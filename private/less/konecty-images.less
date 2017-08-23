@@ -1,0 +1,115 @@
+@import "_lesshat.import.less";
+*,
+*:before,
+*:after {
+	.box-sizing(border-box);
+}
+
+input,
+label,
+textarea {
+	margin: 0;
+	border: 0;
+	padding: 0;
+	display: inline-block;
+	vertical-align: middle;
+	white-space: normal;
+	background: none;
+	line-height: 1;
+}
+
+input:focus {
+	outline: 0;
+}
+
+* {
+	font-family: inherit;
+}
+
+.cf:before,
+.cf:after {
+	content: " ";
+	display: table;
+}
+
+.cf:after {
+	clear: both;
+}
+
+section {
+	.cf;
+}
+
+label {
+	font-size: 13px;
+	font-weight: inherit;
+	float: left;
+	width: 35%;
+	padding: 10px 0;
+	line-height: 12px;
+	text-align: right;
+	padding-right: 20px;
+	min-height: 35px;
+	display: table;
+	span{
+		display: table-cell;
+		vertical-align: middle;
+		text-align: right;
+		line-height: 16px;
+		word-wrap: break-word;
+		word-break: break-word;
+	}
+}
+
+@image-min-height: 125px;
+
+#images{
+	float: left;
+	width: 65%;
+	position: relative;
+}
+
+.gallery{
+	overflow: scroll;
+	width: 100%;
+	height: @image-min-height + 8;
+	position: relative;
+	margin-bottom: 2px;
+	&::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+	&::-webkit-scrollbar-track-piece {
+		background-color: transparent;
+	}
+	&::-webkit-scrollbar-thumb {
+		background-color: rgba(0,0,0,0.1);
+	}
+	img{
+		display: inline-block;
+		max-height: @image-min-height;
+		margin: 0 2px 0 0;
+		vertical-align: text-top;
+	}
+}
+
+konecty-button{
+	font-size: 13px;
+}
+
+.wrapper{
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: @image-min-height;
+	width: auto;
+	white-space: nowrap;
+}
+
+.double label {
+	display: none;
+}
+.double div {
+	float: none;
+	width: 100%;
+}

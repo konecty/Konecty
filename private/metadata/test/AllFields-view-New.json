@@ -1,0 +1,138 @@
+{
+    "_id": "test:AllFields:view:New",
+    "version": 2,
+    "document": "AllFields",
+    "name": "New",
+    "namespace": "test",
+    "type": "view",
+    "label": {
+        "en": "{autoNumber}",
+        "pt_BR": "{autoNumber}"
+    },
+    "plurals": {
+        "en": "All Fields",
+        "pt_BR": "Todos os Campos"
+    },
+    "reverseLookups": [],
+    "groups": [
+        {
+            "icon": "info-sign",
+            "label": {
+                "en": "All Fields",
+                "pt_BR": "Todos os Campos"
+            },
+            "name": "allFields",
+            "sort": 1
+        }
+    ],
+    "visuals": [
+        {
+            "group": "allFields",
+            "name": "code"
+        },
+        {
+            "group": "allFields",
+            "name": "boolean"
+        },
+        {
+            "group": "allFields",
+            "name": "number"
+        },
+        {
+            "group": "allFields",
+            "name": "percentage"
+        },
+        {
+            "group": "allFields",
+            "name": "picklistSingle"
+        },
+        {
+            "group": "allFields",
+            "name": "picklistSingleScroll"
+        },
+        {
+            "group": "allFields",
+            "name": "picklistMulti"
+        },
+        {
+            "group": "allFields",
+            "name": "picklistMultiScroll"
+        },
+        {
+            "group": "allFields",
+            "name": "text"
+        },
+        {
+            "group": "allFields",
+            "name": "richText"
+        },
+        {
+            "group": "allFields",
+            "name": "dateTime"
+        },
+        {
+            "group": "allFields",
+            "name": "date"
+        },
+        {
+            "group": "allFields",
+            "name": "time"
+        },
+        {
+            "group": "allFields",
+            "name": "email"
+        },
+        {
+            "group": "allFields",
+            "name": "url"
+        },
+        {
+            "group": "allFields",
+            "name": "personName"
+        },
+        {
+            "group": "allFields",
+            "name": "phone"
+        },
+        {
+            "group": "allFields",
+            "name": "geoloc"
+        },
+        {
+            "group": "allFields",
+            "name": "money"
+        },
+        {
+            "group": "allFields",
+            "name": "json"
+        },
+        {
+            "group": "allFields",
+            "name": "password"
+        },
+        {
+            "group": "allFields",
+            "name": "encrypted"
+        },
+        {
+            "group": "allFields",
+            "name": "autoNumber"
+        },
+        {
+            "group": "allFields",
+            "name": "address"
+        },
+        {
+            "group": "allFields",
+            "name": "filter"
+        },
+        {
+            "group": "allFields",
+            "name": "composite"
+        },
+        {
+            "group": "allFields",
+            "name": "lookup"
+        }   
+    ]
+}

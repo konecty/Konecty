@@ -1,0 +1,170 @@
+{
+    "_id": "test:AllFieldsList:list:Default",
+    "version": 2,
+    "columns": {
+        "_createdAt": {
+            "linkField": "_createdAt",
+            "minWidth": 100,
+            "name": "_createdAt",
+            "visible": true
+        },
+        "_createdBy": {
+            "linkField": "_createdBy",
+            "minWidth": 100,
+            "name": "_createdBy",
+            "visible": true
+        },
+        "_updatedAt": {
+            "linkField": "_updatedAt",
+            "minWidth": 100,
+            "name": "_updatedAt",
+            "visible": true
+        },
+        "_updatedBy": {
+            "linkField": "_updatedBy",
+            "minWidth": 100,
+            "name": "_updatedBy",
+            "visible": true
+        },
+        "_user": {
+            "linkField": "_user",
+            "minWidth": 100,
+            "name": "_user",
+            "visible": true
+        },
+        "number": {
+            "linkField": "number",
+            "minWidth": 100,
+            "name": "number",
+            "visible": true
+        },
+        "percentage": {
+            "linkField": "percentage",
+            "minWidth": 100,
+            "name": "percentage",
+            "visible": true
+        },
+        "text": {
+            "linkField": "text",
+            "minWidth": 100,
+            "name": "text",
+            "visible": true
+        },
+        "richText": {
+            "linkField": "richText",
+            "minWidth": 100,
+            "name": "richText",
+            "visible": true
+        },
+        "dateTime": {
+            "linkField": "dateTime",
+            "minWidth": 100,
+            "name": "dateTime",
+            "visible": true
+        },
+        "date": {
+            "linkField": "date",
+            "minWidth": 100,
+            "name": "date",
+            "visible": true
+        },
+        "time": {
+            "linkField": "time",
+            "minWidth": 100,
+            "name": "time",
+            "visible": true
+        },
+        "email": {
+            "linkField": "email",
+            "minWidth": 100,
+            "name": "email",
+            "visible": true
+        },
+        "url": {
+            "linkField": "url",
+            "minWidth": 100,
+            "name": "url",
+            "visible": true
+        },
+        "personName": {
+            "linkField": "personName",
+            "minWidth": 100,
+            "name": "personName",
+            "visible": true
+        },
+        "phone": {
+            "linkField": "phone",
+            "minWidth": 100,
+            "name": "phone",
+            "visible": true
+        },
+        "geoloc": {
+            "linkField": "geoloc",
+            "minWidth": 100,
+            "name": "geoloc",
+            "visible": true
+        },
+        "money": {
+            "linkField": "money",
+            "minWidth": 100,
+            "name": "money",
+            "visible": true
+        },
+        "json": {
+            "linkField": "json",
+            "minWidth": 100,
+            "name": "json",
+            "visible": true
+        },
+        "password": {
+            "linkField": "password",
+            "minWidth": 100,
+            "name": "password",
+            "visible": true
+        },
+        "encrypted": {
+            "linkField": "encrypted",
+            "minWidth": 100,
+            "name": "encrypted",
+            "visible": true
+        },
+        "address": {
+            "linkField": "address",
+            "minWidth": 100,
+            "name": "address",
+            "visible": true
+        },
+        "filter": {
+            "linkField": "filter",
+            "minWidth": 100,
+            "name": "filter",
+            "visible": true
+        },
+        "composite": {
+            "linkField": "composite",
+            "minWidth": 100,
+            "name": "composite",
+            "visible": true
+        },
+        "lookup": {
+            "linkField": "lookup",
+            "minWidth": 100,
+            "name": "lookup",
+            "visible": true
+        }
+    },
+    "document": "AllFieldsList",
+    "label": {
+        "en": "All Fields List",
+        "pt_BR": "Todos os Campos Lista"
+    },
+    "plurals": {
+        "en": "All Fields List",
+        "pt_BR": "Todos os Campos Lista"
+    },
+    "loadDataAtOpen": true,
+    "name": "Default",
+    "namespace": "test",
+    "type": "list",
+    "view": "New"
+}

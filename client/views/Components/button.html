@@ -1,0 +1,10 @@
+<template name="Button">
+	<button class="{{getClass}}" tabindex="{{tabindex}}">
+		<span>
+			{{#if icon}}
+				<i class="fa fa-{{icon}}"></i>
+			{{/if}}
+			{{label}}
+		</span>
+	</button>
+</template>

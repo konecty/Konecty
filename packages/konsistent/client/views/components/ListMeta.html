@@ -1,0 +1,58 @@
+<template name="ListMeta">
+	{{> konsistentLogin}}
+	<div class="container konsistent">
+		{{#each arrayify data}}
+			<h3>{{key}}</h3>
+			<ul>
+				<li>
+					<h4>
+						<a href="" class="lookup-item" data-document="{{key}}">Lookup</a>
+					</h4>
+					<ul>
+						{{#each arrayify value.from}}
+							<li>
+								<a href="" class="lookup-item" data-document="{{../key}}" data-from-document="{{key}}">{{key}}</a>
+								<ul>
+									{{#each arrayify value}}
+										<li>
+											<a href="" class="lookup-item" data-document="{{../../key}}" data-from-document="{{../key}}" data-from-field="{{key}}">{{key}}</a>
+										</li>
+									{{/each}}
+								</ul>
+							</li>
+						{{/each}}
+					</ul>
+				</li>
+
+				{{#with arrayify value.relationsTo}}
+					<li>
+						<h4>Relation</h4>
+						<ul>
+							{{#each .}}
+								<li>
+									{{key}}
+									<ul>
+										{{#each value}}
+											<li>
+												<a href="" class="relation-item" data-document="{{../../../key}}" data-from-document="{{document}}">
+													{{document}} ({{lookup}})
+												</a>
+												<ul>
+													{{#each arrayify aggregators}}
+														<li>
+															{{value.aggregator}} -> {{key}}
+														</li>
+													{{/each}}
+												</ul>
+											</li>
+										{{/each}}
+									</ul>
+								</li>
+							{{/each}}
+						</ul>
+					</li>
+				{{/with}}
+			</ul>
+		{{/each}}
+	</div>
+</template>

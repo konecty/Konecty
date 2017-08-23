@@ -1,0 +1,8 @@
+{
+    "_id": "test",
+    "active": true,
+    "emailServers": {},
+    "name": "Test",
+    "parents": [],
+    "version": 1.0
+}

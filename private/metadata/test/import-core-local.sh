@@ -1,0 +1,9 @@
+mongoimport -d core -c MetaObject --upsert < AllFields-list-Default.json
+mongoimport -d core -c MetaObject --upsert < AllFields-view-New.json
+mongoimport -d core -c MetaObject --upsert < AllFields.json
+mongoimport -d core -c MetaObject --upsert < AllFieldsList-list-Default.json
+mongoimport -d core -c MetaObject --upsert < AllFieldsList-view-New.json
+mongoimport -d core -c MetaObject --upsert < AllFieldsList.json
+mongoimport -d core -c MetaObject --upsert < Default-access-Default.json
+mongoimport -d core -c MetaObject --upsert < Default-access-Full.json
+mongoimport -d core -c Namespace --upsert < Namespace.json

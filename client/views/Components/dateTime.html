@@ -1,0 +1,9 @@
+<template name="Component.field.dateTime">
+	<div class="{{getClass}}">
+		{{{getLabelHtml}}}
+		<div>
+			{{> Component.field.date name='date' value=getDate preventValidation=true}}
+			{{> Component.field.time name='time' value=getTime preventValidation=true}}
+		</div>
+	</div>
+</template>

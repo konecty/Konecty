@@ -1,0 +1,11 @@
+<template name="Component.field.text">
+	<div class="{{getClass}}">
+		{{{getLabelHtml}}}
+		<div>
+			<input type="{{inputType.get}}" name="{{name}}" value="{{getTemplateValue}}" />
+			{{#each buttons}}
+				{{ > Button . }}
+			{{/each}}
+		</div>
+	</div>
+</template>

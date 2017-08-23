@@ -1,0 +1,87 @@
+@import "_lesshat.import.less";
+*,
+*:before,
+*:after {
+	.box-sizing(border-box);
+}
+
+* {
+	font-family: inherit;
+	margin: 0;
+	padding: 0;
+}
+
+ol,
+ul {
+	list-style: none outside none;
+}
+
+input,
+label,
+textarea {
+	margin: 0;
+	border: 0;
+	padding: 0;
+	display: inline-block;
+	vertical-align: middle;
+	white-space: normal;
+	background: none;
+	line-height: 1;
+}
+
+@border-color: #F0F0F0;
+
+
+input:focus {
+	outline: 0;
+}
+
+content[select="konecty-button"]::content * {
+	display: inline-block;
+	height: 24px;
+	width: 24px;
+	margin-top: 4px;
+}
+
+section{
+	.cf;
+
+}
+
+
+
+
+
+.btns-1, .btns-2, .btns-3, .btns-4{
+	.text{
+		display: inline-block;
+		margin-right: 3px;
+	}
+}
+
+.btns-1{
+	.text, ul{
+		.calc(width, ~"100% - 27px");
+	}
+}
+
+
+.btns-2{
+	.text, ul{
+		.calc(width, ~"100% - 51px");
+	}
+}
+
+.btns-3{
+	.text, ul{
+		.calc(width, ~"100% - 75px");
+	}
+}
+
+.btns-4{
+	.text, ul{
+		.calc(width, ~"100% - 99px");
+	}
+}
+
+
