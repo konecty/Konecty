@@ -164,10 +164,10 @@ csvExport = (headers, data, name, res) ->
 			value.push if v? then v else ''
 
 		value = value.join separator
-
+	
 		if value isnt ''
 			value = prefix + value + sufix
-
+	
 		# Send each line
 		res.write value + '\n'
 
@@ -203,6 +203,10 @@ xlsExport = (headers, data, name, res) ->
 			if widths[index] < width
 				widths[index] = width
 
+			#Any objects add on cell it's a critical error for excel4node
+			if typeof value == 'object'
+				value = ''
+				
 			ws.Cell(lineIndex + 2, index + 1).String value
 
 	for header, index in headers
