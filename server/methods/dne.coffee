@@ -6,9 +6,12 @@ getUtilDb = ->
 	Server = Mongodb.Server
 
 	host = process.env.MONGO_URL.replace 'mongodb://', ''
-	host = host.split('/').shift().split(':').shift()
+	hostPort = host.split('/').shift().split(':')
 
-	server = new Server host, 27017, {auto_reconnect: true, poolSize: 2}
+	host = hostPort[0]
+	port = hostPort[1] || 27017
+
+	server = new Server host, port, {auto_reconnect: true, poolSize: 2}
 	db_connection = new Db 'utils', server, {w:0, native_parser: false}
 
 	db_connection.open (err, db) ->
