@@ -215,10 +215,12 @@ Picker.middleware( bodyParser.urlencoded( { extended: true } ) );
 global.app =
 	get: (path, cb) ->
 		pickerGet.route path, (params, req, res, next) ->
+			for k, v of params
+				params[k] = if _.isString v then decodeURI(v) else v
 			req.query ?= params.query
 			req.params = params
 			cb(req, res, next)
-	post: (path, cb) ->
+	post: (path, cb) -> 
 		pickerPost.route path, (params, req, res, next) ->
 			req.query ?= params.query
 			req.params = params
