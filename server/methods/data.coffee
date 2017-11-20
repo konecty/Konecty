@@ -753,9 +753,15 @@ Meteor.registerMethod 'data:create', 'withUser', 'withAccessForDocument', 'ifAcc
 					insertResult = model.findOne(request.upsert)?._id
 			else
 				insertResult = model.insert newRecord
-		catch e
-			NotifyErrors.notify 'DataInsertError', e
-			return e
+		catch e 
+			if e.code is 11000
+				e = new Meteor.Error 'internal-error', "Erro ao inserir: registro já existe"
+				NotifyErrors.notify 'catchErrors', e
+				return e
+			else
+				NotifyErrors.notify 'DataInsertError', e
+				return e
+
 
 		query =
 			_id: insertResult
