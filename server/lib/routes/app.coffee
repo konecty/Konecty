@@ -211,6 +211,11 @@ pickerDel = Picker.filter (req, res) ->
 Picker.middleware( bodyParser.json() );
 Picker.middleware( bodyParser.urlencoded( { extended: true } ) );
 
+# Add CORS allowing any origin
+Picker.middleware (req, res, next) ->
+	res.setHeader 'Access-Control-Allow-Origin', '*'
+	next();
+
 # global helper to register REST endpoints
 global.app =
 	get: (path, cb) ->
