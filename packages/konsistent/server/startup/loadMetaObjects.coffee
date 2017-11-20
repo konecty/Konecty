@@ -50,8 +50,8 @@ Konsistent.start = (MetaObject, Models) ->
 	Konsistent._Models = Models or {}
 
 	UserPresenceMonitor.setVisitorStatus = (id, status) ->
-		if not Konsistent.Models.ChatVisitor? then Konsistent.Models.ChatVisitor = new Meteor.Collection "data.ChatVisitor"
-		Konsistent.Models.ChatVisitor.update {_id: id, userStatus: {$ne: status}}, {$set: {userStatus: status}}
+		if not Konsistent._Models.ChatVisitor? then Konsistent._Models.ChatVisitor = new Meteor.Collection "data.ChatVisitor"
+		Konsistent._Models.ChatVisitor.update {_id: id, userStatus: {$ne: status}}, {$set: {userStatus: status}}
 
 	UserPresenceMonitor.start();
 
@@ -85,8 +85,8 @@ Konsistent.start = (MetaObject, Models) ->
 			clearTimeout rebuildReferencesTimer
 			rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
 
-	if Konsistent.Models.Template?
-		Konsistent.Models.Template.find({type: 'email'}).observe
+	if Konsistent._Models.Template?
+		Konsistent._Models.Template.find({type: 'email'}).observe
 			added: (record) ->
 				registerTemplate record
 

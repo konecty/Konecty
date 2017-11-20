@@ -262,17 +262,6 @@ Meteor.startup ->
 	rebuildReferencesTimer = null
 	rebuildReferencesDelay = 1000
 
-	MetaObject.find({type: 'namespace'}).observe
-		added: (meta) ->
-			global.Namespace = meta
-			if meta.kadira?
-				Kadira.connect(meta.kadira.appId, meta.kadira.appSecret)
-
-
-		changed: (meta) ->
-			global.Namespace = meta
-
-
 	MetaObject.find({type: $in: ['document', 'composite']}).observe
 		added: (meta) ->
 			registerMeta meta
