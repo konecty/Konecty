@@ -306,11 +306,16 @@ Meteor.registerMethod 'auth:setRandomPasswordAndSendByEmail', 'withUser', (reque
 			continue
 
 		password = Random.id(6).toLowerCase()
+		data = 
+			username: userRecord.username
+			password: password
+			name: userRecord.name
 
 		Accounts.setPassword userRecord._id, password
 
 		html = SSR.render 'resetPassword',
 			password: password
+			data: data
 
 		Models['Message'].insert
 			from: 'Konecty <support@konecty.com>'
