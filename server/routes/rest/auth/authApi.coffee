@@ -5,9 +5,15 @@ app.get '/rest/auth/loginByUrl/:ns/:sessionId', (req, res, next) ->
 		domain = 'domain=.konecty.com;'
 
 	req.params.sessionId = decodeURIComponent req.params.sessionId.replace /\s/g, '+'
+
+	namespace = MetaObject.findOne _id: 'Namespace'
+	
+	# Verify if Namespace have a session expiration metadata config and set
+	cookieMaxAge = if namespace.sessionExpirationInSeconds? then namespace.sessionExpirationInSeconds else 2592000
+	
 	# Set cookie with session id
-	res.set 'set-cookie', "_authTokenId=#{req.params.sessionId}; #{domain} Version=1; Path=/; Max-Age=2592000"
-	res.set 'set-cookie', "_authTokenNs=#{req.params.ns}; #{domain} Version=1; Path=/; Max-Age=2592000"
+	res.set 'set-cookie', "_authTokenId=#{req.params.sessionId}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
+	res.set 'set-cookie', "_authTokenNs=#{req.params.ns}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
 
 	# Redirect to system
 	res.redirect '/'
@@ -17,6 +23,11 @@ app.get '/rest/auth/loginByUrl/:ns/:sessionId', (req, res, next) ->
 app.post '/rest/auth/login', (req, res, next) ->
 	# Map body parameters
 	{user, password, ns, geolocation, resolution, password_SHA256} = req.body
+	
+	namespace = MetaObject.findOne _id: 'Namespace'
+
+	# Verify if Namespace have a session expiration metadata config and set
+	cookieMaxAge = if namespace.sessionExpirationInSeconds? then namespace.sessionExpirationInSeconds else 2592000
 
 	userAgent = req.headers['user-agent']
 
@@ -41,9 +52,9 @@ app.post '/rest/auth/login', (req, res, next) ->
 
 	if loginResult?.success is true
 		# Set cookie with session id
-		res.set 'set-cookie', "_authTokenId=#{loginResult.authId}; #{domain} Version=1; Path=/; Max-Age=2592000"
+		res.set 'set-cookie', "_authTokenId=#{loginResult.authId}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
 		if _.isString ns
-			res.set 'set-cookie', "_authTokenNs=#{ns}; #{domain} Version=1; Path=/; Max-Age=2592000"
+			res.set 'set-cookie', "_authTokenNs=#{ns}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
 
 		res.send loginResult
 	else
