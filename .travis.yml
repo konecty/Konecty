@@ -17,6 +17,7 @@ install:
   | /bin/sh; fi
 - export PATH="$HOME/.meteor:$PATH"
 script:
+- meteor --version
 - meteor npm install
 - meteor build --server-only /tmp/build
 deploy:

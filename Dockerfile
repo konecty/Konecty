@@ -1,4 +1,4 @@
-FROM node:4.8
+FROM node:4.8-stretch
 
 ENV KONECTY_VERSION 1.0.0
 
