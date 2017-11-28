@@ -17,7 +17,7 @@ async function fetchNamespaces(namespaceObject) {
 
 	if (process.env.KONMETA_DB_URL) {
 		const db = await Db.getConnection();
-		cursor = await db.collection('core.Namespace').find({_id: {$in: namespaceObject.parents}}).toArray();
+		cursor = await db.collection('Namespace').find({_id: {$in: namespaceObject.parents}}).toArray();
 	} else {
 		cursor = coreNamespace.find({_id: {$in: namespaceObject.parents}}).fetch();
 	}
@@ -37,7 +37,7 @@ async function fetchNamespaces(namespaceObject) {
 async function getMetaObjects(namespaces) {
 	if (process.env.KONMETA_DB_URL) {
 		const db = await Db.getConnection();
-		return await db.collection('core.MetaObject').find({namespace: {$in: namespaces}}).toArray();
+		return await db.collection('MetaObject').find({namespace: {$in: namespaces}}).toArray();
 	} else {
 		return coreMetaObject.find({namespace: {$in: namespaces}}).fetch();
 	}
