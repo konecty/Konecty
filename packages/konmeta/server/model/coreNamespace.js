@@ -1,3 +1,3 @@
 import { Mongo } from 'meteor/mongo';
 
-export default coreNamespace = new Mongo.Collection('Namespace');
+export default coreNamespace = new Mongo.Collection('core.Namespace');
