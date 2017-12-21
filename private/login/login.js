@@ -362,11 +362,6 @@ function clearCookie( cookie, clearMyKonecty ) {
 		return $( '.compatible-panel' ).show();
 	}
 
-	if (getCookie( 'KonectyNS' ) ) {
-		$( '#namespace' ).val( getCookie('KonectyNS' ) );
-		$( '#reset-namespace' ).val( getCookie('KonectyNS' ) );
-	}
-
 	if( getCookie( 'KonectyUser' ) ) {
 		$( '#login' ).val( getCookie( 'KonectyUser' ) );
 	}
@@ -400,11 +395,6 @@ function clearCookie( cookie, clearMyKonecty ) {
 
 		if( $( '#password' ).val().trim() === '' ) {
 			$( '#password' ).focus();
-			return false;
-		}
-
-		if ( $( '#namespace' ).val().trim() === '' ) {
-			$( '#namespace' ).focus();
 			return false;
 		}
 
@@ -489,11 +479,6 @@ function clearCookie( cookie, clearMyKonecty ) {
 			return false;
 		}
 
-		if ( $( '#reset-namespace' ).val().trim() === '' ) {
-			$( '#reset-namespace' ).focus();
-			return false;
-		}
-
 		$( '.reset-panel' ).hide();
 		$( '.loading-panel' ).show();
 
@@ -502,7 +487,7 @@ function clearCookie( cookie, clearMyKonecty ) {
 			type: 'POST',
 			dataType: 'json',
 			data: {
-				ns: $( '#reset-namespace' ).val().replace(/[\s-]/g, ''),
+				ns: $( '#namespace' ).val().replace(/[\s-]/g, ''),
 				user: $( '#reset-login' ).val()
 			},
 			complete: function( r ) {

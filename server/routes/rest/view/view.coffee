@@ -5,10 +5,10 @@ app.get '/login', (req, res, next) ->
 	res.render 'login.html',
 		env: if process.env.KONECTY_MODE is 'development' then 'dev-' else ''
 		host: process.env.KONECTY_HOST or 'my.konecty.com'
+		namespace: process.env.KONMETA_NAMESPACE
 		title_login_page: 'Entre na sua conta do Konecty'
 		lbl_login: 'Usuário'
 		lbl_password: 'Senha'
-		lbl_company: 'Nome da Empresa'
 		btn_forget: 'Esqueceu a senha?'
 		btn_login: 'Entrar'
 		btn_reset: 'Redefinir senha'
