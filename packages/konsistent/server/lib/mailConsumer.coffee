@@ -203,6 +203,14 @@ mailConsumer.start = ->
 		if process.env.DEFAULT_SMTP_TLS?
 			defaultSMTPConfig.tls = process.env.DEFAULT_SMTP_TLS
 
+		if process.env.DEFAULT_SMTP_IGNORE_TLS?
+			defaultSMTPConfig.ignoreTLS = process.env.DEFAULT_SMTP_IGNORE_TLS
+		
+		if process.env.DEFAULT_SMTP_REQUIRE_TLS?
+			defaultSMTPConfig.requireTLS = process.env.DEFAULT_SMTP_REQUIRE_TLS
+
+		
+
 		transporters.default = nodemailer.createTransport smtpTransport defaultSMTPConfig
 
 	mailConsumer.consume()
