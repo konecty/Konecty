@@ -192,25 +192,31 @@ mailConsumer.start = ->
 	if not transporters.default? and process.env.DEFAULT_SMTP_HOST? and process.env.DEFAULT_SMTP_PORT? and process.env.DEFAULT_SMTP_USERNAME? and process.env.DEFAULT_SMTP_PASSWORD?
 		defaultSMTPConfig =
 			host: process.env.DEFAULT_SMTP_HOST
-			port: process.env.DEFAULT_SMTP_PORT
+			port: +process.env.DEFAULT_SMTP_PORT
 			auth:
 				user: process.env.DEFAULT_SMTP_USERNAME
 				pass: process.env.DEFAULT_SMTP_PASSWORD
 
 		if process.env.DEFAULT_SMTP_SECURE?
-			defaultSMTPConfig.secure = process.env.DEFAULT_SMTP_SECURE
+			defaultSMTPConfig.secure = process.env.DEFAULT_SMTP_SECURE == 'true'
 
 		if process.env.DEFAULT_SMTP_TLS?
 			defaultSMTPConfig.tls = process.env.DEFAULT_SMTP_TLS
 
 		if process.env.DEFAULT_SMTP_IGNORE_TLS?
-			defaultSMTPConfig.ignoreTLS = process.env.DEFAULT_SMTP_IGNORE_TLS
+			defaultSMTPConfig.ignoreTLS = process.env.DEFAULT_SMTP_IGNORE_TLS == 'true'
 		
-		if process.env.DEFAULT_SMTP_REQUIRE_TLS?
-			defaultSMTPConfig.requireTLS = process.env.DEFAULT_SMTP_REQUIRE_TLS
+		if process.env.DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED?
+			defaultSMTPConfig.tls =
+				rejectUnauthorized: process.env.DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED == 'true'
 
+		if process.env.DEFAULT_SMTP_AUTH_METHOD?
+			defaultSMTPConfig.authMethod = process.env.DEFAULT_SMTP_AUTH_METHOD
 		
-
+		if process.env.DEFAULT_SMTP_DEBUG?
+			defaultSMTPConfig.debug = process.env.DEFAULT_SMTP_DEBUG == 'true'
+		
+		console.log "Setup default email server".green
 		transporters.default = nodemailer.createTransport smtpTransport defaultSMTPConfig
 
 	mailConsumer.consume()
