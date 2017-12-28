@@ -453,7 +453,7 @@ metaUtils.validateAndProcessValueFor = (meta, fieldName, value, actionType, mode
 	return value
 
 metaUtils.getNextUserFromQueue = (queueStrId, user) ->
-	collection = RocketChat.models.Settings.model.rawCollection()
+	collection = Models.QueueUser.rawCollection()
 	findAndModify = Meteor.wrapAsync(collection.findAndModify, collection)
 
 	# Mount query, sort, update, and options
