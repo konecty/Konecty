@@ -170,11 +170,8 @@ utils.convertObjectIdsToFn = (values, fn) ->
 		return values
 
 	if _.isObject values
-		if values instanceof Meteor.Collection.ObjectID
+		if values instanceof Mongo.ObjectID
 			return fn values._str
-
-		if values instanceof MongoInternals.defaultRemoteCollectionDriver().mongo.db.bsonLib.ObjectID
-			return fn values.toString()
 
 		_.each values, (value, key) ->
 			values[key] = utils.convertObjectIdsToFn value, fn
