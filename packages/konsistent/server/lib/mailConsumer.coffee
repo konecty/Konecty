@@ -216,7 +216,7 @@ mailConsumer.start = ->
 		if process.env.DEFAULT_SMTP_DEBUG?
 			defaultSMTPConfig.debug = process.env.DEFAULT_SMTP_DEBUG == 'true'
 		
-		console.log "Setup default email server".green
+		console.log "Setup default email server -> [#{JSON.stringify defaultSMTPConfig}]".green
 		transporters.default = nodemailer.createTransport smtpTransport defaultSMTPConfig
 
 	mailConsumer.consume()
