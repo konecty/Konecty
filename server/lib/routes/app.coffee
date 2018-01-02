@@ -212,9 +212,13 @@ Picker.middleware( bodyParser.json() );
 Picker.middleware( bodyParser.urlencoded( { extended: true } ) );
 
 # Add CORS allowing any origin
+ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS or '').split '|'
 Picker.middleware (req, res, next) ->
-	res.setHeader 'Access-Control-Allow-Origin', '*'
-	next();
+	if ALLOWED_ORIGINS.includes req.headers.origin
+		res.setHeader 'Access-Control-Allow-Credentials', 'true'
+		res.setHeader 'Access-Control-Allow-Origin', req.headers.origin
+
+	next()
 
 # global helper to register REST endpoints
 global.app =
