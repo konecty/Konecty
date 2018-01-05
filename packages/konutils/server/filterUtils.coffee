@@ -67,7 +67,7 @@ operatoresByType =
 	#TODO improve filter
 	'filter'            : ['exists']
 	'filter.conditions' : ['exists']
-	'richText'          : ['exists', 'equals', 'not_equals', 'in', 'not_in', 'contains', 'not_contains', 'starts_with', 'end_with']
+	'richText'          : ['exists', 'contains']
 	'file'              : ['exists']
 
 filterUtils = {}
@@ -155,7 +155,7 @@ filterUtils.validateOperator = (condition, field, subTermPart) ->
 		return e
 
 	if operatoresByType[type].indexOf(condition.operator) is -1
-		e = new Meteor.Error 'utils-internal-error', "Field [#{condition.term}] only suport operators [#{operatoresByType[type].join(', ')}]. Trying to use operator [#{condition.operator}]"
+		e = new Meteor.Error 'utils-internal-error', "Field [#{condition.term}] only supports operators [#{operatoresByType[type].join(', ')}]. Trying to use operator [#{condition.operator}]"
 		NotifyErrors.notify 'FilterError', e, {condition: condition}
 		return e
 
