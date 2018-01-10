@@ -52,8 +52,7 @@ export default new class Schema {
 		console.log('[konmeta] Processing Namespace Hierarchy ➜'.green, namespaceObject._id.cyan);
 
 		const namespaces = await fetchNamespaces(namespaceObject);
-		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));
-		
+		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));		
 		this.namespaceHierarchy[namespaceObject._id] = namespaces;
 
 		for (let key in metaObjects) {
@@ -95,7 +94,7 @@ export default new class Schema {
 				}
 			}
 
-			this.saveFlat(namespaceObject, flatMetaObject);		
+			this.saveFlat(namespaceObject, flatMetaObject);
 		}
 		const toDelete = [];
 		MetaObjects.find({}, { fields: { _id: 1 }}).forEach(doc => {
