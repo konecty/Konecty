@@ -7,12 +7,11 @@ import coreMetaObject from '../model/coreMetaObject';
 import MetaObjects from '../model/MetaObjects';
 
 async function fetchNamespaces(namespaceObject) {
-	let namespaces = [namespaceObject._id];
-
 	if (!namespaceObject.parents) {
-		return namespaces;
+		return [namespaceObject._id];
 	}
-
+	
+	let namespaces = [];
 	let cursor;
 
 	if (process.env.KONMETA_DB_URL) {
@@ -52,6 +51,7 @@ export default new class Schema {
 		console.log('[konmeta] Processing Namespace Hierarchy ➜'.green, namespaceObject._id.cyan);
 
 		const namespaces = await fetchNamespaces(namespaceObject);
+		namespaces.push(namespaceObject._id);
 		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));		
 		this.namespaceHierarchy[namespaceObject._id] = namespaces;
 
@@ -70,17 +70,23 @@ export default new class Schema {
 					lastMetaObject.namespace.push(namespace);
 				}
 			}
-			
-			if ((metasToMerge.length > 1) && !['document', 'composite'].includes(metasToMerge[0].type)) {
-				for (let i = metasToMerge.length - 1; i > 0; i--) {
-					const metaToMerge = metasToMerge[i]
-					delete metaToMerge.visuals;
+
+			if ((metasToMerge.length > 0) && !['document', 'composite'].includes(metasToMerge[0].type)) {
+				let hasVisuals = false;
+				for (let i = metasToMerge.length - 1; i >= 0; i--) {
+					const metaToMerge = metasToMerge[i];
+					if (hasVisuals === true) {
+						delete metaToMerge.visuals;
+					}
+					
+					if ((metaToMerge.visuals != null ? metaToMerge.visuals.length : undefined) > 0) {
+						hasVisuals = true;
+					}
 				}
 			}
-
+					
 			metasToMerge.push(lastMetaObject);
 			const flatMetaObject = DeepExtend.apply(DeepExtend, metasToMerge);
-
 			console.log('[konmeta] Using Namespace(s) ' + JSON.stringify(flatMetaObject.namespace) + ' for ' + flatMetaObject._id);
 
 			if (namespaceObject._id === 'foxter' && flatMetaObject._id === 'Product:access:Default') {
