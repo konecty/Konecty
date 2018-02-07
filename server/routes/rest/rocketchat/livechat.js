@@ -2,7 +2,7 @@ import moment from 'moment';
 
 app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 	if (!req.headers['x-rocketchat-livechat-token'] || !Namespace.RocketChat || !Namespace.RocketChat.livechat || req.headers['x-rocketchat-livechat-token'] !== Namespace.RocketChat.livechat.token) {
-		res.statusCode = 405;
+		res.statusCode = 403;
 		return res.end();
 	}
 
@@ -306,4 +306,30 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 	}
 
 	return res.send(response);
+});
+
+app.get('/rest/rocketchat/livechat/queue', function(req, res/*, next*/) {
+	if (!req.headers['x-rocketchat-secret-token'] || !Namespace.RocketChat || !Namespace.RocketChat.livechat || req.headers['x-rocketchat-secret-token'] !== Namespace.RocketChat.livechat.token) {
+		res.statusCode = 403;
+		return res.end();
+	}
+
+	let departmentId = req.params.query.departmentId;
+
+	if (departmentId && !Models.Queue.findOne(departmentId)) {
+		departmentId = Namespace.RocketChat.livechat.queue;
+	}
+
+	const nextAgent = Meteor.call('data:queue:next', {
+		authTokenId: Namespace.RocketChat.accessToken,
+		document: 'Queue',
+		queueId: departmentId
+	});
+
+	if (nextAgent.success && nextAgent.user && nextAgent.user.user && nextAgent.user.user._id) {
+		const user = Meteor.users.findOne(nextAgent.user.user._id, { fields: { username: 1 }});
+		return res.send(user);
+	}
+
+	return res.send();
 });
