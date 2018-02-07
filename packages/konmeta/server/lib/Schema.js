@@ -7,12 +7,11 @@ import coreMetaObject from '../model/coreMetaObject';
 import MetaObjects from '../model/MetaObjects';
 
 async function fetchNamespaces(namespaceObject) {
-	let namespaces = [namespaceObject._id];
-
 	if (!namespaceObject.parents) {
-		return namespaces;
+		return [namespaceObject._id];
 	}
-
+	
+	let namespaces = [];
 	let cursor;
 
 	if (process.env.KONMETA_DB_URL) {
@@ -36,9 +35,11 @@ async function fetchNamespaces(namespaceObject) {
 
 async function getMetaObjects(namespaces) {
 	if (process.env.KONMETA_DB_URL) {
+		console.log('[konmeta] Searchin Meta Objects from ➜'.green, process.env.KONMETA_DB_URL);
 		const db = await Db.getConnection();
 		return await db.collection('MetaObject').find({namespace: {$in: namespaces}}).toArray();
 	} else {
+		console.log('[konmeta] Searchin Metaobjects from Core.namespace ➜'.green, process.env.MONGO_URL);
 		return coreMetaObject.find({namespace: {$in: namespaces}}).fetch();
 	}
 }
@@ -50,9 +51,8 @@ export default new class Schema {
 		console.log('[konmeta] Processing Namespace Hierarchy ➜'.green, namespaceObject._id.cyan);
 
 		const namespaces = await fetchNamespaces(namespaceObject);
-
-		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));
-
+		namespaces.push(namespaceObject._id);
+		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));		
 		this.namespaceHierarchy[namespaceObject._id] = namespaces;
 
 		for (let key in metaObjects) {
@@ -78,15 +78,16 @@ export default new class Schema {
 					if (hasVisuals === true) {
 						delete metaToMerge.visuals;
 					}
-
+					
 					if ((metaToMerge.visuals != null ? metaToMerge.visuals.length : undefined) > 0) {
 						hasVisuals = true;
 					}
 				}
 			}
-
+					
 			metasToMerge.push(lastMetaObject);
 			const flatMetaObject = DeepExtend.apply(DeepExtend, metasToMerge);
+			console.log('[konmeta] Using Namespace(s) ' + JSON.stringify(flatMetaObject.namespace) + ' for ' + flatMetaObject._id);
 
 			if (namespaceObject._id === 'foxter' && flatMetaObject._id === 'Product:access:Default') {
 				if (flatMetaObject.fields && flatMetaObject.fields.supplier && flatMetaObject.fields.supplier.READ &&
@@ -101,7 +102,6 @@ export default new class Schema {
 
 			this.saveFlat(namespaceObject, flatMetaObject);
 		}
-
 		const toDelete = [];
 		MetaObjects.find({}, { fields: { _id: 1 }}).forEach(doc => {
 			if ((metaObjects[doc._id] == null)) {
@@ -114,6 +114,7 @@ export default new class Schema {
 	}
 
 	copyNamespace(namespaceObject) {
+		console.log('[konmeta] Copying Namespace ➜'.green, namespaceObject._id.cyan);
 		const baseObject = {
 			_id: null,
 			active: false,

@@ -1,5 +1,6 @@
 vm = Npm.require 'vm'
 momentzone = Npm.require 'moment-timezone'
+moment = Npm.require 'moment'
 
 utils = {}
 
