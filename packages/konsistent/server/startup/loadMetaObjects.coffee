@@ -45,7 +45,7 @@ registerTemplate = (record) ->
 		helper[name] = Function.apply null, fn
 		Template[record._id].helpers helper
 
-Konsistent.start = (MetaObject, Models) ->
+Konsistent.start = (MetaObject, Models, rebuildMetas = true) ->
 	Konsistent.MetaObject = MetaObject
 	Konsistent._Models = Models or {}
 
@@ -55,9 +55,6 @@ Konsistent.start = (MetaObject, Models) ->
 
 	UserPresenceMonitor.start();
 
-	rebuildReferencesTimer = null
-	rebuildReferencesDelay = 100
-
 	MetaObjectQuery =
 		type: 'document'
 
@@ -65,25 +62,6 @@ Konsistent.start = (MetaObject, Models) ->
 		return @ready() unless @userId?
 
 		return Konsistent.MetaObject.find MetaObjectQuery
-
-	Konsistent.MetaObject.find(MetaObjectQuery).observe
-		added: (meta) ->
-			registerMeta meta
-
-			clearTimeout rebuildReferencesTimer
-			rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
-
-		changed: (meta) ->
-			registerMeta meta
-
-			clearTimeout rebuildReferencesTimer
-			rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
-
-		removed: (meta) ->
-			deregisterMeta meta
-
-			clearTimeout rebuildReferencesTimer
-			rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
 
 	if Konsistent._Models.Template?
 		Konsistent._Models.Template.find({type: 'email'}).observe
@@ -96,11 +74,35 @@ Konsistent.start = (MetaObject, Models) ->
 			removed: (record) ->
 				delete Templates[record._id]
 
-	mailConsumer.start()
-
 	Konsistent.MetaObject.find({type: 'namespace'}).observe
 		added: (meta) ->
+			console.log 'add meta ->', meta
+
 			global.Namespace = meta
 
 		changed: (meta) ->
 			global.Namespace = meta
+
+	if rebuildMetas
+		rebuildReferencesTimer = null
+		rebuildReferencesDelay = 100
+		Konsistent.MetaObject.find(MetaObjectQuery).observe
+			added: (meta) ->
+				registerMeta meta
+
+				clearTimeout rebuildReferencesTimer
+				rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
+
+			changed: (meta) ->
+				registerMeta meta
+
+				clearTimeout rebuildReferencesTimer
+				rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
+
+			removed: (meta) ->
+				deregisterMeta meta
+
+				clearTimeout rebuildReferencesTimer
+				rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
+
+		mailConsumer.start()
