@@ -316,8 +316,27 @@ app.get('/rest/rocketchat/livechat/queue', function(req, res/*, next*/) {
 
 	let departmentId = req.params.query.departmentId;
 
-	if (departmentId && !Models.Queue.findOne(departmentId)) {
+	if (departmentId) {
+		const queueQuery = {
+			$or: [
+				{ _id: departmentId },
+				{ name: departmentId }
+			]
+		};
+
+		const queue = Models.Queue.findOne(queueQuery, { fields: { _id: 1 } });
+		if (queue) {
+			departmentId = queue._id;
+		} else {
+			departmentId = null;
+		}
+	}
+
+	if (!departmentId && Namespace.RocketChat.livechat.queue) {
 		departmentId = Namespace.RocketChat.livechat.queue;
+	} else {
+		res.writeHead(400, { 'Content-Type': 'application/json' });
+		return res.send('{ "success": false, "error": "Queue not found" }');
 	}
 
 	const nextAgent = Meteor.call('data:queue:next', {
