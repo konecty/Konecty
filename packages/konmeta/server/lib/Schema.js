@@ -10,7 +10,7 @@ async function fetchNamespaces(namespaceObject) {
 	if (!namespaceObject.parents) {
 		return [namespaceObject._id];
 	}
-	
+
 	let namespaces = [];
 	let cursor;
 
@@ -35,11 +35,11 @@ async function fetchNamespaces(namespaceObject) {
 
 async function getMetaObjects(namespaces) {
 	if (process.env.KONMETA_DB_URL) {
-		console.log('[konmeta] Searchin Meta Objects from ➜'.green, process.env.KONMETA_DB_URL);
+		console.log('[konmeta] Searching Meta Objects from ➜'.green, process.env.KONMETA_DB_URL);
 		const db = await Db.getConnection();
 		return await db.collection('MetaObject').find({namespace: {$in: namespaces}}).toArray();
 	} else {
-		console.log('[konmeta] Searchin Metaobjects from Core.namespace ➜'.green, process.env.MONGO_URL);
+		console.log('[konmeta] Searching Metaobjects from Core.namespace ➜'.green, process.env.MONGO_URL);
 		return coreMetaObject.find({namespace: {$in: namespaces}}).fetch();
 	}
 }
@@ -52,7 +52,7 @@ export default new class Schema {
 
 		const namespaces = await fetchNamespaces(namespaceObject);
 		namespaces.push(namespaceObject._id);
-		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));		
+		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));
 		this.namespaceHierarchy[namespaceObject._id] = namespaces;
 
 		for (let key in metaObjects) {
@@ -78,13 +78,13 @@ export default new class Schema {
 					if (hasVisuals === true) {
 						delete metaToMerge.visuals;
 					}
-					
+
 					if ((metaToMerge.visuals != null ? metaToMerge.visuals.length : undefined) > 0) {
 						hasVisuals = true;
 					}
 				}
 			}
-					
+
 			metasToMerge.push(lastMetaObject);
 			const flatMetaObject = DeepExtend.apply(DeepExtend, metasToMerge);
 			console.log('[konmeta] Using Namespace(s) ' + JSON.stringify(flatMetaObject.namespace) + ' for ' + flatMetaObject._id);
