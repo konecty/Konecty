@@ -10,10 +10,9 @@ async function fetchNamespaces(namespaceObject) {
 	if (!namespaceObject.parents) {
 		return [namespaceObject._id];
 	}
-
-	let namespaces = [];
+	
 	let cursor;
-
+	let namespaces = [];
 	if (process.env.KONMETA_DB_URL) {
 		const db = await Db.getConnection();
 		cursor = await db.collection('Namespace').find({_id: {$in: namespaceObject.parents}}).toArray();
@@ -22,14 +21,13 @@ async function fetchNamespaces(namespaceObject) {
 	}
 	await Promise.all(cursor.map(async parent => {
 		const cursor = await fetchNamespaces(parent);
-
 		cursor.forEach(namespace => {
 			if (namespaces.indexOf(namespace) === -1) {
 				namespaces.push(namespace);
 			}
 		});
 	}));
-
+	namespaces.push(namespaceObject._id);	
 	return namespaces;
 }
 
@@ -49,12 +47,10 @@ export default new class Schema {
 
 	async processNamespaceHierarchy(namespaceObject) {
 		console.log('[konmeta] Processing Namespace Hierarchy ➜'.green, namespaceObject._id.cyan);
-
 		const namespaces = await fetchNamespaces(namespaceObject);
-		namespaces.push(namespaceObject._id);
+		console.log('[konmeta] namespaces to process ->'.green, namespaces)
 		const metaObjects = this.parseMetaObjects(await getMetaObjects(namespaces));
 		this.namespaceHierarchy[namespaceObject._id] = namespaces;
-
 		for (let key in metaObjects) {
 			const metaObject = metaObjects[key];
 			const lastMetaObject = {
