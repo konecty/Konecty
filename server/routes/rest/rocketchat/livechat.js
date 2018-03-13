@@ -8,6 +8,7 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 
 	var hookData = req.body;
 	var result;
+	var ddd = Namespace.ddd;
 
 	switch (hookData.type) {
 		case 'LivechatSession':
@@ -37,6 +38,9 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 
 					if (phone.length >= 10) {
 						contactProcess.data.phone = phone;
+					}
+					if ((phone.length <= 9) && (phone.length >= 8)) {
+						contactProcess.data.phone = ddd + phone;
 					}
 				}
 
@@ -198,13 +202,11 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 				authTokenId: Namespace.RocketChat.accessToken,
 				data: [
 					contactProcess,
-					opportunityData
+					opportunityData,
+					messageData
 				]
+				
 			};
-
-			if (!contactProcess.data._id || _.isEmpty(contactProcess.data._id)) {
-				request.data.push(messageData);
-			}
 
 			result = Meteor.call('process:submit', request);
 			break;
