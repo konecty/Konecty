@@ -198,12 +198,27 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 				});
 			}
 
+			var activity = {
+				name: 'activity',
+				data: {
+				  status: 'Concluída',
+				  subject: 'Chat',
+				  priority: 'Média',
+				  type: 'Contato'
+				},
+				map: {
+					opportunity: 'opportunity',
+					contact: 'contact'
+				}
+			  }
+
 			var request = {
 				authTokenId: Namespace.RocketChat.accessToken,
 				data: [
 					contactProcess,
 					opportunityData,
-					messageData
+					messageData,
+					activity
 				]
 				
 			};
@@ -291,7 +306,6 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 			res.statusCode = 400;
 			return res.end();
 	}
-
 	var response = { success: result.success };
 
 	if (result.success) {
