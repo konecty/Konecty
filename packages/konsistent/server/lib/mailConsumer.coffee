@@ -6,6 +6,7 @@ nodemailer = Npm.require 'nodemailer'
 smtpTransport = Npm.require 'nodemailer-smtp-transport'
 emailTemplates = Npm.require 'swig-email-templates'
 xoauth2 = Npm.require 'xoauth2'
+_ = Npm.require 'lodash'
 
 basePath = path.resolve('.').split('.meteor')[0]
 
@@ -160,8 +161,11 @@ mailConsumer.send = (record, cb) ->
 
 mailConsumer.consume = ->
 	return unless Konsistent.Models['Message']?
-
+	
 	mailConsumer.lockedAt = Date.now()
+	collection = Models.Message._getCollection()
+	findAndModify = Meteor.wrapAsync _.bind(collection.findAndModify, collection)
+
 	query =
 		type: 'Email'
 		status: { $in: [ 'Enviando', 'Send' ] }
@@ -169,14 +173,22 @@ mailConsumer.consume = ->
 			{ sendAt: { $exists: 0 } },
 			{ sendAt: { $lt: new Date } }
 		]
+	sort = []
+	update = 
+		$set: { status: 'A Caminho' }
 	options =
+		new: true
 		limit: 10
 
-	records = Konsistent.Models['Message'].find(query, options).fetch()
+	updatedRecords = findAndModify query, sort, update, options
+	records = []
+	if updatedRecords.value isnt null
+		records.push(updatedRecords.value)
+	
 	if records.length is 0
 		setTimeout Meteor.bindEnvironment(mailConsumer.consume), 1000
 		return
-
+		
 	async.each records, mailConsumer.send, ->
 		mailConsumer.consume()
 
