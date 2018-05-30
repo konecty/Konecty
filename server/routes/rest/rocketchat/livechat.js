@@ -10,8 +10,8 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 	var result;
 	var ddd = Namespace.ddd;
 	console.log('RocketChak Hook ' + moment().format('DD/MM/YYYY HH:mm:ss') , hookData.type);
-	console.log('RocketChak Hook -> Visitor', hookData.visitor.name || hookData.visitor.username);
-	console.log('RocketChak Hook -> Agent', hookData.agent.name || hookData.agent.username);
+	console.log('RocketChak Hook -> Visitor', JSON.stringify(hookData.visitor));
+	console.log('RocketChak Hook -> Agent', JSON.stringify(hookData.agent));
 	console.log('RocketChak Hook -> Message', JSON.stringify(hookData.messages));
 	switch (hookData.type) {
 		case 'LivechatSession':
