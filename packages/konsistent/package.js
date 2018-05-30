@@ -61,5 +61,6 @@ Npm.depends({
   "swig-email-templates": "1.3.0",
   "bugsnag": "1.5.1",
   "coffee-script": "1.8.0",
-  "xoauth2": "1.1.0"
+  "xoauth2": "1.1.0",
+  "lodash": "4.17.10"
 });
