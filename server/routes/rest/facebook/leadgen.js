@@ -237,7 +237,7 @@ app.post('/facebook/leadgen', function(req, res, next) {
 										};
 
 										if (Namespace.facebookApp.saveOpportunity) {
-											var opportunity = makeOpportunity(campaign, formName);
+											var opportunity = makeOpportunity(campaign, formName, getNotes(leadData));
 											var opportunityData = {
 												name: 'opportunity',
 												data: opportunity,
