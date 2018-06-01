@@ -9,10 +9,12 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 	var hookData = req.body;
 	var result;
 	var ddd = Namespace.ddd;
-	console.log('RocketChak Hook ' + moment().format('DD/MM/YYYY HH:mm:ss') , hookData.type);
-	console.log('RocketChak Hook -> Visitor', JSON.stringify(hookData.visitor));
-	console.log('RocketChak Hook -> Agent', JSON.stringify(hookData.agent));
-	console.log('RocketChak Hook -> Message', JSON.stringify(hookData.messages));
+	if (process.env.KONECTY_MODE !== 'production'){
+		console.log('RocketChak Hook ' + moment().format('DD/MM/YYYY HH:mm:ss') , hookData.type);
+		console.log('RocketChak Hook -> Visitor', JSON.stringify(hookData.visitor));
+		console.log('RocketChak Hook -> Agent', JSON.stringify(hookData.agent));
+		console.log('RocketChak Hook -> Message', JSON.stringify(hookData.messages));
+	}
 	switch (hookData.type) {
 		case 'LivechatSession':
 		case 'LivechatEdit':
@@ -33,17 +35,21 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 				}
 
 				if (!_.isEmpty(hookData.visitor.email)) {
-					contactProcess.data.email = hookData.visitor.email;
+					contactProcess.data.email = _.isArray(hookData.visitor.email) ? hookData.visitor.email[0].address :  hookData.visitor.email;
 				}
 
 				if (!_.isEmpty(hookData.visitor.phone)) {
-					var phone = s.trim(hookData.visitor.phone).replace(/[^0-9]/g, '').replace(/^0+/g, '');
-
-					if (phone.length >= 10) {
-						contactProcess.data.phone = phone;
-					}
-					if ((phone.length <= 9) && (phone.length >= 8)) {
-						contactProcess.data.phone = ddd + phone;
+					var phoneTreatment = function(p){
+						var phone = s.trim(p).replace(/[^0-9]/g, '').replace(/^0+/g, '');
+						if ((phone.length <= 9) && (phone.length >= 8)) {
+							phone = ddd + phone;
+						}
+						return phone;
+					};
+					if (_.isArray(hookData.visitor.phone)){
+						phones = _.map(hookData.visitor.phone, phoneTreatment);
+					}else{
+						contactProcess.data.phone = phoneTreatment(hookData.visitor.phone);
 					}
 				}
 
@@ -309,6 +315,11 @@ app.post('/rest/rocketchat/livechat', function(req, res/*, next*/) {
 			res.statusCode = 400;
 			return res.end();
 	}
+
+	if (process.env.KONECTY_MODE !== 'production'){
+		console.log('RocketChak result ' + moment().format('DD/MM/YYYY HH:mm:ss') , JSON.stringify(result));
+	}
+
 	var response = { success: result.success };
 
 	if (result.success) {
