@@ -27,7 +27,6 @@ NotifyErrors.notify = (type, message, options) ->
 	if message?.details?.bugsnag is false
 		return
 
-	# Kadira.trackError type, message.message, stacks: message.stack
 	bugsnag.notify message, options
 
 

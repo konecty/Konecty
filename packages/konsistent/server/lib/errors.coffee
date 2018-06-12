@@ -30,7 +30,6 @@ NotifyErrors.notify = (type, message, options) ->
 
 	options.groupingHash = options.errorName + message.message
 
-	# Kadira.trackError type, message.message, stacks: message.stack
 	bugsnag.notify message, options
 
 
