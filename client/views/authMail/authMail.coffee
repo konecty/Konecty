@@ -17,7 +17,6 @@ Template.authMail.helpers
 Template.authMail.events
 	'click button.authorize': (event, instance) ->
 		user = Meteor.user()
-
 		loginConfig =
 			requestPermissions: ['https://mail.google.com/']
 			requestOfflineToken: true
@@ -28,7 +27,9 @@ Template.authMail.events
 		if user.emails?[0]?.address?
 			loginConfig.userEmail = user.emails[0].address
 
-		Meteor.loginWithGoogle loginConfig
+			Meteor.loginWithGoogle loginConfig, (err) ->
+				if err
+					console.log 'error : ' + err.message
 
 		# params =
 		# 	"response_type": "token",
