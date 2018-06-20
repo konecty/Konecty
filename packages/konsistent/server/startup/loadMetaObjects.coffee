@@ -76,8 +76,6 @@ Konsistent.start = (MetaObject, Models, rebuildMetas = true) ->
 
 	Konsistent.MetaObject.find({type: 'namespace'}).observe
 		added: (meta) ->
-			console.log 'add meta ->', meta
-
 			global.Namespace = meta
 
 		changed: (meta) ->
@@ -106,3 +104,23 @@ Konsistent.start = (MetaObject, Models, rebuildMetas = true) ->
 				rebuildReferencesTimer = setTimeout Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay
 
 		mailConsumer.start()
+
+	Accounts.loginServiceConfiguration.remove
+		service: "google"
+
+	if global.Namespace.googleApp?
+		console.log "Setup google config for accounts".green
+		Accounts.loginServiceConfiguration.insert
+			service: "google"
+			clientId: global.Namespace.googleApp.clientId
+			secret: global.Namespace.googleApp.secret
+
+	Accounts.loginServiceConfiguration.remove
+		service: "facebook"
+
+	if global.Namespace.facebookApp?
+		console.log "Setup facebook config for accounts".green
+		Accounts.loginServiceConfiguration.insert
+			service: "facebook"
+			appId: global.Namespace.facebookApp.appId
+			secret: global.Namespace.facebookApp.secret
