@@ -63,5 +63,5 @@ Npm.depends({
   "coffee-script": "1.8.0",
   xoauth2: "1.1.0",
   lodash: "4.17.10",
-  "mongodb-uri": "^0.9.7"
+  "mongodb-uri": "0.9.7"
 });
