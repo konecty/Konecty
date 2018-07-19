@@ -1,7 +1,10 @@
 language: node_js
 branches:
   only:
-  - "/^\\d+\\.\\d+\\.\\d+(-rc\\.\\d+|-dev)?$/"
+  - "/^\\d+\\.\\d+\\.\\d+$/"
+  - "/^\\d+\\.\\d+\\.\\d+(-alfa)$/"
+  - "/^\\d+\\.\\d+\\.\\d+(-beta\\.\\d)$/"
+  - "/^\\d+\\.\\d+\\.\\d+(-dev\\.\\d)$/"
 git:
   depth: 1
 node_js:
