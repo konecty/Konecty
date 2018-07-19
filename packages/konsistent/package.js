@@ -58,7 +58,7 @@ Npm.depends({
   nodemailer: "1.4.0",
   "nodemailer-smtp-transport": "1.0.3",
   async: "0.9.0",
-  "swig-email-templates": "4.0.0",
+  "swig-email-templates": "1.3.0",
   bugsnag: "1.5.1",
   "coffee-script": "1.8.0",
   xoauth2: "1.1.0",
