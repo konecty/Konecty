@@ -52,10 +52,10 @@ app.post '/rest/auth/login', (req, res, next) ->
 
 	if loginResult?.success is true
 		# Set cookie with session id
-		res.set 'set-cookie', "_authTokenId=#{loginResult.authId}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
 		if _.isString ns
-			res.set 'set-cookie', "_authTokenNs=#{ns}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
-
+			res.set 'set-cookie', "_authTokenId=#{loginResult.authId}; #{domain} Version=1; _authTokenNs=#{ns}; Path=/; Max-Age=#{cookieMaxAge.toString()}"
+		else
+			res.set 'set-cookie', "_authTokenId=#{loginResult.authId}; #{domain} Version=1; Path=/; Max-Age=#{cookieMaxAge.toString()}"
 		res.send loginResult
 	else
 		if loginResult?.errors?

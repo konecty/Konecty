@@ -1,4 +1,4 @@
-ua = require 'ua-parser'
+ua = require 'useragent'
 bcrypt = require 'bcrypt'
 bcryptHash = Meteor.wrapAsync bcrypt.hash
 bcryptCompare = Meteor.wrapAsync bcrypt.compare
@@ -8,8 +8,8 @@ SSR.compileTemplate 'resetPassword', Assets.getText('templates/email/resetPasswo
 injectRequestInformation = (userAgent, session) ->
 	r = ua.parse userAgent
 
-	session.browser = r.ua.family
-	session.browserVersion = r.ua.toVersionString()
+	session.browser = r.family
+	session.browserVersion = r.toVersion()
 	session.os = r.os.toString()
 	session.platform = r.device.family
 
@@ -71,6 +71,8 @@ Meteor.registerMethod 'auth:login', (request) ->
 	p = algorithm: 'sha-256', digest: p
 
 	logged = Accounts._checkPassword userRecord, p
+
+	console.log userRecord, p
 
 	if logged.error?
 		accessLog.reason = logged.error.reason

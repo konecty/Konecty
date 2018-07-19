@@ -6,11 +6,13 @@ bodyParser = require 'body-parser'
 swig = require 'swig'
 path = require 'path'
 bugsnag = require 'bugsnag'
+mongodbUri = require 'mongodb-uri'
 
 REQ_TIMEOUT = 1000 * 300
 RES_TIMEOUT = 1000 * 300
 
-process.env.dbName = process.env.MONGO_URL.split('/').pop()
+uri = mongodbUri.parse process.env.MONGO_URL
+process.env.dbName = uri.database
 console.log "[kondata] === #{process.env.dbName} ===".green
 
 bugsnag.register '3aff690ae2254498bb9a88dcf8bbb211'
@@ -165,6 +167,7 @@ Picker.middleware (req, res, next) ->
 		return res.end response
 
 	res.render = (templateName, data) ->
+		console.log 'SWIG', templateName
 		tmpl = swig.compileFile path.join tplPath, templateName
 
 		renderedHtml = tmpl data

@@ -14,16 +14,17 @@
     "colors": "^1.1.2",
     "cookie-parser": "^1.4.3",
     "crypto-js": "^3.1.8",
-    "excel4node": "0.0.10",
+    "excel4node": "^1.4.0",
     "flat": "^2.0.1",
     "fs": "^0.0.1-security",
     "jquery": "^3.2.1",
     "lodash": "^4.17.10",
     "moment": "^2.18.1",
+    "mongodb-uri": "^0.9.7",
     "path": "^0.12.7",
     "request": "^2.81.0",
     "swig": "^1.4.2",
-    "ua-parser": "^0.3.5"
+    "useragent": "^2.3.0"
   },
   "devDependencies": {},
   "scripts": {
