@@ -362,6 +362,11 @@ app.get('/rest/rocketchat/livechat/queue', function(req, res/*, next*/) {
 		}
 	}
 
+	if (queue && !queue.active) {
+		res.writeHead(400, { 'Content-Type': 'application/json' });
+		return res.send('{ "success": false, "error": "Queue not active" }');
+	}
+
 	if (!departmentId && Namespace.RocketChat.livechat.queue) {
 		departmentId = Namespace.RocketChat.livechat.queue;
 	}
