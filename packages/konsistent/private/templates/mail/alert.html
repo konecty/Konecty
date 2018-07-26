@@ -78,7 +78,7 @@
 						</b>
 					</td>
 					<td style="border-collapse: collapse; background-color: #{% if loop.index0 % 2 == 0 %}FFF{% else %}F8F8F8{% endif %};">
-						{{ item.value }}
+						{{ htmlParser item.value }}
 					</td>
 				</tr>
 			{% endfor %}

@@ -67,9 +67,9 @@ operatoresByType =
 	#TODO improve filter
 	'filter'            : ['exists']
 	'filter.conditions' : ['exists']
-	'richText'          : ['exists', 'contains']
+	'richText'          : ['exists',																					'contains']
 	'file'              : ['exists']
-	'percentage'		: ['less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between', 'exists', 'equals', 'not_equals']
+	'percentage'				: ['exists', 'equals', 'not_equals',																																				'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 
 filterUtils = {}
 
