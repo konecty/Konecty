@@ -39,7 +39,7 @@ operatoresByType =
 	'autoNumber'        : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'date'              : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'dateTime'          : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
-	#TODO 'time'              : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
+	#TODO 'time'        : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'money.currency'    : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'money.value'       : ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'boolean'           : ['exists', 'equals', 'not_equals']
@@ -67,9 +67,9 @@ operatoresByType =
 	#TODO improve filter
 	'filter'            : ['exists']
 	'filter.conditions' : ['exists']
-	'richText'          : ['exists', 'contains']
+	'richText'          : ['exists',					  'contains']
 	'file'              : ['exists']
-	'percentage'		: ['less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between', 'exists', 'equals', 'not_equals']
+	'percentage'        : ['exists', 'equals', 'not_equals',									'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 
 filterUtils = {}
 
