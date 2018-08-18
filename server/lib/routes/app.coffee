@@ -6,11 +6,13 @@ bodyParser = require 'body-parser'
 swig = require 'swig'
 path = require 'path'
 bugsnag = require 'bugsnag'
+mongodbUri = Npm.require 'mongodb-uri'
 
 REQ_TIMEOUT = 1000 * 300
 RES_TIMEOUT = 1000 * 300
 
-process.env.dbName = process.env.MONGO_URL.split('/').pop()
+uriObject = mongodbUri.parse(process.env.MONGO_URL)
+process.env.dbName = uriObject.database
 console.log "[kondata] === #{process.env.dbName} ===".green
 
 bugsnag.register '3aff690ae2254498bb9a88dcf8bbb211'

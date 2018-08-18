@@ -10,7 +10,9 @@ Konsistent.References = {}
 Konsistent.tailHandle = null
 
 # Get db name from connection string
-dbName = process.env.MONGO_URL.split('/').pop()
+mongodbUri = Npm.require 'mongodb-uri'
+uriObject = mongodbUri.parse(process.env.MONGO_URL)
+dbName = uriObject.database
 if _.isEmpty(process.env.DISABLE_KONSISTENT) or process.env.DISABLE_KONSISTENT is 'false' or process.env.DISABLE_KONSISTENT is '0'
 	console.log "[konsistent] === #{dbName} ===".green
 

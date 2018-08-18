@@ -1,6 +1,8 @@
 bugsnag = Npm.require 'bugsnag'
 
-process.env.dbName = process.env.MONGO_URL.split('/').pop()
+mongodbUri = Npm.require 'mongodb-uri'
+uriObject = mongodbUri.parse(process.env.MONGO_URL)
+process.env.dbName = uriObject.database
 
 bugsnag.register 'e6464a5423ceea7cb3b5b7ee8731f0fb'
 
