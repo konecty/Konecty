@@ -284,13 +284,13 @@ Meteor.methods
 
 		aggregate = Meteor.wrapAsync placeCollection.aggregate, placeCollection
 
-		results = aggregate pipeline, {cursor: {}}
+		results = aggregate pipeline, { cursor: { batchSize: 1 } }
 
 		if Models['AddressPlace']?
 			delete query.even
 			delete query.odd
 
-			localResults = Models['AddressPlace'].aggregate pipeline
+			localResults = Models['AddressPlace'].aggregate pipeline, { cursor: { batchSize: 1 } }
 
 			if localResults?.length > 0
 				results = results.concat localResults
