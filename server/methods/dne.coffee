@@ -284,7 +284,7 @@ Meteor.methods
 
 		aggregate = Meteor.wrapAsync placeCollection.aggregate, placeCollection
 
-		results = aggregate pipeline
+		results = aggregate pipeline, {cursor: {}}
 
 		if Models['AddressPlace']?
 			delete query.even

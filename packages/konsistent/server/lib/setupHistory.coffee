@@ -505,7 +505,7 @@ Konsistent.History.updateRelationReference = (metaName, relation, lookupId, acti
 
 		# Try to execute agg and log error if fails
 		try
-			result = aggregate pipeline
+			result = aggregate pipeline, {cursor: {}}
 			# If result was an array with one item cotaining a property value
 			if _.isArray(result) and _.isObject(result[0]) and result[0].value?
 				# If aggregator is of type money create an object with value and currency
