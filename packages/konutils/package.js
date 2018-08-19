@@ -30,6 +30,7 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  'moment': '2.18.1',
-  'moment-timezone': '0.5.13'
+  moment: '2.18.1',
+  'moment-timezone': '0.5.13',
+  request: '2.88.0'
 });

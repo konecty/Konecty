@@ -55,12 +55,13 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  "nodemailer": "1.4.0",
-  "nodemailer-smtp-transport": "1.0.3",
-  "async": "0.9.0",
-  "swig-email-templates": "1.3.0",
-  "bugsnag": "1.5.1",
-  "coffee-script": "1.8.0",
-  "xoauth2": "1.1.0",
-  "lodash": "4.17.10"
+  nodemailer: '1.4.0',
+  'nodemailer-smtp-transport': '1.0.3',
+  async: '2.6.1',
+  'swig-email-templates': '5.0.1',
+  bugsnag: '2.4.3',
+  'coffee-script': '1.12.7',
+  xoauth2: '1.2.0',
+  lodash: '4.17.10',
+  'mongodb-uri': '0.9.7'
 });

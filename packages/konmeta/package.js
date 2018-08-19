@@ -11,11 +11,11 @@ Package.describe({
 });
 
 Npm.depends({
-  "mongodb": "2.2.31"
+  "mongodb": "3.1.3"
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.5.1');
+  // api.versionsFrom('1.5.1');
 
   api.use('mongo');
   api.use('webapp');
