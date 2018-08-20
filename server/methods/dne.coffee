@@ -33,6 +33,7 @@ accentToRegex = (str) ->
 	str = str.replace 's', '[sšß]'
 	str = str.replace 'z', '[zž]'
 	str = str.replace 'y', '[yýÿY¥]'
+	str = str.replace '\\', '\\\\'
 	return str
 
 Meteor.methods

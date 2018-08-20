@@ -363,7 +363,7 @@ app.get('/rest/rocketchat/livechat/queue', function(req, res /*, next*/) {
       $or: [{ _id: departmentId }, { name: departmentId }]
     };
 
-    queue = Models.Queue.findOne(queueQuery, { fields: { _id: 1 } });
+    queue = Models.Queue.findOne(queueQuery, { fields: { _id: 1, active: 1 } });
     if (queue) {
       departmentId = queue._id;
     } else {
