@@ -205,7 +205,7 @@ Meteor.methods
 
 			pipeline = [match, group, project, sort]
 
-			localResults = Models['AddressPlace'].aggregate pipeline
+			localResults = Models['AddressPlace'].aggregate pipeline, { cursor: { batchSize: 1 } }
 
 			if localResults?.length > 0
 				results = results.concat localResults
