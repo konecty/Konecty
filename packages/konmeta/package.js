@@ -10,17 +10,16 @@ Package.describe({
   documentation: 'README.md'
 });
 
-Npm.depends({
-  "mongodb": "3.1.3"
-});
+// Npm.depends({
+//   "mongodb": "3.1.3"
+// });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   // api.versionsFrom('1.5.1');
 
   api.use('mongo');
   api.use('webapp');
   api.use('ecmascript');
-  api.use('coffeescript');
 
   api.addAssets('metadata/core.MetaObject.json', 'server');
   api.addAssets('metadata/core.Namespace.json', 'server');

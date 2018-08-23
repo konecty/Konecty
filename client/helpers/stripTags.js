@@ -1,0 +1,1 @@
+UI.registerHelper('stripTags', str => _.stripTags(str));
