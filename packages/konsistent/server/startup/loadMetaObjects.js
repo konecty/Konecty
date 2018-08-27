@@ -1,169 +1,173 @@
 /*
  * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
  * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
-// import Konsistent from '../imports';
 
-this.Namespace = {};
+Namespace = {};
 
 const rebuildReferences = function() {
-	Konsistent.History.setup();
+  Konsistent.History.setup();
 
-	console.log('[konsistent] Rebuilding references');
-	return Konsistent.References = buildReferences(Meta);
+  console.log('[konsistent] Rebuilding references');
+  Konsistent.References = buildReferences(Meta);
 };
 
 const registerMeta = function(meta) {
-	if (meta.collection == null) { meta.collection = `data.${meta.name}`; }
-	Meta[meta.name] = meta;
-	Konsistent.MetaByCollection[meta.collection] = meta;
+  if (meta.collection == null) {
+    meta.collection = `data.${meta.name}`;
+  }
+  Meta[meta.name] = meta;
+  Konsistent.MetaByCollection[meta.collection] = meta;
 
-	if (!Konsistent.Models[meta.name]) {
-		Konsistent.Models[`${meta.name}.History`] = Konsistent._Models[`${meta.name}.History`] || new Meteor.Collection(`${meta.collection}.History`);
-		Konsistent.Models[`${meta.name}.Trash`] = Konsistent._Models[`${meta.name}.Trash`] || new Meteor.Collection(`${meta.collection}.Trash`);
-		Konsistent.Models[`${meta.name}.Comment`] = Konsistent._Models[`${meta.name}.Comment`] || new Meteor.Collection(`${meta.collection}.Comment`);
-		Konsistent.Models[`${meta.name}.AutoNumber`] = Konsistent._Models[`${meta.name}.AutoNumber`] || new Meteor.Collection(`${meta.collection}.AutoNumber`);
+  if (!Konsistent.Models[meta.name]) {
+    Konsistent.Models[`${meta.name}.History`] =
+      Konsistent._Models[`${meta.name}.History`] || new Meteor.Collection(`${meta.collection}.History`);
+    Konsistent.Models[`${meta.name}.Trash`] =
+      Konsistent._Models[`${meta.name}.Trash`] || new Meteor.Collection(`${meta.collection}.Trash`);
+    Konsistent.Models[`${meta.name}.Comment`] =
+      Konsistent._Models[`${meta.name}.Comment`] || new Meteor.Collection(`${meta.collection}.Comment`);
+    Konsistent.Models[`${meta.name}.AutoNumber`] =
+      Konsistent._Models[`${meta.name}.AutoNumber`] || new Meteor.Collection(`${meta.collection}.AutoNumber`);
 
-		switch (meta.collection) {
-			case 'users':
-				return Konsistent.Models[meta.name] = Meteor.users;
-			default:
-				return Konsistent.Models[meta.name] = Konsistent._Models[meta.name] || new Meteor.Collection(meta.collection);
-		}
-	}
+    switch (meta.collection) {
+      case 'users':
+        Konsistent.Models[meta.name] = Meteor.users;
+      default:
+        Konsistent.Models[meta.name] = Konsistent._Models[meta.name] || new Meteor.Collection(meta.collection);
+    }
+  }
 };
-
 
 const deregisterMeta = function(meta) {
-	delete Meta[meta.name];
-
-	delete Konsistent.Models[`${meta.name}.History`];
-	delete Konsistent.Models[`${meta.name}.Trash`];
-	delete Konsistent.Models[`${meta.name}.Comment`];
-	delete Konsistent.Models[`${meta.name}.AutoNumber`];
-	return delete Konsistent.Models[meta.name];
+  delete Meta[meta.name];
+  delete Konsistent.Models[`${meta.name}.History`];
+  delete Konsistent.Models[`${meta.name}.Trash`];
+  delete Konsistent.Models[`${meta.name}.Comment`];
+  delete Konsistent.Models[`${meta.name}.AutoNumber`];
+  delete Konsistent.Models[meta.name];
 };
 
-
 const registerTemplate = function(record) {
-	Templates[record._id] = {
-		template: SSR.compileTemplate(record._id, record.value),
-		subject: record.subject
-	};
+  Templates[record._id] = {
+    template: SSR.compileTemplate(record._id, record.value),
+    subject: record.subject
+  };
 
-	return (() => {
-		const result = [];
-		for (let name in record.helpers) {
-			let fn = record.helpers[name];
-			const helper = {};
-			fn = [].concat(fn);
-			helper[name] = Function.apply(null, fn);
-			result.push(Template[record._id].helpers(helper));
-		}
-		return result;
-	})();
+  for (let name in record.helpers) {
+    let fn = record.helpers[name];
+    const helper = {};
+    fn = [].concat(fn);
+    helper[name] = Function.apply(null, fn);
+    result.push(Template[record._id].helpers(helper));
+  }
 };
 
 Konsistent.start = function(MetaObject, Models, rebuildMetas) {
-	if (rebuildMetas == null) { rebuildMetas = true; }
-	Konsistent.MetaObject = MetaObject;
-	Konsistent._Models = Models || {};
+  if (rebuildMetas === null) {
+    rebuildMetas = true;
+  }
+  Konsistent.MetaObject = MetaObject;
+  Konsistent._Models = Models || {};
 
-	UserPresenceMonitor.setVisitorStatus = function(id, status) {
-		if ((Konsistent._Models.ChatVisitor == null)) { Konsistent._Models.ChatVisitor = new Meteor.Collection("data.ChatVisitor"); }
-		return Konsistent._Models.ChatVisitor.updateOne({_id: id, userStatus: {$ne: status}}, {$set: {userStatus: status}});
-	};
+  UserPresenceMonitor.setVisitorStatus = function(id, status) {
+    if (Konsistent._Models.ChatVisitor == null) {
+      Konsistent._Models.ChatVisitor = new Meteor.Collection('data.ChatVisitor');
+    }
+    Konsistent._Models.ChatVisitor.update({ _id: id, userStatus: { $ne: status } }, { $set: { userStatus: status } });
+  };
 
-	UserPresenceMonitor.start();
+  UserPresenceMonitor.start();
 
-	const MetaObjectQuery =
-		{type: 'document'};
+  const MetaObjectQuery = { type: 'document' };
 
-	Meteor.publish("konsistent/metaObject", function() {
-		if (this.userId == null) { return this.ready(); }
+  Meteor.publish('konsistent/metaObject', function() {
+    if (this.userId == null) {
+      return this.ready();
+    }
 
-		return Konsistent.MetaObject.find(MetaObjectQuery);
-	});
+    return Konsistent.MetaObject.find(MetaObjectQuery);
+  });
 
-	if (Konsistent._Models.Template != null) {
-		Konsistent._Models.Template.find({type: 'email'}).observe({
-			added(record) {
-				return registerTemplate(record);
-			},
+  if (Konsistent._Models.Template != null) {
+    Konsistent._Models.Template.find({ type: 'email' }).observe({
+      added(record) {
+        registerTemplate(record);
+      },
 
-			changed(record) {
-				return registerTemplate(record);
-			},
+      changed(record) {
+        registerTemplate(record);
+      },
 
-			removed(record) {
-				return delete Templates[record._id];
-			}});
-	}
+      removed(record) {
+        delete Templates[record._id];
+      }
+    });
+  }
 
-	Konsistent.MetaObject.find({type: 'namespace'}).observe({
-		added(meta) {
-			return global.Namespace = meta;
-		},
+  Konsistent.MetaObject.find({ type: 'namespace' }).observe({
+    added(meta) {
+      global.Namespace = meta;
+    },
 
-		changed(meta) {
-			return global.Namespace = meta;
-		}
-	});
+    changed(meta) {
+      global.Namespace = meta;
+    }
+  });
 
-	if (rebuildMetas) {
-		let rebuildReferencesTimer = null;
-		const rebuildReferencesDelay = 100;
-		Konsistent.MetaObject.find(MetaObjectQuery).observe({
-			added(meta) {
-				registerMeta(meta);
+  if (rebuildMetas) {
+    let rebuildReferencesTimer = null;
+    const rebuildReferencesDelay = 100;
+    Konsistent.MetaObject.find(MetaObjectQuery).observe({
+      added(meta) {
+        registerMeta(meta);
 
-				clearTimeout(rebuildReferencesTimer);
-				return rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
-			},
+        clearTimeout(rebuildReferencesTimer);
+        rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
+      },
 
-			changed(meta) {
-				registerMeta(meta);
+      changed(meta) {
+        registerMeta(meta);
 
-				clearTimeout(rebuildReferencesTimer);
-				return rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
-			},
+        clearTimeout(rebuildReferencesTimer);
+        rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
+      },
 
-			removed(meta) {
-				deregisterMeta(meta);
+      removed(meta) {
+        deregisterMeta(meta);
 
-				clearTimeout(rebuildReferencesTimer);
-				return rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
-			}
-		});
+        clearTimeout(rebuildReferencesTimer);
+        rebuildReferencesTimer = setTimeout(Meteor.bindEnvironment(rebuildReferences), rebuildReferencesDelay);
+      }
+    });
 
-		mailConsumer.start();
-	}
+    mailConsumer.start();
+  }
 
-	Accounts.loginServiceConfiguration.remove({
-		service: "google"});
+  Accounts.loginServiceConfiguration.remove({
+    service: 'google'
+  });
 
-	if (global.Namespace.googleApp != null) {
-		console.log("Setup google config for accounts".green);
-		Accounts.loginServiceConfiguration.insert({
-			service: "google",
-			clientId: global.Namespace.googleApp.clientId,
-			secret: global.Namespace.googleApp.secret
-		});
-	}
+  if (global.Namespace.googleApp != null) {
+    console.log('Setup google config for accounts'.green);
+    Accounts.loginServiceConfiguration.insert({
+      service: 'google',
+      clientId: global.Namespace.googleApp.clientId,
+      secret: global.Namespace.googleApp.secret
+    });
+  }
 
-	Accounts.loginServiceConfiguration.remove({
-		service: "facebook"});
+  Accounts.loginServiceConfiguration.remove({
+    service: 'facebook'
+  });
 
-	if (global.Namespace.facebookApp != null) {
-		console.log("Setup facebook config for accounts".green);
-		return Accounts.loginServiceConfiguration.insert({
-			service: "facebook",
-			appId: global.Namespace.facebookApp.appId,
-			secret: global.Namespace.facebookApp.secret
-		});
-	}
+  if (global.Namespace.facebookApp != null) {
+    console.log('Setup facebook config for accounts'.green);
+    Accounts.loginServiceConfiguration.insert({
+      service: 'facebook',
+      appId: global.Namespace.facebookApp.appId,
+      secret: global.Namespace.facebookApp.secret
+    });
+  }
 };

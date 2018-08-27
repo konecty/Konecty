@@ -1,1 +1,0 @@
-UI.registerHelper('isArray', value => _.isArray(value));

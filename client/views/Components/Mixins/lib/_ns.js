@@ -1,1 +1,0 @@
-this.Mixin = class Mixin {};

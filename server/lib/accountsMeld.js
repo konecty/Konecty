@@ -1,18 +1,17 @@
 const orig_updateOrCreateUserFromExternalService = Accounts.updateOrCreateUserFromExternalService;
 Accounts.updateOrCreateUserFromExternalService = function(serviceName, serviceData, options) {
-	const userId = Meteor.userId();
+  const userId = Meteor.userId();
 
-	if (!userId) {
-		return;
-	}
+  if (!userId) {
+    return;
+  }
 
-	const update =
-		{$set: {}};
+  const update = { $set: {} };
 
-	const serviceIdKey = `services.${serviceName}.id`;
-	update.$set[serviceIdKey] = serviceData.id;
+  const serviceIdKey = `services.${serviceName}.id`;
+  update.$set[serviceIdKey] = serviceData.id;
 
-	Meteor.users.updateOne(userId, update);
+  Meteor.users.update(userId, update);
 
-	return orig_updateOrCreateUserFromExternalService.apply(this, arguments);
+  return orig_updateOrCreateUserFromExternalService.apply(this, arguments);
 };

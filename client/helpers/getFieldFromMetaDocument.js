@@ -1,1 +1,0 @@
-UI.registerHelper('getFieldFromMetaDocument', (metaDocument, fieldName) => metaDocument.fields[fieldName]);
