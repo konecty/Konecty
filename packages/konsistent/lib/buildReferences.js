@@ -1,10 +1,4 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-this.buildReferences = function(Meta) {
+buildReferences = function(Meta) {
   const References = {};
 
   for (let metaName in Meta) {
@@ -12,13 +6,13 @@ this.buildReferences = function(Meta) {
     for (let fieldName in meta.fields) {
       const field = meta.fields[fieldName];
       if (field.type === 'lookup') {
-        if (References[field.document] == null) {
+        if (!References[field.document]) {
           References[field.document] = {};
         }
-        if (References[field.document].from == null) {
+        if (!References[field.document].from) {
           References[field.document].from = {};
         }
-        if (References[field.document].from[metaName] == null) {
+        if (!References[field.document].from[metaName]) {
           References[field.document].from[metaName] = {};
         }
         References[field.document].from[metaName][fieldName] = {
@@ -34,24 +28,24 @@ this.buildReferences = function(Meta) {
 
     if (_.isArray(meta.relations)) {
       for (let relation of meta.relations) {
-        if (References[relation.document] == null) {
+        if (!References[relation.document]) {
           References[relation.document] = {};
         }
-        if (References[relation.document].relationsFrom == null) {
+        if (!References[relation.document].relationsFrom) {
           References[relation.document].relationsFrom = {};
         }
-        if (References[relation.document].relationsFrom[metaName] == null) {
+        if (!References[relation.document].relationsFrom[metaName]) {
           References[relation.document].relationsFrom[metaName] = [];
         }
         References[relation.document].relationsFrom[metaName].push(relation);
 
-        if (References[metaName] == null) {
+        if (!References[metaName]) {
           References[metaName] = {};
         }
-        if (References[metaName].relationsTo == null) {
+        if (!References[metaName].relationsTo) {
           References[metaName].relationsTo = {};
         }
-        if (References[metaName].relationsTo[relation.document] == null) {
+        if (!References[metaName].relationsTo[relation.document]) {
           References[metaName].relationsTo[relation.document] = [];
         }
         References[metaName].relationsTo[relation.document].push(relation);

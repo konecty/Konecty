@@ -1,14 +1,10 @@
-/*
- * decaffeinate suggestions:
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 /* List history for a record
 	@param authTokenId
 	@param document
 	@param dataId
 	@param fields
 */
+import { has } from 'lodash';
 Meteor.registerMethod('history:find', 'withUser', 'withAccessForDocument', function(request) {
   // Verify if user have permission to read records
   let value;
@@ -29,7 +25,7 @@ Meteor.registerMethod('history:find', 'withUser', 'withAccessForDocument', funct
   for (let fieldName in metaObject.fields) {
     const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
     const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
-    if (accessField.isReadable !== true || (accessFieldConditions != null ? accessFieldConditions.READ : undefined) != null) {
+    if (accessField.isReadable !== true || has(accessFieldConditions, 'READ')) {
       if (emptyFields === true) {
         fields[fieldName] = 0;
       } else {
@@ -55,7 +51,7 @@ Meteor.registerMethod('history:find', 'withUser', 'withAccessForDocument', funct
   const records = historyModel.find(query, options).fetch();
 
   for (let record of records) {
-    if (record.diffs == null && record.data != null) {
+    if (!record.diffs && record.data) {
       record.diffs = {};
       for (field in record.data) {
         value = record.data[field];

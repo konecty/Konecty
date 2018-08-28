@@ -1,10 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-
 Namespace = {};
 
 const rebuildReferences = function() {
@@ -15,7 +8,7 @@ const rebuildReferences = function() {
 };
 
 const registerMeta = function(meta) {
-  if (meta.collection == null) {
+  if (!meta.collection) {
     meta.collection = `data.${meta.name}`;
   }
   Meta[meta.name] = meta;
@@ -60,7 +53,7 @@ const registerTemplate = function(record) {
     const helper = {};
     fn = [].concat(fn);
     helper[name] = Function.apply(null, fn);
-    result.push(Template[record._id].helpers(helper));
+    Template[record._id].helpers(helper);
   }
 };
 
@@ -72,7 +65,7 @@ Konsistent.start = function(MetaObject, Models, rebuildMetas) {
   Konsistent._Models = Models || {};
 
   UserPresenceMonitor.setVisitorStatus = function(id, status) {
-    if (Konsistent._Models.ChatVisitor == null) {
+    if (!Konsistent._Models.ChatVisitor) {
       Konsistent._Models.ChatVisitor = new Meteor.Collection('data.ChatVisitor');
     }
     Konsistent._Models.ChatVisitor.update({ _id: id, userStatus: { $ne: status } }, { $set: { userStatus: status } });
@@ -83,14 +76,14 @@ Konsistent.start = function(MetaObject, Models, rebuildMetas) {
   const MetaObjectQuery = { type: 'document' };
 
   Meteor.publish('konsistent/metaObject', function() {
-    if (this.userId == null) {
+    if (!this.userId) {
       return this.ready();
     }
 
     return Konsistent.MetaObject.find(MetaObjectQuery);
   });
 
-  if (Konsistent._Models.Template != null) {
+  if (Konsistent._Models.Template) {
     Konsistent._Models.Template.find({ type: 'email' }).observe({
       added(record) {
         registerTemplate(record);
@@ -149,7 +142,7 @@ Konsistent.start = function(MetaObject, Models, rebuildMetas) {
     service: 'google'
   });
 
-  if (global.Namespace.googleApp != null) {
+  if (global.Namespace.googleApp) {
     console.log('Setup google config for accounts'.green);
     Accounts.loginServiceConfiguration.insert({
       service: 'google',
@@ -162,7 +155,7 @@ Konsistent.start = function(MetaObject, Models, rebuildMetas) {
     service: 'facebook'
   });
 
-  if (global.Namespace.facebookApp != null) {
+  if (global.Namespace.facebookApp) {
     console.log('Setup facebook config for accounts'.green);
     Accounts.loginServiceConfiguration.insert({
       service: 'facebook',
