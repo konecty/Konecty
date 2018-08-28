@@ -1,9 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
   MochaWeb.testOnly(() =>
     describe('[method] data:save:lead', function() {
@@ -13,8 +7,8 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
           limit: 1
         };
 
-        return Meteor.call('data:find:all', options, function(err, result) {
-          if (err != null) {
+        Meteor.call('data:find:all', options, function(err, result) {
+          if (err) {
             return done(err);
           }
           try {
@@ -22,14 +16,14 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
             chai.expect(result).to.have.keys(['success', 'data']);
             chai.expect(result.success).to.be.true;
             // chai.expect(result.data.length).to.be.equal(0)
-            return done();
+            done();
           } catch (e) {
-            return done(e);
+            done(e);
           }
         });
       });
 
-      return it.skip('should save new Contact', function(done) {
+      it.skip('should save new Contact', function(done) {
         const request = {
           document: 'Contact',
           data: {
@@ -43,8 +37,8 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
         // queue:
         // 	_id: 'dvESwKLiWj9Adegyy'
 
-        return Meteor.call('data:lead:save', request, function(err, result) {
-          if (err != null) {
+        Meteor.call('data:lead:save', request, function(err, result) {
+          if (err) {
             return done(err);
           }
           try {
@@ -55,9 +49,9 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
             chai.expect(result.data[0]).to.contain.keys('code', 'name', 'email', 'status', '_user');
 
             // chai.expect(result.data[0].name).to.be.equal({ first: 'Primeiro', last: 'Contato Inserido', full: 'Primeiro Contato Inserido' })
-            return done();
+            done();
           } catch (e) {
-            return done(e);
+            done(e);
           }
         });
       });

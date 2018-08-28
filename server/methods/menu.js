@@ -1,9 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 /* Get system menu
 	@param authTokenId
 */
@@ -13,7 +7,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
   const accessCache = {};
 
   const getAccess = documentName => {
-    if (accessCache[documentName] == null) {
+    if (!accessCache[documentName]) {
       accessCache[documentName] = accessUtils.getAccessFor(documentName, this.user);
     }
     return accessCache[documentName];
@@ -30,7 +24,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
     metaObject._id = metaObject.namespace + ':' + metaObject._id;
 
     let access = undefined;
-    if (metaObject.document != null) {
+    if (metaObject.document) {
       access = getAccess(metaObject.document);
     } else {
       access = getAccess(metaObject.name);
@@ -54,7 +48,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
 
     metaObject.columns = columns;
 
-    if (metaObject.oldVisuals != null) {
+    if (metaObject.oldVisuals) {
       metaObject.visuals = metaObject.oldVisuals;
       delete metaObject.oldVisuals;
     }
@@ -78,7 +72,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
 
     if (_.isArray(metaObject.fields)) {
       for (let field of metaObject.fields) {
-        if (field.type === 'lookup' && (field.inheritedFields != null ? field.inheritedFields.length : undefined) > 0) {
+        if (field.type === 'lookup' && get(field, 'inheritedFields.length', 0) > 0) {
           field.type = 'inheritLookup';
         }
       }
@@ -92,14 +86,14 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
 
     metaObject._id = metaObject.namespace + ':' + metaObject._id;
 
-    return (list[metaObject._id] = metaObject);
+    list[metaObject._id] = metaObject;
   });
 
   return list;
 });
 
 Meteor.publish('MetaObjectsWithAccess', function() {
-  if (this.userId == null) {
+  if (!this.userId) {
     return this.ready();
   }
 
@@ -108,7 +102,7 @@ Meteor.publish('MetaObjectsWithAccess', function() {
   const accessCache = {};
 
   const getAccess = documentName => {
-    if (accessCache[documentName] == null) {
+    if (!accessCache[documentName]) {
       accessCache[documentName] = accessUtils.getAccessFor(documentName, user);
     }
     return accessCache[documentName];
@@ -117,11 +111,11 @@ Meteor.publish('MetaObjectsWithAccess', function() {
   const namespace = MetaObject.findOne({ _id: 'Namespace' });
 
   const processMetaObject = function(metaObject) {
-    if (metaObject.menuSorter == null) {
+    if (!metaObject.menuSorter) {
       metaObject.menuSorter = 999;
     }
     let access = undefined;
-    if (metaObject.document != null) {
+    if (metaObject.document) {
       access = getAccess(metaObject.document);
     } else {
       access = getAccess(metaObject.name);
@@ -154,17 +148,17 @@ Meteor.publish('MetaObjectsWithAccess', function() {
 
   MetaObject.find({ type: { $nin: ['namespace', 'access'] } }, { sort: { _id: 1 } }).observe({
     added(metaObject) {
-      return self.added('Menu', metaObject._id, processMetaObject(metaObject));
+      self.added('Menu', metaObject._id, processMetaObject(metaObject));
     },
 
     changed(metaObject) {
-      return self.changed('Menu', metaObject._id, processMetaObject(metaObject));
+      self.changed('Menu', metaObject._id, processMetaObject(metaObject));
     },
 
     removed(metaObject) {
-      return self.removed('Menu', metaObject._id, processMetaObject(metaObject));
+      self.removed('Menu', metaObject._id, processMetaObject(metaObject));
     }
   });
 
-  return self.ready();
+  self.ready();
 });

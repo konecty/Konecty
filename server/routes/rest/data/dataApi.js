@@ -1,13 +1,7 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 import moment from 'moment';
-
-const { flatten } = require('flat');
-const xl = require('excel4node');
+import { isString, isObject, isDate, isArray } from 'lodash';
+import { flatten } from 'flat';
+import { WorkBook } from 'excel4node';
 
 app.post('/rest/data/lead/save', (req, res, next) =>
   res.send(
@@ -22,7 +16,7 @@ app.post('/rest/data/lead/save', (req, res, next) =>
 /* @Find_Records */
 // Converted to method
 app.get('/rest/data/:document/find', function(req, res, next) {
-  if (_.isString(req.params.query.filter)) {
+  if (isString(req.params.query.filter)) {
     req.params.query.filter = JSON.parse(req.params.query.filter);
   }
 
@@ -45,7 +39,7 @@ app.get('/rest/data/:document/find', function(req, res, next) {
 
 // Converted to method
 app.post('/rest/data/:document/find', function(req, res, next) {
-  if (_.isObject(req.body)) {
+  if (isObject(req.body)) {
     req.params.query.filter = req.body;
   }
 
@@ -93,7 +87,7 @@ app.get('/rest/data/:document/:dataId', (req, res, next) =>
 // Converted to method
 app.get('/rest/data/:document/lookup/:field', function(req, res, next) {
   let filter = undefined;
-  if (_.isString(req.params.query.filter)) {
+  if (isString(req.params.query.filter)) {
     filter = JSON.parse(req.params.query.filter);
   }
 
@@ -215,7 +209,7 @@ const csvExport = function(headers, data, name, res) {
     for (let key of headers) {
       const v = item[key];
       // If no value then send empty string
-      value.push(v != null ? v : '');
+      value.push(v || '');
     }
 
     value = value.join(separator);
@@ -229,13 +223,13 @@ const csvExport = function(headers, data, name, res) {
   }
 
   // End request
-  return res.end();
+  res.end();
 };
 
 /* @Export_XLS */
 const xlsExport = function(headers, data, name, res) {
   let header, index;
-  const wb = new xl.WorkBook();
+  const wb = new WorkBook();
   wb.debug = false;
 
   const headerStyle = wb.Style();
@@ -261,7 +255,7 @@ const xlsExport = function(headers, data, name, res) {
       header = headers[index];
       let value = item[header] || '';
 
-      if (_.isDate(value)) {
+      if (isDate(value)) {
         value = moment(value).format('DD/MM/YYYY HH:mm:ss');
       }
 
@@ -308,7 +302,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
     });
 
     // If no meta found then send an error
-    if (listMeta == null) {
+    if (!listMeta) {
       return res.send(
         new Meteor.Error(
           'internal-error',
@@ -321,30 +315,30 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
     const meta = Meta[req.params.document];
 
     // If no meta found then send an error
-    if (meta == null) {
+    if (!meta) {
       return res.send(new Meteor.Error('internal-error', `[${req.params.document}] Can't find meta`));
     }
 
     let name = utils.getPlurals(listMeta, req.user) || utils.getLabel(listMeta, req.user);
-    if (name == null) {
+    if (!name) {
       name = utils.getPlurals(meta, req.user) || utils.getLabel(meta, req.user);
     }
-    if (name == null) {
+    if (!name) {
       name = req.params.document;
     }
 
     // If no filter was passed use filter from meta
-    if (!_.isString(req.params.query.filter) && _.isObject(listMeta.filter)) {
+    if (!isString(req.params.query.filter) && isObject(listMeta.filter)) {
       req.params.query.filter = JSON.stringify(listMeta.filter);
     }
 
     // If no sort was passed use sort from meta
-    if (!_.isString(req.params.query.sort) && _.isArray(listMeta.sorters)) {
+    if (!isString(req.params.query.sort) && isArray(listMeta.sorters)) {
       req.params.query.sort = JSON.stringify(listMeta.sorters);
     }
 
     // If no fields was passed use fields from meta
-    if (!_.isString(req.params.query.fields) && _.isObject(listMeta.columns)) {
+    if (!isString(req.params.query.fields) && isObject(listMeta.columns)) {
       fields = [];
       for (let column in listMeta.columns) {
         if (column.visible === true) {
@@ -354,7 +348,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
       req.params.query.fields = fields.join(',');
     }
 
-    if (_.isString(req.params.query.filter)) {
+    if (isString(req.params.query.filter)) {
       req.params.query.filter = JSON.parse(req.params.query.filter);
     }
 
@@ -394,9 +388,9 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
 
     // Call function to specific type
     if (req.params.type === 'xls') {
-      return xlsExport(Object.keys(keys), flatData, name, res);
+      xlsExport(Object.keys(keys), flatData, name, res);
     } else {
-      return csvExport(Object.keys(keys), flatData, name, res);
+      csvExport(Object.keys(keys), flatData, name, res);
     }
   })
 );

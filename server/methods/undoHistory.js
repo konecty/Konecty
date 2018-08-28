@@ -1,9 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 Meteor.methods({
   undoHistory(meta, historyId, keys, runUpdate) {
     return Meteor.wrapAsync(function(callback) {
@@ -18,7 +12,7 @@ Meteor.methods({
       const warnings = [];
       const infos = [];
       for (var key of keys) {
-        if ((history.diffs != null ? history.diffs[key] : undefined) == null) {
+        if (has(history, `diffs.${key}`)) {
           errors.push(`Chave ${key} não encontrada nas alterações do histórico`);
         } else {
           const diff = history.diffs[key];
@@ -51,7 +45,7 @@ Meteor.methods({
           updateFields.$set[key] = history.diffs[key].from;
         }
 
-        return Models[meta].update({ _id: dataId }, updateFields, (err, results) => callback(err, { success: true, infos }));
+        Models[meta].update({ _id: dataId }, updateFields, (err, results) => callback(err, { success: true, infos }));
       } else {
         return callback(null, { success: false });
       }

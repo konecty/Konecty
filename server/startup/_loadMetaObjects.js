@@ -1,18 +1,10 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 import { registerFirstUser, registerFirstGroup } from './initialData';
 
-this.Meta = {};
-this.DisplayMeta = {};
-this.Access = {};
-this.References = {};
-this.Namespace = {};
+Meta = {};
+DisplayMeta = {};
+Access = {};
+References = {};
+Namespace = {};
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
@@ -20,7 +12,7 @@ const logIndexActionEnable = false;
 
 const logIndexAction = function(msg) {
   if (logIndexActionEnable === true) {
-    return console.log(msg);
+    console.log(msg);
   }
 };
 
@@ -34,53 +26,39 @@ const rebuildReferences = function() {
   console.log('[kondata] Rebuilding references');
   global.References = {};
 
-  return (() => {
-    const result = [];
-    for (var metaName in Meta) {
-      var meta = Meta[metaName];
-      result.push(
-        (() => {
-          const result1 = [];
-          for (let fieldName in meta.fields) {
-            const field = meta.fields[fieldName];
-            if (field.type === 'lookup') {
-              if (References[field.document] == null) {
-                References[field.document] = { from: {} };
-              }
-              if (References[field.document].from[metaName] == null) {
-                References[field.document].from[metaName] = {};
-              }
-              result1.push(
-                (References[field.document].from[metaName][fieldName] = {
-                  type: field.type,
-                  field: fieldName,
-                  isList: field.isList,
-                  descriptionFields: field.descriptionFields,
-                  detailFields: field.detailFields
-                })
-              );
-            } else {
-              result1.push(undefined);
-            }
-          }
-          return result1;
-        })()
-      );
+  for (var metaName in Meta) {
+    var meta = Meta[metaName];
+    for (let fieldName in meta.fields) {
+      const field = meta.fields[fieldName];
+      if (field.type === 'lookup') {
+        if (!References[field.document]) {
+          References[field.document] = { from: {} };
+        }
+        if (!References[field.document].from[metaName]) {
+          References[field.document].from[metaName] = {};
+        }
+        References[field.document].from[metaName][fieldName] = {
+          type: field.type,
+          field: fieldName,
+          isList: field.isList,
+          descriptionFields: field.descriptionFields,
+          detailFields: field.detailFields
+        };
+      }
     }
-    return result;
-  })();
+  }
 };
 
 const tryEnsureIndex = function(model, fields, options) {
   try {
-    return model._ensureIndex(fields, options);
+    model._ensureIndex(fields, options);
   } catch (e) {
     if (overwriteExitingIndexes && e.toString().indexOf('already exists with different options') !== -1) {
       logIndexAction(`Overwriting index: ${JSON.stringify(fields)}`.yellow);
       model._dropIndex(fields);
-      return model._ensureIndex(fields, options);
+      model._ensureIndex(fields, options);
     } else {
-      return console.log('Index Error: '.red, e);
+      console.log('Index Error: '.red, e);
     }
   }
 };
@@ -88,13 +66,13 @@ const tryEnsureIndex = function(model, fields, options) {
 const initialData = _.debounce(
   Meteor.bindEnvironment(function() {
     registerFirstUser();
-    return registerFirstGroup();
+    registerFirstGroup();
   }),
   2000
 );
 
 const registerMeta = function(meta) {
-  if (meta.collection == null) {
+  if (!meta.collection) {
     meta.collection = `data.${meta.name}`;
   }
   Meta[meta.name] = meta;
@@ -122,7 +100,7 @@ const registerMeta = function(meta) {
     }
 
     Meteor.publish(`data.${meta.name}`, function(filter, limit) {
-      if (this.userId == null) {
+      if (!this.userId) {
         return this.ready();
       }
 
@@ -137,7 +115,7 @@ const registerMeta = function(meta) {
     // 	return Models["#{meta.name}.History"].find {}, {limit: limit or 30}
 
     Meteor.publish(`data.${meta.name}.History`, function(filter, limit) {
-      if (this.userId == null) {
+      if (!this.userId) {
         return this.ready();
       }
 
@@ -151,7 +129,7 @@ const registerMeta = function(meta) {
       // Drop data indexes
       let indexInformation, value;
       let indexesInformation = getIndexes(meta.name);
-      if (indexesInformation != null) {
+      if (indexesInformation) {
         for (indexInformation in indexesInformation) {
           value = indexesInformation[indexInformation];
           if (indexInformation !== '_id_') {
@@ -163,7 +141,7 @@ const registerMeta = function(meta) {
 
       // Drop comment indexes
       indexesInformation = getIndexes(`${meta.name}.Comment`);
-      if (indexesInformation != null) {
+      if (indexesInformation) {
         for (indexInformation in indexesInformation) {
           value = indexesInformation[indexInformation];
           if (indexInformation !== '_id_') {
@@ -175,18 +153,14 @@ const registerMeta = function(meta) {
 
       // Drop history indexes
       indexesInformation = getIndexes(`${meta.name}.History`);
-      if (indexesInformation != null) {
-        return (() => {
-          const result = [];
-          for (indexInformation in indexesInformation) {
-            value = indexesInformation[indexInformation];
-            if (indexInformation !== '_id_') {
-              logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`.red);
-              result.push(Models[`${meta.name}.History`]._dropIndex(indexInformation));
-            }
+      if (indexesInformation) {
+        for (indexInformation in indexesInformation) {
+          value = indexesInformation[indexInformation];
+          if (indexInformation !== '_id_') {
+            logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`.red);
+            Models[`${meta.name}.History`]._dropIndex(indexInformation);
           }
-          return result;
-        })();
+        }
       }
     };
 
@@ -309,13 +283,13 @@ const registerMeta = function(meta) {
       if (_.isObject(meta.indexes) && !_.isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
         for (let indexName in meta.indexes) {
           const index = meta.indexes[indexName];
-          if (index.keys == null) {
+          if (!index.keys) {
             index.keys = {};
           }
-          if (index.options == null) {
+          if (!index.options) {
             index.options = {};
           }
-          if (index.options.name == null) {
+          if (!index.options.name) {
             index.options.name = indexName;
           }
 
@@ -351,7 +325,7 @@ const registerMeta = function(meta) {
           }
         }
 
-        return tryEnsureIndex(Models[meta.name], keys, options);
+        tryEnsureIndex(Models[meta.name], keys, options);
       }
     };
     if (!process.env.DISABLE_REINDEX) {
@@ -361,7 +335,7 @@ const registerMeta = function(meta) {
 
   // wait required metas to create initial data
   if (Models['User'] && Models['Group']) {
-    return initialData();
+    initialData();
   }
 };
 
@@ -372,7 +346,7 @@ const deregisterMeta = function(meta) {
   delete Models[`${meta.name}.History`];
   delete Models[`${meta.name}.Trash`];
   delete Models[`${meta.name}.AutoNumber`];
-  return delete Models[meta.name];
+  delete Models[meta.name];
 };
 
 Meteor.startup(function() {
@@ -383,15 +357,15 @@ Meteor.startup(function() {
 
   MetaObject.find({ type: 'access' }).observe({
     added(meta) {
-      return (Access[meta._id] = meta);
+      Access[meta._id] = meta;
     },
 
     changed(meta) {
-      return (Access[meta._id] = meta);
+      Access[meta._id] = meta;
     },
 
     removed(meta) {
-      return delete Access[meta._id];
+      delete Access[meta._id];
     }
   });
 
@@ -403,35 +377,35 @@ Meteor.startup(function() {
       registerMeta(meta);
 
       clearTimeout(rebuildReferencesTimer);
-      return (rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay));
+      rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
     },
 
     changed(meta) {
       registerMeta(meta);
 
       clearTimeout(rebuildReferencesTimer);
-      return (rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay));
+      rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
     },
 
     removed(meta) {
       deregisterMeta(meta);
 
       clearTimeout(rebuildReferencesTimer);
-      return (rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay));
+      rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
     }
   });
 
-  return MetaObject.find({ type: { $in: ['pivot', 'view', 'list'] } }).observe({
+  MetaObject.find({ type: { $in: ['pivot', 'view', 'list'] } }).observe({
     added(meta) {
-      return (DisplayMeta[meta._id] = meta);
+      DisplayMeta[meta._id] = meta;
     },
 
     changed(meta) {
-      return (DisplayMeta[meta._id] = meta);
+      DisplayMeta[meta._id] = meta;
     },
 
     removed(meta) {
-      return delete DisplayMeta[meta._id];
+      delete DisplayMeta[meta._id];
     }
   });
 });

@@ -1,9 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
   MochaWeb.testOnly(() =>
     describe('Server initialization', function() {
@@ -769,7 +763,7 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
         });
         chai.expect(MetaObject.findOne('Namespace')).to.be.a('Object');
 
-        return chai.expect(MetaObject.find().count()).to.be.equal(4);
+        chai.expect(MetaObject.find().count()).to.be.equal(4);
       });
 
       it('should have User collection', () =>
@@ -778,7 +772,7 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
 
       it('should have 0 Users', () => chai.expect(Meteor.users.find().count()).to.be.equal(0));
 
-      return it('should have Users', function() {
+      it('should have Users', function() {
         Accounts.createUser({
           username: 'test',
           password: 'test'
@@ -797,7 +791,7 @@ if (typeof MochaWeb !== 'undefined' && MochaWeb !== null) {
           }
         );
 
-        return chai.expect(Meteor.users.find().count()).to.be.equal(1);
+        chai.expect(Meteor.users.find().count()).to.be.equal(1);
       });
     })
   );

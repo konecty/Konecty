@@ -1,10 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS202: Simplify dynamic range loops
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 /* Simualte merge
 	@TODO: Permissões?
 
@@ -117,7 +110,7 @@ Meteor.registerMethod(
     const processField = function(field) {
       let values = [];
       for (let record of records) {
-        if (record[field.name] != null) {
+        if (record[field.name]) {
           values.push({
             _id: record._id,
             value: record[field.name]
@@ -130,20 +123,20 @@ Meteor.registerMethod(
       }
 
       if (values.length === 1) {
-        return (merged[field.name] = values[0].value);
+        merged[field.name] = values[0].value;
       }
 
       if (values.length > 1) {
         if (field.isList === true) {
           values = processIsListField(values);
-          return (merged[field.name] = values[0].value);
+          merged[field.name] = values[0].value;
         } else {
           if (_.isArray(values[0].value) && _.difference(values[0].value, values[1].value).length === 0) {
-            return (merged[field.name] = values[0].value);
+            merged[field.name] = values[0].value;
           } else if (_.isEqual(values[0].value, values[1].value)) {
-            return (merged[field.name] = values[0].value);
+            merged[field.name] = values[0].value;
           } else {
-            return (conflicts[field.name] = values);
+            conflicts[field.name] = values;
           }
         }
       }
@@ -232,7 +225,7 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
   }
 
   // Add merge ids into record
-  if (request.data._merge == null) {
+  if (!request.data._merge) {
     request.data._merge = [];
   }
   request.data._merge = request.data._merge.concat(request.ids);
@@ -260,7 +253,7 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
     }
   });
 
-  if ((updateResult.data != null ? updateResult.data[0] : undefined) == null) {
+  if (has(updateResult, 'data.0')) {
     return updateResult;
   }
 
@@ -302,10 +295,8 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
     historyModel.updateMany({ dataId: record._id }, { $set: { dataId: request.targetId } });
   }
 
-  for (let referenceDocumentName in References[request.document] != null ? References[request.document].from : undefined) {
-    const referenceFields = (References[request.document] != null ? References[request.document].from : undefined)[
-      referenceDocumentName
-    ];
+  for (let referenceDocumentName in get(References[request.document], 'from')) {
+    const referenceFields = get(References[request.document], `from.${referenceDocumentName}`);
     for (let referenceFieldName in referenceFields) {
       const referenceField = referenceFields[referenceFieldName];
       update = {
