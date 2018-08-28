@@ -1,25 +1,20 @@
-/*
- * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-const ua = require('ua-parser');
-const bcrypt = require('bcrypt');
-const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
-const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
+import { parse } from 'ua-parser';
+import { hash, compare } from 'bcrypt';
+import { isString, isObject, get, has } from 'lodash';
+bcryptHash = Meteor.wrapAsync(hash);
+bcryptCompare = Meteor.wrapAsync(compare);
 
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
 const injectRequestInformation = function(userAgent, session) {
-  const r = ua.parse(userAgent);
+  const r = parse(userAgent);
 
   session.browser = r.ua.family;
   session.browserVersion = r.ua.toVersionString();
   session.os = r.os.toString();
   session.platform = r.device.family;
 
-  if (_.isString(resolution)) {
+  if (isString(resolution)) {
     var resolution = JSON.parse(resolution);
     session.resolution = resolution;
   }
@@ -50,7 +45,7 @@ Meteor.registerMethod('auth:login', function(request) {
   const namespace = MetaObject.findOne({ _id: 'Namespace' });
 
   // If there is a geolocation store it with session
-  if (_.isString(geolocation)) {
+  if (isString(geolocation)) {
     geolocation = JSON.parse(geolocation);
     accessLog.geolocation = [geolocation.lng, geolocation.lat];
   } else if (namespace.trackUserGeolocation === true) {
@@ -84,7 +79,7 @@ Meteor.registerMethod('auth:login', function(request) {
 
   const logged = Accounts._checkPassword(userRecord, p);
 
-  if (logged.error != null) {
+  if (logged.error) {
     accessLog.reason = logged.error.reason;
     injectRequestInformation(userAgent, accessLog);
     Models.AccessFailedLog.insert(accessLog);
@@ -114,7 +109,7 @@ Meteor.registerMethod('auth:login', function(request) {
   Meteor.users.update({ _id: userRecord._id }, updateObj);
 
   injectRequestInformation(userAgent, accessLog);
-  if (Models.AccessLog != null) {
+  if (Models.AccessLog) {
     Models.AccessLog.insert(accessLog);
   }
 
@@ -126,7 +121,7 @@ Meteor.registerMethod('auth:login', function(request) {
       _id: userRecord._id,
       access: userRecord.access,
       admin: userRecord.admin,
-      email: __guard__(userRecord.emails != null ? userRecord.emails[0] : undefined, x => x.address),
+      email: get(userRecord, 'emails.0.address'),
       group: userRecord.group,
       locale: userRecord.locale,
       login: userRecord.username,
@@ -166,7 +161,7 @@ Meteor.registerMethod('auth:info', 'withUser', function(request) {
   delete namespace.type;
 
   // If no namespace was found return error
-  if (namespace == null) {
+  if (!namespace) {
     return new Meteor.Error('internal-error', 'Namespace not found');
   }
 
@@ -178,7 +173,7 @@ Meteor.registerMethod('auth:info', 'withUser', function(request) {
       _id: this.user._id,
       access: this.user.access,
       admin: this.user.admin,
-      email: __guard__(this.user.emails != null ? this.user.emails[0] : undefined, x => x.address),
+      email: get(this.user, 'emails.0.address'),
       group: this.user.group,
       locale: this.user.locale,
       login: this.user.username,
@@ -251,7 +246,7 @@ Meteor.registerMethod('auth:resetPassword', function(request) {
 
   const emailData = {
     from: 'Konecty Alerts <alerts@konecty.com>',
-    to: __guard__(userRecord.emails != null ? userRecord.emails[0] : undefined, x => x.address),
+    to: get(userRecord, 'emails.0.address'),
     subject: '[Konecty] Password Reset',
     template: 'resetPassword.html',
     type: 'Email',
@@ -281,7 +276,7 @@ Meteor.registerMethod('auth:setPassword', 'withUser', function(request) {
   const access = accessUtils.getAccessFor('User', this.user);
 
   // If return is false no access was found then return 401 (Unauthorized)
-  if (!_.isObject(access)) {
+  if (!isObject(access)) {
     return new Meteor.Error('internal-error', 'Permissão negada.');
   }
 
@@ -312,7 +307,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
   const access = accessUtils.getAccessFor('User', this.user);
 
   // If return is false no access was found then return 401 (Unauthorized)
-  if (!_.isObject(access)) {
+  if (!isObject(access)) {
     return new Meteor.Error('internal-error', 'Permissão negada.');
   }
 
@@ -329,7 +324,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
   const errors = [];
 
   for (let userRecord of userRecords) {
-    if (__guard__(userRecord.emails != null ? userRecord.emails[0] : undefined, x => x.address) == null) {
+    if (!has(userRecord, 'emails.0.address')) {
       errors.push(new Meteor.Error('internal-error', `Usuário [${userRecord.username}] sem email definido.`));
       continue;
     }
@@ -355,7 +350,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 
     Models['Message'].insert({
       from: 'Konecty <support@konecty.com>',
-      to: __guard__(userRecord.emails != null ? userRecord.emails[0] : undefined, x1 => x1.address),
+      to: get(userRecord, 'emails.0.address'),
       subject: '[Konecty] Sua nova senha',
       body: html,
       type: 'Email',
@@ -381,13 +376,13 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 	@param ip
 */
 Meteor.registerMethod('auth:setGeolocation', 'withUser', function(request) {
-  if (Models.AccessLog == null) {
+  if (!Models.AccessLog) {
     return new Meteor.Error('internal-error', 'Models.AccessLog not defined.');
   }
 
   const { longitude, latitude, userAgent, ip } = request;
 
-  if (longitude == null || latitude == null) {
+  if (!longitude || !latitude) {
     return new Meteor.Error('internal-error', 'Longitude or Latitude not defined');
   }
 
@@ -415,12 +410,8 @@ Meteor.registerMethod('auth:setGeolocation', 'withUser', function(request) {
 });
 
 Accounts.onCreateUser(function(options, user) {
-  if (user.code == null) {
+  if (!user.code) {
     user.code = metaUtils.getNextCode('User', 'code');
   }
   return user;
 });
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null ? transform(value) : undefined;
-}

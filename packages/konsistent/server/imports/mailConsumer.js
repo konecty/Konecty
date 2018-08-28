@@ -1,24 +1,13 @@
-/*
- * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-// import Konsistent from './';
+import { resolve, join } from 'path';
+import { each } from 'async';
+import { createTransport } from 'nodemailer';
+import smtpTransport from 'nodemailer-smtp-transport';
+import emailTemplates from 'swig-email-templates';
+import { createXOAuth2Generator } from 'xoauth2';
+import { isObject, extend, omit, isEmpty, bind, get, has, join as _join, map } from 'lodash';
 
-this.Templates = {};
-
-const path = require('path');
-const async = require('async');
-const nodemailer = require('nodemailer');
-const smtpTransport = require('nodemailer-smtp-transport');
-const emailTemplates = require('swig-email-templates');
-const xoauth2 = require('xoauth2');
-const _ = require('lodash');
-
-const basePath = path.resolve('.').split('.meteor')[0];
+Templates = {};
+const basePath = resolve('.').split('.meteor')[0];
 
 let tplPath = 'packages/konsistent/private/templates/mail';
 
@@ -26,32 +15,28 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
   tplPath = `../../programs/server/assets/${tplPath}`;
 }
 
-const emailTemplateOptions = { root: path.join(basePath, tplPath) };
+const emailTemplateOptions = { root: join(basePath, tplPath) };
 
 let namespace = undefined;
 
 const transporters = {};
 
-this.mailConsumer = {};
+mailConsumer = {};
 
 mailConsumer.sendEmail = function(record, cb) {
   let user;
   let email;
   let server = transporters.default;
-  if (record.server != null) {
-    if (transporters[record.server] != null) {
+  if (record.server) {
+    if (transporters[record.server]) {
       server = transporters[record.server];
     } else if (record.server === 'googleApp') {
-      if (
-        (record._user != null ? record._user.length : undefined) > 0 &&
-        __guard__(namespace != null ? namespace.googleApp : undefined, x => x.clientId) != null &&
-        __guard__(namespace != null ? namespace.googleApp : undefined, x1 => x1.secret) != null
-      ) {
+      if (get(record, '_user.length', 0) > 0 && has(namespace, 'googleApp.clientId') && has(namespace, 'googleApp.secret')) {
         user = Konsistent.Models['User'].findOne(record._user[0]._id, { fields: { name: 1, emails: 1, 'services.google': 1 } });
 
         // console.log 'IF -> user?.services?.google?.idToken ->',user?.services?.google?.idToken
-        if (__guard__(__guard__(user != null ? user.services : undefined, x3 => x3.google), x2 => x2.idToken) != null) {
-          record.from = user.name + ' <' + (user.emails[0] != null ? user.emails[0].address : undefined) + '>';
+        if (has(user, 'services.google.idToken')) {
+          record.from = user.name + ' <' + get(user, 'emails.0.address') + '>';
 
           try {
             if (user.services.google.expiresAt < new Date()) {
@@ -66,12 +51,9 @@ mailConsumer.sendEmail = function(record, cb) {
             return cb();
           }
 
-          if (__guard__(__guard__(user != null ? user.services : undefined, x5 => x5.google), x4 => x4.idToken) != null) {
-            console.log(
-              'GENERATOR -> user?.services?.google?.idToken ->',
-              __guard__(user != null ? user.services : undefined, x6 => x6.google)
-            );
-            const generator = xoauth2.createXOAuth2Generator({
+          if (has(user, 'services.google.idToken')) {
+            console.log('GENERATOR -> user?.services?.google?.idToken ->', get(user, 'services.google'));
+            const generator = createXOAuth2Generator({
               user: user.emails[0].address,
               clientId: namespace.googleApp.clientId,
               clientSecret: namespace.googleApp.secret,
@@ -79,7 +61,7 @@ mailConsumer.sendEmail = function(record, cb) {
               accessToken: user.services.google.accessToken
             });
 
-            server = nodemailer.createTransport({
+            server = createTransport({
               service: 'gmail',
               auth: {
                 xoauth2: generator
@@ -96,38 +78,29 @@ mailConsumer.sendEmail = function(record, cb) {
     record.server = 'default';
   }
 
-  if (
-    _.isObject(namespace != null ? namespace.emailServers : undefined) &&
-    (namespace.emailServers[record.server] != null ? namespace.emailServers[record.server].useUserCredentials : undefined) === true
-  ) {
+  if (isObject(get(namespace, 'emailServers')) && get(namespace, `emailServers.${record.server}.useUserCredentials`) === true) {
     user = Konsistent.Models['User'].findOne(record._user[0]._id, {
       fields: { name: 1, emails: 1, emailAuthLogin: 1, emailAuthPass: 1 }
     });
-    console.log('IF -> user?.emailAuthLogin ->', user != null ? user.emailAuthLogin : undefined);
-    if (user != null ? user.emailAuthLogin : undefined) {
-      record.from = user.name + ' <' + (user.emails[0] != null ? user.emails[0].address : undefined) + '>';
-      server = nodemailer.createTransport(
-        _.extend({}, _.omit(namespace.emailServers[record.server], 'useUserCredentials'), {
+    console.log('IF -> user?.emailAuthLogin ->', get(user, 'emailAuthLogin'));
+    if (has(user, 'emailAuthLogin')) {
+      record.from = user.name + ' <' + get(user, 'emails.0.address') + '>';
+      server = createTransport(
+        extend({}, omit(namespace.emailServers[record.server], 'useUserCredentials'), {
           auth: { user: user.emailAuthLogin, pass: user.emailAuthPass }
         })
       );
     }
   }
 
-  if ((record.to == null || _.isEmpty(record.to)) && record.email != null) {
-    record.to = (() => {
-      const result = [];
-      for (email of [].concat(record.email)) {
-        result.push(email.address);
-      }
-      return result;
-    })().join(',');
+  if ((!record.to || isEmpty(record.to)) && record.email) {
+    record.to = _join(map(record.email, email => email.address), ',');
   }
 
-  if ((record.from == null || _.isEmpty(record.from)) && (record._user != null ? record._user.length : undefined) > 0) {
+  if ((!record.from || isEmpty(record.from)) && get(record, '_user.length', 0) > 0) {
     user = Konsistent.Models['User'].findOne(record._user[0]._id, { fields: { name: 1, emails: 1 } });
 
-    record.from = user.name + ' <' + (user.emails[0] != null ? user.emails[0].address : undefined) + '>';
+    record.from = user.name + ' <' + get(user, 'emails.0.address') + '>';
   }
 
   if (!record.to) {
@@ -165,11 +138,11 @@ mailConsumer.sendEmail = function(record, cb) {
     }
 
     if (mail.to) {
-      var serverHost = __guard__(__guard__(server != null ? server.transporter : undefined, x8 => x8.options), x7 => x7.host);
+      var serverHost = get(server, 'transporter.options.host');
       return server.sendMail(
         mail,
         Meteor.bindEnvironment(function(err, response) {
-          if (err != null) {
+          if (err) {
             err.host = serverHost || record.server;
             NotifyErrors.notify('MailError', err, { mail, err });
             Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
@@ -177,7 +150,7 @@ mailConsumer.sendEmail = function(record, cb) {
             return cb();
           }
 
-          if ((response != null ? response.accepted.length : undefined) > 0) {
+          if (get(response, 'accepted.length') > 0) {
             if (record.discard === true) {
               Konsistent.Models['Message'].remove({ _id: record._id });
             } else {
@@ -195,15 +168,15 @@ mailConsumer.sendEmail = function(record, cb) {
 };
 
 mailConsumer.send = function(record, cb) {
-  if (record.template == null) {
+  if (!record.template) {
     return mailConsumer.sendEmail(record, cb);
   }
 
-  if (Templates[record.template] != null) {
-    if (record.subject == null) {
+  if (Templates[record.template]) {
+    if (!record.subject) {
       record.subject = Templates[record.template].subject;
     }
-    record.body = SSR.render(record.template, _.extend({ message: { _id: record._id } }, record.data));
+    record.body = SSR.render(record.template, extend({ message: { _id: record._id } }, record.data));
     Konsistent.Models['Message'].update({ _id: record._id }, { $set: { body: record.body, subject: record.subject } });
     return mailConsumer.sendEmail(record, cb);
   }
@@ -211,13 +184,13 @@ mailConsumer.send = function(record, cb) {
   return emailTemplates(
     emailTemplateOptions,
     Meteor.bindEnvironment(function(err, render) {
-      if (err != null) {
+      if (err) {
         NotifyErrors.notify('MailError', err);
         Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
         return cb();
       }
 
-      if (record.data == null) {
+      if (!record.data) {
         record.data = {};
       }
 
@@ -225,7 +198,7 @@ mailConsumer.send = function(record, cb) {
         record.template,
         record.data,
         Meteor.bindEnvironment(function(err, html, text) {
-          if (err != null) {
+          if (err) {
             NotifyErrors.notify('MailError', err, { record });
             Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
             return cb();
@@ -241,13 +214,13 @@ mailConsumer.send = function(record, cb) {
 };
 
 mailConsumer.consume = function() {
-  if (Konsistent.Models['Message'] == null) {
+  if (!Konsistent.Models['Message']) {
     return;
   }
 
   mailConsumer.lockedAt = Date.now();
   const collection = Models.Message._getCollection();
-  const findOneAndUpdate = Meteor.wrapAsync(_.bind(collection.findOneAndUpdate, collection));
+  const findOneAndUpdate = Meteor.wrapAsync(bind(collection.findOneAndUpdate, collection));
 
   const query = {
     type: 'Email',
@@ -273,28 +246,28 @@ mailConsumer.consume = function() {
     return;
   }
 
-  return async.each(records, mailConsumer.send, () => mailConsumer.consume());
+  return each(records, mailConsumer.send, () => mailConsumer.consume());
 };
 
 mailConsumer.start = function() {
   namespace = Konsistent.MetaObject.findOne({ _id: 'Namespace' });
 
-  if (_.isObject(namespace != null ? namespace.emailServers : undefined)) {
+  if (isObject(get(namespace, 'emailServers'))) {
     for (let key in namespace.emailServers) {
       const value = namespace.emailServers[key];
       if (!value.useUserCredentials) {
         console.log(`Setup email server [${key}]`.green);
-        transporters[key] = nodemailer.createTransport(smtpTransport(value));
+        transporters[key] = createTransport(smtpTransport(value));
       }
     }
   }
 
   if (
-    transporters.default == null &&
-    process.env.DEFAULT_SMTP_HOST != null &&
-    process.env.DEFAULT_SMTP_PORT != null &&
-    process.env.DEFAULT_SMTP_USERNAME != null &&
-    process.env.DEFAULT_SMTP_PASSWORD != null
+    !transporters.default &&
+    process.env.DEFAULT_SMTP_HOST &&
+    process.env.DEFAULT_SMTP_PORT &&
+    process.env.DEFAULT_SMTP_USERNAME &&
+    process.env.DEFAULT_SMTP_PASSWORD
   ) {
     const defaultSMTPConfig = {
       host: process.env.DEFAULT_SMTP_HOST,
@@ -305,32 +278,32 @@ mailConsumer.start = function() {
       }
     };
 
-    if (process.env.DEFAULT_SMTP_SECURE != null) {
+    if (process.env.DEFAULT_SMTP_SECURE) {
       defaultSMTPConfig.secure = process.env.DEFAULT_SMTP_SECURE === 'true';
     }
 
-    if (process.env.DEFAULT_SMTP_TLS != null) {
+    if (process.env.DEFAULT_SMTP_TLS) {
       defaultSMTPConfig.tls = process.env.DEFAULT_SMTP_TLS;
     }
 
-    if (process.env.DEFAULT_SMTP_IGNORE_TLS != null) {
+    if (process.env.DEFAULT_SMTP_IGNORE_TLS) {
       defaultSMTPConfig.ignoreTLS = process.env.DEFAULT_SMTP_IGNORE_TLS === 'true';
     }
 
-    if (process.env.DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED != null) {
+    if (process.env.DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED) {
       defaultSMTPConfig.tls = { rejectUnauthorized: process.env.DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED === 'true' };
     }
 
-    if (process.env.DEFAULT_SMTP_AUTH_METHOD != null) {
+    if (process.env.DEFAULT_SMTP_AUTH_METHOD) {
       defaultSMTPConfig.authMethod = process.env.DEFAULT_SMTP_AUTH_METHOD;
     }
 
-    if (process.env.DEFAULT_SMTP_DEBUG != null) {
+    if (process.env.DEFAULT_SMTP_DEBUG) {
       defaultSMTPConfig.debug = process.env.DEFAULT_SMTP_DEBUG === 'true';
     }
 
     console.log(`Setup default email server -> [${JSON.stringify(defaultSMTPConfig)}]`.green);
-    transporters.default = nodemailer.createTransport(smtpTransport(defaultSMTPConfig));
+    transporters.default = createTransport(smtpTransport(defaultSMTPConfig));
   }
 
   mailConsumer.consume();
@@ -341,7 +314,3 @@ mailConsumer.start = function() {
     }
   }, 120000);
 };
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null ? transform(value) : undefined;
-}

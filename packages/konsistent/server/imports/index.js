@@ -1,14 +1,9 @@
 /*
- * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-/*
  * @TODO test sincrony
  */
+import { isEmpty, bind, isObject, isString, uniq, intersection, isArray, compact, has, get } from 'lodash';
+import { parse } from 'mongodb-uri';
+
 Konsistent = {};
 Meta = {};
 
@@ -19,11 +14,10 @@ Konsistent.References = {};
 Konsistent.tailHandle = null;
 
 // Get db name from connection string
-const mongodbUri = require('mongodb-uri');
-const uriObject = mongodbUri.parse(process.env.MONGO_URL);
+const uriObject = parse(process.env.MONGO_URL);
 const dbName = uriObject.database;
 if (
-  _.isEmpty(process.env.DISABLE_KONSISTENT) ||
+  isEmpty(process.env.DISABLE_KONSISTENT) ||
   process.env.DISABLE_KONSISTENT === 'false' ||
   process.env.DISABLE_KONSISTENT === '0'
 ) {
@@ -46,8 +40,8 @@ const CursorDescription = function(collectionName, selector, options) {
 
 // Method to init data obervation of all collections with meta.saveHistory equals to true
 Konsistent.History.setup = function() {
-  if ((Konsistent.History != null ? Konsistent.History.db : undefined) != null) {
-    if (Konsistent.tailHandle != null) {
+  if (has(Konsistent, 'History.db')) {
+    if (Konsistent.tailHandle) {
       Konsistent.tailHandle.stop();
     }
     Konsistent.History.db.close();
@@ -85,7 +79,7 @@ Konsistent.History.setup = function() {
   const query = { $or: [queryData, queryTrash] };
 
   // If there are some saved point add ts condition to get records after these point
-  if ((lastProcessedOplog != null ? lastProcessedOplog.ts : undefined) != null) {
+  if (has(lastProcessedOplog, 'ts')) {
     query.ts = { $gt: lastProcessedOplog.ts };
   }
 
@@ -99,15 +93,15 @@ Konsistent.History.setup = function() {
   const collection = Konsistent.History.db.rawCollection('oplog.rs');
 
   // If there are no ts saved go to db to get last oplog registered
-  if (query.ts == null) {
+  if (!query.ts) {
     // Turn findOne sync
-    const findOne = Meteor.wrapAsync(_.bind(collection.findOne, collection));
+    const findOne = Meteor.wrapAsync(bind(collection.findOne, collection));
 
     // find last oplog record and get only ts value
     const lastOplogTimestamp = findOne({}, { ts: 1 }, { sort: { ts: -1 } });
 
     // If there are return then add ts to oplog observer and save the ts into Konsistent collection
-    if ((lastOplogTimestamp != null ? lastOplogTimestamp.ts : undefined) != null) {
+    if (has(lastOplogTimestamp, 'ts')) {
       query.ts = { $gt: lastOplogTimestamp.ts };
       Konsistent.History.saveLastOplogTimestamp(lastOplogTimestamp.ts);
     }
@@ -171,7 +165,7 @@ Konsistent.History.processOplogItem = function(doc) {
   }
 
   // If there are an property $set then move all fields to main object
-  if (data.$set != null) {
+  if (data.$set) {
     for (key in data.$set) {
       value = data.$set[key];
       data[key] = value;
@@ -179,7 +173,7 @@ Konsistent.History.processOplogItem = function(doc) {
   }
 
   // If there are an property $unset then set fields as null on main object
-  if (data.$unset != null) {
+  if (data.$unset) {
     for (key in data.$unset) {
       value = data.$unset[key];
       data[key] = null;
@@ -217,7 +211,7 @@ Konsistent.History.processOplogItem = function(doc) {
   }
 
   // Verify if meta of record was setted to save history
-  if ((Meta[metaName] != null ? Meta[metaName].saveHistory : undefined) === true) {
+  if (get(Meta, `${metaName}.saveHistory`, false) === true) {
     // Pass data and update information to create history record
     Konsistent.History.createHistory(metaName, action, _id, data, updatedBy, updatedAt, doc);
   }
@@ -237,7 +231,7 @@ const saveLastOplogTimestampGreaterValue = null;
 // Save last processed timestamp into Konsistent collection
 Konsistent.History.saveLastOplogTimestamp = function(ts) {
   let saveLastOplogTimestampGratherValue;
-  if (saveLastOplogTimestampGreaterValue == null || ts.greaterThan(saveLastOplogTimestampGreaterValue)) {
+  if (!saveLastOplogTimestampGreaterValue || ts.greaterThan(saveLastOplogTimestampGreaterValue)) {
     saveLastOplogTimestampGratherValue = ts;
   }
 
@@ -267,7 +261,7 @@ Konsistent.History.saveLastOplogTimestamp = function(ts) {
   };
 
   saveLastOplogTimestampQueueSize++;
-  if (saveLastOplogTimestampTimout != null) {
+  if (saveLastOplogTimestampTimout) {
     clearTimeout(saveLastOplogTimestampTimout);
   }
 
@@ -288,7 +282,7 @@ Konsistent.History.saveLastOplogTimestamp = function(ts) {
 // Method to create a new History using meta, action, old record and new record
 Konsistent.History.createHistory = function(metaName, action, id, data, updatedBy, updatedAt, oplogDoc) {
   // If data is empty or no update data is avaible then abort
-  if (Object.keys(data).length === 0 || updatedAt == null || updatedBy == null || data._merge != null) {
+  if (Object.keys(data).length === 0 || !updatedAt || !updatedBy || data._merge) {
     return;
   }
 
@@ -300,7 +294,7 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
   for (let key in data) {
     const value = data[key];
     const field = meta.fields[key];
-    if ((field != null ? field.ignoreHistory : undefined) !== true) {
+    if (get(field, 'ignoreHistory', false) !== true) {
       historyData[key] = value;
     }
   }
@@ -328,7 +322,7 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
   const history = Konsistent.Models[`${metaName}.History`];
 
   // If can't get history collection terminate this method
-  if (history == null) {
+  if (!history) {
     return NotifyErrors.notify('SaveLastOplogTimestamp', new Error(`Can't get History collection from ${metaName}`));
   }
 
@@ -364,7 +358,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
   const references = Konsistent.References[metaName];
 
   // Verify if exists reverse relations
-  if (!_.isObject(references) || !_.isObject(references.relationsFrom) || Object.keys(references.relationsFrom).length === 0) {
+  if (!isObject(references) || !isObject(references.relationsFrom) || Object.keys(references.relationsFrom).length === 0) {
     return;
   }
 
@@ -395,7 +389,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
       for (relation of relations) {
         let referencedKeys = [];
 
-        if (_.isString(relation.lookup)) {
+        if (isString(relation.lookup)) {
           referencedKeys.push(relation.lookup);
         }
 
@@ -403,19 +397,19 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 
         for (let fieldName in relation.aggregators) {
           const aggregator = relation.aggregators[fieldName];
-          if (aggregator.field != null) {
+          if (aggregator.field) {
             referencedKeys.push(aggregator.field.split('.')[0]);
           }
         }
 
         // Remove duplicated fields, can exists because we splited paths to get only first part
-        referencedKeys = _.uniq(referencedKeys);
+        referencedKeys = uniq(referencedKeys);
         // Get only keys that exists in references and list of updated keys
-        referencedKeys = _.intersection(referencedKeys, updatedKeys);
+        referencedKeys = intersection(referencedKeys, updatedKeys);
 
         // If there are common fields, add relation to list of relations to be processed
         if (referencedKeys.length > 0) {
-          if (referencesToUpdate[relationsFromDocumentName] == null) {
+          if (!referencesToUpdate[relationsFromDocumentName]) {
             referencesToUpdate[relationsFromDocumentName] = [];
           }
           referencesToUpdate[relationsFromDocumentName].push(relation);
@@ -433,7 +427,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
   const record = model.findOne({ _id: id });
 
   // If no record was found log error to console and abort
-  if (record == null) {
+  if (!record) {
     return NotifyErrors.notify('updateRelationReferences', new Error(`Can't find record ${id} from ${metaName}`), {
       metaName,
       action,
@@ -444,102 +438,72 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
   }
 
   // # Iterate over relations to process
-  return (() => {
-    const result = [];
-    for (var referenceDocumentName in referencesToUpdate) {
-      relations = referencesToUpdate[referenceDocumentName];
-      result.push(
-        (() => {
-          const result1 = [];
-          for (relation of relations) {
-            var value;
-            const relationLookupMeta = Meta[relation.document];
-            // Get lookup id from record
-            const lookupId = [];
-            if ((record[relation.lookup] != null ? record[relation.lookup]._id : undefined) != null) {
-              lookupId.push(record[relation.lookup] != null ? record[relation.lookup]._id : undefined);
-            } else if (
-              (relationLookupMeta.fields[relation.lookup] != null
-                ? relationLookupMeta.fields[relation.lookup].isList
-                : undefined) === true &&
-              _.isArray(record[relation.lookup])
-            ) {
-              for (value of record[relation.lookup]) {
-                if ((value != null ? value._id : undefined) != null) {
-                  lookupId.push(value != null ? value._id : undefined);
-                }
-              }
-            }
-
-            // If action is update and the lookup field of relation was updated go to hitory to update old relation
-            if (
-              lookupId.length > 0 &&
-              action === 'update' &&
-              (data[relation.lookup] != null ? data[relation.lookup]._id : undefined) != null
-            ) {
-              // Try to get history model
-              const historyModel = Konsistent.Models[`${metaName}.History`];
-
-              if (historyModel == null) {
-                NotifyErrors.notify('updateRelationReferences', new Error(`Can't get model for document ${metaName}.History`));
-              }
-
-              // Define query of history with data id
-              const historyQuery = { dataId: id.toString() };
-
-              // Add condition to get aonly data with changes on lookup field
-              historyQuery[`data.${relation.lookup}`] = { $exists: true };
-
-              // And sort DESC to get only last data
-              const historyOptions = { sort: { createdAt: -1 } };
-
-              // User findOne to get only one data
-              const historyRecord = historyModel.findOne(historyQuery, historyOptions);
-
-              // If there are record
-              if (historyRecord != null) {
-                // Then get lookupid to execute update on old relation
-                let historyLookupId =
-                  historyRecord.data[relation.lookup] != null ? historyRecord.data[relation.lookup]._id : undefined;
-                if (
-                  (relationLookupMeta.fields[relation.lookup] != null
-                    ? relationLookupMeta.fields[relation.lookup].isList
-                    : undefined) === true &&
-                  _.isArray(historyRecord.data[relation.lookup])
-                ) {
-                  historyLookupId = [];
-                  for (value of historyRecord.data[relation.lookup]) {
-                    historyLookupId.push(value != null ? value._id : undefined);
-                  }
-                }
-
-                // Execute update on old relation
-                historyLookupId = [].concat(historyLookupId);
-                for (let historyLookupIdItem of historyLookupId) {
-                  Konsistent.History.updateRelationReference(
-                    metaName,
-                    relation,
-                    historyLookupIdItem,
-                    action,
-                    referenceDocumentName
-                  );
-                }
-              }
-            }
-
-            // Execute update of relations into new value
-            result1.push(
-              lookupId.map(lookupIdItem =>
-                Konsistent.History.updateRelationReference(metaName, relation, lookupIdItem, action, referenceDocumentName)
-              )
-            );
+  for (var referenceDocumentName in referencesToUpdate) {
+    relations = referencesToUpdate[referenceDocumentName];
+    for (relation of relations) {
+      var value;
+      const relationLookupMeta = Meta[relation.document];
+      // Get lookup id from record
+      const lookupId = [];
+      if (has(record, `${relation.lookup}._id`)) {
+        lookupId.push(get(record, `${relation.lookup}._id`));
+      } else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(record[relation.lookup])) {
+        for (value of record[relation.lookup]) {
+          if (has(value, '_id')) {
+            lookupId.push(value._id);
           }
-          return result1;
-        })()
+        }
+      }
+
+      // If action is update and the lookup field of relation was updated go to hitory to update old relation
+      if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
+        // Try to get history model
+        const historyModel = Konsistent.Models[`${metaName}.History`];
+
+        if (!historyModel) {
+          NotifyErrors.notify('updateRelationReferences', new Error(`Can't get model for document ${metaName}.History`));
+        }
+
+        // Define query of history with data id
+        const historyQuery = { dataId: id.toString() };
+
+        // Add condition to get aonly data with changes on lookup field
+        historyQuery[`data.${relation.lookup}`] = { $exists: true };
+
+        // And sort DESC to get only last data
+        const historyOptions = { sort: { createdAt: -1 } };
+
+        // User findOne to get only one data
+        const historyRecord = historyModel.findOne(historyQuery, historyOptions);
+
+        // If there are record
+        if (historyRecord) {
+          // Then get lookupid to execute update on old relation
+          let historyLookupId = get(historyRecord, `data.${relation.lookup}._id`);
+          if (
+            get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true &&
+            isArray(historyRecord.data[relation.lookup])
+          ) {
+            historyLookupId = [];
+            for (value of historyRecord.data[relation.lookup]) {
+              historyLookupId.push(get(value, '_id'));
+            }
+          }
+
+          // Execute update on old relation
+          historyLookupId = [].concat(historyLookupId);
+          for (let historyLookupIdItem of historyLookupId) {
+            Konsistent.History.updateRelationReference(metaName, relation, historyLookupIdItem, action, referenceDocumentName);
+          }
+        }
+      }
+
+      // Execute update of relations into new value
+      lookupId.map(lookupIdItem =>
+        Konsistent.History.updateRelationReference(metaName, relation, lookupIdItem, action, referenceDocumentName)
       );
     }
-    return result;
-  })();
+  }
 };
 
 // Method to udpate documents with references in this document
@@ -548,21 +512,21 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
   let aggregator, e, query;
   const meta = Meta[metaName];
 
-  if (meta == null) {
+  if (!meta) {
     return NotifyErrors.notify('updateRelationReference', new Error(`Can't get meta of document ${metaName}`));
   }
 
-  if (_.isObject(relation)) {
+  if (isObject(relation)) {
     relation = JSON.parse(JSON.stringify(relation));
   }
 
   // Init a query with filter of relation
-  if ((relation != null ? relation.filter : undefined) != null) {
+  if (has(relation, 'filter')) {
     query = filterUtils.parseFilterObject(relation.filter, meta);
   }
 
   // If no query was setted, then init a empty filter
-  if (query == null) {
+  if (!query) {
     query = {};
   }
   // Add condition to get only documents with lookup to passaed lookupId
@@ -647,13 +611,13 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
     pipeline.push(group);
 
     // Wrap aggregate method into an async metero's method
-    const aggregate = Meteor.wrapAsync(_.bind(collection.aggregate, collection));
+    const aggregate = Meteor.wrapAsync(bind(collection.aggregate, collection));
 
     // Try to execute agg and log error if fails
     try {
       const result = aggregate(pipeline, { cursor: { batchSize: 1 } });
       // If result was an array with one item cotaining a property value
-      if (_.isArray(result) && _.isObject(result[0]) && result[0].value != null) {
+      if (isArray(result) && isObject(result[0]) && result[0].value) {
         // If aggregator is of type money create an object with value and currency
         if (type === 'money') {
           valuesToUpdate.$set[fieldName] = { currency: result[0].currency, value: result[0].value };
@@ -690,7 +654,7 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 
   // Try to get reference model
   const referenceModel = Konsistent.Models[referenceDocumentName];
-  if (referenceModel == null) {
+  if (!referenceModel) {
     return NotifyErrors.notify('updateRelationReference', new Error(`Can't get model for document ${referenceDocumentName}`));
   }
 
@@ -708,7 +672,7 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
       // And log all aggregatores for this status
       for (fieldName in relation.aggregators) {
         aggregator = relation.aggregators[fieldName];
-        if (aggregator.field != null) {
+        if (aggregator.field) {
           console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow);
         } else {
           console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`.yellow);
@@ -733,7 +697,7 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
   const references = Konsistent.References[metaName];
 
   // Verify if exists reverse relations
-  if (!_.isObject(references) || !_.isObject(references.from) || Object.keys(references.from).length === 0) {
+  if (!isObject(references) || !isObject(references.from) || Object.keys(references.from).length === 0) {
     return;
   }
 
@@ -754,26 +718,26 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
       field = fields[fieldName];
       let keysToUpdate = [];
       // Split each key to get only first key of array of paths
-      if ((field.descriptionFields != null ? field.descriptionFields.length : undefined) > 0) {
+      if (get(field, 'descriptionFields.length', 0) > 0) {
         for (key of field.descriptionFields) {
           keysToUpdate.push(key.split('.')[0]);
         }
       }
 
-      if ((field.inheritedFields != null ? field.inheritedFields.length : undefined) > 0) {
+      if (get(field, 'inheritedFields.length', 0) > 0) {
         for (key of field.inheritedFields) {
           keysToUpdate.push(key.fieldName.split('.')[0]);
         }
       }
 
       // Remove duplicated fields, can exists because we splited paths to get only first part
-      keysToUpdate = _.uniq(keysToUpdate);
+      keysToUpdate = uniq(keysToUpdate);
       // Get only keys that exists in references and list of updated keys
-      keysToUpdate = _.intersection(keysToUpdate, updatedKeys);
+      keysToUpdate = intersection(keysToUpdate, updatedKeys);
 
       // If there are common fields, add field to list of relations to be processed
       if (keysToUpdate.length > 0) {
-        if (referencesToUpdate[referenceDocumentName] == null) {
+        if (!referencesToUpdate[referenceDocumentName]) {
           referencesToUpdate[referenceDocumentName] = {};
         }
         referencesToUpdate[referenceDocumentName][fieldName] = field;
@@ -790,41 +754,31 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
   const record = model.findOne({ _id: id });
 
   // If no record was found log error to console and abort
-  if (record == null) {
+  if (!record) {
     return NotifyErrors.notify('updateLookupReferences', new Error(`Can't find record ${id} from ${metaName}`));
   }
 
   // Iterate over relations to process and iterate over each related field to execute a method to update relations
-  return (() => {
-    const result = [];
-    for (referenceDocumentName in referencesToUpdate) {
-      fields = referencesToUpdate[referenceDocumentName];
-      result.push(
-        (() => {
-          const result1 = [];
-          for (fieldName in fields) {
-            field = fields[fieldName];
-            result1.push(Konsistent.History.updateLookupReference(referenceDocumentName, fieldName, field, record, metaName));
-          }
-          return result1;
-        })()
-      );
+  for (referenceDocumentName in referencesToUpdate) {
+    fields = referencesToUpdate[referenceDocumentName];
+    for (fieldName in fields) {
+      field = fields[fieldName];
+      Konsistent.History.updateLookupReference(referenceDocumentName, fieldName, field, record, metaName);
     }
-    return result;
-  })();
+  }
 };
 
 // Method to update a single field of a single relation from a single updated record
 Konsistent.History.updateLookupReference = function(metaName, fieldName, field, record, relatedMetaName) {
   // Try to get related meta
   const meta = Meta[metaName];
-  if (meta == null) {
+  if (!meta) {
     return NotifyErrors.notify('updateLookupReference', new Error(`Meta ${metaName} does not exists`));
   }
 
   // Try to get related model
   const model = Konsistent.Models[metaName];
-  if (model == null) {
+  if (!model) {
     return NotifyErrors.notify('updateLookupReference', new Error(`Model ${metaName} does not exists`));
   }
 
@@ -852,13 +806,13 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
   updateData.$set[fieldToUpdate] = {};
 
   // If there are description fields
-  if (_.isArray(field.descriptionFields) && field.descriptionFields.length > 0) {
+  if (isArray(field.descriptionFields) && field.descriptionFields.length > 0) {
     // Execute method to copy fields and values using an array of paths
     utils.copyObjectFieldsByPathsIncludingIds(record, updateData.$set[fieldToUpdate], field.descriptionFields);
   }
 
   // If there are inherit fields
-  if (_.isArray(field.inheritedFields) && field.inheritedFields.length > 0) {
+  if (isArray(field.inheritedFields) && field.inheritedFields.length > 0) {
     // For each inherited field
     for (var inheritedField of field.inheritedFields) {
       if (['always', 'hierarchy_always'].includes(inheritedField.inherit)) {
@@ -867,10 +821,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 
         if (inheritedField.inherit === 'hierarchy_always') {
           // If inherited field not is a lookup our not is list then notify to bugsnag and ignore process
-          if (
-            (inheritedMetaField != null ? inheritedMetaField.type : undefined) !== 'lookup' ||
-            inheritedMetaField.isList !== true
-          ) {
+          if (get(inheritedMetaField, 'type') !== 'lookup' || inheritedMetaField.isList !== true) {
             NotifyErrors.notify('updateLookupReference[hierarchy_always]', new Error('Not lookup or not isList'), {
               inheritedMetaField,
               query,
@@ -879,7 +830,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
             });
             continue;
           }
-          if (record[inheritedField.fieldName] == null) {
+          if (!record[inheritedField.fieldName]) {
             record[inheritedField.fieldName] = [];
           }
           record[inheritedField.fieldName].push({
@@ -888,19 +839,18 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
         }
 
         // If field is lookup
-        if ((inheritedMetaField != null ? inheritedMetaField.type : undefined) === 'lookup') {
+        if (get(inheritedMetaField, 'type') === 'lookup') {
           // Get model to find record
           const lookupModel = Konsistent.Models[inheritedMetaField.document];
 
-          if (lookupModel == null) {
+          if (!lookupModel) {
             console.log(new Error(`Document ${inheritedMetaField.document} not found`));
             continue;
           }
 
           if (
-            (record[inheritedField.fieldName] != null ? record[inheritedField.fieldName]._id : undefined) != null ||
-            (inheritedMetaField.isList === true &&
-              (record[inheritedField.fieldName] != null ? record[inheritedField.fieldName].length : undefined) > 0)
+            has(record, `${inheritedField.fieldName}._id`) ||
+            (inheritedMetaField.isList === true && get(record, `${inheritedField.fieldName}.length`) > 0)
           ) {
             var lookupRecord, subQuery;
             if (inheritedMetaField.isList !== true) {
@@ -910,7 +860,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
               lookupRecord = lookupModel.findOne(subQuery);
 
               // If no record found log error
-              if (lookupRecord == null) {
+              if (!lookupRecord) {
                 console.log(
                   new Error(
                     `Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${
@@ -922,8 +872,8 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
               }
 
               // Else copy description fields
-              if (_.isArray(inheritedMetaField.descriptionFields)) {
-                if (updateData.$set[inheritedField.fieldName] == null) {
+              if (isArray(inheritedMetaField.descriptionFields)) {
+                if (!updateData.$set[inheritedField.fieldName]) {
                   updateData.$set[inheritedField.fieldName] = {};
                 }
                 utils.copyObjectFieldsByPathsIncludingIds(
@@ -934,16 +884,16 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
               }
 
               // End copy inherited values
-              if (_.isArray(inheritedMetaField.inheritedFields)) {
+              if (isArray(inheritedMetaField.inheritedFields)) {
                 for (let inheritedMetaFieldItem of inheritedMetaField.inheritedFields) {
                   if (inheritedMetaFieldItem.inherit === 'always') {
                     updateData.$set[inheritedMetaFieldItem.fieldName] = lookupRecord[inheritedMetaFieldItem.fieldName];
                   }
                 }
               }
-            } else if ((record[inheritedField.fieldName] != null ? record[inheritedField.fieldName].length : undefined) > 0) {
+            } else if (get(record, `${inheritedField.fieldName}.length`, 0) > 0) {
               let ids = record[inheritedField.fieldName].map(item => item._id);
-              ids = _.compact(_.uniq(ids));
+              ids = compact(uniq(ids));
               subQuery = {
                 _id: {
                   $in: ids
@@ -951,7 +901,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
               };
 
               const subOptions = {};
-              if (_.isArray(inheritedMetaField.descriptionFields)) {
+              if (isArray(inheritedMetaField.descriptionFields)) {
                 subOptions.fields = utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(
                   utils.getFirstPartOfArrayOfPaths(inheritedMetaField.descriptionFields).join(',')
                 );
@@ -968,7 +918,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
                 lookupRecord = lookupRecordsById[item._id];
 
                 // If no record found log error
-                if (lookupRecord == null) {
+                if (!lookupRecord) {
                   console.log(
                     new Error(
                       `Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${
@@ -980,10 +930,10 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
                 }
 
                 // Else copy description fields
-                if (_.isArray(inheritedMetaField.descriptionFields)) {
+                if (isArray(inheritedMetaField.descriptionFields)) {
                   const tempValue = {};
                   utils.copyObjectFieldsByPathsIncludingIds(lookupRecord, tempValue, inheritedMetaField.descriptionFields);
-                  if (updateData.$set[inheritedField.fieldName] == null) {
+                  if (!updateData.$set[inheritedField.fieldName]) {
                     updateData.$set[inheritedField.fieldName] = [];
                   }
                   return updateData.$set[inheritedField.fieldName].push(tempValue);
@@ -1005,13 +955,13 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 
     // If there are affected records then log into console
     if (affectedRecordsCount > 0) {
-      console.log(`∞ ${relatedMetaName} > ${metaName}.${fieldName} (${affectedRecordsCount})`.yellow);
+      console.log(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${affectedRecordsCount})`.yellow);
     }
 
     return affectedRecordsCount;
   } catch (e) {
     // Log if update get some error
-    return NotifyErrors.notify('updateLookupReference', e, {
+    NotifyErrors.notify('updateLookupReference', e, {
       query,
       updateData,
       options
@@ -1032,7 +982,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
   let reverseLookupCount = 0;
   for (var fieldName in meta.fields) {
     field = meta.fields[fieldName];
-    if (field.type === 'lookup' && field.reverseLookup != null && data[field.name] !== undefined) {
+    if (field.type === 'lookup' && !field.reverseLookup && data[field.name] !== undefined) {
       reverseLookupCount++;
     }
   }
@@ -1046,7 +996,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 
   const record = model.findOne(query);
 
-  if (record == null) {
+  if (!record) {
     return NotifyErrors.notify(
       'ReverseLoockup Error',
       new Error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`)
@@ -1054,121 +1004,113 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
   }
 
   // Process reverse lookups
-  return (() => {
-    const result = [];
-    for (fieldName in meta.fields) {
-      field = meta.fields[fieldName];
-      if (field.type === 'lookup' && field.reverseLookup != null) {
-        var affectedRecordsCount, reverseLookupQuery, reverseLookupUpdate;
+  for (fieldName in meta.fields) {
+    field = meta.fields[fieldName];
+    if (field.type === 'lookup' && field.reverseLookup) {
+      var affectedRecordsCount, reverseLookupQuery, reverseLookupUpdate;
 
-        const reverseLookupMeta = Meta[field.document];
+      const reverseLookupMeta = Meta[field.document];
 
-        if (reverseLookupMeta == null) {
-          NotifyErrors.notify('ReverseLoockup Error', new Error(`Meta [${field.document}] not found`));
-          continue;
+      if (!reverseLookupMeta) {
+        NotifyErrors.notify('ReverseLoockup Error', new Error(`Meta [${field.document}] not found`));
+        continue;
+      }
+
+      if (!reverseLookupMeta.fields[field.reverseLookup]) {
+        NotifyErrors.notify(
+          'ReverseLoockup Error',
+          new Error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`)
+        );
+        continue;
+      }
+
+      const reverseLookupModel = Konsistent.Models[field.document];
+
+      // Mount query and update to remove reverse lookup from another records
+      if (data[field.name] !== undefined) {
+        reverseLookupQuery = {};
+
+        if (data[field.name]) {
+          reverseLookupQuery._id = { $ne: data[field.name]._id };
         }
 
-        if (reverseLookupMeta.fields[field.reverseLookup] == null) {
-          NotifyErrors.notify(
-            'ReverseLoockup Error',
-            new Error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`)
-          );
-          continue;
+        reverseLookupQuery[`${field.reverseLookup}._id`] = id;
+
+        reverseLookupUpdate = { $unset: {} };
+        reverseLookupUpdate.$unset[field.reverseLookup] = 1;
+
+        if (reverseLookupMeta.fields[field.reverseLookup].isList === true) {
+          delete reverseLookupUpdate.$unset;
+          reverseLookupUpdate.$pull = {};
+          reverseLookupUpdate.$pull[`${field.reverseLookup}`] = { _id: id };
         }
 
-        const reverseLookupModel = Konsistent.Models[field.document];
+        affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate, null);
 
-        // Mount query and update to remove reverse lookup from another records
-        if (data[field.name] !== undefined) {
-          reverseLookupQuery = {};
+        if (affectedRecordsCount > 0) {
+          console.log(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${affectedRecordsCount})`.yellow);
+        }
+      }
 
-          if (data[field.name] != null) {
-            reverseLookupQuery._id = { $ne: data[field.name]._id };
-          }
+      // Create fake empty record to be populated with lookup detail fields and inherited fields
+      if (data[field.name]) {
+        const value = {};
+        value[field.reverseLookup] = { _id: id };
 
-          reverseLookupQuery[`${field.reverseLookup}._id`] = id;
+        lookupUtils.copyDescriptionAndInheritedFields(
+          reverseLookupMeta.fields[field.reverseLookup],
+          value[field.reverseLookup],
+          record,
+          reverseLookupMeta,
+          action,
+          reverseLookupModel,
+          value,
+          value,
+          [data[field.name]._id]
+        );
 
-          reverseLookupUpdate = { $unset: {} };
-          reverseLookupUpdate.$unset[field.reverseLookup] = 1;
+        // Mount query and update to create the reverse lookup
+        reverseLookupQuery = { _id: data[field.name]._id };
 
-          if (reverseLookupMeta.fields[field.reverseLookup].isList === true) {
-            delete reverseLookupUpdate.$unset;
-            reverseLookupUpdate.$pull = {};
-            reverseLookupUpdate.$pull[`${field.reverseLookup}`] = { _id: id };
-          }
+        reverseLookupUpdate = { $set: value };
 
-          affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate, null);
-
-          if (affectedRecordsCount > 0) {
-            console.log(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${affectedRecordsCount})`.yellow);
+        // If reverse lookup is list then add lookup to array and set inherited fields
+        if (reverseLookupMeta.fields[field.reverseLookup].isList === true) {
+          reverseLookupUpdate.$push = {};
+          reverseLookupUpdate.$push[field.reverseLookup] = reverseLookupUpdate.$set[field.reverseLookup];
+          delete reverseLookupUpdate.$set[field.reverseLookup];
+          if (Object.keys(reverseLookupUpdate.$set).length === 0) {
+            delete reverseLookupUpdate.$set;
           }
         }
 
-        // Create fake empty record to be populated with lookup detail fields and inherited fields
-        if (data[field.name] != null) {
-          const value = {};
-          value[field.reverseLookup] = { _id: id };
+        affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate);
 
-          lookupUtils.copyDescriptionAndInheritedFields(
-            reverseLookupMeta.fields[field.reverseLookup],
-            value[field.reverseLookup],
-            record,
-            reverseLookupMeta,
-            action,
-            reverseLookupModel,
-            value,
-            value,
-            [data[field.name]._id]
-          );
-
-          // Mount query and update to create the reverse lookup
-          reverseLookupQuery = { _id: data[field.name]._id };
-
-          reverseLookupUpdate = { $set: value };
-
-          // If reverse lookup is list then add lookup to array and set inherited fields
-          if (reverseLookupMeta.fields[field.reverseLookup].isList === true) {
-            reverseLookupUpdate.$push = {};
-            reverseLookupUpdate.$push[field.reverseLookup] = reverseLookupUpdate.$set[field.reverseLookup];
-            delete reverseLookupUpdate.$set[field.reverseLookup];
-            if (Object.keys(reverseLookupUpdate.$set).length === 0) {
-              delete reverseLookupUpdate.$set;
-            }
-          }
-
-          affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate);
-
-          if (affectedRecordsCount > 0) {
-            result.push(console.log(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${affectedRecordsCount})`.yellow));
-          } else {
-            result.push(undefined);
-          }
-        } else {
-          result.push(undefined);
+        if (affectedRecordsCount > 0) {
+          console.log(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${affectedRecordsCount})`.yellow);
         }
       }
     }
-    return result;
-  })();
+  }
 };
 
 Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, data, updatedBy, updatedAt) {
   let field, userRecords, value;
-  if (updatedBy == null) {
+  if (!updatedBy) {
     return;
   }
 
-  if (updatedAt == null) {
+  if (!updatedAt) {
     return;
   }
 
-  if (data._merge != null) {
+  if (data._merge) {
     return;
   }
 
   const meta = Meta[metaName];
 
-  if (meta == null) {
+  if (!meta) {
     return NotifyErrors.notify('processAlertsForOplogItem', new Error(`Can't get meta for ${metaName}`));
   }
 
@@ -1178,20 +1120,20 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 
   const model = Konsistent.Models[metaName];
 
-  if (model == null) {
+  if (!model) {
     return NotifyErrors.notify('processAlertsForOplogItem', new Error(`Can't get model for ${metaName}`));
   }
 
   const userModel = Konsistent.Models['User'];
 
-  if (userModel == null) {
+  if (!userModel) {
     return NotifyErrors.notify('processAlertsForOplogItem', new Error("Can't get model for User"));
   }
 
   let { code } = data;
   const usersToFindEmail = [];
   let users = [];
-  if (data._user != null) {
+  if (data._user) {
     users = users.concat(data._user);
   }
 
@@ -1207,13 +1149,13 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 
     const updatedRecord = model.findOne(query, options);
     ({ code } = updatedRecord);
-    if (updatedRecord._user != null) {
+    if (updatedRecord._user) {
       users = users.concat(updatedRecord._user);
     }
   }
 
   for (var user of users) {
-    if (user != null && user._id !== updatedBy._id) {
+    if (user && user._id !== updatedBy._id) {
       usersToFindEmail.push(user._id);
     }
   }
@@ -1262,111 +1204,90 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
   for (var key in data) {
     value = data[key];
     field = meta.fields[key];
-    if ((field != null ? field.ignoreHistory : undefined) === true) {
+    if (get(field, 'ignoreHistory') === true) {
       excludeKeys.push(key);
     }
   }
 
-  return (() => {
-    const result = [];
-    for (user of userRecords) {
-      const rawData = {};
-      const dataArray = [];
+  for (user of userRecords) {
+    const rawData = {};
+    const dataArray = [];
 
-      for (key in data) {
-        value = data[key];
-        if (!excludeKeys.includes(key)) {
-          if (key === '_id') {
-            value = value;
-          }
+    for (key in data) {
+      value = data[key];
+      if (!excludeKeys.includes(key)) {
+        if (key === '_id') {
+          value = value;
+        }
 
-          field = key.split('.')[0];
-          field = meta.fields[field];
+        field = key.split('.')[0];
+        field = meta.fields[field];
 
-          rawData[key] = value;
+        rawData[key] = value;
 
-          if (field != null) {
-            dataArray.push({
-              field: utils.getLabel(field, user) || key,
-              value: utils.formatValue(value, field)
-            });
-          } else {
-            dataArray.push({
-              field: utils.getLabel(field, user) || key,
-              value
-            });
-          }
+        if (field) {
+          dataArray.push({
+            field: utils.getLabel(field, user) || key,
+            value: utils.formatValue(value, field)
+          });
+        } else {
+          dataArray.push({
+            field: utils.getLabel(field, user) || key,
+            value
+          });
         }
       }
-
-      if ((dataArray != null ? dataArray.length : undefined) === 0) {
-        continue;
-      }
-
-      const documentName = utils.getLabel(meta, user) || meta.name;
-
-      var alertData = {
-        documentName,
-        action,
-        actionText,
-        code,
-        _id,
-        _updatedBy: updatedBy,
-        _updatedAt: updatedAt,
-        data: dataArray,
-        rawData,
-        user
-      };
-
-      if ((Namespace.RocketChat != null ? Namespace.RocketChat.alertWebhook : undefined) != null) {
-        var urls = [].concat(Namespace.RocketChat.alertWebhook);
-        result.push(
-          (() => {
-            const result1 = [];
-            for (var url of urls) {
-              if (!_.isEmpty(url)) {
-                result1.push(
-                  HTTP.post(url, { data: alertData }, function(err, response) {
-                    if (err != null) {
-                      NotifyErrors.notify('HookRocketChatAlertError', err);
-                      return console.log('📠 ', `Rocket.Chat Alert ERROR ${url}`.red, err);
-                    }
-
-                    if (response.statusCode === 200) {
-                      return console.log('📠 ', `${response.statusCode} Rocket.Chat Alert ${url}`.green);
-                    } else {
-                      return console.log('📠 ', `${response.statusCode} Rocket.Chat Alert ${url}`.red);
-                    }
-                  })
-                );
-              }
-            }
-            return result1;
-          })()
-        );
-      } else if (__guard__(user.emails != null ? user.emails[0] : undefined, x => x.address) != null) {
-        const emailData = {
-          from: 'Konecty Alerts <alerts@konecty.com>',
-          to: __guard__(user.emails != null ? user.emails[0] : undefined, x1 => x1.address),
-          subject: `[Konecty] Dado em: ${documentName} com code: ${code} foi ${actionText}`,
-          template: 'alert.html',
-          data: alertData,
-          type: 'Email',
-          status: 'Send',
-          discard: true
-        };
-
-        result.push(Konsistent.Models['Message'].insert(emailData));
-      } else {
-        result.push(undefined);
-      }
     }
-    return result;
-  })();
+
+    if (get(dataArray, 'length') === 0) {
+      continue;
+    }
+
+    const documentName = utils.getLabel(meta, user) || meta.name;
+
+    var alertData = {
+      documentName,
+      action,
+      actionText,
+      code,
+      _id,
+      _updatedBy: updatedBy,
+      _updatedAt: updatedAt,
+      data: dataArray,
+      rawData,
+      user
+    };
+
+    if (has(Namespace, 'RocketChat.alertWebhook')) {
+      var urls = [].concat(Namespace.RocketChat.alertWebhook);
+      for (var url of urls) {
+        if (!isEmpty(url)) {
+          HTTP.post(url, { data: alertData }, function(err, response) {
+            if (err) {
+              NotifyErrors.notify('HookRocketChatAlertError', err);
+              console.log('🚀 ', `Rocket.Chat Alert ERROR ${url}`.red, err);
+              return;
+            }
+
+            if (response.statusCode === 200) {
+              return console.log('🚀 ', `${response.statusCode} Rocket.Chat Alert ${url}`.green);
+            } else {
+              return console.log('🚀 ', `${response.statusCode} Rocket.Chat Alert ${url}`.red);
+            }
+          });
+        }
+      }
+    } else if (has(user, 'emails.0.address')) {
+      const emailData = {
+        from: 'Konecty Alerts <alerts@konecty.com>',
+        to: get(user, 'emails.0.address'),
+        subject: `[Konecty] Dado em: ${documentName} com code: ${code} foi ${actionText}`,
+        template: 'alert.html',
+        data: alertData,
+        type: 'Email',
+        status: 'Send',
+        discard: true
+      };
+    }
+  }
 };
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null ? transform(value) : undefined;
-}
-
-// export default Konsistent;

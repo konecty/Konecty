@@ -1,16 +1,13 @@
-/*
- * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
+import { isArray, compact, map, pluck, filter as _filter, find, findWhere, get, has } from 'lodash';
+const cheerio = require('cheerio');
+
 const findOpportunity = function(search) {
   let filter;
   if (!search) {
     return null;
   }
 
-  if ((search != null ? search._id : undefined) != null) {
+  if (has(search, '_id')) {
     filter = {
       term: '_id',
       operator: 'equals',
@@ -18,7 +15,7 @@ const findOpportunity = function(search) {
     };
   }
 
-  if ((search != null ? search.rawMessageId : undefined) != null) {
+  if (has(search, 'rawMessageId')) {
     filter = {
       term: 'rawMessageId',
       operator: 'equals',
@@ -26,7 +23,7 @@ const findOpportunity = function(search) {
     };
   }
 
-  if ((search != null ? search.contactId : undefined) != null) {
+  if (has(search, 'contactId')) {
     filter = {
       term: 'contact._id',
       operator: 'equals',
@@ -46,13 +43,13 @@ const findOpportunity = function(search) {
     fields: '_id, _updatedAt, contact, rawMessageId, status'
   });
 
-  if (__guard__(__guard__(record != null ? record.data : undefined, x1 => x1[0]), x => x._id) != null) {
+  if (has(record, 'data.0._id')) {
     return record.data[0];
   }
 };
 
 const findContactsByEmails = function(emails) {
-  if (!_.isArray(emails)) {
+  if (!isArray(emails)) {
     return null;
   }
 
@@ -70,7 +67,7 @@ const findContactsByEmails = function(emails) {
     fields: '_id, email'
   });
 
-  if (__guard__(record != null ? record.data : undefined, x => x.length) > 0) {
+  if (get(record, 'data.length') > 0) {
     return record.data;
   }
 
@@ -78,7 +75,7 @@ const findContactsByEmails = function(emails) {
 };
 
 const findUsersByEmails = function(emails) {
-  if (!_.isArray(emails)) {
+  if (!isArray(emails)) {
     return null;
   }
 
@@ -96,7 +93,7 @@ const findUsersByEmails = function(emails) {
     fields: '_id, emails'
   });
 
-  if (__guard__(record != null ? record.data : undefined, x => x.length) > 0) {
+  if (get(record, 'data.length') > 0) {
     return record.data;
   }
 
@@ -110,8 +107,6 @@ const findUsersByEmails = function(emails) {
 Meteor.registerMethod('process:zapier', 'withUser', function(request) {
   let contact, contactEmails, opportunity, result, updateRequest;
   console.log('[ZAPIER] ->'.blue, request.data.message_id);
-
-  const cheerio = require('cheerio');
 
   const response = {
     success: true,
@@ -136,7 +131,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
 
   console.log('[ZAPIER] Metas ->'.blue, metas);
 
-  if (metas['opportunity:_id'] && request.data.message_id != null) {
+  if (metas['opportunity:_id'] && request.data.message_id) {
     opportunity = findOpportunity({ _id: metas['opportunity:_id'] });
     console.log('[ZAPIER] opportunity ->'.blue, opportunity);
     if (opportunity && !opportunity.rawMessageId) {
@@ -151,7 +146,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
       };
 
       result = Meteor.call('data:update', updateRequest);
-      if (_.isArray(result.errors)) {
+      if (isArray(result.errors)) {
         response.errors = response.errors.concat(result.errors);
       }
 
@@ -164,7 +159,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
     }
   }
 
-  let mainContact = opportunity != null ? opportunity.contact : undefined;
+  let mainContact = get(opportunity, 'contact');
 
   if (!opportunity) {
     if (request.data.references) {
@@ -207,8 +202,8 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
   }
 
   const rfcMailPatternWithName = /^(?:(.*)<)?([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)(?:>?)$/;
-  emails = _.compact(
-    _.map(emails, function(email) {
+  emails = compact(
+    map(emails, function(email) {
       const matches = email.match(rfcMailPatternWithName);
       if (matches) {
         return { name: matches[1], address: matches[2] };
@@ -217,12 +212,12 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
   );
   console.log('[ZAPIER] emails ->'.blue, emails);
 
-  const users = findUsersByEmails(_.pluck(emails, 'address'));
+  const users = findUsersByEmails(pluck(emails, 'address'));
 
   if (Namespace.domain) {
-    contactEmails = _.filter(_.pluck(emails, 'address'), email => email.indexOf(Namespace.domain) === -1);
+    contactEmails = _filter(pluck(emails, 'address'), email => email.indexOf(Namespace.domain) === -1);
   } else {
-    contactEmails = _.pluck(emails, 'address');
+    contactEmails = pluck(emails, 'address');
   }
 
   console.log('[ZAPIER] contact emails ->'.blue, contactEmails);
@@ -235,9 +230,9 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
   for (var email of emails) {
     if (email.address.indexOf('zapiermail.com') === -1 && (!Namespace.domain || email.address.indexOf(Namespace.domain) === -1)) {
       if (
-        !_.find(users, user => _.findWhere(user.emails, { address: email.address })) &&
-        !_.find(contacts, user => _.findWhere(user.email, { address: email.address })) &&
-        !_.find(notFound, user => ({ address: email.address }))
+        !find(users, user => findWhere(user.emails, { address: email.address })) &&
+        !find(contacts, user => findWhere(user.email, { address: email.address })) &&
+        !find(notFound, user => ({ address: email.address }))
       ) {
         notFound.push(email);
       }
@@ -275,7 +270,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
     }
 
     result = Meteor.call('data:create', createContact);
-    if (result.success === true && __guard__(result.data != null ? result.data[0] : undefined, x => x._id)) {
+    if (result.success === true && has(result, 'data.0._id')) {
       contacts.push({ _id: result.data[0]._id });
     }
   }
@@ -295,7 +290,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
     result = Meteor.call('data:update', updateRequest);
     console.log('[ZAPIER] update opportunity status ->'.blue, opportunity.status, updateRequest.data.data.status);
 
-    if (_.isArray(result.errors)) {
+    if (isArray(result.errors)) {
       response.errors = response.errors.concat(result.errors);
       response.success = false;
       return response;
@@ -313,7 +308,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
     };
 
     result = Meteor.call('data:create', createOpportunity);
-    if (result.success === true && __guard__(result.data != null ? result.data[0] : undefined, x1 => x1._id)) {
+    if (result.success === true && has(result, 'data.0._id')) {
       opportunity = { _id: result.data[0]._id };
     }
 
@@ -347,7 +342,7 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
     }
 
     result = Meteor.call('data:create', createMessage);
-    if (_.isArray(result.errors)) {
+    if (isArray(result.errors)) {
       response.errors = response.errors.concat(result.errors);
     }
 
@@ -364,7 +359,3 @@ Meteor.registerMethod('process:zapier', 'withUser', function(request) {
 
   return response;
 });
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null ? transform(value) : undefined;
-}

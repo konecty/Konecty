@@ -1,14 +1,9 @@
-/*
- * decaffeinate suggestions:
- * DS103: Rewrite code to no longer use __guard__
- * DS207: Consider shorter variations of null checks
- * DS208: Avoid top-level this
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-this.refreshUserToken = function(userId, googleApp) {
+import { get, has } from 'lodash';
+
+refreshUserToken = function(userId, googleApp) {
   const user = Meteor.users.findOne(userId);
 
-  if (!__guard__(__guard__(user != null ? user.services : undefined, x1 => x1.google), x => x.refreshToken)) {
+  if (!get(user, 'services.google.refreshToken')) {
     return;
   }
 
@@ -27,7 +22,7 @@ this.refreshUserToken = function(userId, googleApp) {
 
   console.log('ret ->', ret);
 
-  if (__guard__(ret != null ? ret.data : undefined, x2 => x2.access_token)) {
+  if (has(ret, 'data.access_token')) {
     user.services.google.accessToken = ret.data.access_token;
     user.services.google.idToken = ret.data.id_token;
     user.services.google.expiresAt = +new Date() + 1000 * parseInt(ret.data.expires_in, 10);
@@ -43,7 +38,3 @@ this.refreshUserToken = function(userId, googleApp) {
 
   return user.services.google;
 };
-
-function __guard__(value, transform) {
-  return typeof value !== 'undefined' && value !== null ? transform(value) : undefined;
-}
