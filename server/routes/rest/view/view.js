@@ -46,7 +46,6 @@ app.get('/', function(req, res, next) {
   if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR' || req.query.mocha != null) {
     return next();
   }
-
   const user = Meteor.call('auth:getUser', {
     authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
     dontSetLastLogin: true

@@ -1,4 +1,4 @@
-import { isArray, each } from 'lodash';
+import { isArray, each, get } from 'lodash';
 
 sortUtils = {};
 

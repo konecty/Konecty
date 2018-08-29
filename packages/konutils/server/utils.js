@@ -542,7 +542,6 @@ utils.getObjectPathAgg = function(obj, path, defaultValue) {
     return obj[currentPath];
   }
 
-  let value;
   if (isArray(obj[currentPath]) && !/^\d$/.test(path[1])) {
     value = [];
     path = path.slice(1);

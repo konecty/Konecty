@@ -12,7 +12,6 @@ const getUtilDb = function() {
 
   mongoClient.connect((err, mongoClient) => {
     connection.db = mongoClient.db('utils');
-    mongoClient.close();
   });
 };
 
@@ -238,7 +237,11 @@ Meteor.methods({
 
       const pipeline = [match, group, project, sort];
 
-      const localResults = Models['AddressPlace'].aggregate(pipeline, { cursor: { batchSize: 1 } });
+      const resultsCursor = Models['AddressPlace'].aggregate(pipeline, { cursor: { batchSize: 1 } });
+
+      const aggregateToArray = Meteor.wrapAsync(resultsCursor.toArray, resultsCursor);
+
+      let localResults = aggregateToArray();
 
       if (get(localResults, 'length', 0) > 0) {
         results = results.concat(localResults);
@@ -350,13 +353,21 @@ Meteor.methods({
 
     const aggregate = Meteor.wrapAsync(placeCollection.aggregate, placeCollection);
 
-    let results = aggregate(pipeline, { cursor: { batchSize: 1 } });
+    let resultsCursor = aggregate(pipeline, { cursor: { batchSize: 1 } });
+
+    const toArray = Meteor.wrapAsync(resultsCursor.toArray, resultsCursor);
+
+    let results = toArray();
 
     if (Models['AddressPlace']) {
       delete query.even;
       delete query.odd;
 
       const localResults = Models['AddressPlace'].aggregate(pipeline, { cursor: { batchSize: 1 } });
+
+      const toArrayLocal = Meteor.wrapAsync(localResults.toArray, localResults);
+
+      results = toArrayLocal();
 
       if (get(localResults, 'length', 0) > 0) {
         results = results.concat(localResults);
@@ -369,7 +380,7 @@ Meteor.methods({
       }
     }
 
-    results = utils.unicodeSortArrayOfObjectsByParam(results, 'place');
+    utils.unicodeSortArrayOfObjectsByParam(results, 'place');
 
     return results;
   }

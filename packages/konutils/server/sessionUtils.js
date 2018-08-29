@@ -1,6 +1,3 @@
-const sessionUtils = {};
+sessionUtils = {};
 
-sessionUtils.getAuthTokenIdFromReq = req =>
-	// Get session id from cookie
-	req.cookies['_authTokenId'] || req.cookies['authTokenId']
-;
+sessionUtils.getAuthTokenIdFromReq = req => req.cookies['_authTokenId'] || req.cookies['authTokenId'];

@@ -138,7 +138,7 @@ const operatoresByType = {
   percentage: ['exists', 'equals', 'not_equals', 'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 };
 
-const filterUtils = {};
+filterUtils = {};
 
 filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
   let group;

@@ -1,8 +1,8 @@
-import { isDate, isObject, has } from 'lodash';
+import { isDate, isObject, get, has, toLowerCase, size } from 'lodash';
 
 // Middleware to get user and populate into request
 Meteor.registerMiddleware('withUser', function(request) {
-  if (!this.user) {
+  if (this.user) {
     return;
   }
 
@@ -10,18 +10,18 @@ Meteor.registerMiddleware('withUser', function(request) {
     this.hashedToken = request.authTokenId;
 
     // @TODO: In the future, use only @hashedToken = Accounts._hashLoginToken request.authTokenId as it should always receive client loginToken
-    if (request.authTokenId.toLowerCase && request.authTokenId.length === 24) {
-      this.hashedToken = request.authTokenId.toLowerCase();
+    if (has(request, 'authTokenId') && get(request, 'authTokenId.length', 0) === 24) {
+      this.hashedToken = toLowerCase(request.authTokenId);
     }
 
-    if (request.authTokenId.length === 43) {
+    if (size(request.authTokenId) === 43) {
       this.hashedToken = Accounts._hashLoginToken(request.authTokenId);
     }
 
     this.user = Meteor.users.findOne({ 'services.resume.loginTokens.hashedToken': this.hashedToken });
 
     // If no user was found return error
-    if (this.user) {
+    if (!this.user) {
       console.log(`[withUser] User not found using token ${this.hashedToken}`);
       return 401;
     }
@@ -47,6 +47,7 @@ Meteor.registerMiddleware('withUser', function(request) {
       });
     }
   }
+  return;
 });
 
 // Middleware to get access from document as parameter 'document'

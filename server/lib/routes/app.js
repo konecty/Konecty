@@ -8,6 +8,7 @@ import { resolve, join } from 'path';
 import { register } from 'bugsnag';
 import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get } from 'lodash';
+import cors from 'cors';
 
 REQ_TIMEOUT = 1000 * 300;
 RES_TIMEOUT = 1000 * 300;
@@ -240,14 +241,30 @@ Picker.middleware(urlencoded({ extended: true }));
 
 // Add CORS allowing any origin
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
-Picker.middleware(function(req, res, next) {
-  if (ALLOWED_ORIGINS.includes(req.headers.origin)) {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-  }
+const corsOptions = {
+  origin: function(origin, callback) {
+    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
 
-  next();
-});
+Picker.middleware(cors(corsOptions));
+
+// Picker.middleware(function(req, res, next) {
+
+//   if (ALLOWED_ORIGINS.includes(req.headers.origin)) {
+//     res.setHeader('Access-Control-Allow-Credentials', true);
+//     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+
+//   }
+
+//   next();
+// });
 
 // global helper to register REST endpoints
 global.app = {

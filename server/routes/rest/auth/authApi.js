@@ -16,8 +16,12 @@ app.get('/rest/auth/loginByUrl/:ns/:sessionId', function(req, res) {
   const cookieMaxAge = get(namespace, 'sessionExpirationInSeconds', 2592000);
 
   // Set cookie with session id
-  res.set('set-cookie', `_authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
-  res.set('set-cookie', `_authTokenNs=${req.params.ns}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
+  res.set(
+    'set-cookie',
+    `_authTokenNs=${req.params.ns}; _authTokenId=${
+      req.params.sessionId
+    }; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`
+  );
 
   // Redirect to system
   return res.redirect('/');
@@ -60,17 +64,21 @@ app.post('/rest/auth/login', function(req, res, next) {
 
   if (get(loginResult, 'success', false) === true) {
     // Set cookie with session id
-    res.set('set-cookie', `_authTokenId=${loginResult.authId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
     if (isString(ns)) {
-      res.set('set-cookie', `_authTokenNs=${ns}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
+      res.set(
+        'set-cookie',
+        `_authTokenNs=${ns}; _authTokenId=${loginResult.authId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`
+      );
+    } else {
+      res.set('set-cookie', `_authTokenId=${loginResult.authId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
     }
 
-    res.send(loginResult);
+    res.send({ ...loginResult, cookieMaxAge });
   } else {
     if (has(loginResult, 'errors')) {
       res.send(401, loginResult);
     } else {
-      res.send(loginResult);
+      res.send({ ...loginResult, cookieMaxAge });
     }
   }
 });

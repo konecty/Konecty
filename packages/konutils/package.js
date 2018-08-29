@@ -5,7 +5,7 @@ Package.describe({
   git: ''
 });
 
-Package.onUse(function (api) {
+Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('mongo');
   api.use('nooitaf:colors');
@@ -19,17 +19,11 @@ Package.onUse(function (api) {
   api.addFiles('server/lookupUtils.js', ['server']);
   api.addFiles('server/metaUtils.js', ['server']);
 
-  api.export(['utils'], ['server']);
-  api.export(['sortUtils'], ['server']);
-  api.export(['sessionUtils'], ['server']);
-  api.export(['accessUtils'], ['server']);
-  api.export(['filterUtils'], ['server']);
-  api.export(['lookupUtils'], ['server']);
-  api.export(['metaUtils'], ['server']);
+  api.export('utils', ['server']);
+  api.export('sortUtils', ['server']);
+  api.export('sessionUtils', ['server']);
+  api.export('accessUtils', ['server']);
+  api.export('filterUtils', ['server']);
+  api.export('lookupUtils', ['server']);
+  api.export('metaUtils', ['server']);
 });
-
-// Npm.depends({
-//   moment: '2.18.1',
-//   'moment-timezone': '0.5.13',
-//   request: '2.88.0'
-// });

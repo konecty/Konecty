@@ -1,6 +1,8 @@
 /* Get system menu
 	@param authTokenId
 */
+
+import { isObject, isArray, get } from 'lodash';
 Meteor.registerMethod('menu', 'withUser', function(request) {
   const list = {};
 
@@ -34,7 +36,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
       return;
     }
 
-    if (['document', 'composite'].includes(metaObject.type) && _.isObject(access)) {
+    if (['document', 'composite'].includes(metaObject.type) && isObject(access)) {
       accesses.push(access._id);
       metaObject.access = metaObject.namespace + ':' + access._id;
     }
@@ -70,7 +72,7 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
       delete metaObject.fields;
     }
 
-    if (_.isArray(metaObject.fields)) {
+    if (isArray(metaObject.fields)) {
       for (let field of metaObject.fields) {
         if (field.type === 'lookup' && get(field, 'inheritedFields.length', 0) > 0) {
           field.type = 'inheritLookup';
@@ -125,7 +127,7 @@ Meteor.publish('MetaObjectsWithAccess', function() {
       return;
     }
 
-    if (['document', 'composite'].includes(metaObject.type) && _.isObject(access)) {
+    if (['document', 'composite'].includes(metaObject.type) && isObject(access)) {
       metaObject.accessId = access._id;
     }
 

@@ -17,7 +17,8 @@ import {
   words,
   rest,
   has,
-  map
+  map,
+  get
 } from 'lodash';
 
 import { post } from 'request';

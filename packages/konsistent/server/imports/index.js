@@ -615,7 +615,11 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 
     // Try to execute agg and log error if fails
     try {
-      const result = aggregate(pipeline, { cursor: { batchSize: 1 } });
+      const resultsCursor = aggregate(pipeline, { cursor: { batchSize: 1 } });
+      const aggregateToArray = Meteor.wrapAsync(resultsCursor.toArray, resultsCursor);
+
+      let result = aggregateToArray();
+
       // If result was an array with one item cotaining a property value
       if (isArray(result) && isObject(result[0]) && result[0].value) {
         // If aggregator is of type money create an object with value and currency
