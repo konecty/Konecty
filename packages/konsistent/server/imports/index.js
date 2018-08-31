@@ -25,7 +25,7 @@ if (
 }
 
 // Define fome keys to remove from saved data in history when data was created or updated
-const keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_deletedBy', '_deletedBy'];
+const keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_deletedBy', '_deletedBy', '$v'];
 
 // Define collection Konsistent to save last state
 Konsistent.Models.Konsistent = new Meteor.Collection('Konsistent');
@@ -109,13 +109,13 @@ Konsistent.History.setup = function() {
 
   const cursorDescription = new CursorDescription('oplog.rs', query, { tailable: true });
 
-  return (Konsistent.tailHandle = Konsistent.History.db.tail(
+  Konsistent.tailHandle = Konsistent.History.db.tail(
     cursorDescription,
     Meteor.bindEnvironment(function(doc) {
-      const ns = doc.ns.split('.');
-      return Konsistent.History.processOplogItem(doc);
+      // const ns = doc.ns.split('.');
+      Konsistent.History.processOplogItem(doc);
     })
-  ));
+  );
 };
 
 // # Define query as tailable to receive insertions
@@ -340,10 +340,16 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
 
   // Create history!
   try {
-    return history.update(historyQuery, historyItem, { upsert: true });
+    console.log('======================');
+    console.log(data);
+    console.log(historyQuery);
+    console.log(historyItem);
+    console.log('======================');
+
+    history.update(historyQuery, historyItem, { upsert: true });
   } catch (e) {
     console.log(e);
-    return NotifyErrors.notify('createHistory', e, {
+    NotifyErrors.notify('createHistory', e, {
       historyQuery,
       historyItem,
       upsert: true

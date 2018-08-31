@@ -8,7 +8,7 @@ accounts-ui-unstyled@1.4.1
 allow-deny@1.1.0
 autoupdate@1.4.1
 babel-compiler@7.1.1
-babel-runtime@1.2.5
+babel-runtime@1.2.7
 base64@1.0.11
 binary-heap@1.0.10
 blaze@2.3.3

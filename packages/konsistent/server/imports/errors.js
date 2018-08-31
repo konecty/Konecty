@@ -1,3 +1,4 @@
+import { get } from 'lodash';
 import { register, notify } from 'bugsnag';
 
 import { parse } from 'mongodb-uri';

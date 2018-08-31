@@ -8,7 +8,7 @@ Namespace = {};
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
-const logIndexActionEnable = false;
+const logIndexActionEnable = true;
 
 const logIndexAction = function(msg) {
   if (logIndexActionEnable === true) {
@@ -328,9 +328,9 @@ const registerMeta = function(meta) {
         tryEnsureIndex(Models[meta.name], keys, options);
       }
     };
-    if (!process.env.DISABLE_REINDEX) {
-      Meteor.defer(processIndexes);
-    }
+    // if (!process.env.DISABLE_REINDEX) {
+    Meteor.defer(processIndexes);
+    // }
   }
 
   // wait required metas to create initial data
