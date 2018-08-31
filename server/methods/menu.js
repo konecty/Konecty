@@ -2,7 +2,7 @@
 	@param authTokenId
 */
 
-import { isObject, isArray, get } from 'lodash';
+import { isObject, isArray, get, size } from 'lodash';
 Meteor.registerMethod('menu', 'withUser', function(request) {
   const list = {};
 
@@ -74,13 +74,13 @@ Meteor.registerMethod('menu', 'withUser', function(request) {
 
     if (isArray(metaObject.fields)) {
       for (let field of metaObject.fields) {
-        if (field.type === 'lookup' && get(field, 'inheritedFields.length', 0) > 0) {
+        if (field.type === 'lookup' && size(get(field, 'inheritedFields')) > 0) {
           field.type = 'inheritLookup';
         }
       }
     }
 
-    return (list[metaObject._id] = metaObject);
+    list[metaObject._id] = metaObject;
   });
 
   MetaObject.find({ _id: { $in: accesses } }).forEach(function(metaObject) {

@@ -18,7 +18,8 @@ import {
   rest,
   has,
   map,
-  get
+  get,
+  size
 } from 'lodash';
 
 import { post } from 'request';
@@ -214,8 +215,9 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
   for (let accessCondition of accessConditions) {
     const update = { $unset: {} };
     update.$unset[accessCondition.fieldName] = 1;
+		options = {multi: true};
 
-    const affected = local.collection.updateMany(accessCondition.condition, update);
+		const affected = local.collection.update(accessCondition.condition, update, options);
   }
 
   records = local.collection.find().fetch();
@@ -442,8 +444,9 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
     for (let accessCondition of accessConditions) {
       const update = { $unset: {} };
       update.$unset[accessCondition.fieldName] = 1;
+			options = {multi: true};
 
-      const affected = local.collection.updateMany(accessCondition.condition, update);
+			const affected = local.collection.update(accessCondition.condition, update, options);
     }
 
     data = local.collection.find({}).fetch();
@@ -699,7 +702,7 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
       }
     });
 
-    if (has(record, 'data')) {
+    if (has(record, 'data.0')) {
       for (let recordKey in record.data[0]) {
         const recordValue = record.data[0][recordKey];
         value[recordKey] = recordValue;
@@ -712,7 +715,7 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
   for (let fieldName in request.record) {
     const value = request.record[fieldName];
     const field = metaObject.fields[fieldName];
-    if (value && field && field.type === 'lookup' && (field.detailFields ? field.detailFields.length : undefined) > 0) {
+    if (value && field && field.type === 'lookup' && size(field.detailFields) > 0) {
       if (field.isList === true) {
         for (let item of value) {
           populateDetailFields(field, item, value);
@@ -809,7 +812,7 @@ Meteor.registerMethod(
       request.data._user = { _id: userOid };
 
       // If user field is isList change format to array
-      if (has(meta, 'fields._user.isList')) {
+      if (get(meta, 'fields._user.isList') === true) {
         request.data._user = [request.data._user];
       }
     }
@@ -862,7 +865,7 @@ Meteor.registerMethod(
           }
 
           // If don't exists data for field and exists default values into metadata, set default values
-          if (!request.data[field.name] && get(field, 'defaultValues.length', 0) > 0) {
+          if (!request.data[field.name] && size(get(field, 'defaultValues')) > 0) {
             // Work around to fix picklist behavior
             if (field.type === 'picklist') {
               let v = get(field, 'defaultValues.0.pt_BR');
@@ -1469,9 +1472,11 @@ Meteor.registerMethod(
         }
 
         // Execute update
+			options =
+				{multi: true};
         try {
-          model.updateMany(query, update);
-          updatedIds = updatedIds.concat(query._id.$in);
+				model.update(query, update, options);
+				return updatedIds = updatedIds.concat(query._id.$in);
         } catch (e) {
           NotifyErrors.notify('DataUpdateError', e);
           return e;
@@ -1997,7 +2002,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
     request.data.data = {};
   }
 
-  const sendEmail = has(request, 'data.email') && request.data.email === true;
+  const sendEmail = get(request, 'data.email', false)  === true;
   const emailData = {};
 
   if (sendEmail) {
@@ -2112,7 +2117,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
     }
   }
 
-  if (sendEmail && get(emailData, `${relation.document}.length`, 0) > 0) {
+  if (sendEmail && size(get(emailData, relation.document)) > 0) {
     const objectByString = function(o, s) {
       s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
       s = s.replace(/^\./, ''); // strip a leading dot
@@ -2178,7 +2183,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
       const contactData = objectByString(emailData, relation.emailConf.contact);
 
       if (contactData) {
-        if ((get(contactData, 'email.length', 0) > 0 && !messageData.to) || isEmpty(messageData.to)) {
+        if ((size(get(contactData, 'email')) > 0 && !messageData.to) || isEmpty(messageData.to)) {
           messageData.to = contactData.email[0].address;
         }
 
@@ -2390,7 +2395,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
   }
 
   if (request.lead.email) {
-    if (get(contact, 'email.length', 0) > 0) {
+    if (size(get(contact, 'email')) > 0) {
       if (!findWhere(compact(contact.email), { address: request.lead.email })) {
         contactData.email = contact.email;
         contactData.email.push({
@@ -2403,7 +2408,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
   }
 
   if (phoneSent.length > 0) {
-    if (get(contact, 'phone.length', 0) > 0) {
+    if (size(get(contact, 'phone.length')) > 0) {
       let firstPhoneNotFound = true;
       phoneSent.forEach(function(leadPhone) {
         if (!findWhere(compact(contact.phone), { phoneNumber: leadPhone })) {
@@ -2466,7 +2471,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
       limit: 1
     });
 
-    if (get(record, 'data.length') > 0) {
+    if (size(get(record, 'data')) > 0) {
       if (has(contact, '_user')) {
         if (!findWhere(compact(contact._user), { _id: record.data[0]._id })) {
           contactData._user = clone(contact._user);

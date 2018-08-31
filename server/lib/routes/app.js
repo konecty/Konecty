@@ -80,18 +80,18 @@ Picker.middleware(function(req, res, next) {
 
     options.user = {
       _id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
-      name: req.user != null ? req.user.name : undefined,
-      login: req.user != null ? req.user.username : undefined,
-      email: req.user != null ? req.user.emails : undefined,
-      access: req.user != null ? req.user.access : undefined,
-      lastLogin: req.user != null ? req.user.lastLogin : undefined
+      name: get(req, 'user.name'),
+      login: get(req, 'user.username'),
+      email: get(req, 'user.emails'),
+      access: get(req, 'user.access'),
+      lastLogin: get(req, 'user.lastLogin')
     };
     options.session = {
       _id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
-      _createdAt: req.session != null ? req.session._createdAt : undefined,
-      ip: req.session != null ? req.session.ip : undefined,
-      geolocation: req.session != null ? req.session.geolocation : undefined,
-      expireAt: req.session != null ? req.session.expireAt : undefined
+      _createdAt: get(req, 'session._createdAt'),
+      ip: get(req, 'session.ip'),
+      geolocation: get(req, 'session.geolocation'),
+      expireAt: get(req, 'session.expireAt')
     };
 
     return NotifyErrors.notify(type, message, options);
@@ -156,7 +156,7 @@ Picker.middleware(function(req, res, next) {
     if (isObject(response) || isArray(response)) {
       res.set('Content-Type', 'application/json');
 
-      if (response.errors != null) {
+      if (response.errors) {
         res.hasErrors = true;
         if (isArray(response.errors)) {
           for (let index = 0; index < response.errors.length; index++) {
@@ -166,7 +166,7 @@ Picker.middleware(function(req, res, next) {
         }
       }
 
-      if (response.time != null) {
+      if (response.time) {
         req.time = response.time;
       }
 
@@ -179,7 +179,7 @@ Picker.middleware(function(req, res, next) {
 
     res.statusCode = status;
 
-    if (response == null) {
+    if (!response) {
       res.end();
     }
 
@@ -200,7 +200,7 @@ Picker.middleware(function(req, res, next) {
   res.end = function() {
     resEnd.apply(res, arguments);
 
-    if (res.statusCode == null) {
+    if (!res.statusCode) {
       res.statusCode = 200;
     }
 
@@ -209,7 +209,7 @@ Picker.middleware(function(req, res, next) {
       req.headers.host != null ? req.headers.host.grey : undefined
     } ${req.headers.referer != null ? req.headers.referer.grey : undefined}`;
 
-    if (res.statusCode === 401 && req.user != null) {
+    if (res.statusCode === 401 && req.user) {
       log += ` ${req.user._id}`;
     }
 
@@ -255,17 +255,6 @@ const corsOptions = {
 
 Picker.middleware(cors(corsOptions));
 
-// Picker.middleware(function(req, res, next) {
-
-//   if (ALLOWED_ORIGINS.includes(req.headers.origin)) {
-//     res.setHeader('Access-Control-Allow-Credentials', true);
-//     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-
-//   }
-
-//   next();
-// });
-
 // global helper to register REST endpoints
 global.app = {
   get(path, cb) {
@@ -274,7 +263,7 @@ global.app = {
         const v = params[k];
         params[k] = isString(v) ? decodeURI(v) : v;
       }
-      if (req.query == null) {
+      if (!req.query) {
         req.query = params.query;
       }
       req.params = params;
@@ -283,7 +272,7 @@ global.app = {
   },
   post(path, cb) {
     pickerPost.route(path, function(params, req, res, next) {
-      if (req.query == null) {
+      if (!req.query) {
         req.query = params.query;
       }
       req.params = params;
@@ -292,7 +281,7 @@ global.app = {
   },
   put(path, cb) {
     pickerPut.route(path, function(params, req, res, next) {
-      if (req.query == null) {
+      if (!req.query) {
         req.query = params.query;
       }
       req.params = params;
@@ -301,7 +290,7 @@ global.app = {
   },
   del(path, cb) {
     pickerDel.route(path, function(params, req, res, next) {
-      if (req.query == null) {
+      if (!req.query) {
         req.query = params.query;
       }
       req.params = params;

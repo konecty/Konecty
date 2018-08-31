@@ -1,4 +1,4 @@
-import { isArray, compact, map, pluck, filter as _filter, find, findWhere, get, has } from 'lodash';
+import { isArray, compact, map, pluck, filter as _filter, find, findWhere, get, has, size } from 'lodash';
 const cheerio = require('cheerio');
 
 const findOpportunity = function(search) {
@@ -67,7 +67,7 @@ const findContactsByEmails = function(emails) {
     fields: '_id, email'
   });
 
-  if (get(record, 'data.length') > 0) {
+  if (size(get(record, 'data')) > 0) {
     return record.data;
   }
 
@@ -93,7 +93,7 @@ const findUsersByEmails = function(emails) {
     fields: '_id, emails'
   });
 
-  if (get(record, 'data.length') > 0) {
+  if (size(get(record, 'data')) > 0) {
     return record.data;
   }
 

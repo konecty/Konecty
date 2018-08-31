@@ -48,6 +48,6 @@ Template.ListMeta.events({
       fromDocument
     };
 
-    Meteor.call('processRelation', config, result => parent.html(html));
+		return Meteor.call('processRelation', config, result => parent.html(html));
   }
 });

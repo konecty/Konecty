@@ -82,9 +82,7 @@ lookupUtils.removeInheritedFields = function(lookupField, objectNewValues) {
   if (_.isArray(lookupField.inheritedFields)) {
     for (let inheritedField of lookupField.inheritedFields) {
       if (['always', 'hierarchy_always'].includes(inheritedField.inherit)) {
-        result.push((objectNewValues[inheritedField.fieldName] = null));
-      } else {
-        result.push(undefined);
+        objectNewValues[inheritedField.fieldName] = null;
       }
     }
   }

@@ -6,13 +6,13 @@ Meteor.methods({
       throw new Meteor.Error('invalid-user');
     }
 
-    if (!has(Namespace, 'facebookApp.appId') || has(Namespace, 'facebookApp.secret')) {
+    if (!has(Namespace, 'facebookApp.appId') || !has(Namespace, 'facebookApp.secret')) {
       throw new Meteor.Error('invalid-server-configuration');
     }
 
     const user = Meteor.user();
 
-    if (has(user, 'services.accessToken')) {
+    if (!has(user, 'services.accessToken')) {
       throw new Meteor.Error('invalid-user');
     }
 

@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { createHash } from 'crypto';
 
-import { isArray, isNumber, isObject, isString, isBoolean } from 'lodash';
+import { isArray, isNumber, isObject, isString, isBoolean, has, get } from 'lodash';
 metaUtils = {};
 
 metaUtils.validateAndProcessValueFor = function(
@@ -838,7 +838,7 @@ metaUtils.getNextUserFromQueue = function(queueStrId, user) {
 
   if (!isObject(queueUser)) {
     queueUser = Models.Queue.findOne(queueStrId);
-    if (queueUser && queueUser._user && queueUser._user[0]) {
+    if (has(queueUser, '_user.0')) {
       return {
         user: queueUser._user[0]
       };

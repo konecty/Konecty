@@ -105,8 +105,10 @@ Meteor.registerMethod(
         }
       };
 
+		const options =
+			{multi: true};
       try {
-        this.model.updateMany(query, update);
+			this.model.update(query, update, options);
       } catch (e) {
         return e;
       }
@@ -170,8 +172,10 @@ Meteor.registerMethod(
       }
     };
 
+	const options =
+		{multi: true};
     try {
-      this.model.update(query, update);
+		this.model.update(query, update, options);
     } catch (e) {
       return e;
     }
@@ -237,8 +241,10 @@ Meteor.registerMethod(
       }
     };
 
+	const options =
+		{multi: true};
     try {
-      this.model.updateMany(query, update);
+		this.model.update(query, update, options);
     } catch (e) {
       return e;
     }
@@ -347,8 +353,10 @@ Meteor.registerMethod(
       }
     };
 
+	const options =
+		{multi: true};
     try {
-      this.model.updateMany(query, update);
+		this.model.update(query, update, options);
     } catch (error) {
       e = error;
       return e;
@@ -374,7 +382,7 @@ Meteor.registerMethod(
     };
 
     try {
-      this.model.updateMany(query, update);
+		this.model.update(query, update, options);
     } catch (error1) {
       e = error1;
       return e;
@@ -491,8 +499,10 @@ Meteor.registerMethod(
       }
     };
 
+	const options =
+		{multi: true};
     try {
-      this.model.updateMany(query, update);
+		this.model.update(query, update, options);
     } catch (e) {
       return e;
     }

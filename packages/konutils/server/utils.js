@@ -2,16 +2,16 @@ import { createContext, runInContext } from 'vm';
 import momentzone from 'moment-timezone';
 import moment from 'moment';
 import request from 'request';
-import { isArray, isDate, isObject, isString, each, numberFormat, has } from 'lodash';
+import { isArray, isDate, isObject, isString, each, numberFormat, has, get } from 'lodash';
 
 utils = {};
 
 utils.deepEqual = function(a, b) {
-  if (b == null && a == null) {
+  if (!b && !a) {
     return true;
   }
 
-  if (b == null || a == null) {
+  if (!b || !a) {
     return false;
   }
 
@@ -199,7 +199,7 @@ utils.rpad = function(str, length) {
 };
 
 utils.getByLocale = function(obj, user) {
-  if ((user != null ? user.locale : undefined) == null || (obj != null ? obj[user.locale] : undefined) == null) {
+  if (!has(user, 'locale') || !has(obj, user.locale)) {
     return;
   }
 
@@ -207,7 +207,7 @@ utils.getByLocale = function(obj, user) {
 };
 
 utils.getLabel = function(obj, user) {
-  if ((obj != null ? obj.label : undefined) == null) {
+  if (!has(obj, 'label')) {
     return;
   }
 
@@ -287,10 +287,10 @@ utils.runScriptBeforeValidation = function(script, data, req, extraData) {
     //	emails.push({ from: '', to: '', server: '', subject: '', template: '_id', data: {  } });
     //	emails.push({ from: '', to: '', server: '', template: '_id', data: {  } });
     if (
-      sandbox.emails != null &&
+      sandbox.emails &&
       isArray(sandbox.emails) &&
       sandbox.emails.length > 0 &&
-      (typeof Models !== 'undefined' && Models !== null ? Models['Message'] : undefined) != null
+      has(Models, 'Message')
     ) {
       sandbox.emails = JSON.parse(JSON.stringify(sandbox.emails));
       for (let email of sandbox.emails) {
@@ -304,7 +304,7 @@ utils.runScriptBeforeValidation = function(script, data, req, extraData) {
         // HACK for dealing with modified date fields and inserting emails
         for (let key in email.data) {
           const value = email.data[key];
-          if (isString(value != null ? value['$date'] : undefined)) {
+          if (isString(get(value, '$date'))) {
             email.data[key] = new Date(value['$date']);
           }
         }
@@ -331,7 +331,7 @@ utils.runScriptBeforeValidation = function(script, data, req, extraData) {
 utils.runValidationScript = function(script, data, req, extraData) {
   try {
     let user;
-    if (req.user != null) {
+    if (req.user) {
       user = JSON.parse(JSON.stringify(req.user));
     }
     const contextData = {
@@ -345,7 +345,7 @@ utils.runValidationScript = function(script, data, req, extraData) {
     script = `result = (function(data, user, console) { ${script} })(data, user, console);`;
     runInContext(script, sandbox);
 
-    if (sandbox.result != null && isObject(sandbox.result)) {
+    if (sandbox.result && isObject(sandbox.result)) {
       return sandbox.result;
     } else {
       return {};
@@ -469,26 +469,26 @@ utils.formatValue = function(value, field, ignoreIsList) {
       return result.join(' - ');
     case 'address':
       result = [];
-      value.placeType != null && result.push(`${value.placeType}`);
-      value.place != null && result.push(` ${value.place}`);
-      value.number != null && result.push(`, ${value.number}`);
-      value.complement != null && result.push(`, ${value.complement}`);
-      value.district != null && result.push(`, ${value.district}`);
-      value.city != null && result.push(`, ${value.city}`);
-      value.state != null && result.push(`, ${value.state}`);
-      value.country != null && result.push(`, ${value.country}`);
-      value.postalCode != null && result.push(`, ${value.postalCode}`);
+      value.placeType  && result.push(`${value.placeType}`);
+      value.place  && result.push(` ${value.place}`);
+      value.number && result.push(`, ${value.number}`);
+      value.complement && result.push(`, ${value.complement}`);
+      value.district && result.push(`, ${value.district}`);
+      value.city && result.push(`, ${value.city}`);
+      value.state && result.push(`, ${value.state}`);
+      value.country && result.push(`, ${value.country}`);
+      value.postalCode && result.push(`, ${value.postalCode}`);
       return result.join('');
     case 'phone':
       result = [];
-      value.countryCode != null && result.push(`${value.countryCode}`);
-      value.phoneNumber != null &&
+      value.countryCode && result.push(`${value.countryCode}`);
+      value.phoneNumber &&
         value.phoneNumber.length > 6 &&
         result.push(` (${value.phoneNumber.substr(0, 2)}) ${value.phoneNumber.substr(2, 4)}-${value.phoneNumber.substr(6)}`);
       return result.join('');
     case 'money':
       result = [];
-      if ((value != null ? value.currency : undefined) != null && value.currency === 'BRL') {
+      if (get(value, 'currency') === 'BRL') {
         return `R$ ${numberFormat(value.value, 2, ',', '.')}`;
       } else {
         return `$ ${numberFormat(value.value, 2)}`;
@@ -520,11 +520,11 @@ utils.formatValue = function(value, field, ignoreIsList) {
 
 utils.getObjectPathAgg = function(obj, path, defaultValue) {
   let value;
-  if (path == null) {
+  if (!path) {
     return obj;
   }
 
-  if (obj == null) {
+  if (!obj) {
     return defaultValue;
   }
 

@@ -1,4 +1,4 @@
-import { indexBy, get } from 'lodash';
+import { indexBy, get, size } from 'lodash';
 
 /* @Add_File */
 app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
@@ -175,7 +175,7 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
     }
 
     // If resuls is success: false or data don't have records, return
-    if (result.success === false || get(result, 'data.length', 0) !== 1) {
+    if (result.success === false || size(get(result, 'data')) !== 1) {
       return res.send(result);
     }
 

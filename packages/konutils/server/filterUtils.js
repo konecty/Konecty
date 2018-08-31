@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { isArray, isString, isObject, get } from 'lodash';
+import { isArray, isString, isObject, get, has, indexOf } from 'lodash';
 /*
 rest/data/OK Activity/find
 	&fields=_user,_updatedAt,code
@@ -144,7 +144,7 @@ filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
   let group;
   if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
     const meta = Meta[field.document];
-    if (meta == null) {
+    if (!meta) {
       const e = new Meteor.Error('utils-internal-error', `Meta ${field.document} of field ${field.name} not found`);
       NotifyErrors.notify('FilterError', e);
       return e;
@@ -169,11 +169,11 @@ filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
       return req.user._id;
       break;
     case '$group':
-      return req.user.group != null ? req.user.group._id : undefined;
+      return get(req, 'user.group._id');
       break;
     case '$groups':
       var groups = [];
-      if (req.user.groups != null && isArray(req.user.groups)) {
+      if (isArray(get(req, 'user.groups'))) {
         for (group of req.user.groups) {
           groups.push(group._id);
         }
@@ -187,7 +187,7 @@ filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
         groups.push(req.user.group._id);
       }
 
-      if (req.user.groups != null && isArray(req.user.groups)) {
+      if (isArray(get(req, 'user.groups'))) {
         for (group of req.user.groups) {
           groups.push(group._id);
         }
@@ -223,7 +223,7 @@ filterUtils.validateOperator = function(condition, field, subTermPart) {
   let e;
   if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
     const meta = Meta[field.document];
-    if (meta == null) {
+    if (!meta) {
       e = new Meteor.Error('utils-internal-error', `Meta ${field.document} of field ${field.name} not found`);
       NotifyErrors.notify('FilterError', e);
       return e;
@@ -244,7 +244,7 @@ filterUtils.validateOperator = function(condition, field, subTermPart) {
   }
 
   const type = field.type + subTermPart;
-  if (operatoresByType[type] == null) {
+  if (!operatoresByType[type]) {
     e = new Meteor.Error('utils-internal-error', `Field type [${type}] of [${field.name}] not supported to filter`);
     NotifyErrors.notify('FilterError', e, { condition, field });
     return e;
@@ -265,7 +265,7 @@ filterUtils.validateOperator = function(condition, field, subTermPart) {
 };
 
 filterUtils.parseFilterCondition = function(condition, metaObject, req, invert) {
-  if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || condition.value == null) {
+  if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || !condition.value) {
     return new Meteor.Error('utils-internal-error', 'All conditions must contain term, operator and value');
   }
 
@@ -285,7 +285,7 @@ filterUtils.parseFilterCondition = function(condition, metaObject, req, invert) 
     field = { type: 'ObjectId' };
   }
 
-  if (field == null) {
+  if (!field) {
     return new Meteor.Error('utils-internal-error', `Field [${condition.term}] does not exists at [${metaObject._id}]`);
   }
 
@@ -479,7 +479,7 @@ filterUtils.parseDynamicData = function(filter, keyword, data) {
   }
 
   const parseConditions = function(condition) {
-    if (get(condition, 'value') !== -1) {
+    if (indexOf(get(condition, 'value', ''), keyword) !== -1) {
       return (condition.value = utils.getObjectPathAgg(data, condition.value.replace(keyword + '.', '')));
     }
   };

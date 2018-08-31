@@ -291,8 +291,8 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
     historyModel.upsert(query, data);
 
     // update old histories to reference the new merged document
-    historyModel.updateMany({ dataId: record._id, origDataId: { $exists: false } }, { $set: { origDataId: record._id } });
-    historyModel.updateMany({ dataId: record._id }, { $set: { dataId: request.targetId } });
+		historyModel.update({ dataId: record._id, origDataId: { $exists: false } }, { $set: { origDataId: record._id } }, { multi: true });
+		historyModel.update({ dataId: record._id }, { $set: { dataId: request.targetId } }, { multi: true });
   }
 
   for (let referenceDocumentName in get(References[request.document], 'from')) {
@@ -339,10 +339,14 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
         delete update[referenceFieldName];
       }
 
-      update = { $set: update };
+			update =
+				{$set: update};
+
+			const options =
+				{multi: true};
 
       model = Models[referenceDocumentName];
-      model.updateMany(query, update);
+			model.update(query, update, options);
     }
   }
 

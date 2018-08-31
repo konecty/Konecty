@@ -9,7 +9,7 @@ middlewares.user = function(req, res, next) {
   req.user = Meteor.users.findOne({ 'services.resume.loginTokens.hashedToken': { $in: [token, hashedToken] } });
 
   // If no user was found return error
-  if (req.user) {
+  if (!req.user) {
     return res.send(new Meteor.Error('internal-error', "Token doesn't exists"));
   }
 
@@ -27,7 +27,7 @@ middlewares.getAccessFor = documentParamName =>
     const documentName = req.params[documentParamName];
 
     // If no param was found with document name return 401 (Unauthorized)
-    if (documentName) {
+    if (!documentName) {
       return res.send(401);
     }
 

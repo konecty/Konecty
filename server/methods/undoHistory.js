@@ -1,3 +1,5 @@
+import { has } from 'lodash';
+
 Meteor.methods({
   undoHistory(meta, historyId, keys, runUpdate) {
     return Meteor.wrapAsync(function(callback) {
@@ -12,7 +14,7 @@ Meteor.methods({
       const warnings = [];
       const infos = [];
       for (var key of keys) {
-        if (has(history, `diffs.${key}`)) {
+        if (!has(history, `diffs.${key}`)) {
           errors.push(`Chave ${key} não encontrada nas alterações do histórico`);
         } else {
           const diff = history.diffs[key];

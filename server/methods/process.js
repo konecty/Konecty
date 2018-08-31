@@ -15,7 +15,8 @@ import {
   clone,
   has,
   get,
-  some
+  some,
+  size
 } from 'lodash';
 
 /* Process submit
@@ -187,7 +188,7 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function(request) {
       limit: 1
     });
 
-    if (get(record, 'data.length', 0) > 0) {
+    if (size(get(record, 'data')) > 0) {
       return response;
     }
   }
@@ -267,7 +268,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
   });
 
   // don't create an opportunity if contact already has
-  if (get(record, 'data.length', 0) > 0) {
+  if (size(get(record, 'data')) > 0) {
     opportunity = record.data[0];
     opportunityId = record.data[0]._id;
     response.processData['opportunity'] = record.data[0];
@@ -491,7 +492,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
       // console.log 'record ->'.red,request.product.code,record
 
       // don't create an opportunity if concat already has
-      if (get(record, 'data.length') > 0) {
+      if (size(get(record, 'data')) > 0) {
         productsList = [record.data[0]._id];
       }
     } else if (request.product.ids) {
@@ -525,7 +526,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
         // console.log 'record ->'.red,request.product.code,record
 
         // don't create an opportunity if concat already has
-        if (get(record, 'data.length', 0) === 0) {
+        if (size(get(record, 'data')) === 0) {
           createRequest = {
             document: 'ProductsPerOpportunities',
             data: {
@@ -557,7 +558,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
             return response;
           }
 
-          if (response.processData['productsPerOpportunities'] == null) {
+          if (!response.processData['productsPerOpportunities']) {
             response.processData['productsPerOpportunities'] = [];
           }
 
@@ -866,7 +867,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
   }
 
   if (emailSent.length > 0) {
-    if (get(contact, 'email.length') > 0) {
+    if (size(get(contact, 'email')) > 0) {
       let firstEmailNotFound = true;
       emailSent.forEach(function(emailAddress) {
         if (!findWhere(compact(contact.email), { address: emailAddress })) {
@@ -892,7 +893,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
   }
 
   if (phoneSent.length > 0) {
-    if (get(contact, 'phone.length') > 0) {
+    if (size(get(contact, 'phone')) > 0) {
       let firstPhoneNotFound = true;
       phoneSent.forEach(function(leadPhone) {
         if (!findWhere(compact(contact.phone), { phoneNumber: leadPhone })) {
@@ -978,7 +979,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
       limit: 1
     });
 
-    if (get(record, 'data.length', 0) > 0) {
+    if (size(get(record, 'data')) > 0) {
       if (has(contact, '_user')) {
         if (!findWhere(compact(contact._user), { _id: record.data[0]._id })) {
           contactData._user = clone(contact._user);
