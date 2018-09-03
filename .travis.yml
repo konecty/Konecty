@@ -3,36 +3,36 @@ branches:
   only:
     - "/^\\d+\\.\\d+\\.\\d+$/"
     - "/^\\d+\\.\\d+\\.\\d+(-alpha)$/"
-    - "/^\\d+\\.\\d+\\.\\d+(-beta\\.\\d)$/"
-    - "/^\\d+\\.\\d+\\.\\d+(-dev\\.\\d)$/"
+    - "/^\\d+\\.\\d+\\.\\d+(-beta\\.\\d+)$/"
+    - "/^\\d+\\.\\d+\\.\\d+(-dev\\.\\d+)$/"
 git:
   depth: 1
 node_js:
-- '4'
+  - '4'
 cache:
   directories:
-  - "$HOME/node_modules"
-  - "$HOME/.meteor"
-  - "$HOME/.npm"
-  - "$HOME/.node-gyp"
+    - '$HOME/node_modules'
+    - '$HOME/.meteor'
+    - '$HOME/.npm'
+    - '$HOME/.node-gyp'
 install:
-- if [ ! -e "$HOME/.meteor/meteor" ]; then curl https://install.meteor.com | sed s/--progress-bar/-sL/g
-  | /bin/sh; fi
-- export PATH="$HOME/.meteor:$PATH"
+  - if [ ! -e "$HOME/.meteor/meteor" ]; then curl https://install.meteor.com | sed s/--progress-bar/-sL/g
+    | /bin/sh; fi
+  - export PATH="$HOME/.meteor:$PATH"
 script:
-- meteor --version
-- meteor npm install
-- meteor build --server-only /tmp/build
+  - meteor --version
+  - meteor npm install
+  - meteor build --server-only /tmp/build
 deploy:
   provider: releases
   api_key:
     secure: eWbjmu87ZLpK5dzWf4XoUJ357McibkIVvy0E2pl7uoFxVTV+rZjFmGz4xG8b53fsccdfi7PwIXL7RDIOropyEmXe6VSRCM0jkm3sr6+aIR+19MV+oPOTjmrfkv0vQB4UNAFq6XRtOFRWb7zSG71OwhzccUrJWryAAXHQXajgt7AaWGJV4I19aUntoTb0sOU9HnscMqYNki1S+8wNBL6dmUl+BFY4Nub86rfPKyKk+pu3x7Ky8XTu9mLGwjFwBcX4iUt30RyjdMA0uDQ9j/LWLMdrdWb81ZixthbckN613CCNAs68JnArnafXpIBvzNQY9x38lr+tJLCUVq4kupAK60+VkTdsHwpu6GcdsEiGtjrvAiqObLDQh0uUSvTMPPkzDa3Y2nsjIKbIfQ+xPe+qBN+9ybQUxC2jELT6JN87VkIEqRy2dzQZK8WBiC2RLT4iunye/JTKDVLQd1P0oH1oL3pBSIzsrD3AU9eJ8wbtWkY1o0Vw28j9FA1Mctz7svL8a468ML9OmyqY1L5CIqfAM394xP4vOVH2VjNWYnfEmAm1yV5cNWyefK5vRAyUEc1sbhuqe2+mLqbe8z9WeLfwK0ngaZQ/hotQ40yDsyMKhRlqS3IIxP0VuEi+u4xHF4MaNQuXnw65jWmedrKLLKWjbkymdER1o2BQaZ4rCw4jZMw=
   skip_cleanup: true
-  file: "/tmp/build/Konecty.tar.gz"
+  file: '/tmp/build/Konecty.tar.gz'
   on:
     tags: true
 after_deploy:
-- |
-  curl -H "Content-Type: application/json" \
-  --data '{"source_type":"Tag","source_name":"'"$TRAVIS_TAG"'"}' \
-  -X POST "https://registry.hub.docker.com/u/konecty/konecty/trigger/$DOCKERHUBTOKEN/"
+  - |
+    curl -H "Content-Type: application/json" \
+    --data '{"source_type":"Tag","source_name":"'"$TRAVIS_TAG"'"}' \
+    -X POST "https://registry.hub.docker.com/u/konecty/konecty/trigger/$DOCKERHUBTOKEN/"
