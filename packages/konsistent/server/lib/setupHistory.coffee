@@ -17,7 +17,7 @@ if _.isEmpty(process.env.DISABLE_KONSISTENT) or process.env.DISABLE_KONSISTENT i
 	console.log "[konsistent] === #{dbName} ===".green
 
 # Define fome keys to remove from saved data in history when data was created or updated
-keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_deletedBy', '_deletedBy']
+keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_deletedBy', '_deletedBy', '$v']
 
 # Define collection Konsistent to save last state
 Konsistent.Models.Konsistent = new Meteor.Collection "Konsistent"
@@ -944,7 +944,7 @@ Konsistent.History.processAlertsForOplogItem = (metaName, action, _id, data, upd
 		when 'update'
 			actionText = 'Alterado'
 
-	excludeKeys = ['_updatedAt', '_updatedBy', '_createdAt', '_createdBy', '_deletedAt', '_deletedBy']
+	excludeKeys = ['_updatedAt', '_updatedBy', '_createdAt', '_createdBy', '_deletedAt', '_deletedBy', '$v']
 
 	# Ignore fields that is marked to ignore history
 	for key, value of data
