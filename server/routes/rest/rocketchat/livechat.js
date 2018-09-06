@@ -238,6 +238,10 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
         }
       };
 
+			if (contactProcess.data.campaign.identifier) {
+				contactProcess.data.campaign._id = contactProcess.data.campaign.identifier;
+			};
+
       var request = {
         authTokenId: Namespace.RocketChat.accessToken,
         data: [contactProcess, opportunityData, messageData, activity]
