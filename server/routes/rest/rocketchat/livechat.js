@@ -119,7 +119,9 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
         _id: hookData.agent._id
       };
 
-      if (Namespace.RocketChat.livechat.queue) {
+			if (hookData.visitor.department) {
+				contactProcess.data.queue = { _id: hookData.visitor.department };
+			} else if (Namespace.RocketChat.livechat.queue) {
         contactProcess.data.queue = Namespace.RocketChat.livechat.queue;
       }
 
@@ -150,9 +152,12 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
       if (contactProcess.data.source) {
         opportunityData.data.source = contactProcess.data.source;
       }
-      if (Namespace.RocketChat.livechat.queue) {
-        opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
-      }
+			
+			if (hookData.visitor.department) {
+				opportunityData.data.queue = { _id: hookData.visitor.department };
+			} else if (Namespace.RocketChat.livechat.queue) {
+				opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
+			}
 
       var messages = '';
       if (hookData.messages) {
