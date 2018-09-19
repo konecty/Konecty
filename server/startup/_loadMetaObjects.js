@@ -8,7 +8,7 @@ Namespace = {};
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
-const logIndexActionEnable = true;
+const logIndexActionEnable = false;
 
 const logIndexAction = function(msg) {
   if (logIndexActionEnable === true) {
