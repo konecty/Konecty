@@ -340,12 +340,6 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
 
   // Create history!
   try {
-    console.log('======================');
-    console.log(data);
-    console.log(historyQuery);
-    console.log(historyItem);
-    console.log('======================');
-
     history.update(historyQuery, historyItem, { upsert: true });
   } catch (e) {
     console.log(e);

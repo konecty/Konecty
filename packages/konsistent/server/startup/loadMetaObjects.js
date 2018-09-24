@@ -58,7 +58,7 @@ const registerTemplate = function(record) {
 };
 
 Konsistent.start = function(MetaObject, Models, rebuildMetas) {
-  if (!rebuildMetas) {
+  if (typeof rebuildMetas === 'undefined') {
     rebuildMetas = true;
   }
   Konsistent.MetaObject = MetaObject;
