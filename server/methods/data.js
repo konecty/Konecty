@@ -193,7 +193,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
     }
   }
 
-  const options = {
+  var options = {
     limit: parseInt(request.limit),
     skip: parseInt(request.start),
     fields,
