@@ -57,8 +57,10 @@ const tryEnsureIndex = function(model, fields, options) {
       logIndexAction(`Overwriting index: ${JSON.stringify(fields)}`.yellow);
       model._dropIndex(fields);
       model._ensureIndex(fields, options);
+    } else if (e.toString().indexOf('too many indexes for') !== -1) {
+      logIndexAction('Too many indexes'.red);
     } else {
-      console.log('Index Error: '.red, e);
+      logIndexAction('Index Error: '.red, e);
     }
   }
 };
