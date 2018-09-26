@@ -1,0 +1,17 @@
+{
+  "plugins": ["meteor"],
+  "extends": ["plugin:meteor/recommended"],
+  "rules": {
+    "meteor/audit-argument-checks": 0,
+    "meteor/template-names": 0,
+    "meteor/eventmap-params": 0
+  },
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true
+    }
+  }
+}

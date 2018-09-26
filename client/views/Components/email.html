@@ -1,9 +1,0 @@
-<template name="Component.field.email">
-	<section class="{{getClass}}">
-		{{{getLabelHtml}}}
-		<div>
-			{{ > Component.field.select name="type" value=getType options=getOptions class="list-dock-right"}}
-			{{ > Component.field.text name="address" mask="email" type="email" value=getAddress buttons=buttons }}
-		</div>
-	</section>
-</template>
