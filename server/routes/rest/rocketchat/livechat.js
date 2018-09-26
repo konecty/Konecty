@@ -56,11 +56,15 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
             }
             return phone;
           };
+
+					var phone = [];
+
           if (_.isArray(hookData.visitor.phone)) {
-            phones = _.map(hookData.visitor.phone, phoneTreatment);
+						phone = hookData.visitor.phone.map(phone => phoneTreatment(phone.phoneNumber));
           } else {
-            contactProcess.data.phone = phoneTreatment(hookData.visitor.phone);
+						phone.push(phoneTreatment(hookData.visitor.phone));
           }
+					contactProcess.data.phone = phone;
         }
 
         if (_.isEmpty(contactProcess.data.phone) && _.isEmpty(contactProcess.data.email)) {
