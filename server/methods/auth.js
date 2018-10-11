@@ -1,4 +1,4 @@
-import { parse } from 'ua-parser';
+const useragent = require('useragent');
 import { hash, compare } from 'bcrypt';
 import { isString, isObject, get, has } from 'lodash';
 bcryptHash = Meteor.wrapAsync(hash);
@@ -7,10 +7,10 @@ bcryptCompare = Meteor.wrapAsync(compare);
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
 const injectRequestInformation = function(userAgent, session) {
-  const r = parse(userAgent);
+	const r = useragent.parse(userAgent);
 
-  session.browser = r.ua.family;
-  session.browserVersion = r.ua.toVersionString();
+	session.browser = r.family;
+	session.browserVersion = r.toVersion();
   session.os = r.os.toString();
   session.platform = r.device.family;
 
