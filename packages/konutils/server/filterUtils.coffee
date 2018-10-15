@@ -51,6 +51,8 @@ operatoresByType =
 	'address.number'    : ['exists', 'equals', 'not_equals']
 	'address.postalCode': ['exists', 'equals', 'not_equals',                  'contains']
 	'address.complement': ['exists', 'equals', 'not_equals',                  'contains']
+	'address.geolocation.0': ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
+	'address.geolocation.1': ['exists', 'equals', 'not_equals', 'in', 'not_in',                                                        'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between']
 	'personName.first'  : ['exists', 'equals', 'not_equals',                  'contains', 'not_contains', 'starts_with', 'end_with']
 	'personName.last'   : ['exists', 'equals', 'not_equals',                  'contains', 'not_contains', 'starts_with', 'end_with']
 	'personName.full'   : ['exists', 'equals', 'not_equals',                  'contains', 'not_contains', 'starts_with', 'end_with']
@@ -298,7 +300,7 @@ filterUtils.parseFilterObject = (filter, metaObject, req) ->
 					console.log result
 					return result
 				query.push result
-
+	console.log JSON.stringify query
 	if query.length is 0
 		return {}
 
