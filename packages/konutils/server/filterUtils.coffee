@@ -300,7 +300,7 @@ filterUtils.parseFilterObject = (filter, metaObject, req) ->
 					console.log result
 					return result
 				query.push result
-	console.log JSON.stringify query
+
 	if query.length is 0
 		return {}
 
