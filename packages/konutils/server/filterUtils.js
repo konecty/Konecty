@@ -451,7 +451,7 @@ filterUtils.parseFilterObject = function(filter, metaObject, req) {
 
 	if (isArray(filter.conditions) && filter.conditions.length > 0) {
 		for (condition of filter.conditions) {
-			if (condition.disabled !== true) {
+			if (condition && condition.disabled !== true) {
 				result = filterUtils.parseFilterCondition(condition, metaObject, req);
 				if (result instanceof Error) {
 					console.log(result);
