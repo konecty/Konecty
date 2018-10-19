@@ -285,7 +285,7 @@ filterUtils.parseFilterObject = (filter, metaObject, req) ->
 
 	if _.isArray(filter.conditions) and filter.conditions.length > 0
 		for condition in filter.conditions
-			if condition.disabled isnt true
+			if condition?.disabled? isnt true
 				result = filterUtils.parseFilterCondition condition, metaObject, req
 				if result instanceof Error
 					console.log result
