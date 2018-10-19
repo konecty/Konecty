@@ -1001,14 +1001,14 @@ Meteor.registerMethod(
 						delete updateOperation['$setOnInsert'];
 					}
 
-					insertResult = model.upsert(request.upsert, updateOperation);
+					insertResult = model.upsert(utils.processDate(request.upsert), utils.processDate(updateOperation));
 					if (insertResult.insertedId) {
 						insertResult = insertResult.insertedId;
 					} else if (insertResult.numberAffected > 0) {
 						insertResult = get(model.findOne(request.upsert), '_id');
 					}
 				} else {
-					insertResult = model.insert(newRecord);
+					insertResult = model.insert(utils.processDate(newRecord));
 				}
 			} catch (e) {
 				if (e.code === 11000) {
@@ -1490,7 +1490,7 @@ Meteor.registerMethod(
 				// Execute update
 				options = { multi: true };
 				try {
-					model.update(query, update, options);
+					model.update(query, utils.processDate(update), options);
 					return (updatedIds = updatedIds.concat(query._id.$in));
 				} catch (e) {
 					NotifyErrors.notify('DataUpdateError', e);

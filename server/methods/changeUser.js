@@ -1,7 +1,4 @@
-import moment from 'moment';
-import { mapObjIndexed } from 'ramda';
-
-import { isArray, isObject, map } from 'lodash';
+import { map } from 'lodash';
 
 const validateRequest = function(request, access) {
 	// Verify if user have permission to update record
@@ -43,19 +40,6 @@ const validateRequest = function(request, access) {
 		}
 	}
 };
-
-const processDate = mapObjIndexed(value => {
-	if (value.$date) {
-		return moment(value.$date);
-	}
-	if (isArray(value)) {
-		return map(value, processDate);
-	}
-	if (isObject(value)) {
-		return processDate(value);
-	}
-	return value;
-});
 
 /* Add users
 	@param authTokenId
@@ -108,7 +92,7 @@ Meteor.registerMethod(
 			const update = {
 				$push: {
 					_user: {
-						$each: [processDate(user)],
+						$each: [utils.processDate(user)],
 						$position: 0
 					}
 				},
@@ -246,7 +230,7 @@ Meteor.registerMethod(
 
 		const update = {
 			$set: {
-				_user: map(request.users, processDate),
+				_user: map(request.users, utils.processDate),
 				_updatedAt: now,
 				_updatedBy: {
 					_id: this.user._id,
@@ -353,7 +337,7 @@ Meteor.registerMethod(
 		let update = {
 			$push: {
 				_user: {
-					$each: [processDate(request.to)],
+					$each: [utils.processDate(request.to)],
 					$position: 0
 				}
 			},
