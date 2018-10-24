@@ -46,7 +46,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
         }
 
         if (!_.isEmpty(hookData.visitor.phone)) {
-					var phoneTreatment = function (p) {
+          var phoneTreatment = function (p) {
             var phone = s
               .trim(p)
               .replace(/[^0-9]/g, '')
@@ -57,14 +57,14 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
             return phone;
           };
 
-					var phone = [];
+          var phone = [];
 
           if (_.isArray(hookData.visitor.phone)) {
-						phone = hookData.visitor.phone.map(phone => phoneTreatment(phone.phoneNumber));
+            phone = hookData.visitor.phone.map(phone => phoneTreatment(phone.phoneNumber));
           } else {
-						phone.push(phoneTreatment(hookData.visitor.phone));
+            phone.push(phoneTreatment(hookData.visitor.phone));
           }
-					contactProcess.data.phone = phone;
+          contactProcess.data.phone = phone;
         }
 
         if (_.isEmpty(contactProcess.data.phone) && _.isEmpty(contactProcess.data.email)) {
@@ -123,9 +123,9 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
         _id: hookData.agent._id
       };
 
-			if (hookData.visitor.department) {
-				contactProcess.data.queue = { _id: hookData.visitor.department };
-			} else if (Namespace.RocketChat.livechat.queue) {
+      if (hookData.visitor.department) {
+        contactProcess.data.queue = { _id: hookData.visitor.department };
+      } else if (Namespace.RocketChat.livechat.queue) {
         contactProcess.data.queue = Namespace.RocketChat.livechat.queue;
       }
 
@@ -156,16 +156,16 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
       if (contactProcess.data.source) {
         opportunityData.data.source = contactProcess.data.source;
       }
-			
-			if (hookData.visitor.department) {
-				opportunityData.data.queue = { _id: hookData.visitor.department };
-			} else if (Namespace.RocketChat.livechat.queue) {
-				opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
-			}
+      
+      if (hookData.visitor.department) {
+        opportunityData.data.queue = { _id: hookData.visitor.department };
+      } else if (Namespace.RocketChat.livechat.queue) {
+        opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
+      }
 
       var messages = '';
       if (hookData.messages) {
-				hookData.messages.forEach(function (msg) {
+        hookData.messages.forEach(function (msg) {
           messages +=
             '<strong>' +
             msg.username +
@@ -201,13 +201,13 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
           messageData.data.medium = contactProcess.data.medium;
         }
 
-				Object.keys(messageExtraFields).forEach(function (key) {
+        Object.keys(messageExtraFields).forEach(function (key) {
           messageData.data[key] = messageExtraFields[key];
         });
       }
 
       if (hookData.crmData) {
-				Object.keys(hookData.crmData).forEach(function (key) {
+        Object.keys(hookData.crmData).forEach(function (key) {
           if (key === 'contact') {
             if (hookData.crmData[key]._id) {
               contactProcess.data._id = hookData.crmData[key]._id;
@@ -247,21 +247,21 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
         }
       };
 
-			if (contactProcess.data.campaign.identifier) {
-				contactProcess.data.campaign._id = contactProcess.data.campaign.identifier;
-			};
+      if (contactProcess.data.campaign.identifier) {
+        contactProcess.data.campaign._id = contactProcess.data.campaign.identifier;
+      };
 
 
       var request = {
-				authTokenId: Namespace.RocketChat.accessToken
+        authTokenId: Namespace.RocketChat.accessToken
       };
 
-			if (contactProcess.data.email === 'chatsemlead@email.com') {
-				delete activity.map.opportunity;
-				request.data = [contactProcess, messageData, activity];
-			} else {
-				request.data = [contactProcess, opportunityData, messageData, activity];				
-			}
+      if (contactProcess.data.email === 'chatsemlead@email.com') {
+        delete activity.map.opportunity;
+        request.data = [contactProcess, messageData, activity];
+      } else {
+        request.data = [contactProcess, opportunityData, messageData, activity];				
+      }
 
       result = Meteor.call('process:submit', request);
       break;
@@ -353,7 +353,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
     var processData = {};
 
     // get _id from all saved documents
-		Object.keys(result.processData).forEach(function (key) {
+    Object.keys(result.processData).forEach(function (key) {
       if (result.processData[key]._id) {
         processData[key] = _.pick(result.processData[key], '_id', 'code');
       }
