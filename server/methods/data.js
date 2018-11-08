@@ -765,7 +765,7 @@ Meteor.registerMethod(
 		const { meta } = this;
 		const { model } = this;
 
-		if (has(request, 'data._user')) {
+		if (get(request, 'data._user', undefined)) {
 			let onlyMe = true;
 
 			for (let newUser of request.data._user) {
