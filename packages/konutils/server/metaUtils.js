@@ -85,7 +85,7 @@ metaUtils.validateAndProcessValueFor = function(
 		lookupUtils.removeInheritedFields(field, objectNewValues);
 	}
 
-	if (value && field.type !== 'autoNumber') {
+	if (!value && field.type !== 'autoNumber') {
 		return value;
 	}
 
