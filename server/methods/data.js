@@ -20,10 +20,9 @@ import {
 	map,
 	get,
 	size,
-	isDate
+	isDate,
+	reduce
 } from 'lodash';
-
-import { mapObjIndexed } from 'ramda';
 
 import { post } from 'request';
 
@@ -211,18 +210,37 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 	const local = { collection: new Meteor.Collection(null) };
 
-	const mapDateValue = mapObjIndexed(value => {
-		if (isDate(value)) {
-			return moment(value).toISOString();
-		}
-		if (isArray(value)) {
-			return map(value, mapDateValue);
-		}
-		if (isObject(value)) {
-			return mapDateValue(value);
-		}
-		return value;
-	});
+	const mapDateValue = record =>
+		isObject(record)
+			? reduce(
+					record,
+					(acc, value, key) => {
+						if (isDate(value)) {
+							return {
+								...acc,
+								[key]: moment(value).toISOString()
+							};
+						}
+						if (isArray(value)) {
+							return {
+								...acc,
+								[key]: map(value, mapDateValue)
+							};
+						}
+						if (isObject(value)) {
+							return {
+								...acc,
+								[key]: mapDateValue(value)
+							};
+						}
+						return {
+							...acc,
+							[key]: value
+						};
+					},
+					{}
+			  )
+			: record;
 
 	for (var record of records) {
 		local.collection.insert(mapDateValue(record));
