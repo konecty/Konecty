@@ -1291,7 +1291,8 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
         type: 'Email',
         status: 'Send',
         discard: true
-      };
+			};
+			Konsistent.Models['Message'].insert(emailData);
     }
   }
 };
