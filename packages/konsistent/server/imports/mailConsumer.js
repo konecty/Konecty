@@ -188,7 +188,6 @@ mailConsumer.send = function(record, cb) {
 		return mailConsumer.sendEmail(record, cb);
 	}
 
-	console.log(JSON.stringify(emailTemplateOptions, null, 2));
 	const emailTemplates = new EmailTemplates(emailTemplateOptions);
 	if (!record.data) {
 		record.data = {};
