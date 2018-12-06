@@ -34,6 +34,7 @@
 		"request": "^2.88.0",
 		"swig": "^1.4.2",
 		"swig-email-templates": "^5.0.1",
+		"underscore.string": "^3.3.5",
 		"useragent": "^2.3.0",
 		"vm": "^0.1.0",
 		"xoauth2": "^1.2.0"
