@@ -243,14 +243,18 @@ Picker.middleware(urlencoded({ extended: true }));
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
 const corsOptions = {
 	origin: function(origin, callback) {
-		if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-			callback(null, true);
+		if (origin) {
+			if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+				callback(null, true);
+			} else {
+				console.error(`${origin} Not allowed by CORS`);
+				callback(new Error(`Not allowed by CORS`));
+			}
 		} else {
-			console.error(`${origin} Not allowed by CORS`);
-			callback(new Error(`Not allowed by CORS`));
+			callback(null, true);
 		}
 	},
-	allowedHeaders:['Content-Type', 'Authorization', 'Cookie'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
 	credentials: true,
 	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 };

@@ -343,7 +343,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read field`);
 	}
 
-	const options = { fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field) };
+	let options = { fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field) };
 
 	const records = model.find(query, options).fetch();
 
@@ -466,7 +466,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 		}
 	}
 
-	const options = { fields };
+	let options = { fields };
 
 	let data = model.findOne(query, options);
 
@@ -687,7 +687,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 		}
 	}
 
-	const options = {
+	let options = {
 		limit: parseInt(request.limit),
 		skip: parseInt(request.start),
 		fields,
@@ -1694,7 +1694,7 @@ Meteor.registerMethod(
 			idMap[item._id] = item;
 		}
 
-		const options = {};
+		let options = {};
 		// fields:
 		// 	_updatedAt: 1
 
