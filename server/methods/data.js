@@ -15,7 +15,7 @@ import {
 	isNumber,
 	first as _first,
 	words,
-	rest,
+	tail,
 	has,
 	map,
 	get,
@@ -2422,7 +2422,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 			const nameParts = words(request.lead.name);
 			contactData.name = {
 				first: _first(nameParts),
-				last: rest(nameParts).join(' ')
+				last: tail(nameParts).join(' ')
 			};
 		}
 	}

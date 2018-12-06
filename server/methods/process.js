@@ -9,7 +9,7 @@ import {
   isEmpty,
   first as _first,
   words,
-  rest,
+  tail,
   findWhere,
   compact,
   clone,
@@ -861,7 +861,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
       const nameParts = words(request.name);
       contactData.name = {
         first: _first(nameParts),
-        last: rest(nameParts).join(' ')
+        last: tail(nameParts).join(' ')
       };
     }
   }
