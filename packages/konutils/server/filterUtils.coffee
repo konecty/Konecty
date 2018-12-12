@@ -285,7 +285,7 @@ filterUtils.parseFilterObject = (filter, metaObject, req) ->
 
 	if _.isArray(filter.conditions) and filter.conditions.length > 0
 		for condition in filter.conditions
-			if condition?.disabled? isnt true
+			if condition?.disabled isnt true
 				result = filterUtils.parseFilterCondition condition, metaObject, req
 				if result instanceof Error
 					console.log result
@@ -294,7 +294,7 @@ filterUtils.parseFilterObject = (filter, metaObject, req) ->
 
 	else if _.isObject(filter.conditions) and Object.keys(filter.conditions).length > 0
 		for key, condition of filter.conditions
-			if condition?.disabled? isnt true
+			if condition?.disabled isnt true
 				result = filterUtils.parseFilterCondition condition, metaObject, req
 				if result instanceof Error
 					console.log result
@@ -327,12 +327,12 @@ filterUtils.parseDynamicData = (filter, keyword, data) ->
 
 	if _.isArray(filter.conditions) and filter.conditions.length > 0
 		for condition in filter.conditions
-			if condition?.disabled? isnt true
+			if condition?.disabled isnt true
 				parseConditions condition
 
 	else if _.isObject(filter.conditions) and Object.keys(filter.conditions).length > 0
 		for key, condition of filter.conditions
-			if condition?.disabled? isnt true
+			if condition?.disabled isnt true
 				parseConditions condition
 
 	return filter
