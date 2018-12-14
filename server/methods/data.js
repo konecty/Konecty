@@ -210,40 +210,8 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 	const local = { collection: new Meteor.Collection(null) };
 
-	const mapDateValue = record =>
-		isObject(record)
-			? reduce(
-					record,
-					(acc, value, key) => {
-						if (isDate(value)) {
-							return {
-								...acc,
-								[key]: moment(value).toISOString()
-							};
-						}
-						if (isArray(value)) {
-							return {
-								...acc,
-								[key]: map(value, mapDateValue)
-							};
-						}
-						if (isObject(value)) {
-							return {
-								...acc,
-								[key]: mapDateValue(value)
-							};
-						}
-						return {
-							...acc,
-							[key]: value
-						};
-					},
-					{}
-			  )
-			: record;
-
 	for (var record of records) {
-		local.collection.insert(mapDateValue(record));
+		local.collection.insert(utils.mapDateValue(record));
 	}
 
 	for (let accessCondition of accessConditions) {
@@ -473,7 +441,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	if (data) {
 		const local = { collection: new Meteor.Collection(null) };
 
-		local.collection.insert(data);
+		local.collection.insert(utils.mapDateValue(data));
 
 		for (let accessCondition of accessConditions) {
 			const update = { $unset: {} };
@@ -701,7 +669,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	const data = model.find(query, options).fetch();
 	const total = model.find(query).count();
 
-	return { success: true, data, total };
+	return { success: true, data: map(data, utils.mapDateValue), total };
 });
 
 /* Receive a record and populate with detail fields
@@ -1096,7 +1064,7 @@ Meteor.registerMethod(
 			// Set update reords to response object
 			if (isObject(insertedRecord)) {
 				insertedRecord = accessUtils.removeUnauthorizedDataForRead(this.access, insertedRecord);
-				response.data = [insertedRecord];
+				response.data = [utils.mapDateValue(insertedRecord)];
 			}
 		}
 
@@ -1507,6 +1475,7 @@ Meteor.registerMethod(
 
 				// Execute update
 				options = { multi: true };
+
 				try {
 					model.update(query, utils.processDate(update), options);
 					return (updatedIds = updatedIds.concat(query._id.$in));
@@ -1591,7 +1560,7 @@ Meteor.registerMethod(
 			// Set update reords to response object
 			response.data = [];
 			for (let updatedRecord of updatedRecords) {
-				response.data.push(accessUtils.removeUnauthorizedDataForRead(this.access, updatedRecord));
+				response.data.push(utils.mapDateValue(accessUtils.removeUnauthorizedDataForRead(this.access, updatedRecord)));
 			}
 		}
 
