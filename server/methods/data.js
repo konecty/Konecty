@@ -10,7 +10,7 @@ import {
 	extend,
 	isEmpty,
 	pick,
-	findWhere,
+	find,
 	clone,
 	isNumber,
 	first as _first,
@@ -2065,7 +2065,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 				}
 				if (
 					reverseLookupModel &&
-					!findWhere(emailData[Meta[relation.document].fields[relation.reverseLookup].document], { _id: reverseLookup })
+					!find(emailData[Meta[relation.document].fields[relation.reverseLookup].document], { _id: reverseLookup })
 				) {
 					const reverseLookupData = reverseLookupModel.findOne({ _id: reverseLookup });
 					metaUtils.populateLookupsData(Meta[relation.document].fields[relation.reverseLookup].document, reverseLookupData, {
@@ -2429,7 +2429,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 	if (request.lead.email) {
 		if (size(get(contact, 'email')) > 0) {
-			if (!findWhere(compact(contact.email), { address: request.lead.email })) {
+			if (!find(compact(contact.email), { address: request.lead.email })) {
 				contactData.email = contact.email;
 				contactData.email.push({
 					address: request.lead.email
@@ -2444,7 +2444,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 		if (size(get(contact, 'phone.length')) > 0) {
 			let firstPhoneNotFound = true;
 			phoneSent.forEach(function(leadPhone) {
-				if (!findWhere(compact(contact.phone), { phoneNumber: leadPhone })) {
+				if (!find(compact(contact.phone), { phoneNumber: leadPhone })) {
 					if (firstPhoneNotFound) {
 						contactData.phone = contact.phone;
 						firstPhoneNotFound = false;
@@ -2506,7 +2506,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 		if (size(get(record, 'data')) > 0) {
 			if (has(contact, '_user')) {
-				if (!findWhere(compact(contact._user), { _id: record.data[0]._id })) {
+				if (!find(compact(contact._user), { _id: record.data[0]._id })) {
 					contactData._user = clone(contact._user);
 					contactData._user.push({
 						_id: record.data[0]._id
@@ -2561,7 +2561,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					contactUser = record.data[0]._user[0];
 
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-					if (!findWhere(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
+					if (!find(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
 						contactData._user = clone(contact._user);
 						contactData._user.push(record.data[0]._user[0]);
 					}
@@ -2609,7 +2609,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					contactUser = record.data[0]._user[0];
 
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-					if (!findWhere(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
+					if (!find(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
 						contactData._user = clone(contact._user);
 						contactData._user.push(record.data[0]._user[0]);
 					}
@@ -2628,7 +2628,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
-						if (!findWhere(compact(contact._user), { _id: userQueue.user._id })) {
+						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
 							contactData._user = clone(contact._user);
 							contactData._user.push(userQueue.user);
 						}
@@ -2669,7 +2669,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
-						if (!findWhere(compact(contact._user), { _id: userQueue.user._id })) {
+						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
 							contactData._user = clone(contact._user);
 							contactData._user.push(userQueue.user);
 						}

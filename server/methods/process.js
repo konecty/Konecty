@@ -10,7 +10,7 @@ import {
   first as _first,
   words,
   tail,
-  findWhere,
+  find,
   compact,
   clone,
   has,
@@ -870,7 +870,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
     if (size(get(contact, 'email')) > 0) {
       let firstEmailNotFound = true;
       emailSent.forEach(function(emailAddress) {
-        if (!findWhere(compact(contact.email), { address: emailAddress })) {
+        if (!find(compact(contact.email), { address: emailAddress })) {
           if (firstEmailNotFound) {
             contactData.email = contact.email;
             firstEmailNotFound = false;
@@ -896,7 +896,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
     if (size(get(contact, 'phone')) > 0) {
       let firstPhoneNotFound = true;
       phoneSent.forEach(function(leadPhone) {
-        if (!findWhere(compact(contact.phone), { phoneNumber: leadPhone })) {
+        if (!find(compact(contact.phone), { phoneNumber: leadPhone })) {
           if (firstPhoneNotFound) {
             contactData.phone = contact.phone;
             firstPhoneNotFound = false;
@@ -981,7 +981,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
     if (size(get(record, 'data')) > 0) {
       if (has(contact, '_user')) {
-        if (!findWhere(compact(contact._user), { _id: record.data[0]._id })) {
+        if (!find(compact(contact._user), { _id: record.data[0]._id })) {
           contactData._user = clone(contact._user);
           if (!contactData._user) {
             contactData._user = [];
@@ -1044,7 +1044,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
           if (userFromOpportunity.active === true) {
             contactUser = userFromOpportunity;
             // @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-            if (!findWhere(compact(contact._user), { _id: userFromOpportunity._id })) {
+            if (!find(compact(contact._user), { _id: userFromOpportunity._id })) {
               contactData._user = clone(contact._user);
               if (!contactData._user) {
                 contactData._user = [];
@@ -1099,7 +1099,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
             // console.log 'user from Activity ->'.magenta,contactUser
 
             // @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-            if (!findWhere(compact(contact._user), { _id: userFromActivity._id })) {
+            if (!find(compact(contact._user), { _id: userFromActivity._id })) {
               contactData._user = clone(contact._user);
               if (!contactData._user) {
                 contactData._user = [];
@@ -1122,7 +1122,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
       if (has(userQueue, 'user._id')) {
         if (contact) {
-          if (!findWhere(compact(contact._user), { _id: userQueue.user._id })) {
+          if (!find(compact(contact._user), { _id: userQueue.user._id })) {
             contactData._user = clone(contact._user);
             if (!contactData._user) {
               contactData._user = [];
@@ -1165,7 +1165,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
         if (has(userQueue, 'user._id')) {
           if (contact) {
-            if (!findWhere(compact(contact._user), { _id: userQueue.user._id })) {
+            if (!find(compact(contact._user), { _id: userQueue.user._id })) {
               contactData._user = clone(contact._user);
               if (!contactData._user) {
                 contactData._user = [];
