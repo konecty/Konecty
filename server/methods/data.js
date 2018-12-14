@@ -2713,7 +2713,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 		const updateRequest = {
 			document: 'Contact',
 			data: {
-				ids: [{ _id: contact._id, _updatedAt: { $date: contact._updatedAt.toISOString() } }],
+				ids: [{ _id: contact._id, _updatedAt: { $date: moment(contact._updatedAt).toISOString() } }],
 				data: contactData
 			}
 		};
