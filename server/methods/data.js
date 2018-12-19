@@ -19,9 +19,7 @@ import {
 	has,
 	map,
 	get,
-	size,
-	isDate,
-	reduce
+	size
 } from 'lodash';
 
 import { post } from 'request';
@@ -211,7 +209,12 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	const local = { collection: new Meteor.Collection(null) };
 
 	for (var record of records) {
-		local.collection.insert(utils.mapDateValue(record));
+		try {
+			local.collection.insert(utils.mapDateValue(record));
+		} catch (error) {
+			console.log(error);
+			console.log(record);
+		}
 	}
 
 	for (let accessCondition of accessConditions) {
