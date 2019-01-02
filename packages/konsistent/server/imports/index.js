@@ -1,7 +1,7 @@
 /*
  * @TODO test sincrony
  */
-import { isEmpty, bind, isObject, isString, uniq, intersection, isArray, compact, has, get } from 'lodash';
+import { isEmpty, bind, isObject, isString, uniq, intersection, isArray, compact, has, get, size, keys } from 'lodash';
 import { parse } from 'mongodb-uri';
 
 Konsistent = {};
@@ -701,7 +701,7 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
 	const references = Konsistent.References[metaName];
 
 	// Verify if exists reverse relations
-	if (!isObject(references) || !isObject(references.from) || Object.keys(references.from).length === 0) {
+	if (!isObject(references) || size(keys(references.from)) === 0) {
 		return;
 	}
 
@@ -722,13 +722,13 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
 			field = fields[fieldName];
 			let keysToUpdate = [];
 			// Split each key to get only first key of array of paths
-			if (get(field, 'descriptionFields.length', 0) > 0) {
+			if (size(field.descriptionFields) > 0) {
 				for (key of field.descriptionFields) {
 					keysToUpdate.push(key.split('.')[0]);
 				}
 			}
 
-			if (get(field, 'inheritedFields.length', 0) > 0) {
+			if (size(field.inheritedFields) > 0) {
 				for (key of field.inheritedFields) {
 					keysToUpdate.push(key.fieldName.split('.')[0]);
 				}
@@ -955,7 +955,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 
 	try {
 		// Execute update and get affected records
-		const affectedRecordsCount = model.updateMany(query, updateData, null);
+		const affectedRecordsCount = model.update(query, updateData, { multi: true });
 
 		// If there are affected records then log into console
 		if (affectedRecordsCount > 0) {
@@ -964,6 +964,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 
 		return affectedRecordsCount;
 	} catch (e) {
+		console.error(e);
 		// Log if update get some error
 		NotifyErrors.notify('updateLookupReference', e, {
 			query,
@@ -1049,7 +1050,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 					reverseLookupUpdate.$pull[`${field.reverseLookup}`] = { _id: id };
 				}
 
-				affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate, null);
+				affectedRecordsCount = reverseLookupModel.update(reverseLookupQuery, reverseLookupUpdate, { multi: true });
 
 				if (affectedRecordsCount > 0) {
 					console.log(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${affectedRecordsCount})`.yellow);
@@ -1088,7 +1089,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 					}
 				}
 
-				affectedRecordsCount = reverseLookupModel.updateMany(reverseLookupQuery, reverseLookupUpdate);
+				affectedRecordsCount = reverseLookupModel.update(reverseLookupQuery, reverseLookupUpdate, { multi: true });
 
 				if (affectedRecordsCount > 0) {
 					console.log(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${affectedRecordsCount})`.yellow);
