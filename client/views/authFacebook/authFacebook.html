@@ -1,0 +1,48 @@
+<template name="authFacebook">
+	<section id="konecty-login">
+		<header class="header" role="navigation">
+			<a href="http://konecty.com"><img src="/images/logo/lettering.svg"></a>
+			<small>Connecting ideas since 2012</small>
+		</header>
+		<div class="main">
+			<div class="wrapper">
+				<div class="facebook-list">
+					<div class="content">
+						<p>Olá {{currentUser.name}}</p>
+
+						{{#if notAuthorized}}
+							<p>
+								Para autorizar o Konecty a gerenciar suas páginas do Facebook, por favor clique no botão abaixo
+								<div class="submit">
+									<button class="authorize" data-wait='Aguarde ..'><span>Autorizar</span></button>
+									<button class="logout"><span>Sair</span></button>
+								</div>
+							</p>
+						{{else}}
+							<p>Autorização concedida. Agora você poderá utilizar o Konecty para gerenciar as leads geradas no Facebook.</p>
+							<p>Escolha abaixo as páginas cujas leads serão enviadas ao Konecty:</p>
+							<ul>
+							{{#each pages}}
+								<li><a href="#" class="{{#if added}}remove-webhook{{else}}add-webhook{{/if}}">{{name}}</a> <i class="fa fa-check {{#unless added}}hidden{{/unless}}" data-rel="{{id}}"></i></li>
+							{{/each}}
+							</ul>
+							<p>
+								Você pode revogar acesso clicando no botão abaixo:
+								<div class="submit">
+									<button class="revoke" data-wait='Aguarde ..'><span>Revogar</span></button>
+									<button class="logout"><span>Deslogar</span></button>
+								</div>
+							</p>
+
+							<p>
+								<div class="submit">
+									<button class="ok" style="color:green"><span>OK</span></button>
+								</div>
+							</p>
+						{{/if}}
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</template>
