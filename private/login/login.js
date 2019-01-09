@@ -382,12 +382,7 @@ function SHA256(s) {
 }
 
 function createCookie(cookie, value, days, clearMyKonecty) {
-  if (clearMyKonecty || document.location.hostname === 'localhost') {
-    domain = '';
-  } else {
-    domain = 'domain=.konecty.com';
-  }
-
+  
   var newDate = new Date();
 
   if (days) {
@@ -396,7 +391,7 @@ function createCookie(cookie, value, days, clearMyKonecty) {
   } else {
     var strExpires = '';
   }
-  document.cookie = cookie + '=' + value + strExpires + '; path=/; ' + domain;
+  document.cookie = cookie + '=' + value + strExpires + '; path=/; ';
 }
 
 function getCookie(cookie) {
