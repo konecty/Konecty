@@ -1,4 +1,4 @@
-import { isDate, isObject, get, has, lowerCase, size } from 'lodash';
+import { isDate, isObject, get, has, toLower, size } from 'lodash';
 
 // Middleware to get user and populate into request
 Meteor.registerMiddleware('withUser', function(request) {
@@ -11,7 +11,7 @@ Meteor.registerMiddleware('withUser', function(request) {
 
 		// @TODO: In the future, use only @hashedToken = Accounts._hashLoginToken request.authTokenId as it should always receive client loginToken
 		if (size(get(request, 'authTokenId')) === 24) {
-			this.hashedToken = lowerCase(request.authTokenId);
+			this.hashedToken = toLower(request.authTokenId);
 		}
 
 		if (size(request.authTokenId) === 43) {
