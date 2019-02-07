@@ -1,24 +1,31 @@
+import size from 'lodash/size';
+
 global.middlewares = {};
 
 // Middleware to get user and populate into request
 middlewares.user = function(req, res, next) {
 	const token = req.cookies['_authTokenId'] || req.cookies['authTokenId'] || req.headers['authorization'];
-	const hashedToken = Accounts._hashLoginToken(token);
 
-	// Find User from session
-	req.user = Meteor.users.findOne({ 'services.resume.loginTokens.hashedToken': { $in: [token, hashedToken] } });
+	if (size(token) > 0) {
+		const hashedToken = Accounts._hashLoginToken(token);
 
-	// If no user was found return error
-	if (!req.user) {
+		// Find User from session
+		req.user = Meteor.users.findOne({ 'services.resume.loginTokens.hashedToken': { $in: [token, hashedToken] } });
+
+		// If no user was found return error
+		if (!req.user) {
+			return res.send(new Meteor.Error('internal-error', "Token doesn't exists"));
+		}
+
+		if (req.user.active !== true) {
+			return res.send(new Meteor.Error('internal-error', 'User inactive'));
+		}
+
+		// If everithing is awesome go to next step
+		next();
+	} else {
 		return res.send(new Meteor.Error('internal-error', "Token doesn't exists"));
 	}
-
-	if (req.user.active !== true) {
-		return res.send(new Meteor.Error('internal-error', 'User inactive'));
-	}
-
-	// If everithing is awesome go to next step
-	next();
 };
 
 // Middleware to get access of user and document

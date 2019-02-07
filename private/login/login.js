@@ -383,6 +383,17 @@ function SHA256(s) {
 
 function createCookie(cookie, value, days, clearMyKonecty) {
 	var newDate = new Date();
+	var url = window.location.href;
+	var match = url.match(/^(http|https|ftp)?(?:[\:\/]*)([a-z0-9\.-]*)(?:\:([0-9]+))?(\/[^?#]*)?(?:\?([^#]*))?(?:#(.*))?$/i);
+	var host = match[2];
+	if (/localhost/i.test(host)) {
+		var server = host;
+	} else {
+		var server = host
+			.split('.')
+			.slice(1)
+			.join('.');
+	}
 
 	if (days) {
 		newDate.setTime(newDate.getTime() + days * 24 * 60 * 60 * 1000);
@@ -390,7 +401,13 @@ function createCookie(cookie, value, days, clearMyKonecty) {
 	} else {
 		var strExpires = '';
 	}
-	document.cookie = cookie + '=' + value + strExpires + '; path=/; ';
+
+	if (/localhost/i.test(server)) {
+		var domain = '';
+	} else {
+		var domain = '; domain=.' + server;
+	}
+	document.cookie = cookie + '=' + value + domain + strExpires + '; path=/; ';
 }
 
 function getCookie(cookie) {

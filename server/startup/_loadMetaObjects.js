@@ -1,4 +1,5 @@
 import { registerFirstUser, registerFirstGroup } from './initialData';
+import isEmpty from 'lodash/isEmpty';
 
 Meta = {};
 DisplayMeta = {};
@@ -330,7 +331,8 @@ const registerMeta = function(meta) {
 				tryEnsureIndex(Models[meta.name], keys, options);
 			}
 		};
-		if (!process.env.DISABLE_REINDEX) {
+
+		if (isEmpty(process.env.DISABLE_REINDEX) || process.env.DISABLE_REINDEX === 'false' || process.env.DISABLE_REINDEX === '0') {
 			Meteor.defer(processIndexes);
 		}
 	}

@@ -145,29 +145,36 @@ mailConsumer.sendEmail = function(record, cb) {
 		}
 
 		if (mail.to) {
-			var serverHost = get(server, 'transporter.options.host');
-			return server.sendMail(
-				mail,
-				Meteor.bindEnvironment(function(err, response) {
-					if (err) {
-						err.host = serverHost || record.server;
-						NotifyErrors.notify('MailError', err, { mail, err });
-						Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
-						console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
-						return cb();
-					}
-
-					if (get(response, 'accepted.length') > 0) {
-						if (record.discard === true) {
-							Konsistent.Models['Message'].remove({ _id: record._id });
-						} else {
-							Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: record.sentStatus || 'Enviada' } });
+			if (server) {
+				var serverHost = get(server, 'transporter.options.host');
+				return server.sendMail(
+					mail,
+					Meteor.bindEnvironment(function(err, response) {
+						if (err) {
+							err.host = serverHost || record.server;
+							NotifyErrors.notify('MailError', err, { mail, err });
+							Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+							console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
+							return cb();
 						}
-						console.log('📧 ', `Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`.green);
-					}
-					return cb();
-				})
-			);
+
+						if (get(response, 'accepted.length') > 0) {
+							if (record.discard === true) {
+								Konsistent.Models['Message'].remove({ _id: record._id });
+							} else {
+								Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: record.sentStatus || 'Enviada' } });
+							}
+							console.log('📧 ', `Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`.green);
+						}
+						return cb();
+					})
+				);
+			} else {
+				console.log('📧 ', `There are no mail server configured`.red);
+				console.log('📧 ', `Email NOT sent to ${response.accepted.join(', ')}`.red);
+				console.log(JSON.stringify(mail, null, 2));
+				return cb();
+			}
 		} else {
 			return cb();
 		}
