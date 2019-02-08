@@ -204,9 +204,33 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		options.limit = 50;
 	}
 
-	let records = model.find(query, options).fetch();
+	let records;
+	try {
+		records = model.find(query, options).fetch();
+	} catch (error) {
+		console.error('Error executing query');
+		console.error('========================================');
+		console.error(error);
+		console.error('========================================');
+		console.error(`authTokenId: ${request.authTokenId}`);
+		console.error(JSON.stringify(query, null, 2));
+		console.error(JSON.stringify(options, null, 2));
+		console.error('========================================');
+		return {
+			success: false,
+			errors: [
+				{
+					message: 'Oops something went wrong, please try again later... if this message persisits, please contact our support',
+					bugsnag: false
+				}
+			],
+			data: []
+		};
+	}
 
-	const local = { collection: new Meteor.Collection(null) };
+	const local = {
+		collection: new Meteor.Collection(null)
+	};
 
 	for (var record of records) {
 		try {
@@ -314,7 +338,9 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read field`);
 	}
 
-	let options = { fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field) };
+	let options = {
+		fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field)
+	};
 
 	const records = model.find(query, options).fetch();
 
@@ -442,7 +468,9 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	let data = model.findOne(query, options);
 
 	if (data) {
-		const local = { collection: new Meteor.Collection(null) };
+		const local = {
+			collection: new Meteor.Collection(null)
+		};
 
 		local.collection.insert(utils.mapDateValue(data));
 
@@ -565,7 +593,10 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 						'complement'
 					]) {
 						const c = {};
-						c[`${descriptionField}.${addressField}`] = { $regex: request.search, $options: 'i' };
+						c[`${descriptionField}.${addressField}`] = {
+							$regex: request.search,
+							$options: 'i'
+						};
 						conditions.push(c);
 					}
 				} else {
@@ -573,7 +604,10 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 						if (['date', 'dateTime'].includes(lookupField.type)) {
 							condition[descriptionField] = new Date(request.search);
 						} else if (lookupField.type !== 'boolean') {
-							condition[descriptionField] = { $regex: request.search, $options: 'i' };
+							condition[descriptionField] = {
+								$regex: request.search,
+								$options: 'i'
+							};
 						}
 					}
 				}
@@ -672,7 +706,11 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	const data = model.find(query, options).fetch();
 	const total = model.find(query).count();
 
-	return { success: true, data: map(data, utils.mapDateValue), total };
+	return {
+		success: true,
+		data: map(data, utils.mapDateValue),
+		total
+	};
 });
 
 /* Receive a record and populate with detail fields
@@ -966,7 +1004,10 @@ Meteor.registerMethod(
 			// Execute insert
 			try {
 				if (isObject(request.upsert)) {
-					const updateOperation = { $setOnInsert: {}, $set: {} };
+					const updateOperation = {
+						$setOnInsert: {},
+						$set: {}
+					};
 					if (isObject(request.updateOnUpsert)) {
 						for (key in newRecord) {
 							value = newRecord[key];
@@ -1768,7 +1809,9 @@ Meteor.registerMethod(
 
 						const ref = referenceFieldName;
 
-						condition[`${ref}._id`] = { $in: idsToVerifyRelations };
+						condition[`${ref}._id`] = {
+							$in: idsToVerifyRelations
+						};
 
 						referenceConditions.push(condition);
 					}
@@ -1776,7 +1819,9 @@ Meteor.registerMethod(
 					// If there are references of this meta
 					if (referenceConditions.length > 0) {
 						// Set up a query with all conditions using operator "or"
-						let referenceQuery = { $or: referenceConditions };
+						let referenceQuery = {
+							$or: referenceConditions
+						};
 
 						let referenceQueryOptions = {
 							fields: {
@@ -1798,7 +1843,9 @@ Meteor.registerMethod(
 								}
 
 								// Define query to all field references of this id
-								referenceQuery = { $or: referenceConditions };
+								referenceQuery = {
+									$or: referenceConditions
+								};
 
 								referenceQueryOptions = {
 									fields: {
@@ -1873,7 +1920,9 @@ Meteor.registerMethod(
 					trashModel.insert(record);
 				} catch (error) {
 					e = error;
-					NotifyErrors.notify('TrashInsertError', e, { record });
+					NotifyErrors.notify('TrashInsertError', e, {
+						record
+					});
 				}
 			}
 
@@ -1882,7 +1931,9 @@ Meteor.registerMethod(
 				model.remove(query);
 			} catch (error1) {
 				e = error1;
-				NotifyErrors.notify('DataDeleteError', e, { query });
+				NotifyErrors.notify('DataDeleteError', e, {
+					query
+				});
 				return e;
 			}
 
@@ -2029,7 +2080,9 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 			// Define lookups of relation
 			data[relation.lookup] = { _id: lookup };
 
-			data[relation.reverseLookup] = { _id: reverseLookup };
+			data[relation.reverseLookup] = {
+				_id: reverseLookup
+			};
 
 			if (sendEmail) {
 				if (!emailData[Meta[relation.document].fields[relation.reverseLookup].document]) {
@@ -2401,7 +2454,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 	if (request.lead.email) {
 		if (size(get(contact, 'email')) > 0) {
-			if (!find(compact(contact.email), { address: request.lead.email })) {
+			if (
+				!find(compact(contact.email), {
+					address: request.lead.email
+				})
+			) {
 				contactData.email = contact.email;
 				contactData.email.push({
 					address: request.lead.email
@@ -2416,7 +2473,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 		if (size(get(contact, 'phone.length')) > 0) {
 			let firstPhoneNotFound = true;
 			phoneSent.forEach(function(leadPhone) {
-				if (!find(compact(contact.phone), { phoneNumber: leadPhone })) {
+				if (
+					!find(compact(contact.phone), {
+						phoneNumber: leadPhone
+					})
+				) {
 					if (firstPhoneNotFound) {
 						contactData.phone = contact.phone;
 						firstPhoneNotFound = false;
@@ -2478,7 +2539,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 		if (size(get(record, 'data')) > 0) {
 			if (has(contact, '_user')) {
-				if (!find(compact(contact._user), { _id: record.data[0]._id })) {
+				if (
+					!find(compact(contact._user), {
+						_id: record.data[0]._id
+					})
+				) {
 					contactData._user = clone(contact._user);
 					contactData._user.push({
 						_id: record.data[0]._id
@@ -2533,7 +2598,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					contactUser = record.data[0]._user[0];
 
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-					if (!find(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
+					if (
+						!find(compact(contact._user), {
+							_id: record.data[0]._user[0]._id
+						})
+					) {
 						contactData._user = clone(contact._user);
 						contactData._user.push(record.data[0]._user[0]);
 					}
@@ -2581,7 +2650,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					contactUser = record.data[0]._user[0];
 
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-					if (!find(compact(contact._user), { _id: record.data[0]._user[0]._id })) {
+					if (
+						!find(compact(contact._user), {
+							_id: record.data[0]._user[0]._id
+						})
+					) {
 						contactData._user = clone(contact._user);
 						contactData._user.push(record.data[0]._user[0]);
 					}
@@ -2600,7 +2673,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
-						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
+						if (
+							!find(compact(contact._user), {
+								_id: userQueue.user._id
+							})
+						) {
 							contactData._user = clone(contact._user);
 							contactData._user.push(userQueue.user);
 						}
@@ -2630,7 +2707,9 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 			if (has(record, 'data.0.targetQueue')) {
 				// set targetQueue from campaign to contact if not set
 				if (!contactData.queue) {
-					contactData.queue = { _id: record.data[0].targetQueue._id };
+					contactData.queue = {
+						_id: record.data[0].targetQueue._id
+					};
 				}
 
 				userQueue = metaUtils.getNextUserFromQueue(record.data[0].targetQueue._id, this.user);
@@ -2641,7 +2720,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
-						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
+						if (
+							!find(compact(contact._user), {
+								_id: userQueue.user._id
+							})
+						) {
 							contactData._user = clone(contact._user);
 							contactData._user.push(userQueue.user);
 						}
@@ -2685,7 +2768,14 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 		const updateRequest = {
 			document: 'Contact',
 			data: {
-				ids: [{ _id: contact._id, _updatedAt: { $date: moment(contact._updatedAt).toISOString() } }],
+				ids: [
+					{
+						_id: contact._id,
+						_updatedAt: {
+							$date: moment(contact._updatedAt).toISOString()
+						}
+					}
+				],
 				data: contactData
 			}
 		};
@@ -2728,7 +2818,9 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					if (has(Meta[saveObj.document], 'fields.contact.isList')) {
 						createRequest.data.contact = [{ _id: contactId }];
 					} else {
-						createRequest.data.contact = { _id: contactId };
+						createRequest.data.contact = {
+							_id: contactId
+						};
 					}
 
 					if (parentObj) {
@@ -2746,7 +2838,9 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 						if (saveObj.relations) {
 							const relationMap = {};
-							relationMap[saveObj.name] = { _id: saveResult.data[0]._id };
+							relationMap[saveObj.name] = {
+								_id: saveResult.data[0]._id
+							};
 
 							saveRelations(saveObj.relations, contactId, relationMap);
 						}
