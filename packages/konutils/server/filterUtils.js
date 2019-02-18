@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { isArray, isString, isObject, get, has, indexOf } from 'lodash';
+import { isArray, isString, isObject, get, has, map, size, keys, reduce, startsWith } from 'lodash';
 /*
 rest/data/OK Activity/find
 	&fields=_user,_updatedAt,code
@@ -490,37 +490,44 @@ filterUtils.parseFilterObject = function(filter, metaObject, req) {
 };
 
 filterUtils.parseDynamicData = function(filter, keyword, data) {
-	let condition;
-	if ((filter != null ? filter.filter : undefined) != null) {
-		filterUtils.parseDynamicData(filter.filter, keyword, data);
-		return filter;
+	if (!filter) {
+		return;
 	}
 
-	if (isArray(filter.filters) && filter.filters.length > 0) {
-		for (let subFilter of filter.filters) {
-			return filterUtils.parseDynamicData(subFilter, keyword, data);
-		}
+	if (filter.filter) {
+		return {
+			...filter,
+			filter: filterUtils.parseDynamicData(filter.filter, keyword, data)
+		};
 	}
 
 	const parseConditions = function(condition) {
-		if (indexOf(get(condition, 'value', ''), keyword) !== -1) {
-			return (condition.value = utils.getObjectPathAgg(data, condition.value.replace(keyword + '.', '')));
+		if (condition && startsWith(condition.value, keyword)) {
+			return {
+				...condition,
+				value: get(data, condition.value.replace(keyword + '.', ''))
+			};
 		}
 	};
 
-	if (isArray(filter.conditions) && filter.conditions.length > 0) {
-		for (condition of filter.conditions) {
-			if (condition.disabled !== true) {
-				parseConditions(condition);
-			}
-		}
-	} else if (isObject(filter.conditions) && Object.keys(filter.conditions).length > 0) {
-		for (let key in filter.conditions) {
-			condition = filter.conditions[key];
-			if (condition.disabled !== true) {
-				parseConditions(condition);
-			}
-		}
+	if (isArray(filter.conditions) && size(filter.conditions) > 0) {
+		return {
+			...filter,
+			conditions: map(filter.conditions.filter(c => c.disabled !== true), parseConditions)
+		};
+	} else if (isObject(filter.conditions) && size(keys(filter.conditions)) > 0) {
+		return {
+			...filter,
+			conditions: reduce(
+				filter.conditions,
+				(result, condition) => {
+					if (condition.disabled !== true) {
+						return [...result, parseConditions(condition)];
+					}
+				},
+				[]
+			)
+		};
 	}
 
 	return filter;

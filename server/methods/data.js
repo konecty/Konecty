@@ -2879,9 +2879,8 @@ var processValidationScript = function(validationScript, validationData, fullDat
 	if (validationData) {
 		for (let validationField in validationData) {
 			const validationFilter = validationData[validationField];
-			const validationDataFilter = JSON.parse(JSON.stringify(validationFilter));
 
-			filterUtils.parseDynamicData(validationDataFilter, '$this', fullData);
+			const validationDataFilter = filterUtils.parseDynamicData(validationFilter, '$this', fullData);
 
 			const record = Meteor.call('data:find:all', validationDataFilter);
 
