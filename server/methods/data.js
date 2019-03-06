@@ -559,62 +559,66 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 		for (let descriptionField of descriptionFields) {
 			const lookupField = lookupMeta.fields[descriptionField.split('.')[0]];
 
-			if (lookupField.type === 'picklist' || lookupField.isList === true) {
-				if (!sortArrayField) {
-					sort[descriptionField] = 1;
-					sortArrayField = true;
-				}
-			} else {
-				sort[descriptionField] = 1;
-			}
-
-			fields[descriptionField] = 1;
-
-			if (isString(request.search) && request.search.length > 0) {
-				const condition = {};
-
-				const searchAsInt = String(parseInt(request.search)) === request.search;
-
-				if (['number', 'autoNumber', 'money'].includes(lookupField.type)) {
-					const floatValue = parseFloat(request.search);
-					if (floatValue && !isNaN(floatValue)) {
-						condition[descriptionField] = floatValue;
-					}
-				} else if (lookupField.type === 'address' && descriptionField === lookupField.name) {
-					for (let addressField of [
-						'country',
-						'state',
-						'city',
-						'place',
-						'number',
-						'postalCode',
-						'district',
-						'placeType',
-						'complement'
-					]) {
-						const c = {};
-						c[`${descriptionField}.${addressField}`] = {
-							$regex: request.search,
-							$options: 'i'
-						};
-						conditions.push(c);
+			if (lookupField) {
+				if (lookupField.type === 'picklist' || lookupField.isList === true) {
+					if (!sortArrayField) {
+						sort[descriptionField] = 1;
+						sortArrayField = true;
 					}
 				} else {
-					if (searchAsInt === false) {
-						if (['date', 'dateTime'].includes(lookupField.type)) {
-							condition[descriptionField] = new Date(request.search);
-						} else if (lookupField.type !== 'boolean') {
-							condition[descriptionField] = {
+					sort[descriptionField] = 1;
+				}
+
+				fields[descriptionField] = 1;
+
+				if (isString(request.search) && request.search.length > 0) {
+					const condition = {};
+
+					const searchAsInt = String(parseInt(request.search)) === request.search;
+
+					if (['number', 'autoNumber', 'money'].includes(lookupField.type)) {
+						const floatValue = parseFloat(request.search);
+						if (floatValue && !isNaN(floatValue)) {
+							condition[descriptionField] = floatValue;
+						}
+					} else if (lookupField.type === 'address' && descriptionField === lookupField.name) {
+						for (let addressField of [
+							'country',
+							'state',
+							'city',
+							'place',
+							'number',
+							'postalCode',
+							'district',
+							'placeType',
+							'complement'
+						]) {
+							const c = {};
+							c[`${descriptionField}.${addressField}`] = {
 								$regex: request.search,
 								$options: 'i'
 							};
+							conditions.push(c);
+						}
+					} else {
+						if (searchAsInt === false) {
+							if (['date', 'dateTime'].includes(lookupField.type)) {
+								condition[descriptionField] = new Date(request.search);
+							} else if (lookupField.type !== 'boolean') {
+								condition[descriptionField] = {
+									$regex: request.search,
+									$options: 'i'
+								};
+							}
 						}
 					}
-				}
 
-				if (Object.keys(condition).length > 0) {
-					conditions.push(condition);
+					if (Object.keys(condition).length > 0) {
+						conditions.push(condition);
+					}
 				}
+			} else {
+				console.error(`Inconsistent metadata, field [${lookupField}] does not exists in [${field.document}]`);
 			}
 		}
 
@@ -760,7 +764,7 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
 		const field = metaObject.fields[fieldName];
 		if (value && field && field.type === 'lookup' && size(field.detailFields) > 0) {
 			if (field.isList === true) {
-				for (let item of value) {
+				for (let item of isArray(value) ? value : [value]) {
 					populateDetailFields(field, item, value);
 				}
 			} else {

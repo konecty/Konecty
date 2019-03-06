@@ -156,6 +156,10 @@ Konsistent.History.processOplogItem = function(doc) {
 		Konsistent.MetaByCollection[ns[Math.min(2, ns.length - 1)]] ||
 		Konsistent.MetaByCollection[`data.${ns[2]}`] ||
 		Konsistent.MetaByCollection[ns.slice(1).join('.')];
+	if (!metaName) {
+		console.log(`Meta not found for collection [${doc.ns}]`);
+		return;
+	}
 	metaName = metaName.name;
 
 	// If opration is an update get _id from o2 and define action as update
