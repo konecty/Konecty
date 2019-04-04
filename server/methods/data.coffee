@@ -1028,7 +1028,7 @@ Meteor.registerMethod 'data:update', 'withUser', 'withAccessForDocument', 'ifAcc
 				original: records[0]
 				request: request.data.data
 				validated: validatedData
-			bodyData = _.extend request.data.data, utils.runScriptBeforeValidation(meta.scriptBeforeValidation, _.extend({}, records[0], request.data.data, validatedData), context, extraData)
+			bodyData = _.extend {}, request.data.data, utils.runScriptBeforeValidation(meta.scriptBeforeValidation, _.extend({}, records[0], request.data.data, validatedData), context, extraData)
 		else
 			bodyData = _.extend {}, request.data.data
 

@@ -145,6 +145,7 @@ mailConsumer.send = (record, cb) ->
 		if err?
 			NotifyErrors.notify 'MailError', err
 			Konsistent.Models['Message'].update {_id: record._id}, {$set: {status: 'Falha no Envio', error: err}}
+			console.log '📧 ', "Email error 1: #{JSON.stringify err, null, ' '}".red
 			return cb()
 
 		record.data ?= {}
@@ -153,6 +154,7 @@ mailConsumer.send = (record, cb) ->
 			if err?
 				NotifyErrors.notify 'MailError', err, {record: record}
 				Konsistent.Models['Message'].update {_id: record._id}, {$set: {status: 'Falha no Envio', error: err}}
+				console.log '📧 ', "Email error 2: #{JSON.stringify err, null, ' '}".red
 				return cb()
 
 			record.body = html
