@@ -1045,6 +1045,7 @@ Meteor.registerMethod(
 					insertResult = model.insert(utils.processDate(newRecord));
 				}
 			} catch (e) {
+				console.error(e);
 				if (e.code === 11000) {
 					e = new Meteor.Error('internal-error', 'Erro ao inserir: registro já existe');
 					NotifyErrors.notify('catchErrors', e);
@@ -1150,7 +1151,6 @@ Meteor.registerMethod(
 		const context = this;
 		const { meta } = this;
 		const { model } = this;
-
 		if (this.access.changeUser !== true && has(request, 'data.data._user')) {
 			delete request.data.data._user;
 		}
@@ -1419,6 +1419,7 @@ Meteor.registerMethod(
 					validated: validatedData
 				};
 				bodyData = extend(
+					{},
 					request.data.data,
 					utils.runScriptBeforeValidation(
 						meta.scriptBeforeValidation,
