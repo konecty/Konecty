@@ -43,22 +43,24 @@ utils.sortArrayOfObjectsByParam = (arr, param) =>
 	});
 
 utils.processDate = mapObjIndexed(value => {
-	if (value.$date) {
-		return moment(value.$date).toDate();
-	}
-	if (isArray(value)) {
-		return map(value, v => {
-			if (isObject(v) || isArray(v)) {
-				return utils.processDate(v);
-			}
-			return v;
-		});
-	}
-	if (isString(value) || isDate(value)) {
-		return value;
-	}
-	if (isObject(value)) {
-		return utils.processDate(value);
+	if (value) {
+		if (value.$date) {
+			return moment(value.$date).toDate();
+		}
+		if (isArray(value)) {
+			return map(value, v => {
+				if (isObject(v) || isArray(v)) {
+					return utils.processDate(v);
+				}
+				return v;
+			});
+		}
+		if (isString(value) || isDate(value)) {
+			return value;
+		}
+		if (isObject(value)) {
+			return utils.processDate(value);
+		}
 	}
 	return value;
 });
