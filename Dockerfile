@@ -17,4 +17,4 @@ ENV PORT=3000 \
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+CMD ["node", "--max-old-space-size=4096", "--max-http-header-size=65535", "main.js"]

@@ -171,7 +171,7 @@ mailConsumer.sendEmail = function(record, cb) {
 				);
 			} else {
 				console.log('📧 ', `There are no mail server configured`.red);
-				console.log('📧 ', `Email NOT sent to ${response.accepted.join(', ')}`.red);
+				console.log('📧 ', `Email NOT sent to ${mail.to}`.red);
 				console.log(JSON.stringify(mail, null, 2));
 				return cb();
 			}
