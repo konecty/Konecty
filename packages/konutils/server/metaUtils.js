@@ -182,7 +182,7 @@ metaUtils.validateAndProcessValueFor = function(
 				return false;
 			}
 
-			if (!condition.value) {
+			if (!has(condition, 'value')) {
 				result = new Meteor.Error(
 					'utils-internal-error',
 					`Value for field ${fieldName} must contains conditions property named 'value'`
