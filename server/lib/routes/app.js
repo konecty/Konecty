@@ -7,7 +7,7 @@ import { compileFile } from 'swig';
 import { resolve, join } from 'path';
 import { register } from 'bugsnag';
 import { parse } from 'mongodb-uri';
-import { isArray, isObject, each, isString, isNumber, get } from 'lodash';
+import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
 REQ_TIMEOUT = 1000 * 300;
@@ -115,9 +115,14 @@ Picker.middleware(function(req, res, next) {
 		res.set('Location', url);
 	};
 
-	res.redirect = function(url) {
+	res.redirect = function(statusCode, url) {
+		if (isNumber(statusCode)) {
+			res.location(url);
+			res.statusCode = statusCode;
+			res.end();
+		}
 		// Set location header
-		res.location(url);
+		res.location(statusCode);
 		res.statusCode = 302;
 		res.end();
 	};
@@ -153,24 +158,26 @@ Picker.middleware(function(req, res, next) {
 			status = 200;
 		}
 
-		if (isObject(response) || isArray(response)) {
-			res.set('Content-Type', 'application/json');
+		if (!isBuffer(response)) {
+			if (isObject(response) || isArray(response)) {
+				res.set('Content-Type', 'application/json');
 
-			if (response.errors) {
-				res.hasErrors = true;
-				if (isArray(response.errors)) {
-					for (let index = 0; index < response.errors.length; index++) {
-						const error = response.errors[index];
-						response.errors[index] = { message: error.message };
+				if (response.errors) {
+					res.hasErrors = true;
+					if (isArray(response.errors)) {
+						for (let index = 0; index < response.errors.length; index++) {
+							const error = response.errors[index];
+							response.errors[index] = { message: error.message };
+						}
 					}
 				}
-			}
 
-			if (response.time) {
-				req.time = response.time;
-			}
+				if (response.time) {
+					req.time = response.time;
+				}
 
-			response = EJSON.stringify(convertObjectIdsToOid(response));
+				response = EJSON.stringify(convertObjectIdsToOid(response));
+			}
 		}
 
 		if (status !== 200 || res.hasErrors === true) {
@@ -260,6 +267,10 @@ const corsOptions = {
 };
 
 Picker.middleware(cors(corsOptions));
+Picker.middleware((req, res, next) => {
+	console.log(req.url);
+	next();
+});
 
 // global helper to register REST endpoints
 global.app = {

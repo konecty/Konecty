@@ -549,6 +549,7 @@ function clearCookie(cookie, clearMyKonecty) {
 					})
 				},
 				complete: function(r) {
+					console.log('=============> AQUI', r);
 					if (r.status === 200) {
 						var data = JSON.parse(r.responseText);
 						var duration = (data.cookieMaxAge || 2592000) / (24 * 60 * 60);
@@ -568,6 +569,14 @@ function clearCookie(cookie, clearMyKonecty) {
 							duration
 						);
 						createCookie('_authTokenId', data.authId, duration);
+						if (URL && URLSearchParams) {
+							var url = new URL(window.location);
+							var qs = new URLSearchParams(url.search);
+							if (qs.has('redirectURL')) {
+								location.href = qs.get('redirectURL');
+								return;
+							}
+						}
 						location.href = location.origin;
 					} else {
 						$('.loading-panel').hide();
