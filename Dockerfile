@@ -1,6 +1,6 @@
 FROM node:8-stretch
 
-ENV KONECTY_VERSION 1.1.0-dev.38
+ENV KONECTY_VERSION 1.2.0-alpha
 
 RUN set -x \
 	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$KONECTY_VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
