@@ -549,7 +549,6 @@ function clearCookie(cookie, clearMyKonecty) {
 					})
 				},
 				complete: function(r) {
-					console.log('=============> AQUI', r);
 					if (r.status === 200) {
 						var data = JSON.parse(r.responseText);
 						var duration = (data.cookieMaxAge || 2592000) / (24 * 60 * 60);

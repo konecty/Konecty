@@ -267,10 +267,11 @@ const corsOptions = {
 };
 
 Picker.middleware(cors(corsOptions));
-Picker.middleware((req, res, next) => {
-	console.log(req.url);
-	next();
-});
+
+// Picker.middleware((req, res, next) => {
+// 	console.log(req.url);
+// 	next();
+// });
 
 // global helper to register REST endpoints
 global.app = {

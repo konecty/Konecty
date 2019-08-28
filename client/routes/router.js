@@ -8,7 +8,6 @@ Router.onBeforeAction(function() {
 Router.route('/auth/mail', {
 	name: 'auth-mail',
 	action() {
-		console.log('AQUI');
 		this.render('authMail');
 	},
 	subscriptions() {
