@@ -35,9 +35,16 @@ const ensureLoggedIn = next => (req, res) => {
 };
 
 const setupNodered = async () => {
+	if (process.env.DISABLE_FLOWS) {
+		return;
+	}
+
 	const flows = await find('flows', '/', []);
 
 	const { flows: flowsConfig, ns } = MetaObject.findOne({ _id: 'Namespace' });
+	if (!flowsConfig || !Object.keys(flowsConfig).length) {
+		return;
+	}
 
 	const configNode = flows.find(({ id }) => id === 'konecty-embedded-server');
 
