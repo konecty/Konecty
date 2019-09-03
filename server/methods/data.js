@@ -1277,7 +1277,7 @@ Meteor.registerMethod(
 		for (id in idMap) {
 			idMapItem = idMap[id];
 			if (idMapItem.exists !== true) {
-				idMapItem.userDontHasPermission = existsMap[id];
+				idMapItem.userDontHasPermission = existsMap[id] != null;
 			}
 		}
 
