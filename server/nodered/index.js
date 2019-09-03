@@ -35,7 +35,7 @@ const ensureLoggedIn = next => (req, res) => {
 };
 
 const setupNodered = async () => {
-	if (process.env.DISABLE_FLOWS) {
+	if (process.env.DISABLE_FLOWS === "true") {
 		return;
 	}
 
