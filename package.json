@@ -33,6 +33,7 @@
 		"node-red-contrib-chatbot": "^0.16.12",
 		"node-red-contrib-konecty": "^1.2.3",
 		"node-red-contrib-rocketchat": "^1.0.2",
+		"node-red-contrib-validatejs": "0.0.1",
 		"nodemailer": "^4.6.8",
 		"nodemailer-smtp-transport": "^2.7.4",
 		"path": "^0.12.7",
