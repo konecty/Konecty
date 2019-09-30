@@ -228,7 +228,8 @@ registerMeta = (meta) ->
 
 				tryEnsureIndex Models[meta.name], keys, options
 
-		Meteor.defer(processIndexes);
+		if _.isEmpty(process.env.DISABLE_REINDEX) or process.env.DISABLE_REINDEX is 'false' or process.env.DISABLE_REINDEX is '0'
+			Meteor.defer(processIndexes);
 
 	# wait required metas to create initial data
 	if Models['User'] && Models['Group']

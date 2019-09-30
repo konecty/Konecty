@@ -146,6 +146,9 @@ Meteor.registerMethod 'data:find:all', 'withUser', 'withAccessForDocument', (req
 
 	if _.isNaN(options.limit) or not options.limit?
 		options.limit = 50
+	
+	if (options.limit >= 1000)
+		options.sort =  { _id: 1 }
 
 	records = model.find(query, options).fetch()
 
