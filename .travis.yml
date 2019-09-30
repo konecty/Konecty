@@ -16,8 +16,7 @@ cache:
     - '$HOME/.npm'
     - '$HOME/.node-gyp'
 install:
-  - if [ ! -e "$HOME/.meteor/meteor" ]; then curl https://install.meteor.com | sed s/--progress-bar/-sL/g
-    | /bin/sh; fi
+  - curl https://install.meteor.com | sed s/--progress-bar/-sL/g | /bin/sh
   - export PATH="$HOME/.meteor:$PATH"
 script:
   - meteor --version
