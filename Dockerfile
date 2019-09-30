@@ -1,6 +1,6 @@
 FROM node:4.9-stretch
 
-ENV KONECTY_VERSION 1.0.28-beta.3
+ENV KONECTY_VERSION 1.0.28
 
 RUN set -x \
 	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$KONECTY_VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
@@ -18,4 +18,4 @@ ENV PORT=3000 \
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+CMD ["node", "--max-old-space-size=4096", "--max-http-header-size=65535", "main.js"]
