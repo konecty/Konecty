@@ -46,7 +46,7 @@ app.post '/rest/file2/:document/:recordCode/:fieldName', (req, res, next) ->
 			ids: [{
 				_id: record._id
 				_updatedAt:
-					$date: record._updatedAt.toISOString()
+					$date: (record._updatedAt || new Date()).toISOString()
 			}]
 			data: {}
 
@@ -122,7 +122,7 @@ app.del '/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 			ids: [{
 				_id: record._id
 				_updatedAt:
-					$date: record._updatedAt.toISOString()
+					$date: (record._updatedAt || new Date()).toISOString()
 			}]
 			data: {}
 
