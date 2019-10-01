@@ -204,6 +204,10 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		options.limit = 50;
 	}
 
+	if (options.limit > 1000) {
+		options.sort =  { _id: 1 }
+	}
+	
 	let records;
 	try {
 		records = model.find(query, options).fetch();
