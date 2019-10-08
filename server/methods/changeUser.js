@@ -59,8 +59,8 @@ Meteor.registerMethod(
 		}
 
 		const validateRequestResult = validateRequest(request, this.access);
-		if (validateRequest instanceof Error) {
-			return validateRequest;
+		if (validateRequestResult instanceof Error) {
+			return validateRequestResult;
 		}
 
 		const resultOfValidation = metaUtils.validateAndProcessValueFor(
@@ -137,8 +137,8 @@ Meteor.registerMethod(
 		}
 
 		const validateRequestResult = validateRequest(request, this.access);
-		if (validateRequest instanceof Error) {
-			return validateRequest;
+		if (validateRequestResult instanceof Error) {
+			return validateRequestResult;
 		}
 
 		const userIds = request.users.map(user => user._id);
@@ -526,8 +526,8 @@ Meteor.registerMethod(
 		}
 
 		const validateRequestResult = validateRequest(request, this.access);
-		if (validateRequest instanceof Error) {
-			return validateRequest;
+		if (validateRequestResult instanceof Error) {
+			return validateRequestResult;
 		}
 
 		const queue = metaUtils.validateAndProcessValueFor(this.meta, 'queue', request.queue, 'update', this.model, {}, {}, id);
