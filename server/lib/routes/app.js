@@ -38,6 +38,7 @@ process.on('SIGUSR2', function() {
 
 Picker.middleware(function(req, res, next) {
 	let data = '';
+	req.startTime = process.hrtime();
 	req.on('data', chunk => (data += chunk));
 	req.on('end', () => (req.rawBody = data));
 	next();
@@ -84,14 +85,14 @@ Picker.middleware(function(req, res, next) {
 			login: get(req, 'user.username'),
 			email: get(req, 'user.emails'),
 			access: get(req, 'user.access'),
-			lastLogin: get(req, 'user.lastLogin')
+			lastLogin: get(req, 'user.lastLogin'),
 		};
 		options.session = {
 			_id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
 			_createdAt: get(req, 'session._createdAt'),
 			ip: get(req, 'session.ip'),
 			geolocation: get(req, 'session.geolocation'),
-			expireAt: get(req, 'session.expireAt')
+			expireAt: get(req, 'session.expireAt'),
 		};
 
 		return NotifyErrors.notify(type, message, options);
@@ -145,9 +146,9 @@ Picker.middleware(function(req, res, next) {
 				errors: [
 					{
 						message: response.message,
-						bugsnag: false
-					}
-				]
+						bugsnag: false,
+					},
+				],
 			};
 
 			status = 200;
@@ -205,20 +206,23 @@ Picker.middleware(function(req, res, next) {
 		}
 
 		// Log API Calls
-		let log = `-> ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url} (${req.time}) ${
-			req.headers.host != null ? req.headers.host.grey : undefined
-		} ${req.headers.referer != null ? req.headers.referer.grey : undefined}`;
+		const totalTime = process.hrtime(req.startTime);
+
+		let log = `-> ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url} (${totalTime[0]}s ${totalTime[1] /
+			1000000}ms) ${req.headers.host != null ? `${req.headers.host}`.grey : ''} ${
+			req.headers.referer != null ? `${req.headers.referer}`.grey : ''
+		}`;
 
 		if (res.statusCode === 401 && req.user) {
 			log += ` ${req.user._id}`;
 		}
 
 		if (res.statusCode === 200 && res.hasErrors !== true) {
-			log = log.cyan;
+			log = `${log}`.cyan;
 		} else if (res.statusCode === 500) {
-			log = log.red;
+			log = `${log}`.red;
 		} else {
-			log = log.yellow;
+			log = `${log}`.yellow;
 		}
 
 		if (global.logAllRequests === true || res.statusCode !== 200 || res.hasErrors === true) {
@@ -256,7 +260,7 @@ const corsOptions = {
 	},
 	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
 	credentials: true,
-	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+	optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 Picker.middleware(cors(corsOptions));
@@ -302,5 +306,5 @@ global.app = {
 			req.params = params;
 			cb(req, res, next);
 		});
-	}
+	},
 };
