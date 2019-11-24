@@ -205,11 +205,17 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	}
 
 	if (options.limit > 1000) {
-		options.sort =  { _id: 1 }
+		options.sort = { _id: 1 };
 	}
-	
+
 	let records;
 	try {
+		if (global.logAllRequests) {
+			console.log('Find filter');
+			console.log(JSON.stringify(query));
+			console.log('Find Options');
+			console.log(JSON.stringify(options));
+		}
 		records = model.find(query, options).fetch();
 	} catch (error) {
 		console.error('Error executing query');
@@ -224,7 +230,8 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 			success: false,
 			errors: [
 				{
-					message: 'Oops something went wrong, please try again later... if this message persisits, please contact our support',
+					message:
+						'Oops something went wrong, please try again later... if this message persisits, please contact our support',
 					bugsnag: false
 				}
 			],
@@ -832,7 +839,10 @@ Meteor.registerMethod(
 		for (let fieldName in request.data) {
 			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
 			if (accessField.isCreatable !== true) {
-				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create field ${fieldName}`);
+				return new Meteor.Error(
+					'internal-error',
+					`[${request.document}] You don't have permission to create field ${fieldName}`
+				);
 			}
 		}
 
@@ -875,7 +885,15 @@ Meteor.registerMethod(
 				if (newRecord[key] === undefined) {
 					value = request.data[field.name];
 
-					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
+					resultOfValidation = metaUtils.validateAndProcessValueFor(
+						meta,
+						key,
+						value,
+						'insert',
+						model,
+						request.data,
+						newRecord
+					);
 					if (resultOfValidation instanceof Error) {
 						response.errors.push(resultOfValidation);
 					}
@@ -931,7 +949,15 @@ Meteor.registerMethod(
 					}
 
 					value = request.data[field.name];
-					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
+					resultOfValidation = metaUtils.validateAndProcessValueFor(
+						meta,
+						key,
+						value,
+						'insert',
+						model,
+						request.data,
+						newRecord
+					);
 					if (resultOfValidation instanceof Error) {
 						this.notifyError('Create - Validation Error', resultOfValidation, request);
 						response.errors.push(resultOfValidation);
@@ -968,7 +994,15 @@ Meteor.registerMethod(
 
 					// Ignore autonumbers if requested
 					if (request.ignoreAutoNumber !== true || !value) {
-						resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
+						resultOfValidation = metaUtils.validateAndProcessValueFor(
+							meta,
+							key,
+							value,
+							'insert',
+							model,
+							request.data,
+							newRecord
+						);
 						if (resultOfValidation instanceof Error) {
 							this.notifyError('Create - Validation Error', resultOfValidation, request);
 							response.errors.push(resultOfValidation);
@@ -1177,7 +1211,10 @@ Meteor.registerMethod(
 		for (var fieldName in request.data.data) {
 			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
 			if (accessField.isUpdatable !== true) {
-				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to update field ${fieldName}`);
+				return new Meteor.Error(
+					'internal-error',
+					`[${request.document}] You don't have permission to update field ${fieldName}`
+				);
 			}
 
 			// If there are condition in access for this field then add to array
@@ -1302,7 +1339,9 @@ Meteor.registerMethod(
 			idMapItem = idMap[id];
 			if (idMapItem.exists !== true) {
 				if (idMapItem.userDontHasPermission === true) {
-					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { bugsnag: false }));
+					response.errors.push(
+						new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { bugsnag: false })
+					);
 				} else {
 					response.errors.push(
 						new Meteor.Error(
@@ -1675,7 +1714,10 @@ Meteor.registerMethod(
 
 			if (meta.ignoreUpdatedAt !== true) {
 				if (!isObject(item) || !isObject(item._updatedAt) || !isString(item._updatedAt.$date)) {
-					return new Meteor.Error('internal-error', `[${request.document}] Each id must contain an date field named _updatedAt`);
+					return new Meteor.Error(
+						'internal-error',
+						`[${request.document}] Each id must contain an date field named _updatedAt`
+					);
 				}
 			}
 		}
@@ -1871,9 +1913,7 @@ Meteor.registerMethod(
 									response.errors.push(
 										new Meteor.Error(
 											'internal-error',
-											`Não é possivel apagar o dado com id:[${
-												request.document
-											}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
+											`Não é possivel apagar o dado com id:[${request.document}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
 											{ bugsnag: false }
 										)
 									);
@@ -2102,10 +2142,14 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 					!find(emailData[Meta[relation.document].fields[relation.reverseLookup].document], { _id: reverseLookup })
 				) {
 					const reverseLookupData = reverseLookupModel.findOne({ _id: reverseLookup });
-					metaUtils.populateLookupsData(Meta[relation.document].fields[relation.reverseLookup].document, reverseLookupData, {
-						_user: 1,
-						contact: 1
-					});
+					metaUtils.populateLookupsData(
+						Meta[relation.document].fields[relation.reverseLookup].document,
+						reverseLookupData,
+						{
+							_user: 1,
+							contact: 1
+						}
+					);
 
 					emailData[Meta[relation.document].fields[relation.reverseLookup].document].push(reverseLookupData);
 				}
@@ -2582,7 +2626,14 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 							{
 								term: 'status',
 								operator: 'in',
-								value: ['Nova', 'Ofertando Imóveis', 'Em Visitação', 'Proposta', 'Contrato', 'Pré-Reserva de Lançamentos']
+								value: [
+									'Nova',
+									'Ofertando Imóveis',
+									'Em Visitação',
+									'Proposta',
+									'Contrato',
+									'Pré-Reserva de Lançamentos'
+								]
 							},
 							{
 								term: '_user.active',
