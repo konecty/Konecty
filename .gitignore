@@ -64,3 +64,4 @@ thumbs.db
 tramp
 typo3temp
 .vscode
+package-lock.json

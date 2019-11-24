@@ -25,7 +25,7 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 	tplPath = '../../programs/server/assets/app/templates';
 }
 
-global.logAllRequests = false;
+global.logAllRequests = process.env.LOG_REQUEST != null;
 
 process.on('SIGUSR2', function() {
 	global.logAllRequests = !global.logAllRequests;
@@ -41,10 +41,6 @@ Picker.middleware(function(req, res, next) {
 	req.startTime = process.hrtime();
 	req.on('data', chunk => (data += chunk));
 	req.on('end', () => (req.rawBody = data));
-	if (global.logAllRequests) {
-		console.log('==================================================');
-		console.log(`Start request processing: ${req.url}`);
-	}
 	next();
 });
 
@@ -230,8 +226,10 @@ Picker.middleware(function(req, res, next) {
 		}
 
 		if (global.logAllRequests === true || res.statusCode !== 200 || res.hasErrors === true) {
-			console.log(log);
-			console.log(JSON.stringify(req.headers));
+			console.log(`==============================
+${log}
+${JSON.stringify(req.headers)}
+==============================`);
 		}
 	};
 

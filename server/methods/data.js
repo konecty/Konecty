@@ -210,13 +210,21 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 	let records;
 	try {
-		if (global.logAllRequests) {
-			console.log('Find filter');
-			console.log(JSON.stringify(query));
-			console.log('Find Options');
-			console.log(JSON.stringify(options));
-		}
+		const startTime = process.hrtime();
+
 		records = model.find(query, options).fetch();
+		if (global.logAllRequests) {
+			const totalTime = process.hrtime(startTime);
+			const log = `========== FIND ALL
+filter
+${JSON.stringify(query)}
+options
+${JSON.stringify(options)}
+time
+${totalTime[0]}s ${totalTime[1] / 1000000}ms
+==========`;
+			console.log(log);
+		}
 	} catch (error) {
 		console.error('Error executing query');
 		console.error('========================================');
