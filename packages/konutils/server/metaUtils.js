@@ -5,6 +5,8 @@ import { createHash } from 'crypto';
 import { isArray, isNumber, isObject, isString, isBoolean, has, get } from 'lodash';
 metaUtils = {};
 
+const NS_PER_SEC = 1e9;
+
 metaUtils.validateAndProcessValueFor = function(
 	meta,
 	fieldName,
@@ -60,7 +62,10 @@ metaUtils.validateAndProcessValueFor = function(
 			for (let itemA of value) {
 				for (let itemB of value) {
 					if (utils.deepEqual(itemA, itemB) === true) {
-						return new Meteor.Error('utils-internal-error', `Value for field ${fieldName} must be array no duplicated values`);
+						return new Meteor.Error(
+							'utils-internal-error',
+							`Value for field ${fieldName} must be array no duplicated values`
+						);
 					}
 				}
 			}
@@ -305,11 +310,17 @@ metaUtils.validateAndProcessValueFor = function(
 				}
 
 				if (isNumber(field.maxValue) && value > field.maxValue) {
-					return new Meteor.Error('utils-internal-error', `Value for field ${fieldName} must be less than ${field.maxValue}`);
+					return new Meteor.Error(
+						'utils-internal-error',
+						`Value for field ${fieldName} must be less than ${field.maxValue}`
+					);
 				}
 
 				if (isNumber(field.minValue) && value < field.minValue) {
-					return new Meteor.Error('utils-internal-error', `Value for field ${fieldName} must be greater than ${field.minValue}`);
+					return new Meteor.Error(
+						'utils-internal-error',
+						`Value for field ${fieldName} must be greater than ${field.minValue}`
+					);
 				}
 				break;
 
@@ -360,7 +371,10 @@ metaUtils.validateAndProcessValueFor = function(
 
 				if (isNumber(field.size) && field.size > 0) {
 					if (value.length > field.size) {
-						return new Meteor.Error('utils-internal-error', `Value for field ${fieldName} must be smaller than ${field.size}`);
+						return new Meteor.Error(
+							'utils-internal-error',
+							`Value for field ${fieldName} must be smaller than ${field.size}`
+						);
 					}
 				}
 				break;
@@ -424,7 +438,9 @@ metaUtils.validateAndProcessValueFor = function(
 					if (mustBeDate(minValue) !== false && value < minValue) {
 						return new Meteor.Error(
 							'utils-internal-error',
-							`Value for field ${fieldName} must be greater than or equals to ${moment(minValue).format(momentFormat)}`
+							`Value for field ${fieldName} must be greater than or equals to ${moment(minValue).format(
+								momentFormat
+							)}`
 						);
 					}
 				}
@@ -760,7 +776,19 @@ metaUtils.validateAndProcessValueFor = function(
 				if (mustBeObject(value) === false) {
 					return result;
 				}
-				keys = ['key', 'name', 'size', 'created', 'etag', 'headers', 'kind', 'last_modified', 'description', 'label', 'wildcard'];
+				keys = [
+					'key',
+					'name',
+					'size',
+					'created',
+					'etag',
+					'headers',
+					'kind',
+					'last_modified',
+					'description',
+					'label',
+					'wildcard'
+				];
 				removeUnauthorizedKeys(value, keys);
 				break;
 
@@ -854,21 +882,17 @@ metaUtils.getNextUserFromQueue = function(queueStrId, user) {
 };
 
 metaUtils.getNextCode = function(documentName, fieldName) {
-	const meta = Meta[documentName];
 	if (!fieldName) {
 		fieldName = 'code';
 	}
 
-	// Force autoNumber record to exists
-	Models[`${documentName}.AutoNumber`].upsert({ _id: fieldName }, { $set: { _id: fieldName } });
-
 	const collection = Models[`${documentName}.AutoNumber`].rawCollection();
 	const findOneAndUpdate = Meteor.wrapAsync(collection.findOneAndUpdate, collection);
+	const destCollection = Models[documentName].rawCollection();
+	const findOne = Meteor.wrapAsync(destCollection.findOne, destCollection);
 
 	// Mount query, sort, update, and options
 	const query = { _id: fieldName };
-
-	const sort = {};
 
 	const update = {
 		$inc: {
@@ -877,16 +901,39 @@ metaUtils.getNextCode = function(documentName, fieldName) {
 	};
 
 	const options = {
-		new: true,
-		sort: sort
+		upsert: true,
+		returnOriginal: false
 	};
 
 	// Try to get next code
 	try {
-		const result = findOneAndUpdate(query, update, options);
-		return get(result, 'value.next_val', 0);
+		const startTime = process.hrtime();
+		const elapsedTimeInSeconds = time => {
+			const [sec, nanosec] = process.hrtime(startTime);
+			return sec + Math.ceil(nanosec / NS_PER_SEC);
+		};
+		while (elapsedTimeInSeconds(startTime) < 10) {
+			const result = findOneAndUpdate(query, update, options);
+			const next_val = get(result, 'value.next_val', 1);
+
+			// Validate the new sequential
+			const maxRes = findOne(
+				{ [fieldName]: next_val },
+				{
+					fields: {
+						_id: false,
+						code: true
+					}
+				}
+			);
+			if (maxRes == null) {
+				return next_val;
+			}
+			console.log(`Duplicated key found on ${documentName}.${fieldName}: ${next_val}`);
+		}
+		throw new Error(`Error creating new ${fieldName} value from ${documentName}: Timeout exceed!`);
 	} catch (e) {
-		throw err;
+		throw e;
 	}
 };
 
