@@ -16,12 +16,7 @@ app.get('/rest/auth/loginByUrl/:ns/:sessionId', function(req, res) {
   const cookieMaxAge = get(namespace, 'sessionExpirationInSeconds', 2592000);
 
   // Set cookie with session id
-  res.set(
-    'set-cookie',
-    `_authTokenNs=${req.params.ns}; _authTokenId=${
-      req.params.sessionId
-    }; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`
-  );
+  res.set('set-cookie', `_authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
 
   // Redirect to system
   return res.redirect('/');
