@@ -98,7 +98,7 @@ Konsistent.History.setup = function() {
 		const findOne = Meteor.wrapAsync(bind(collection.findOne, collection));
 
 		// find last oplog record and get only ts value
-		const lastOplogTimestamp = findOne({}, { ts: 1 }, { sort: { ts: -1 } });
+		const lastOplogTimestamp = findOne({}, { projection: { ts: 1 }, sort: { ts: -1 } });
 
 		// If there are return then add ts to oplog observer and save the ts into Konsistent collection
 		if (has(lastOplogTimestamp, 'ts')) {
@@ -451,7 +451,10 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 			const lookupId = [];
 			if (has(record, `${relation.lookup}._id`)) {
 				lookupId.push(get(record, `${relation.lookup}._id`));
-			} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(record[relation.lookup])) {
+			} else if (
+				get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true &&
+				isArray(record[relation.lookup])
+			) {
 				for (value of record[relation.lookup]) {
 					if (has(value, '_id')) {
 						lookupId.push(value._id);
@@ -497,7 +500,13 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 					// Execute update on old relation
 					historyLookupId = [].concat(historyLookupId);
 					for (let historyLookupIdItem of historyLookupId) {
-						Konsistent.History.updateRelationReference(metaName, relation, historyLookupIdItem, action, referenceDocumentName);
+						Konsistent.History.updateRelationReference(
+							metaName,
+							relation,
+							historyLookupIdItem,
+							action,
+							referenceDocumentName
+						);
 					}
 				}
 			}
@@ -681,7 +690,9 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 			for (fieldName in relation.aggregators) {
 				aggregator = relation.aggregators[fieldName];
 				if (aggregator.field) {
-					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow);
+					console.log(
+						`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow
+					);
 				} else {
 					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`.yellow);
 				}
@@ -871,9 +882,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 							if (!lookupRecord) {
 								console.log(
 									new Error(
-										`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${
-											inheritedMetaField.document
-										}] not found`
+										`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`
 									)
 								);
 								continue;
@@ -895,7 +904,8 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 							if (isArray(inheritedMetaField.inheritedFields)) {
 								for (let inheritedMetaFieldItem of inheritedMetaField.inheritedFields) {
 									if (inheritedMetaFieldItem.inherit === 'always') {
-										updateData.$set[inheritedMetaFieldItem.fieldName] = lookupRecord[inheritedMetaFieldItem.fieldName];
+										updateData.$set[inheritedMetaFieldItem.fieldName] =
+											lookupRecord[inheritedMetaFieldItem.fieldName];
 									}
 								}
 							}
@@ -929,9 +939,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 								if (!lookupRecord) {
 									console.log(
 										new Error(
-											`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${
-												inheritedMetaField.document
-											}] not found`
+											`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`
 										)
 									);
 									return;
@@ -940,7 +948,11 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 								// Else copy description fields
 								if (isArray(inheritedMetaField.descriptionFields)) {
 									const tempValue = {};
-									utils.copyObjectFieldsByPathsIncludingIds(lookupRecord, tempValue, inheritedMetaField.descriptionFields);
+									utils.copyObjectFieldsByPathsIncludingIds(
+										lookupRecord,
+										tempValue,
+										inheritedMetaField.descriptionFields
+									);
 									if (!updateData.$set[inheritedField.fieldName]) {
 										updateData.$set[inheritedField.fieldName] = [];
 									}
