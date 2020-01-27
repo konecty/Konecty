@@ -173,7 +173,6 @@ Meteor.publish('MetaObjectsWithAccess', function() {
 
 Meteor.registerMethod('documents', 'withUser', function() {
 	const { user } = this;
-	console.log('TCL: user', user);
 
 	const documents = Array.from(MetaObject.find({ type: 'document' }, { sort: { menuSorter: 1 } })).reduce(
 		(acc, { _id, name, menuSorter, label, plurals }) => {
