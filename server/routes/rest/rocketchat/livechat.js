@@ -67,6 +67,12 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
 					contactProcess.data.phone = phone;
         }
 
+        // Remove email if it is invalid
+        // so it doesnt break the process/submit
+        if (contactProcess.data.email && /^.+@.+\.[A-Za-z]{2,}(:?\.[A-Za-z]{2,})?$/.test(contactProcess.data.email) != true) {
+            contactProcess.data.email = null;
+        }
+
         if (_.isEmpty(contactProcess.data.phone) && _.isEmpty(contactProcess.data.email)) {
           res.statusCode = 200;
           return res.end();
