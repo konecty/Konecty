@@ -69,7 +69,7 @@ app.post('/rest/rocketchat/livechat', function(req, res /*, next*/) {
 
         // Remove email if it is invalid
         // so it doesnt break the process/submit
-        if (contactProcess.data.email && /^.+@.+\.[A-Za-z]{2,}(:?\.[A-Za-z]{2,})?$/.test(contactProcess.data.email) != true) {
+        if (contactProcess.data.email != null && /^.+@.+\.[A-Za-z]{2,}(:?\.[A-Za-z]{2,})?$/.test(contactProcess.data.email) !== true) {
             contactProcess.data.email = null;
         }
 
