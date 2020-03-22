@@ -744,8 +744,8 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	if (request.code) {
 		codeSent = request.code;
 	}
-
 	let phoneSent = [];
+
 	if (request.phone && !isEmpty(request.phone)) {
 		phoneSent = phoneSent.concat(request.phone);
 	}
@@ -798,7 +798,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	}
 
 	// try to find a contact with given email
-	if (!contact && emailSent.length > 0) {
+	if (codeSent === false && contact == null && emailSent.length > 0) {
 		// request.email.some (email) ->
 		record = Meteor.call('data:find:all', {
 			document: 'Contact',
@@ -820,7 +820,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	}
 
 	// If contact not found try to find with name and phone
-	if (!contact && request.name && phoneSent.length > 0) {
+	if (codeSent === false && contact == null && request.name && phoneSent.length > 0) {
 		const regexName = _first(words(request.name));
 
 		record = Meteor.call('data:find:all', {
@@ -847,7 +847,32 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 		}
 	}
 
+	// If contact not found try with phone number
+	if (codeSent === false && contact == null && phoneSent.length > 0) {
+		record = Meteor.call('data:find:all', {
+			document: 'Contact',
+			filter: {
+				conditions: [
+					{
+						term: 'phone.phoneNumber',
+						operator: 'in',
+						value: phoneSent
+					}
+				]
+			},
+			limit: 1
+		});
+
+		if (has(record, 'data.0')) {
+			contact = get(record, 'data.0');
+		}
+	}
+
 	let contactData = {};
+
+	if (codeSent !== false) {
+		contactData.code = codeSent;
+	}
 
 	if (request.name) {
 		let setName = true;
@@ -1200,7 +1225,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	// 		contactData._user = _.clone contact._user
 
 	// delete source fields if contact already exists
-	if (contact) {
+	if (contact != null) {
 		delete contactData.queue;
 		delete contactData.campaign;
 		delete contactData.source;
@@ -1210,7 +1235,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	}
 
 	// creates a contact if not found one
-	if (!contact) {
+	if (contact == null) {
 		const createRequest = {
 			document: 'Contact',
 			data: contactData
