@@ -26,7 +26,7 @@ script:
 deploy:
     provider: releases
     api_key:
-        secure: eWbjmu87ZLpK5dzWf4XoUJ357McibkIVvy0E2pl7uoFxVTV+rZjFmGz4xG8b53fsccdfi7PwIXL7RDIOropyEmXe6VSRCM0jkm3sr6+aIR+19MV+oPOTjmrfkv0vQB4UNAFq6XRtOFRWb7zSG71OwhzccUrJWryAAXHQXajgt7AaWGJV4I19aUntoTb0sOU9HnscMqYNki1S+8wNBL6dmUl+BFY4Nub86rfPKyKk+pu3x7Ky8XTu9mLGwjFwBcX4iUt30RyjdMA0uDQ9j/LWLMdrdWb81ZixthbckN613CCNAs68JnArnafXpIBvzNQY9x38lr+tJLCUVq4kupAK60+VkTdsHwpu6GcdsEiGtjrvAiqObLDQh0uUSvTMPPkzDa3Y2nsjIKbIfQ+xPe+qBN+9ybQUxC2jELT6JN87VkIEqRy2dzQZK8WBiC2RLT4iunye/JTKDVLQd1P0oH1oL3pBSIzsrD3AU9eJ8wbtWkY1o0Vw28j9FA1Mctz7svL8a468ML9OmyqY1L5CIqfAM394xP4vOVH2VjNWYnfEmAm1yV5cNWyefK5vRAyUEc1sbhuqe2+mLqbe8z9WeLfwK0ngaZQ/hotQ40yDsyMKhRlqS3IIxP0VuEi+u4xHF4MaNQuXnw65jWmedrKLLKWjbkymdER1o2BQaZ4rCw4jZMw=
+			secure: xEbbmogCfTmbrtFJbfPUU9Pq+GECp1ZdTTUV6G/2wuEWq06N9KI9kUwAWDn57BsmWVjpbp0oiNV0NaBbC5KcYT8Dofl3h8Cr+CCjSVf7U13Bcn8mR0TIo3z3oF0EjU8LMJdMI3yvpFNm9Ju41S8J/p50qv5eIVoknOQCF9WQO122MJ0nl4nQ77en3p9QpskG0dQLo2LVlvZevpNvsLbZ0YLyBFGFlUVEz6K4bXVJqWmZZzYABiRlz+YP3byJU+tgKkNjrqGnetMiZJlTXs3L61P6bCIOytVZUdjfbBLQTsQNJHbhP74S86AcePNBnbTujmFhJ7JfcNsS6+gbZHyDPlLlcDHmjGWsq5otUOuAtcmepAVcWEClGH9YvAmz75UpWGhg7s3PyHAmuN1sW8CJdiD+DPGzqQX5fUVOHKN34LLlJVSvEucjG1y080JLQT357cBBmoaE0efyvw97ZkV4UC6+O1Lbvck+IkHxeZrEkbbijhiFsrRSWxfyzDSLIngEFkUVrhLPS+zwE7CwkaN2MbeH5tkprlzdqwF1SdnXCo+ZI6zAJvSpxeNPttCYZOzV5PPeg0ux3Z3vdQrhvu8N34Wacgtv122cSq/OOcbNGhr9PJ+prR7K0evHm25cKzeRxhTJhQj3bagyHl6Sj3RJ4ZzxNdted2WCT1vTJyG1Gso=
     skip_cleanup: true
     file: '/tmp/build/Konecty.tar.gz'
     on:
@@ -35,4 +35,4 @@ after_deploy:
     - |
         curl -H "Content-Type: application/json" \
         --data '{"source_type":"Tag","source_name":"'"$TRAVIS_TAG"'"}' \
-        -X POST "https://registry.hub.docker.com/u/konecty/konecty/trigger/$DOCKERHUBTOKEN/"
+        -X POST "https://hub.docker.com/api/build/v1/source/$DOCKERHUB_TOKEN/trigger/$DOCKERHUB_BUILD/call/"
