@@ -35,4 +35,4 @@ after_deploy:
   - |
     curl -H "Content-Type: application/json" \
     --data '{"source_type":"Tag","source_name":"'"$TRAVIS_TAG"'"}' \
-    -X POST "https://registry.hub.docker.com/u/konecty/konecty/trigger/$DOCKERHUBTOKEN/"
+    -X POST "https://hub.docker.com/api/build/v1/source/$DOCKERHUB_TOKEN/trigger/$DOCKERHUB_BUILD/call/"
