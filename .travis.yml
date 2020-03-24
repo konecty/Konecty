@@ -9,13 +9,13 @@ branches:
 git:
   depth: 1
 node_js:
-  - '4'
+  - "4"
 cache:
   directories:
-    - '$HOME/node_modules'
-    - '$HOME/.meteor'
-    - '$HOME/.npm'
-    - '$HOME/.node-gyp'
+    - "$HOME/node_modules"
+    - "$HOME/.meteor"
+    - "$HOME/.npm"
+    - "$HOME/.node-gyp"
 install:
   - curl https://install.meteor.com | sed s/--progress-bar/-sL/g | /bin/sh
   - export PATH="$HOME/.meteor:$PATH"
@@ -26,9 +26,9 @@ script:
 deploy:
   provider: releases
   api_key:
-    secure: eWbjmu87ZLpK5dzWf4XoUJ357McibkIVvy0E2pl7uoFxVTV+rZjFmGz4xG8b53fsccdfi7PwIXL7RDIOropyEmXe6VSRCM0jkm3sr6+aIR+19MV+oPOTjmrfkv0vQB4UNAFq6XRtOFRWb7zSG71OwhzccUrJWryAAXHQXajgt7AaWGJV4I19aUntoTb0sOU9HnscMqYNki1S+8wNBL6dmUl+BFY4Nub86rfPKyKk+pu3x7Ky8XTu9mLGwjFwBcX4iUt30RyjdMA0uDQ9j/LWLMdrdWb81ZixthbckN613CCNAs68JnArnafXpIBvzNQY9x38lr+tJLCUVq4kupAK60+VkTdsHwpu6GcdsEiGtjrvAiqObLDQh0uUSvTMPPkzDa3Y2nsjIKbIfQ+xPe+qBN+9ybQUxC2jELT6JN87VkIEqRy2dzQZK8WBiC2RLT4iunye/JTKDVLQd1P0oH1oL3pBSIzsrD3AU9eJ8wbtWkY1o0Vw28j9FA1Mctz7svL8a468ML9OmyqY1L5CIqfAM394xP4vOVH2VjNWYnfEmAm1yV5cNWyefK5vRAyUEc1sbhuqe2+mLqbe8z9WeLfwK0ngaZQ/hotQ40yDsyMKhRlqS3IIxP0VuEi+u4xHF4MaNQuXnw65jWmedrKLLKWjbkymdER1o2BQaZ4rCw4jZMw=
+    secure: ej2yXJumvq3wdB++2rlV0DThQyuemg4gLAxn+WX3yJ8DZ377Lqmz+wLPnbPcxoaBvqq3+aIo65b2HVzILXU/euVfvHnGgh1WomTGrzp0Uri7ANEX9cMn7stwx7dXG6nT6da7LNaTRPOBZTt/Vkk0WFthqTxv9rfx+TAGNPtvEKoGL3HscSEsos+EXFaVv5uZ+uqiIbuyAl6VXsRiOPagsGVLuaDnlSEmH9PMbKUhbWhL7z7lJAyITSmA6fdY5CAsedELRudycP27S0cPhF1pwAA1f94WkUDQyYUcfTq6JZlrO8TlXKeeY2uIcnLX2OgeRHEuyKJ8mJZ3fPqediSbwjIuDdMEF3Lt1WxdQkgeNTuoQsGoINXbmXOZqNLWN8cPKlxPprj54KQUA9g05yJxaloC/bl5RCU2irM2a5uPcRGL0CDJmeRmWrlJho3K13fZP6Dy7Hj7c3b8Z3kbEYzUdI76c+7I9Z+nwEpKclQGfHEKRtC5kkwD2mI967htiA+ir9/AIO1Xb4BH4ugO0tk+KRVfF/j8KcA7H/Fn3Ynewhkhb3HgYA2b7fCnhTxx6aW/TZ28toaSqHKIDG1W849Oaxce563/u6GMgMBDfGCMi/URjOwzNxAs1lbe2T07dfEJOienG0TfHyT2QX72SvI39Bxio6KH0m7brm0sSJqGKvE=
   skip_cleanup: true
-  file: '/tmp/build/Konecty.tar.gz'
+  file: "/tmp/build/Konecty.tar.gz"
   on:
     tags: true
 after_deploy:
