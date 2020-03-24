@@ -1,9 +1,7 @@
 FROM node:4.9-stretch
 
-ENV KONECTY_VERSION 1.0.30
-
 RUN set -x \
-	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$KONECTY_VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
+	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$DOCKER_TAG/Konecty.tar.gz" -o Konecty.tar.gz \
 	&& mkdir /app \
 	&& tar -zxf Konecty.tar.gz -C /app \
 	&& rm Konecty.tar.gz \
