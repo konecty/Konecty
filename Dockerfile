@@ -1,5 +1,7 @@
 FROM node:4.9-stretch
 
+ARG DOCKER_TAG
+
 RUN set -x \
 	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$DOCKER_TAG/Konecty.tar.gz" -o Konecty.tar.gz \
 	&& mkdir /app \
