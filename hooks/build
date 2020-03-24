@@ -1,0 +1,11 @@
+#!/bin/bash
+# hooks/build
+# https://docs.docker.com/docker-cloud/builds/advanced/
+
+# $IMAGE_NAME var is injected into the build so the tag is correct.
+echo "[***] Build hook running"
+
+docker build \
+    --build-arg VERSION=$(git describe --tags --always) \
+		-f $DOCKERFILE_PATH \
+    -t $IMAGE_NAME .

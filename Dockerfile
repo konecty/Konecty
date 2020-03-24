@@ -1,9 +1,9 @@
 FROM node:12
 
-ENV KONECTY_VERSION 1.1.0-dev.55
+ARG VERSION
 
 RUN set -x \
-	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$KONECTY_VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
+	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
 	&& mkdir /app \
 	&& tar -zxf Konecty.tar.gz -C /app \
 	&& rm Konecty.tar.gz \
