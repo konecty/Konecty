@@ -7,7 +7,7 @@ import { compileFile } from 'swig';
 import { resolve, join } from 'path';
 import { register } from 'bugsnag';
 import { parse } from 'mongodb-uri';
-import { isArray, isObject, each, isString, isNumber, get } from 'lodash';
+import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
 REQ_TIMEOUT = 1000 * 300;
@@ -25,9 +25,9 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 	tplPath = '../../programs/server/assets/app/templates';
 }
 
-global.logAllRequests = process.env.LOG_REQUEST != null;
+global.logAllRequests = false;
 
-process.on('SIGUSR2', function() {
+process.on('SIGUSR2', function () {
 	global.logAllRequests = !global.logAllRequests;
 	if (global.logAllRequests === true) {
 		console.log('Log all requests ENABLED'.green);
@@ -36,7 +36,7 @@ process.on('SIGUSR2', function() {
 	}
 });
 
-Picker.middleware(function(req, res, next) {
+Picker.middleware(function (req, res, next) {
 	let data = '';
 	req.startTime = process.hrtime();
 	req.on('data', chunk => (data += chunk));
@@ -46,7 +46,7 @@ Picker.middleware(function(req, res, next) {
 
 Picker.middleware(cookieParser());
 
-var convertObjectIdsToOid = function(values) {
+var convertObjectIdsToOid = function (values) {
 	if (isArray(values)) {
 		values.forEach((item, index) => (values[index] = convertObjectIdsToOid(item)));
 		return values;
@@ -69,8 +69,8 @@ var convertObjectIdsToOid = function(values) {
 // ### Helpers
 // Add res.send method and res.headers object to be sent on res.send
 // Add res.set and res.get to handle response headers
-Picker.middleware(function(req, res, next) {
-	req.notifyError = function(type, message, options) {
+Picker.middleware(function (req, res, next) {
+	req.notifyError = function (type, message, options) {
 		options = options || {};
 		options.url = req.url;
 		options.req = req;
@@ -85,14 +85,14 @@ Picker.middleware(function(req, res, next) {
 			login: get(req, 'user.username'),
 			email: get(req, 'user.emails'),
 			access: get(req, 'user.access'),
-			lastLogin: get(req, 'user.lastLogin')
+			lastLogin: get(req, 'user.lastLogin'),
 		};
 		options.session = {
 			_id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
 			_createdAt: get(req, 'session._createdAt'),
 			ip: get(req, 'session.ip'),
 			geolocation: get(req, 'session.geolocation'),
-			expireAt: get(req, 'session.expireAt')
+			expireAt: get(req, 'session.expireAt'),
 		};
 
 		return NotifyErrors.notify(type, message, options);
@@ -106,7 +106,7 @@ Picker.middleware(function(req, res, next) {
 
 	res.get = header => res.getHeader(header);
 
-	res.location = function(url) {
+	res.location = function (url) {
 		// "back" is an alias for the referrer
 		if ('back' === url) {
 			url = req.get('Referrer') || '/';
@@ -116,14 +116,14 @@ Picker.middleware(function(req, res, next) {
 		res.set('Location', url);
 	};
 
-	res.redirect = function(url) {
+	res.redirect = function (url) {
 		// Set location header
 		res.location(url);
 		res.statusCode = 302;
 		res.end();
 	};
 
-	res.send = function(status, response) {
+	res.send = function (status, response) {
 		// req.setTimeout REQ_TIMEOUT
 		// res.removeAllListeners 'finish'
 		// res.setTimeout RES_TIMEOUT
@@ -146,9 +146,9 @@ Picker.middleware(function(req, res, next) {
 				errors: [
 					{
 						message: response.message,
-						bugsnag: false
-					}
-				]
+						bugsnag: false,
+					},
+				],
 			};
 
 			status = 200;
@@ -174,7 +174,7 @@ Picker.middleware(function(req, res, next) {
 			response = EJSON.stringify(convertObjectIdsToOid(response));
 		}
 
-		if (status !== 200 || res.hasErrors === true) {
+		if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
 			console.log(status, response);
 		}
 
@@ -187,7 +187,7 @@ Picker.middleware(function(req, res, next) {
 		res.end(response);
 	};
 
-	res.render = function(templateName, data) {
+	res.render = function (templateName, data) {
 		const tmpl = compileFile(join(tplPath, templateName));
 
 		const renderedHtml = tmpl(data);
@@ -198,7 +198,7 @@ Picker.middleware(function(req, res, next) {
 
 	const resEnd = res.end;
 
-	res.end = function() {
+	res.end = function () {
 		resEnd.apply(res, arguments);
 
 		if (!res.statusCode) {
@@ -208,8 +208,9 @@ Picker.middleware(function(req, res, next) {
 		// Log API Calls
 		const totalTime = process.hrtime(req.startTime);
 
-		let log = `-> ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url} (${totalTime[0]}s ${totalTime[1] /
-			1000000}ms) ${req.headers.host != null ? `${req.headers.host}` : ''} ${
+		let log = `-> ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url} (${totalTime[0]}s ${
+			totalTime[1] / 1000000
+		}ms) ${req.headers.host != null ? `${req.headers.host}` : ''} ${
 			req.headers.referer != null ? `${req.headers.referer}` : ''
 		}`;
 
@@ -225,11 +226,8 @@ Picker.middleware(function(req, res, next) {
 			log = `${log}`;
 		}
 
-		if (global.logAllRequests === true || res.statusCode !== 200 || res.hasErrors === true) {
-			console.log(`==============================
-${log}
-${JSON.stringify(req.headers)}
-==============================`);
+		if (global.logAllRequests === true || [200, 204, 304].includes(res.statusCode) !== true || res.hasErrors === true) {
+			console.log(`${log} ${JSON.stringify(req.headers)}`);
 		}
 	};
 
@@ -248,7 +246,7 @@ Picker.middleware(urlencoded({ extended: true }));
 // Add CORS allowing any origin
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
 const corsOptions = {
-	origin: function(origin, callback) {
+	origin: function (origin, callback) {
 		if (origin) {
 			if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
 				callback(null, true);
@@ -262,7 +260,7 @@ const corsOptions = {
 	},
 	allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
 	credentials: true,
-	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+	optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 Picker.middleware(cors(corsOptions));
@@ -270,7 +268,7 @@ Picker.middleware(cors(corsOptions));
 // global helper to register REST endpoints
 global.app = {
 	get(path, cb) {
-		pickerGet.route(path, function(params, req, res, next) {
+		pickerGet.route(path, function (params, req, res, next) {
 			for (let k in params) {
 				const v = params[k];
 				params[k] = isString(v) ? decodeURI(v) : v;
@@ -283,7 +281,7 @@ global.app = {
 		});
 	},
 	post(path, cb) {
-		pickerPost.route(path, function(params, req, res, next) {
+		pickerPost.route(path, function (params, req, res, next) {
 			if (!req.query) {
 				req.query = params.query;
 			}
@@ -292,7 +290,7 @@ global.app = {
 		});
 	},
 	put(path, cb) {
-		pickerPut.route(path, function(params, req, res, next) {
+		pickerPut.route(path, function (params, req, res, next) {
 			if (!req.query) {
 				req.query = params.query;
 			}
@@ -301,12 +299,12 @@ global.app = {
 		});
 	},
 	del(path, cb) {
-		pickerDel.route(path, function(params, req, res, next) {
+		pickerDel.route(path, function (params, req, res, next) {
 			if (!req.query) {
 				req.query = params.query;
 			}
 			req.params = params;
 			cb(req, res, next);
 		});
-	}
+	},
 };
