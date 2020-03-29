@@ -116,9 +116,14 @@ Picker.middleware(function (req, res, next) {
 		res.set('Location', url);
 	};
 
-	res.redirect = function (url) {
+	res.redirect = function (statusCode, url) {
+		if (isNumber(statusCode)) {
+			res.location(url);
+			res.statusCode = statusCode;
+			res.end();
+		}
 		// Set location header
-		res.location(url);
+		res.location(statusCode);
 		res.statusCode = 302;
 		res.end();
 	};
@@ -154,6 +159,7 @@ Picker.middleware(function (req, res, next) {
 			status = 200;
 		}
 
+		if (!isBuffer(response)) {
 		if (isObject(response) || isArray(response)) {
 			res.set('Content-Type', 'application/json');
 
@@ -172,6 +178,7 @@ Picker.middleware(function (req, res, next) {
 			}
 
 			response = EJSON.stringify(convertObjectIdsToOid(response));
+		}
 		}
 
 		if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
