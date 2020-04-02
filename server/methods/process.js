@@ -1243,14 +1243,18 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
 		if (contactData.code) {
 			createRequest.ignoreAutoNumber = true;
-		}
+        }
+        
+        const { fields: { status, type } } = Meteor.call('document', { document: 'Contact' });
 
-		// default data
+		// Use defaultValue field from status and type metas
 		if (!contactData.status) {
-			createRequest.data.status = 'Lead';
+            if (status && status.defaultValue)
+			    createRequest.data.status = status.defaultValue;
 		}
 		if (!contactData.type) {
-			createRequest.data.type = ['Cliente'];
+            if (type && type.defaultValue)
+			    createRequest.data.type = type.maxSelected > 1 || type.isList === true ? [].concat(type.defaultValue) : type.defaultValue;
 		}
 
 		// console.log '[data:create] ->'.yellow, JSON.stringify createRequest, null, '  '
