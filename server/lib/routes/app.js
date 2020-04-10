@@ -25,7 +25,7 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 	tplPath = '../../programs/server/assets/app/templates';
 }
 
-global.logAllRequests = false;
+global.logAllRequests = /true|1|enable/i.test(process.env.LOG_REQUEST);
 
 process.on('SIGUSR2', function () {
 	global.logAllRequests = !global.logAllRequests;
@@ -160,25 +160,25 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if (!isBuffer(response)) {
-		if (isObject(response) || isArray(response)) {
-			res.set('Content-Type', 'application/json');
+			if (isObject(response) || isArray(response)) {
+				res.set('Content-Type', 'application/json');
 
-			if (response.errors) {
-				res.hasErrors = true;
-				if (isArray(response.errors)) {
-					for (let index = 0; index < response.errors.length; index++) {
-						const error = response.errors[index];
-						response.errors[index] = { message: error.message };
+				if (response.errors) {
+					res.hasErrors = true;
+					if (isArray(response.errors)) {
+						for (let index = 0; index < response.errors.length; index++) {
+							const error = response.errors[index];
+							response.errors[index] = { message: error.message };
+						}
 					}
 				}
-			}
 
-			if (response.time) {
-				req.time = response.time;
-			}
+				if (response.time) {
+					req.time = response.time;
+				}
 
-			response = EJSON.stringify(convertObjectIdsToOid(response));
-		}
+				response = EJSON.stringify(convertObjectIdsToOid(response));
+			}
 		}
 
 		if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
@@ -234,7 +234,7 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if (global.logAllRequests === true || [200, 204, 304].includes(res.statusCode) !== true || res.hasErrors === true) {
-			console.log(`${log} ${JSON.stringify(req.headers)}`);
+			console.log(log);
 		}
 	};
 
@@ -247,7 +247,7 @@ const pickerPost = Picker.filter((req, res) => req.method === 'POST');
 const pickerPut = Picker.filter((req, res) => req.method === 'PUT');
 const pickerDel = Picker.filter((req, res) => req.method === 'DELETE' || req.method === 'DEL');
 
-Picker.middleware(json());
+Picker.middleware(json({ limit: '20mb' }));
 Picker.middleware(urlencoded({ extended: true }));
 
 // Add CORS allowing any origin
