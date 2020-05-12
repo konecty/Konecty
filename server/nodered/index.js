@@ -5,6 +5,7 @@ import RED from 'node-red';
 import jsdom from 'jsdom';
 import adminAuth from './adminAuth';
 import storageModule from './storageModule';
+import getCollection from './getCollection';
 
 // for D3 compatibility on server
 const { JSDOM } = jsdom;
@@ -36,7 +37,7 @@ const init = async () => {
 			sharp: require('sharp'),
 			FuzzySet: require('fuzzyset.js'),
 			crypto: require('crypto'),
-			getCollection: require('./getCollection'),
+			getCollection: getCollection,
 			geolib: require('geolib'),
 			uuid: require('uuid'),
 			jwt: require('jsonwebtoken'),
