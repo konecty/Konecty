@@ -41,6 +41,7 @@ const init = async () => {
 			geolib: require('geolib'),
 			uuid: require('uuid'),
 			jwt: require('jsonwebtoken'),
+			aws,
 			s3: new aws.S3({
 				apiVersion: '2006-03-01',
 				endpoint,
