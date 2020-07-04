@@ -212,28 +212,25 @@ Picker.middleware(function (req, res, next) {
 			res.statusCode = 200;
 		}
 
-		// Log API Calls
-		const totalTime = process.hrtime(req.startTime);
-
-		let log = `-> ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url} (${totalTime[0]}s ${
-			totalTime[1] / 1000000
-		}ms) ${req.headers.host != null ? `${req.headers.host}` : ''} ${
-			req.headers.referer != null ? `${req.headers.referer}` : ''
-		}`;
-
-		if (res.statusCode === 401 && req.user) {
-			log += ` ${req.user._id}`;
-		}
-
-		if (res.statusCode === 200 && res.hasErrors !== true) {
-			log = `${log}`;
-		} else if (res.statusCode === 500) {
-			log = `${log}`;
-		} else {
-			log = `${log}`;
-		}
-
 		if (global.logAllRequests === true || [200, 204, 304].includes(res.statusCode) !== true || res.hasErrors === true) {
+			// Log API Calls
+			const totalTime = process.hrtime(req.startTime);
+
+			let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
+				req.headers.host != null ? `${req.headers.host}` : ''
+			} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
+
+			if (res.statusCode === 401 && req.user) {
+				log += ` ${req.user._id}`;
+			}
+
+			if (res.statusCode === 200 && res.hasErrors !== true) {
+				log = `${log}`.grey;
+			} else if (res.statusCode === 500) {
+				log = `${log}`.red;
+			} else {
+				log = `${log}`.yellow;
+			}
 			console.log(log);
 		}
 	};

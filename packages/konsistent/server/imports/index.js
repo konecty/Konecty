@@ -16,11 +16,7 @@ Konsistent.tailHandle = null;
 // Get db name from connection string
 const uriObject = parse(process.env.MONGO_URL);
 const dbName = uriObject.database;
-if (
-	isEmpty(process.env.DISABLE_KONSISTENT) ||
-	process.env.DISABLE_KONSISTENT === 'false' ||
-	process.env.DISABLE_KONSISTENT === '0'
-) {
+if (isEmpty(process.env.DISABLE_KONSISTENT) || process.env.DISABLE_KONSISTENT === 'false' || process.env.DISABLE_KONSISTENT === '0') {
 	console.log(`[konsistent] === ${dbName} ===`.green);
 }
 
@@ -30,7 +26,7 @@ const keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_
 // Define collection Konsistent to save last state
 Konsistent.Models.Konsistent = new Meteor.Collection('Konsistent');
 
-const CursorDescription = function(collectionName, selector, options) {
+const CursorDescription = function (collectionName, selector, options) {
 	const self = this;
 	self.collectionName = collectionName;
 	self.selector = Mongo.Collection._rewriteSelector(selector);
@@ -39,7 +35,7 @@ const CursorDescription = function(collectionName, selector, options) {
 };
 
 // Method to init data obervation of all collections with meta.saveHistory equals to true
-Konsistent.History.setup = function() {
+Konsistent.History.setup = function () {
 	if (has(Konsistent, 'History.db')) {
 		if (Konsistent.tailHandle) {
 			Konsistent.tailHandle.stop();
@@ -60,19 +56,19 @@ Konsistent.History.setup = function() {
 	// Create condition to get oplogs of update and insert types from data collections
 	const queryData = {
 		op: {
-			$in: ['u', 'i']
+			$in: ['u', 'i'],
 		},
 		ns: {
-			$in: metaNames
-		}
+			$in: metaNames,
+		},
 	};
 
 	// Create condition to get oplogs of insert type from trash collections
 	const queryTrash = {
 		op: 'i',
 		ns: {
-			$in: metaNames.map(name => name + '.Trash')
-		}
+			$in: metaNames.map(name => name + '.Trash'),
+		},
 	};
 
 	// Define query with data and trash conditions
@@ -111,10 +107,10 @@ Konsistent.History.setup = function() {
 
 	Konsistent.tailHandle = Konsistent.History.db.tail(
 		cursorDescription,
-		Meteor.bindEnvironment(function(doc) {
+		Meteor.bindEnvironment(function (doc) {
 			// const ns = doc.ns.split('.');
 			Konsistent.History.processOplogItem(doc);
-		})
+		}),
 	);
 };
 
@@ -143,7 +139,8 @@ Konsistent.History.setup = function() {
 // 		Konsistent.History.processOplogItem doc
 
 // Process each oplog item to verify if there are data to save as history
-Konsistent.History.processOplogItem = function(doc) {
+Konsistent.History.processOplogItem = function (doc) {
+	let startTime = process.hrtime();
 	// Split ns into array to get db name, meta name and if is a trash collection
 	let key, value;
 	const ns = doc.ns.split('.');
@@ -153,9 +150,7 @@ Konsistent.History.processOplogItem = function(doc) {
 	let action = 'create';
 	const data = doc.o;
 	let metaName =
-		Konsistent.MetaByCollection[ns[Math.min(2, ns.length - 1)]] ||
-		Konsistent.MetaByCollection[`data.${ns[2]}`] ||
-		Konsistent.MetaByCollection[ns.slice(1).join('.')];
+		Konsistent.MetaByCollection[ns[Math.min(2, ns.length - 1)]] || Konsistent.MetaByCollection[`data.${ns[2]}`] || Konsistent.MetaByCollection[ns.slice(1).join('.')];
 	if (!metaName) {
 		console.log(`Meta not found for collection [${doc.ns}]`);
 		return;
@@ -202,12 +197,30 @@ Konsistent.History.processOplogItem = function(doc) {
 	// Update relatinos if action was an update
 	if (action === 'update') {
 		Konsistent.History.updateLookupReferences(metaName, _id, data);
+		if (global.logAllRequests === true) {
+			const totalTime = process.hrtime(startTime);
+			console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update lookup references for ${metaName}`.brightMagenta);
+		}
 	}
+
+	startTime = process.hrtime();
 
 	Konsistent.History.processReverseLookups(metaName, _id, data, action);
 
+	if (global.logAllRequests === true) {
+		const totalTime = process.hrtime(startTime);
+		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process reverse lookups for ${metaName}`.brightMagenta);
+	}
+
+	startTime = process.hrtime();
+
 	// Update documents with relations to this document
 	Konsistent.History.updateRelationReferences(metaName, action, _id, data);
+
+	if (global.logAllRequests === true) {
+		const totalTime = process.hrtime(startTime);
+		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update relation references for ${metaName}`.brightMagenta);
+	}
 
 	// Remove some internal data
 	for (key of keysToIgnore) {
@@ -219,9 +232,14 @@ Konsistent.History.processOplogItem = function(doc) {
 		// Pass data and update information to create history record
 		Konsistent.History.createHistory(metaName, action, _id, data, updatedBy, updatedAt, doc);
 	}
-
+	startTime = process.hrtime();
 	// Save last processed ts
 	Konsistent.History.saveLastOplogTimestamp(doc.ts);
+
+	if (global.logAllRequests === true) {
+		const totalTime = process.hrtime(startTime);
+		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Save last oplog timestamp`.brightMagenta);
+	}
 
 	return Konsistent.History.processAlertsForOplogItem(metaName, action, _id, data, updatedBy, updatedAt);
 };
@@ -233,18 +251,18 @@ const saveLastOplogTimestampMaxQueueSize = 1000;
 const saveLastOplogTimestampGreaterValue = null;
 
 // Save last processed timestamp into Konsistent collection
-Konsistent.History.saveLastOplogTimestamp = function(ts) {
+Konsistent.History.saveLastOplogTimestamp = function (ts) {
 	let saveLastOplogTimestampGratherValue;
 	if (!saveLastOplogTimestampGreaterValue || ts.greaterThan(saveLastOplogTimestampGreaterValue)) {
 		saveLastOplogTimestampGratherValue = ts;
 	}
 
-	const flush = function() {
+	const flush = function () {
 		const query = { _id: 'LastProcessedOplog' };
 
 		const data = {
 			_id: 'LastProcessedOplog',
-			ts: saveLastOplogTimestampGratherValue
+			ts: saveLastOplogTimestampGratherValue,
 		};
 
 		const options = { upsert: true };
@@ -252,14 +270,14 @@ Konsistent.History.saveLastOplogTimestamp = function(ts) {
 		try {
 			return Konsistent.Models.Konsistent.update(query, data, options);
 		} catch (e) {
-			console.log(e);
+			console.error(e);
 			return NotifyErrors.notify(
 				'SaveLastOplogTimestamp',
 				e({
 					query,
 					data,
-					options
-				})
+					options,
+				}),
 			);
 		}
 	};
@@ -269,7 +287,7 @@ Konsistent.History.saveLastOplogTimestamp = function(ts) {
 		clearTimeout(saveLastOplogTimestampTimout);
 	}
 
-	const timeoutFn = function() {
+	const timeoutFn = function () {
 		saveLastOplogTimestampQueueSize = 0;
 		return flush();
 	};
@@ -284,11 +302,13 @@ Konsistent.History.saveLastOplogTimestamp = function(ts) {
 };
 
 // Method to create a new History using meta, action, old record and new record
-Konsistent.History.createHistory = function(metaName, action, id, data, updatedBy, updatedAt, oplogDoc) {
+Konsistent.History.createHistory = function (metaName, action, id, data, updatedBy, updatedAt, oplogDoc) {
 	// If data is empty or no update data is avaible then abort
 	if (Object.keys(data).length === 0 || !updatedAt || !updatedBy || data._merge) {
 		return;
 	}
+
+	const startTime = process.hrtime();
 
 	const historyData = {};
 
@@ -301,25 +321,6 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
 		if (get(field, 'ignoreHistory', false) !== true) {
 			historyData[key] = value;
 		}
-	}
-
-	// Log operation to shell
-	let log = metaName;
-
-	switch (action) {
-		case 'create':
-			log = `+ ${log}`.green;
-			break;
-		case 'update':
-			log = `• ${log}`.blue;
-			break;
-		case 'delete':
-			log = `- ${log}`.red;
-			break;
-	}
-
-	if (global.logAllRequests === true) {
-		console.log(log);
 	}
 
 	// Get history collection
@@ -339,24 +340,43 @@ Konsistent.History.createHistory = function(metaName, action, id, data, updatedB
 		createdAt: updatedAt,
 		createdBy: updatedBy,
 		data: historyData,
-		type: action
+		type: action,
 	};
 
 	// Create history!
 	try {
 		history.update(historyQuery, historyItem, { upsert: true });
+		if (global.logAllRequests === true) {
+			const totalTime = process.hrtime(startTime);
+			// Log operation to shell
+			let log = metaName;
+
+			switch (action) {
+				case 'create':
+					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to create action over  ${log}`.green;
+					break;
+				case 'update':
+					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to update action over ${log}`.blue;
+					break;
+				case 'delete':
+					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to delete action over ${log}`.red;
+					break;
+			}
+
+			console.log(log);
+		}
 	} catch (e) {
-		console.log(e);
+		console.error(e);
 		NotifyErrors.notify('createHistory', e, {
 			historyQuery,
 			historyItem,
-			upsert: true
+			upsert: true,
 		});
 	}
 };
 
 // Method to update reverse relations of one record
-Konsistent.History.updateRelationReferences = function(metaName, action, id, data) {
+Konsistent.History.updateRelationReferences = function (metaName, action, id, data) {
 	// Get references from meta
 	let relation, relations, relationsFromDocumentName;
 	const references = Konsistent.References[metaName];
@@ -437,7 +457,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 			action,
 			id,
 			data,
-			referencesToUpdate
+			referencesToUpdate,
 		});
 	}
 
@@ -451,10 +471,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 			const lookupId = [];
 			if (has(record, `${relation.lookup}._id`)) {
 				lookupId.push(get(record, `${relation.lookup}._id`));
-			} else if (
-				get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true &&
-				isArray(record[relation.lookup])
-			) {
+			} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(record[relation.lookup])) {
 				for (value of record[relation.lookup]) {
 					if (has(value, '_id')) {
 						lookupId.push(value._id);
@@ -487,10 +504,7 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 				if (historyRecord) {
 					// Then get lookupid to execute update on old relation
 					let historyLookupId = get(historyRecord, `data.${relation.lookup}._id`);
-					if (
-						get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true &&
-						isArray(historyRecord.data[relation.lookup])
-					) {
+					if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(historyRecord.data[relation.lookup])) {
 						historyLookupId = [];
 						for (value of historyRecord.data[relation.lookup]) {
 							historyLookupId.push(get(value, '_id'));
@@ -500,27 +514,19 @@ Konsistent.History.updateRelationReferences = function(metaName, action, id, dat
 					// Execute update on old relation
 					historyLookupId = [].concat(historyLookupId);
 					for (let historyLookupIdItem of historyLookupId) {
-						Konsistent.History.updateRelationReference(
-							metaName,
-							relation,
-							historyLookupIdItem,
-							action,
-							referenceDocumentName
-						);
+						Konsistent.History.updateRelationReference(metaName, relation, historyLookupIdItem, action, referenceDocumentName);
 					}
 				}
 			}
 
 			// Execute update of relations into new value
-			lookupId.map(lookupIdItem =>
-				Konsistent.History.updateRelationReference(metaName, relation, lookupIdItem, action, referenceDocumentName)
-			);
+			lookupId.map(lookupIdItem => Konsistent.History.updateRelationReference(metaName, relation, lookupIdItem, action, referenceDocumentName));
 		}
 	}
 };
 
 // Method to udpate documents with references in this document
-Konsistent.History.updateRelationReference = function(metaName, relation, lookupId, action, referenceDocumentName) {
+Konsistent.History.updateRelationReference = function (metaName, relation, lookupId, action, referenceDocumentName) {
 	// Try to get metadata
 	let aggregator, e, query;
 	const meta = Meta[metaName];
@@ -552,7 +558,7 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 	// Init update object
 	const valuesToUpdate = {
 		$set: {},
-		$unset: {}
+		$unset: {},
 	};
 
 	// Iterate over all aggregators to create the update object
@@ -574,8 +580,8 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 		const group = {
 			$group: {
 				_id: null,
-				value: {}
-			}
+				value: {},
+			},
 		};
 
 		let type = '';
@@ -607,9 +613,9 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 					$group: {
 						_id: `$${aggregator.field}._id`,
 						value: {
-							$first: `$${aggregator.field}`
-						}
-					}
+							$first: `$${aggregator.field}`,
+						},
+					},
 				};
 
 				pipeline.push(addToSetGroup);
@@ -649,7 +655,7 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 		} catch (error) {
 			e = error;
 			NotifyErrors.notify('updateRelationReference', e, {
-				pipeline
+				pipeline,
 			});
 		}
 	}
@@ -690,9 +696,7 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 			for (fieldName in relation.aggregators) {
 				aggregator = relation.aggregators[fieldName];
 				if (aggregator.field) {
-					console.log(
-						`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow
-					);
+					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow);
 				} else {
 					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`.yellow);
 				}
@@ -704,13 +708,13 @@ Konsistent.History.updateRelationReference = function(metaName, relation, lookup
 		e = error1;
 		return NotifyErrors.notify('updateRelationReference', e, {
 			updateQuery,
-			valuesToUpdate
+			valuesToUpdate,
 		});
 	}
 };
 
 // Method to update reverse relations of one record
-Konsistent.History.updateLookupReferences = function(metaName, id, data) {
+Konsistent.History.updateLookupReferences = function (metaName, id, data) {
 	// Get references from meta
 	let field, fieldName, fields;
 	const references = Konsistent.References[metaName];
@@ -788,7 +792,7 @@ Konsistent.History.updateLookupReferences = function(metaName, id, data) {
 };
 
 // Method to update a single field of a single relation from a single updated record
-Konsistent.History.updateLookupReference = function(metaName, fieldName, field, record, relatedMetaName) {
+Konsistent.History.updateLookupReference = function (metaName, fieldName, field, record, relatedMetaName) {
 	// Try to get related meta
 	const meta = Meta[metaName];
 	if (!meta) {
@@ -845,7 +849,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 							inheritedMetaField,
 							query,
 							updateData,
-							options
+							options,
 						});
 						continue;
 					}
@@ -853,7 +857,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 						record[inheritedField.fieldName] = [];
 					}
 					record[inheritedField.fieldName].push({
-						_id: record._id
+						_id: record._id,
 					});
 				}
 
@@ -867,10 +871,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 						continue;
 					}
 
-					if (
-						has(record, `${inheritedField.fieldName}._id`) ||
-						(inheritedMetaField.isList === true && get(record, `${inheritedField.fieldName}.length`) > 0)
-					) {
+					if (has(record, `${inheritedField.fieldName}._id`) || (inheritedMetaField.isList === true && get(record, `${inheritedField.fieldName}.length`) > 0)) {
 						var lookupRecord, subQuery;
 						if (inheritedMetaField.isList !== true) {
 							subQuery = { _id: record[inheritedField.fieldName]._id.valueOf() };
@@ -882,8 +883,8 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 							if (!lookupRecord) {
 								console.log(
 									new Error(
-										`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`
-									)
+										`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`,
+									),
 								);
 								continue;
 							}
@@ -893,19 +894,14 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 								if (!updateData.$set[inheritedField.fieldName]) {
 									updateData.$set[inheritedField.fieldName] = {};
 								}
-								utils.copyObjectFieldsByPathsIncludingIds(
-									lookupRecord,
-									updateData.$set[inheritedField.fieldName],
-									inheritedMetaField.descriptionFields
-								);
+								utils.copyObjectFieldsByPathsIncludingIds(lookupRecord, updateData.$set[inheritedField.fieldName], inheritedMetaField.descriptionFields);
 							}
 
 							// End copy inherited values
 							if (isArray(inheritedMetaField.inheritedFields)) {
 								for (let inheritedMetaFieldItem of inheritedMetaField.inheritedFields) {
 									if (inheritedMetaFieldItem.inherit === 'always') {
-										updateData.$set[inheritedMetaFieldItem.fieldName] =
-											lookupRecord[inheritedMetaFieldItem.fieldName];
+										updateData.$set[inheritedMetaFieldItem.fieldName] = lookupRecord[inheritedMetaFieldItem.fieldName];
 									}
 								}
 							}
@@ -914,14 +910,14 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 							ids = compact(uniq(ids));
 							subQuery = {
 								_id: {
-									$in: ids
-								}
+									$in: ids,
+								},
 							};
 
 							const subOptions = {};
 							if (isArray(inheritedMetaField.descriptionFields)) {
 								subOptions.fields = utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(
-									utils.getFirstPartOfArrayOfPaths(inheritedMetaField.descriptionFields).join(',')
+									utils.getFirstPartOfArrayOfPaths(inheritedMetaField.descriptionFields).join(','),
 								);
 							}
 
@@ -932,15 +928,15 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 								lookupRecordsById[item._id] = item;
 							}
 
-							record[inheritedField.fieldName].forEach(function(item) {
+							record[inheritedField.fieldName].forEach(function (item) {
 								lookupRecord = lookupRecordsById[item._id];
 
 								// If no record found log error
 								if (!lookupRecord) {
 									console.log(
 										new Error(
-											`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`
-										)
+											`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`,
+										),
 									);
 									return;
 								}
@@ -948,11 +944,7 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 								// Else copy description fields
 								if (isArray(inheritedMetaField.descriptionFields)) {
 									const tempValue = {};
-									utils.copyObjectFieldsByPathsIncludingIds(
-										lookupRecord,
-										tempValue,
-										inheritedMetaField.descriptionFields
-									);
+									utils.copyObjectFieldsByPathsIncludingIds(lookupRecord, tempValue, inheritedMetaField.descriptionFields);
 									if (!updateData.$set[inheritedField.fieldName]) {
 										updateData.$set[inheritedField.fieldName] = [];
 									}
@@ -985,13 +977,13 @@ Konsistent.History.updateLookupReference = function(metaName, fieldName, field, 
 		NotifyErrors.notify('updateLookupReference', e, {
 			query,
 			updateData,
-			options
+			options,
 		});
 	}
 };
 
 // Method to update reverse relations of one record
-Konsistent.History.processReverseLookups = function(metaName, id, data, action) {
+Konsistent.History.processReverseLookups = function (metaName, id, data, action) {
 	let field;
 	if (action === 'delete') {
 		return;
@@ -1018,10 +1010,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 	const record = model.findOne(query);
 
 	if (!record) {
-		return NotifyErrors.notify(
-			'ReverseLoockup Error',
-			new Error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`)
-		);
+		return NotifyErrors.notify('ReverseLoockup Error', new Error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`));
 	}
 
 	// Process reverse lookups
@@ -1038,10 +1027,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 			}
 
 			if (!reverseLookupMeta.fields[field.reverseLookup]) {
-				NotifyErrors.notify(
-					'ReverseLoockup Error',
-					new Error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`)
-				);
+				NotifyErrors.notify('ReverseLoockup Error', new Error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`));
 				continue;
 			}
 
@@ -1087,7 +1073,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 					reverseLookupModel,
 					value,
 					value,
-					[data[field.name]._id]
+					[data[field.name]._id],
 				);
 
 				// Mount query and update to create the reverse lookup
@@ -1115,7 +1101,7 @@ Konsistent.History.processReverseLookups = function(metaName, id, data, action) 
 	}
 };
 
-Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, data, updatedBy, updatedAt) {
+Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, data, updatedBy, updatedAt) {
 	let field, userRecords, value;
 	if (!updatedBy) {
 		return;
@@ -1150,7 +1136,7 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 	if (!userModel) {
 		return NotifyErrors.notify('processAlertsForOplogItem', new Error("Can't get model for User"));
 	}
-
+	const startTime = process.hrtime();
 	let { code } = data;
 	const usersToFindEmail = [];
 	let users = [];
@@ -1164,8 +1150,8 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 		const options = {
 			fields: {
 				_user: 1,
-				code: 1
-			}
+				code: 1,
+			},
 		};
 
 		const updatedRecord = model.findOne(query, options);
@@ -1187,17 +1173,17 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 
 	const userQuery = {
 		_id: {
-			$in: usersToFindEmail
+			$in: usersToFindEmail,
 		},
-		active: true
+		active: true,
 	};
 
 	const userOptions = {
 		fields: {
 			username: 1,
 			emails: 1,
-			locale: 1
-		}
+			locale: 1,
+		},
 	};
 
 	try {
@@ -1205,7 +1191,7 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 	} catch (e) {
 		NotifyErrors.notify('updateLookupReference', e, {
 			userQuery,
-			userOptions
+			userOptions,
 		});
 	}
 
@@ -1249,12 +1235,12 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 				if (field) {
 					dataArray.push({
 						field: utils.getLabel(field, user) || key,
-						value: utils.formatValue(value, field)
+						value: utils.formatValue(value, field),
 					});
 				} else {
 					dataArray.push({
 						field: utils.getLabel(field, user) || key,
-						value
+						value,
 					});
 				}
 			}
@@ -1276,14 +1262,14 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 			_updatedAt: updatedAt,
 			data: dataArray,
 			rawData,
-			user
+			user,
 		};
 
 		if (has(Namespace, 'RocketChat.alertWebhook')) {
 			var urls = [].concat(Namespace.RocketChat.alertWebhook);
 			for (var url of urls) {
 				if (!isEmpty(url)) {
-					HTTP.post(url, { data: alertData }, function(err, response) {
+					HTTP.post(url, { data: alertData }, function (err, response) {
 						if (err) {
 							NotifyErrors.notify('HookRocketChatAlertError', err);
 							console.log('🚀 ', `Rocket.Chat Alert ERROR ${url}`.red, err);
@@ -1307,9 +1293,13 @@ Konsistent.History.processAlertsForOplogItem = function(metaName, action, _id, d
 				data: alertData,
 				type: 'Email',
 				status: 'Send',
-				discard: true
+				discard: true,
 			};
 			Konsistent.Models['Message'].insert(emailData);
 		}
+	}
+	if (global.logAllRequests === true) {
+		const totalTime = process.hrtime(startTime);
+		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process alerts for oplog item for ${metaName}`.brightMagenta);
 	}
 };

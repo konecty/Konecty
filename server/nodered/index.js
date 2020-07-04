@@ -19,8 +19,7 @@ const ensurePath = path =>
 		.filter(p => p)
 		.join('/');
 
-const endpoint =
-	process.env.S3_DOMAIN != null ? new aws.Endpoint(`${process.env.S3_REGION}.${process.env.S3_DOMAIN}`) : new aws.Endpoint();
+const endpoint = process.env.S3_DOMAIN != null ? new aws.Endpoint(`${process.env.S3_REGION}.${process.env.S3_DOMAIN}`) : new aws.Endpoint('amazonaws.com');
 
 const init = async () => {
 	const httpAdminRoot = `/${ensurePath(process.env.NR_ADMIN || 'flows')}`;
