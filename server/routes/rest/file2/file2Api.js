@@ -2,7 +2,7 @@ import { findIndex, get, size } from 'lodash';
 
 /* @Add_File */
 app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
-	middlewares.sessionUserAndGetAccessFor('document')(req, res, function() {
+	middlewares.sessionUserAndGetAccessFor('document')(req, res, function () {
 		// Get meta of document
 		const meta = Meta[req.params.document];
 
@@ -13,9 +13,7 @@ app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
 		// Try to get passed field
 		const field = meta.fields[req.params.fieldName];
 		if (!field) {
-			return res.send(
-				new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`)
-			);
+			return res.send(new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`));
 		}
 
 		// Verify if field is of type file
@@ -28,7 +26,7 @@ app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
 
 		// Find record by code or id
 		const record = model.findOne({
-			$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }]
+			$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
 		});
 
 		// If no record found then return error
@@ -56,11 +54,11 @@ app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
 				{
 					_id: record._id,
 					_updatedAt: {
-						$date: (record._updatedAt || new Date()).toISOString()
-					}
-				}
+						$date: (record._updatedAt || new Date()).toISOString(),
+					},
+				},
 			],
-			data: {}
+			data: {},
 		};
 
 		// Add field of file
@@ -73,7 +71,7 @@ app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
 		const result = Meteor.call('data:update', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			data: body
+			data: body,
 		});
 
 		// If resuls is an error, return
@@ -88,12 +86,12 @@ app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res, next) =>
 
 		// Else send result
 		return res.send(result.data[0]);
-	})
+	}),
 );
 
 /* @Remove_File */
 app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, next) =>
-	middlewares.sessionUserAndGetAccessFor('document')(req, res, function() {
+	middlewares.sessionUserAndGetAccessFor('document')(req, res, function () {
 		// Get meta of document
 		const meta = Meta[req.params.document];
 
@@ -104,9 +102,7 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 		// Try to get passed field
 		const field = meta.fields[req.params.fieldName];
 		if (!field) {
-			return res.send(
-				new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`)
-			);
+			return res.send(new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`));
 		}
 
 		// Verify if field is of type file
@@ -119,7 +115,7 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 
 		// Find record by code or id
 		const record = model.findOne({
-			$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }]
+			$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
 		});
 
 		// If no record found then return error
@@ -149,11 +145,11 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 				{
 					_id: record._id,
 					_updatedAt: {
-						$date: record._updatedAt || new Date()
-					}
-				}
+						$date: (record._updatedAt || new Date()).toISOString(),
+					},
+				},
 			],
-			data: {}
+			data: {},
 		};
 
 		// Add field of file
@@ -166,7 +162,7 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 		const result = Meteor.call('data:update', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			data: body
+			data: body,
 		});
 
 		// If resuls is an error, return
@@ -181,5 +177,5 @@ app.del('/rest/file2/:document/:recordCode/:fieldName/:fileName', (req, res, nex
 
 		// Else send result
 		res.send(result.data[0]);
-	})
+	}),
 );

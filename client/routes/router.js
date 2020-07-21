@@ -1,4 +1,4 @@
-Router.onBeforeAction(function() {
+Router.onBeforeAction(function () {
 	if (Meteor.user()) {
 		return this.next();
 	}
@@ -8,12 +8,11 @@ Router.onBeforeAction(function() {
 Router.route('/auth/mail', {
 	name: 'auth-mail',
 	action() {
-		console.log('AQUI');
 		this.render('authMail');
 	},
 	subscriptions() {
 		Meteor.subscribe('fullUserInfo');
-	}
+	},
 });
 
 Router.route('/auth/facebook', {
@@ -23,5 +22,5 @@ Router.route('/auth/facebook', {
 	},
 	subscriptions() {
 		Meteor.subscribe('fullUserInfo');
-	}
+	},
 });

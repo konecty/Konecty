@@ -19,7 +19,7 @@ import {
 	has,
 	map,
 	get,
-	size
+	size,
 } from 'lodash';
 
 import { post } from 'request';
@@ -29,7 +29,7 @@ import { post } from 'request';
 	@param document
 	@param queueId
 */
-Meteor.registerMethod('data:queue:next', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:queue:next', 'withUser', 'withAccessForDocument', function (request) {
 	const user = metaUtils.getNextUserFromQueue(request.queueId, this.user);
 
 	if (!user) {
@@ -51,7 +51,7 @@ Meteor.registerMethod('data:queue:next', 'withUser', 'withAccessForDocument', fu
 	@param start
 	@param getTotal
 */
-Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', function (request) {
 	let accessField, condition;
 	const context = this;
 
@@ -78,7 +78,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	// Define init filter
 	const filter = {
 		match: 'and',
-		filters: []
+		filters: [],
 	};
 
 	// If filter is not given, apply meta default filters
@@ -176,7 +176,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 				accessConditions.push({
 					fieldName,
-					condition
+					condition,
 				});
 
 				if ((emptyFields === true && !fields[fieldName]) || (emptyFields !== true && fields[fieldName] === 1)) {
@@ -197,7 +197,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		limit: parseInt(request.limit),
 		skip: parseInt(request.start),
 		fields,
-		sort
+		sort,
 	};
 
 	if (_isNaN(options.limit) || !options.limit) {
@@ -215,14 +215,8 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		records = model.find(query, options).fetch();
 		if (global.logAllRequests) {
 			const totalTime = process.hrtime(startTime);
-			const log = `========== FIND ALL
-filter
-${JSON.stringify(query)}
-options
-${JSON.stringify(options)}
-time
-${totalTime[0]}s ${totalTime[1] / 1000000}ms
-==========`;
+			const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${request.document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(options)}`
+				.brightCyan;
 			console.log(log);
 		}
 	} catch (error) {
@@ -238,17 +232,16 @@ ${totalTime[0]}s ${totalTime[1] / 1000000}ms
 			success: false,
 			errors: [
 				{
-					message:
-						'Oops something went wrong, please try again later... if this message persisits, please contact our support',
-					bugsnag: false
-				}
+					message: 'Oops something went wrong, please try again later... if this message persisits, please contact our support',
+					bugsnag: false,
+				},
 			],
-			data: []
+			data: [],
 		};
 	}
 
 	const local = {
-		collection: new Meteor.Collection(null)
+		collection: new Meteor.Collection(null),
 	};
 
 	for (var record of records) {
@@ -274,7 +267,7 @@ ${totalTime[0]}s ${totalTime[1] / 1000000}ms
 
 	const data = {
 		success: true,
-		data: records
+		data: records,
 	};
 
 	if (request.getTotal === true) {
@@ -289,8 +282,8 @@ ${totalTime[0]}s ${totalTime[1] / 1000000}ms
 				document: request.document,
 				__scope__: {
 					user: this.user,
-					access: this.access
-				}
+					access: this.access,
+				},
 			});
 
 			if (populatedRecord) {
@@ -307,7 +300,7 @@ ${totalTime[0]}s ${totalTime[1] / 1000000}ms
 	@param document
 	@param field
 */
-Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument', function (request) {
 	const context = this;
 
 	// Verify if user have permission to read records
@@ -331,7 +324,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 	// Define init filter
 	const filter = {
 		match: 'and',
-		filters: []
+		filters: [],
 	};
 
 	if (isObject(context.access.readFilter)) {
@@ -358,13 +351,13 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 	}
 
 	let options = {
-		fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field)
+		fields: utils.convertStringOfFieldsSeparatedByCommaIntoObjectToFind(request.field),
 	};
 
 	const records = model.find(query, options).fetch();
 
 	const values = [];
-	each(records, function(item) {
+	each(records, function (item) {
 		const value = utils.getObjectPathAgg(item, request.field);
 		if (isArray(value)) {
 			each(value, _value => values.push(_value));
@@ -377,7 +370,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 
 	const data = {
 		success: true,
-		data: uniques
+		data: uniques,
 	};
 
 	return data;
@@ -389,7 +382,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 	@param fields
 	@param dataId
 */
-Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', function (request) {
 	let accessField, condition;
 	const context = this;
 
@@ -414,7 +407,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	// Define init filter
 	const filter = {
 		match: 'and',
-		filters: []
+		filters: [],
 	};
 
 	if (isObject(this.access.readFilter)) {
@@ -465,7 +458,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 
 				accessConditions.push({
 					fieldName,
-					condition
+					condition,
 				});
 
 				if ((emptyFields === true && !fields[fieldName]) || (emptyFields !== true && fields[fieldName] === 1)) {
@@ -488,7 +481,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 
 	if (data) {
 		const local = {
-			collection: new Meteor.Collection(null)
+			collection: new Meteor.Collection(null),
 		};
 
 		local.collection.insert(utils.mapDateValue(data));
@@ -513,8 +506,8 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 					document: request.document,
 					__scope__: {
 						user: this.user,
-						access: this.access
-					}
+						access: this.access,
+					},
 				});
 
 				if (populatedRecord) {
@@ -538,7 +531,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	@param limit
 	@param useChangeUserFilter
 */
-Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument', function (request) {
 	const context = this;
 
 	const meta = Meta[request.document];
@@ -601,21 +594,11 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 							condition[descriptionField] = floatValue;
 						}
 					} else if (lookupField.type === 'address' && descriptionField === lookupField.name) {
-						for (let addressField of [
-							'country',
-							'state',
-							'city',
-							'place',
-							'number',
-							'postalCode',
-							'district',
-							'placeType',
-							'complement'
-						]) {
+						for (let addressField of ['country', 'state', 'city', 'place', 'number', 'postalCode', 'district', 'placeType', 'complement']) {
 							const c = {};
 							c[`${descriptionField}.${addressField}`] = {
 								$regex: request.search,
-								$options: 'i'
+								$options: 'i',
 							};
 							conditions.push(c);
 						}
@@ -626,7 +609,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 							} else if (lookupField.type !== 'boolean') {
 								condition[descriptionField] = {
 									$regex: request.search,
-									$options: 'i'
+									$options: 'i',
 								};
 							}
 						}
@@ -677,7 +660,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	// Define init filter
 	const filter = {
 		match: 'and',
-		filters: []
+		filters: [],
 	};
 
 	if (request.useChangeUserFilter === true && isObject(access.changeUserFilter)) {
@@ -719,7 +702,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 		limit: parseInt(request.limit),
 		skip: parseInt(request.start),
 		fields,
-		sort
+		sort,
 	};
 
 	if (_isNaN(options.limit) || !options.limit) {
@@ -732,7 +715,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	return {
 		success: true,
 		data: map(data, utils.mapDateValue),
-		total
+		total,
 	};
 });
 
@@ -741,21 +724,21 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	@param document
 	@param record
 */
-Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAccessForDocument', function (request) {
 	const context = this;
 	if (!request.record) {
 		return;
 	}
 
-	const populateDetailFields = function(field, value, parent) {
+	const populateDetailFields = function (field, value, parent) {
 		if (!has(value, '_id')) {
 			context.notifyError(
 				new Meteor.Error('internal-error', 'populateDetailFields: value without _id', {
 					field,
 					value,
 					document: request.document,
-					parent
-				})
+					parent,
+				}),
 			);
 		}
 
@@ -764,8 +747,8 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
 			fields: field.detailFields.join(','),
 			dataId: value._id,
 			__scope__: {
-				user: context.user
-			}
+				user: context.user,
+			},
 		});
 
 		if (has(record, 'data.0')) {
@@ -809,7 +792,7 @@ Meteor.registerMethod(
 	'withModelForDocument',
 	'ifCreateIsValid',
 	'processCollectionLogin',
-	function(request) {
+	function (request) {
 		let field, k, resultOfValidation, value;
 		const context = this;
 		const { meta } = this;
@@ -832,7 +815,7 @@ Meteor.registerMethod(
 		// Define response object to be populated later
 		const response = {
 			errors: [],
-			success: true
+			success: true,
 		};
 
 		// Remove null values and empty strings
@@ -847,10 +830,7 @@ Meteor.registerMethod(
 		for (let fieldName in request.data) {
 			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
 			if (accessField.isCreatable !== true) {
-				return new Meteor.Error(
-					'internal-error',
-					`[${request.document}] You don't have permission to create field ${fieldName}`
-				);
+				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create field ${fieldName}`);
 			}
 		}
 
@@ -893,15 +873,7 @@ Meteor.registerMethod(
 				if (newRecord[key] === undefined) {
 					value = request.data[field.name];
 
-					resultOfValidation = metaUtils.validateAndProcessValueFor(
-						meta,
-						key,
-						value,
-						'insert',
-						model,
-						request.data,
-						newRecord
-					);
+					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
 					if (resultOfValidation instanceof Error) {
 						response.errors.push(resultOfValidation);
 					}
@@ -918,12 +890,9 @@ Meteor.registerMethod(
 			const extraData = {
 				original: {},
 				request: request.data,
-				validated: newRecord
+				validated: newRecord,
 			};
-			request.data = extend(
-				request.data,
-				utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend(request.data, newRecord), context, extraData)
-			);
+			request.data = extend(request.data, utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend(request.data, newRecord), context, extraData));
 		}
 
 		// Iterate over all fields, except autoNumbers, of meta to validate values and insert default values
@@ -957,15 +926,7 @@ Meteor.registerMethod(
 					}
 
 					value = request.data[field.name];
-					resultOfValidation = metaUtils.validateAndProcessValueFor(
-						meta,
-						key,
-						value,
-						'insert',
-						model,
-						request.data,
-						newRecord
-					);
+					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
 					if (resultOfValidation instanceof Error) {
 						this.notifyError('Create - Validation Error', resultOfValidation, request);
 						response.errors.push(resultOfValidation);
@@ -980,12 +941,7 @@ Meteor.registerMethod(
 
 		// If meta includes validationScript, run it in a sandboxed environment
 		if (meta.validationScript) {
-			const validation = processValidationScript(
-				meta.validationScript,
-				meta.validationData,
-				extend({}, request.data, newRecord),
-				context
-			);
+			const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, request.data, newRecord), context);
 			if (get(validation, 'success') !== true) {
 				const error = new Meteor.Error(validation.reason);
 				this.notifyError('Create - Script Validation Error', error, request);
@@ -1002,15 +958,7 @@ Meteor.registerMethod(
 
 					// Ignore autonumbers if requested
 					if (request.ignoreAutoNumber !== true || !value) {
-						resultOfValidation = metaUtils.validateAndProcessValueFor(
-							meta,
-							key,
-							value,
-							'insert',
-							model,
-							request.data,
-							newRecord
-						);
+						resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
 						if (resultOfValidation instanceof Error) {
 							this.notifyError('Create - Validation Error', resultOfValidation, request);
 							response.errors.push(resultOfValidation);
@@ -1039,7 +987,7 @@ Meteor.registerMethod(
 			newRecord._createdBy = request.data._createdBy || {
 				_id: this.user._id,
 				name: this.user.name,
-				group: this.user.group
+				group: this.user.group,
 			};
 
 			// Set _updatedAt and _updatedBy with same values of _createdAt _createdBy
@@ -1056,7 +1004,7 @@ Meteor.registerMethod(
 				if (isObject(request.upsert)) {
 					const updateOperation = {
 						$setOnInsert: {},
-						$set: {}
+						$set: {},
 					};
 					if (isObject(request.updateOnUpsert)) {
 						for (key in newRecord) {
@@ -1112,7 +1060,7 @@ Meteor.registerMethod(
 					ns: Namespace.ns,
 					documentName: request.document,
 					user: pick(this.user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
-					data: [model.findOne(query)] // Find records before apply access filter to query
+					data: [model.findOne(query)], // Find records before apply access filter to query
 				};
 
 				const urls = [].concat(Namespace.onCreate);
@@ -1121,7 +1069,7 @@ Meteor.registerMethod(
 						url = url.replace('${dataId}', insertResult.valueOf());
 						url = url.replace('${documentId}', `${Namespace.ns}:${request.document}`);
 
-						post({ url, json: hookData }, function(err, response) {
+						post({ url, json: hookData }, function (err, response) {
 							if (err) {
 								NotifyErrors.notify('HookOnCreateError', err);
 								console.log('📠 ', `CREATE ERROR ${url}`.red, err);
@@ -1172,7 +1120,7 @@ Meteor.registerMethod(
 
 		// And finally, send the response
 		return response;
-	}
+	},
 );
 
 /* Update records
@@ -1191,7 +1139,7 @@ Meteor.registerMethod(
 	'withModelForDocument',
 	'ifUpdateIsValid',
 	'processCollectionLogin',
-	function(request) {
+	function (request) {
 		let idMapItem, validateResult;
 		let id;
 		const context = this;
@@ -1206,7 +1154,7 @@ Meteor.registerMethod(
 		// Define response object to be populated later
 		const response = {
 			errors: [],
-			success: true
+			success: true,
 		};
 
 		// Separate queue from data
@@ -1219,10 +1167,7 @@ Meteor.registerMethod(
 		for (var fieldName in request.data.data) {
 			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
 			if (accessField.isUpdatable !== true) {
-				return new Meteor.Error(
-					'internal-error',
-					`[${request.document}] You don't have permission to update field ${fieldName}`
-				);
+				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to update field ${fieldName}`);
 			}
 
 			// If there are condition in access for this field then add to array
@@ -1240,7 +1185,7 @@ Meteor.registerMethod(
 		// Define init filter
 		const filter = {
 			match: 'and',
-			filters: []
+			filters: [],
 		};
 
 		// Add access update filter as sub filter
@@ -1284,8 +1229,8 @@ Meteor.registerMethod(
 		if (!meta.scriptBeforeValidation && !meta.validationScript && !meta.scriptAfterSave) {
 			options = {
 				fields: {
-					_updatedAt: 1
-				}
+					_updatedAt: 1,
+				},
 			};
 		}
 
@@ -1296,8 +1241,8 @@ Meteor.registerMethod(
 
 		const existsOptions = {
 			fields: {
-				_id: 1
-			}
+				_id: 1,
+			},
 		};
 
 		const existsRecords = model.find(existsQuery, existsOptions).fetch();
@@ -1347,16 +1292,9 @@ Meteor.registerMethod(
 			idMapItem = idMap[id];
 			if (idMapItem.exists !== true) {
 				if (idMapItem.userDontHasPermission === true) {
-					response.errors.push(
-						new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { bugsnag: false })
-					);
+					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { bugsnag: false }));
 				} else {
-					response.errors.push(
-						new Meteor.Error(
-							'internal-error',
-							`Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`
-						)
-					);
+					response.errors.push(new Meteor.Error('internal-error', `Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`));
 				}
 
 				delete idMap[id];
@@ -1364,9 +1302,9 @@ Meteor.registerMethod(
 				outOfDateQuery.push({
 					dataId: id,
 					createdAt: {
-						$gt: new Date(idMapItem._updatedAt.$date)
+						$gt: new Date(idMapItem._updatedAt.$date),
 					},
-					$or: mapOfFieldsToUpdateForHistoryQuery
+					$or: mapOfFieldsToUpdateForHistoryQuery,
 				});
 			}
 		}
@@ -1397,8 +1335,8 @@ Meteor.registerMethod(
 										'internal-error',
 										`O Campo ${fieldName} do dado com id ${id} que está tentando salvar está desatualizado. A Modificação foi feita por [${
 											outOfDateRecordsByDataId[id].createdBy.name
-										}] at [${outOfDateRecordsByDataId[id].createdAt.toISOString()}]`
-									)
+										}] at [${outOfDateRecordsByDataId[id].createdAt.toISOString()}]`,
+									),
 								);
 								delete idMap[id];
 							}
@@ -1427,7 +1365,7 @@ Meteor.registerMethod(
 			let bodyData, resultOfValidation, value;
 			const update = {
 				$set: {},
-				$unset: {}
+				$unset: {},
 			};
 
 			// Ignore history by default. If any field have ignoreHistory different from true then set as false
@@ -1439,16 +1377,7 @@ Meteor.registerMethod(
 				value = request.data.data[key];
 				if (validatedData[key] === undefined) {
 					if (get(meta, `fields.${key}.type`) === 'lookup') {
-						resultOfValidation = metaUtils.validateAndProcessValueFor(
-							meta,
-							key,
-							value,
-							'update',
-							model,
-							request.data.data,
-							validatedData,
-							idsToUpdate
-						);
+						resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'update', model, request.data.data, validatedData, idsToUpdate);
 						if (resultOfValidation instanceof Error) {
 							return resultOfValidation;
 						}
@@ -1467,17 +1396,12 @@ Meteor.registerMethod(
 				const extraData = {
 					original: records[0],
 					request: request.data.data,
-					validated: validatedData
+					validated: validatedData,
 				};
 				bodyData = extend(
 					{},
 					request.data.data,
-					utils.runScriptBeforeValidation(
-						meta.scriptBeforeValidation,
-						extend({}, records[0], request.data.data, validatedData),
-						context,
-						extraData
-					)
+					utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend({}, records[0], request.data.data, validatedData), context, extraData),
 				);
 			} else {
 				bodyData = extend({}, request.data.data);
@@ -1487,16 +1411,7 @@ Meteor.registerMethod(
 			for (key in bodyData) {
 				value = bodyData[key];
 				if (validatedData[key] === undefined) {
-					resultOfValidation = metaUtils.validateAndProcessValueFor(
-						meta,
-						key,
-						value,
-						'update',
-						model,
-						bodyData,
-						validatedData,
-						idsToUpdate
-					);
+					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'update', model, bodyData, validatedData, idsToUpdate);
 					if (resultOfValidation instanceof Error) {
 						this.notifyError('Update - Validation Error', resultOfValidation, request);
 						return resultOfValidation;
@@ -1512,12 +1427,7 @@ Meteor.registerMethod(
 
 			// If meta includes validationScript, run it in a sandboxed environment
 			if (meta.validationScript) {
-				const validation = processValidationScript(
-					meta.validationScript,
-					meta.validationData,
-					extend({}, records[0], validatedData),
-					context
-				);
+				const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, records[0], validatedData), context);
 				if (get(validation, 'success') !== true) {
 					const error = new Meteor.Error(validation.reason);
 					this.notifyError('Update - Script Validation Error', error, request);
@@ -1558,15 +1468,15 @@ Meteor.registerMethod(
 						_id: this.user._id,
 						name: this.user.name,
 						group: this.user.group,
-						ts: update.$set._updatedAt
+						ts: update.$set._updatedAt,
 					};
 				}
 
 				// Define update query
 				query = {
 					_id: {
-						$in: []
-					}
+						$in: [],
+					},
 				};
 
 				for (record of records) {
@@ -1612,7 +1522,7 @@ Meteor.registerMethod(
 					ns: Namespace.ns,
 					documentName: request.document,
 					user: pick(this.user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
-					data: model.find(query).fetch() // Find records before apply access filter to query
+					data: model.find(query).fetch(), // Find records before apply access filter to query
 				};
 
 				const urls = [].concat(Namespace.onUpdate);
@@ -1621,7 +1531,7 @@ Meteor.registerMethod(
 						url = url.replace('${dataId}', ids.join(','));
 						url = url.replace('${documentId}', `${Namespace.ns}:${request.document}`);
 
-						post({ url, json: hookData }, function(err, response) {
+						post({ url, json: hookData }, function (err, response) {
 							if (err) {
 								NotifyErrors.notify('HookOnUpdateError', err);
 								console.log('📠 ', `UPDATE ERROR ${url}`.red, err);
@@ -1673,7 +1583,7 @@ Meteor.registerMethod(
 
 		// And finally, send the response
 		return response;
-	}
+	},
 );
 
 /* Delete records
@@ -1681,369 +1591,348 @@ Meteor.registerMethod(
 	@param document
 	@param data
 */
-Meteor.registerMethod(
-	'data:delete',
-	'withUser',
-	'withAccessForDocument',
-	'ifAccessIsDeletable',
-	'withMetaForDocument',
-	'withModelForDocument',
-	function(request) {
-		let idMapItem;
-		let id;
-		const context = this;
+Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAccessIsDeletable', 'withMetaForDocument', 'withModelForDocument', function (request) {
+	let idMapItem;
+	let id;
+	const context = this;
 
-		const data = [];
+	const data = [];
 
-		// Define response object to be populated later
-		const response = {
-			errors: [],
-			success: true
-		};
+	// Define response object to be populated later
+	const response = {
+		errors: [],
+		success: true,
+	};
 
-		// Some validations of payload
-		if (!isObject(request.data)) {
-			return new Meteor.Error('internal-error', `[${request.document}] Invalid payload`);
+	// Some validations of payload
+	if (!isObject(request.data)) {
+		return new Meteor.Error('internal-error', `[${request.document}] Invalid payload`);
+	}
+
+	if (!isArray(request.data.ids) || request.data.ids.length === 0) {
+		return new Meteor.Error('internal-error', `[${request.document}] Payload must contain an array of ids with at least one item`);
+	}
+
+	const { meta } = this;
+
+	for (var item of request.data.ids) {
+		if (!isObject(item) || !isString(item._id)) {
+			return new Meteor.Error('internal-error', `[${request.document}] Each id must contain an valid _id`);
 		}
 
-		if (!isArray(request.data.ids) || request.data.ids.length === 0) {
-			return new Meteor.Error(
-				'internal-error',
-				`[${request.document}] Payload must contain an array of ids with at least one item`
-			);
-		}
-
-		const { meta } = this;
-
-		for (var item of request.data.ids) {
-			if (!isObject(item) || !isString(item._id)) {
-				return new Meteor.Error('internal-error', `[${request.document}] Each id must contain an valid _id`);
+		if (meta.ignoreUpdatedAt !== true) {
+			if (!isObject(item) || !isObject(item._updatedAt) || !isString(item._updatedAt.$date)) {
+				return new Meteor.Error('internal-error', `[${request.document}] Each id must contain an date field named _updatedAt`);
 			}
+		}
+	}
+
+	const { model } = this;
+
+	// Try to get trash model of document
+	const trashModel = Models[`${request.document}.Trash`];
+	if (!trashModel) {
+		return new Meteor.Error('internal-error', `[${request.document}] Document ${request.document}.Trash does not exists`);
+	}
+
+	// Find records that we are trying to update
+	// Map all passed ids to facilitate later access
+
+	let query = {};
+
+	if (isObject(this.access.deleteFilter)) {
+		const deleteFilter = filterUtils.parseFilterObject(this.access.deleteFilter, meta, context);
+		if (deleteFilter instanceof Error) {
+			this.notifyError('Delete - Validation Error', deleteFilter, request);
+			return deleteFilter;
+		}
+
+		query = deleteFilter;
+	}
+
+	if (!query._id) {
+		query._id = { $in: [] };
+	}
+
+	const idMap = {};
+
+	for (item of request.data.ids) {
+		if (has(query, '_id.$in') && isArray(query._id.$in)) {
+			query._id.$in.push(item._id);
+		}
+		idMap[item._id] = item;
+	}
+
+	let options = {};
+	// fields:
+	// 	_updatedAt: 1
+
+	const records = model.find(query, options).fetch();
+
+	// Make a query with only _ids to verify if record does not exists or user does not have permission to view the record
+	const existsQuery = { _id: query._id };
+
+	const existsOptions = {
+		fields: {
+			_id: 1,
+		},
+	};
+
+	const existsRecords = model.find(existsQuery, existsOptions).fetch();
+	const existsMap = {};
+
+	for (let existsRecord of existsRecords) {
+		existsMap[existsRecord._id] = existsRecord;
+	}
+
+	// Mark ids that exists on database and mark all out of date ids to later use
+	for (var record of records) {
+		idMapItem = idMap[record._id];
+		if (idMapItem) {
+			idMapItem.exists = true;
 
 			if (meta.ignoreUpdatedAt !== true) {
-				if (!isObject(item) || !isObject(item._updatedAt) || !isString(item._updatedAt.$date)) {
-					return new Meteor.Error(
-						'internal-error',
-						`[${request.document}] Each id must contain an date field named _updatedAt`
-					);
+				if (record._updatedAt.getTime() !== new Date(idMapItem._updatedAt.$date).getTime()) {
+					idMapItem.outOfDate = true;
 				}
 			}
 		}
+	}
 
-		const { model } = this;
-
-		// Try to get trash model of document
-		const trashModel = Models[`${request.document}.Trash`];
-		if (!trashModel) {
-			return new Meteor.Error('internal-error', `[${request.document}] Document ${request.document}.Trash does not exists`);
+	// Verify if records that was marked as unexistent was only anaccessible by user
+	for (id in idMap) {
+		idMapItem = idMap[id];
+		if (idMapItem.exists !== true) {
+			idMapItem.userDontHasPermission = existsMap[id];
 		}
+	}
 
-		// Find records that we are trying to update
-		// Map all passed ids to facilitate later access
-
-		let query = {};
-
-		if (isObject(this.access.deleteFilter)) {
-			const deleteFilter = filterUtils.parseFilterObject(this.access.deleteFilter, meta, context);
-			if (deleteFilter instanceof Error) {
-				this.notifyError('Delete - Validation Error', deleteFilter, request);
-				return deleteFilter;
+	// If id doesn't exists return an error and remove id from ids map
+	for (id in idMap) {
+		idMapItem = idMap[id];
+		if (idMapItem.exists !== true) {
+			if (idMapItem.userDontHasPermission === true) {
+				response.errors.push(new Meteor.Error('internal-error', `Sem premissão para ver o dado ${id}`));
+			} else {
+				response.errors.push(new Meteor.Error('internal-error', `Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`));
 			}
 
-			query = deleteFilter;
+			delete idMap[id];
+		} else if (idMapItem.outOfDate === true) {
+			response.errors.push(
+				new Meteor.Error('internal-error', `Existe uma versão mais nova do dado que a que está tentando apagar [${id}]. Tente atualizar a tela e tente apagar novamente.`, {
+					bugsnag: false,
+				}),
+			);
+
+			delete idMap[id];
 		}
+	}
 
-		if (!query._id) {
-			query._id = { $in: [] };
+	// Iterate over id map to create an array with ObjectIds to verify relations
+	const idsToVerifyRelations = [];
+	for (id in idMap) {
+		idMapItem = idMap[id];
+		if (idMapItem.exists === true) {
+			idsToVerifyRelations.push(id);
 		}
+	}
 
-		const idMap = {};
+	// Get references of document
+	const references = References[request.document];
 
-		for (item of request.data.ids) {
-			if (has(query, '_id.$in') && isArray(query._id.$in)) {
-				query._id.$in.push(item._id);
-			}
-			idMap[item._id] = item;
-		}
+	// If exist references
+	if (isObject(references) && isObject(references.from)) {
+		for (let referenceMetaName in references.from) {
+			// Get model
+			const referenceMeta = references.from[referenceMetaName];
+			const referenceModel = Models[referenceMetaName];
 
-		let options = {};
-		// fields:
-		// 	_updatedAt: 1
+			if (referenceModel) {
+				// Define an array to multiple conditions
+				const referenceConditions = [];
+				// Get all fields that reference this meta and create one condition with all ids
+				for (let referenceFieldName in referenceMeta) {
+					const referenceField = referenceMeta[referenceFieldName];
+					const condition = {};
 
-		const records = model.find(query, options).fetch();
+					const ref = referenceFieldName;
 
-		// Make a query with only _ids to verify if record does not exists or user does not have permission to view the record
-		const existsQuery = { _id: query._id };
+					condition[`${ref}._id`] = {
+						$in: idsToVerifyRelations,
+					};
 
-		const existsOptions = {
-			fields: {
-				_id: 1
-			}
-		};
-
-		const existsRecords = model.find(existsQuery, existsOptions).fetch();
-		const existsMap = {};
-
-		for (let existsRecord of existsRecords) {
-			existsMap[existsRecord._id] = existsRecord;
-		}
-
-		// Mark ids that exists on database and mark all out of date ids to later use
-		for (var record of records) {
-			idMapItem = idMap[record._id];
-			if (idMapItem) {
-				idMapItem.exists = true;
-
-				if (meta.ignoreUpdatedAt !== true) {
-					if (record._updatedAt.getTime() !== new Date(idMapItem._updatedAt.$date).getTime()) {
-						idMapItem.outOfDate = true;
-					}
-				}
-			}
-		}
-
-		// Verify if records that was marked as unexistent was only anaccessible by user
-		for (id in idMap) {
-			idMapItem = idMap[id];
-			if (idMapItem.exists !== true) {
-				idMapItem.userDontHasPermission = existsMap[id];
-			}
-		}
-
-		// If id doesn't exists return an error and remove id from ids map
-		for (id in idMap) {
-			idMapItem = idMap[id];
-			if (idMapItem.exists !== true) {
-				if (idMapItem.userDontHasPermission === true) {
-					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para ver o dado ${id}`));
-				} else {
-					response.errors.push(
-						new Meteor.Error(
-							'internal-error',
-							`Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`
-						)
-					);
+					referenceConditions.push(condition);
 				}
 
-				delete idMap[id];
-			} else if (idMapItem.outOfDate === true) {
-				response.errors.push(
-					new Meteor.Error(
-						'internal-error',
-						`Existe uma versão mais nova do dado que a que está tentando apagar [${id}]. Tente atualizar a tela e tente apagar novamente.`,
-						{ bugsnag: false }
-					)
-				);
+				// If there are references of this meta
+				if (referenceConditions.length > 0) {
+					// Set up a query with all conditions using operator "or"
+					let referenceQuery = {
+						$or: referenceConditions,
+					};
 
-				delete idMap[id];
-			}
-		}
+					let referenceQueryOptions = {
+						fields: {
+							_id: 1,
+						},
+					};
 
-		// Iterate over id map to create an array with ObjectIds to verify relations
-		const idsToVerifyRelations = [];
-		for (id in idMap) {
-			idMapItem = idMap[id];
-			if (idMapItem.exists === true) {
-				idsToVerifyRelations.push(id);
-			}
-		}
+					// Get first result
+					let referenceResult = referenceModel.findOne(referenceQuery, referenceQueryOptions);
 
-		// Get references of document
-		const references = References[request.document];
-
-		// If exist references
-		if (isObject(references) && isObject(references.from)) {
-			for (let referenceMetaName in references.from) {
-				// Get model
-				const referenceMeta = references.from[referenceMetaName];
-				const referenceModel = Models[referenceMetaName];
-
-				if (referenceModel) {
-					// Define an array to multiple conditions
-					const referenceConditions = [];
-					// Get all fields that reference this meta and create one condition with all ids
-					for (let referenceFieldName in referenceMeta) {
-						const referenceField = referenceMeta[referenceFieldName];
-						const condition = {};
-
-						const ref = referenceFieldName;
-
-						condition[`${ref}._id`] = {
-							$in: idsToVerifyRelations
-						};
-
-						referenceConditions.push(condition);
-					}
-
-					// If there are references of this meta
-					if (referenceConditions.length > 0) {
-						// Set up a query with all conditions using operator "or"
-						let referenceQuery = {
-							$or: referenceConditions
-						};
-
-						let referenceQueryOptions = {
-							fields: {
-								_id: 1
+					// If there are result got ahead and find problems for each record
+					if (referenceResult) {
+						// For each id
+						for (id of idsToVerifyRelations) {
+							// Change all conditions
+							for (let referenceCondition of referenceConditions) {
+								// To set the unique property as one id condition
+								referenceCondition[Object.keys(referenceCondition)[0]] = id;
 							}
-						};
 
-						// Get first result
-						let referenceResult = referenceModel.findOne(referenceQuery, referenceQueryOptions);
+							// Define query to all field references of this id
+							referenceQuery = {
+								$or: referenceConditions,
+							};
 
-						// If there are result got ahead and find problems for each record
-						if (referenceResult) {
-							// For each id
-							for (id of idsToVerifyRelations) {
-								// Change all conditions
-								for (let referenceCondition of referenceConditions) {
-									// To set the unique property as one id condition
-									referenceCondition[Object.keys(referenceCondition)[0]] = id;
-								}
+							referenceQueryOptions = {
+								fields: {
+									_id: 1,
+								},
+							};
 
-								// Define query to all field references of this id
-								referenceQuery = {
-									$or: referenceConditions
-								};
+							// Execute query
+							referenceResult = referenceModel.findOne(referenceQuery, referenceQueryOptions);
 
-								referenceQueryOptions = {
-									fields: {
-										_id: 1
-									}
-								};
+							// If there are results
+							if (referenceResult) {
+								// Add error to response
+								response.errors.push(
+									new Meteor.Error(
+										'internal-error',
+										`Não é possivel apagar o dado com id:[${request.document}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
+										{ bugsnag: false },
+									),
+								);
 
-								// Execute query
-								referenceResult = referenceModel.findOne(referenceQuery, referenceQueryOptions);
-
-								// If there are results
-								if (referenceResult) {
-									// Add error to response
-									response.errors.push(
-										new Meteor.Error(
-											'internal-error',
-											`Não é possivel apagar o dado com id:[${request.document}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
-											{ bugsnag: false }
-										)
-									);
-
-									// And delete data from idMap
-									delete idMap[id];
-								}
+								// And delete data from idMap
+								delete idMap[id];
 							}
 						}
 					}
 				}
 			}
 		}
+	}
 
-		// Iterate over records to get only records that was valid to delete to save them into trash
-		const recordsToSaveInTrash = [];
-		for (record of records) {
-			if (get(idMap, `${record._id}.exists`) === true) {
-				recordsToSaveInTrash.push(record);
-			}
+	// Iterate over records to get only records that was valid to delete to save them into trash
+	const recordsToSaveInTrash = [];
+	for (record of records) {
+		if (get(idMap, `${record._id}.exists`) === true) {
+			recordsToSaveInTrash.push(record);
 		}
+	}
 
-		// Iterate over id map to create an array with ObjectIds to execute delete query
-		const idsToDelete = [];
-		for (id in idMap) {
-			idMapItem = idMap[id];
-			if (idMapItem.exists === true) {
-				idsToDelete.push(id);
-			}
+	// Iterate over id map to create an array with ObjectIds to execute delete query
+	const idsToDelete = [];
+	for (id in idMap) {
+		idMapItem = idMap[id];
+		if (idMapItem.exists === true) {
+			idsToDelete.push(id);
 		}
+	}
 
-		// If there are ids to execute the delete, then execute
-		if (idsToDelete.length > 0) {
-			// Define delete query
-			let e;
-			query = {
-				_id: {
-					$in: idsToDelete
-				}
+	// If there are ids to execute the delete, then execute
+	if (idsToDelete.length > 0) {
+		// Define delete query
+		let e;
+		query = {
+			_id: {
+				$in: idsToDelete,
+			},
+		};
+
+		// Save every record into trash
+		for (record of recordsToSaveInTrash) {
+			// Add information about how and when record was sent to trash
+			record._deletedAt = new Date();
+			record._deletedBy = {
+				_id: this.user._id,
+				name: this.user.name,
+				group: this.user.group,
 			};
 
-			// Save every record into trash
-			for (record of recordsToSaveInTrash) {
-				// Add information about how and when record was sent to trash
-				record._deletedAt = new Date();
-				record._deletedBy = {
-					_id: this.user._id,
-					name: this.user.name,
-					group: this.user.group
-				};
+			try {
+				trashModel.insert(record);
+			} catch (error) {
+				e = error;
+				NotifyErrors.notify('TrashInsertError', e, {
+					record,
+				});
+			}
+		}
 
-				try {
-					trashModel.insert(record);
-				} catch (error) {
-					e = error;
-					NotifyErrors.notify('TrashInsertError', e, {
-						record
+		// Execute delete
+		try {
+			model.remove(query);
+		} catch (error1) {
+			e = error1;
+			NotifyErrors.notify('DataDeleteError', e, {
+				query,
+			});
+			return e;
+		}
+
+		// Call hooks
+		if (!isEmpty(Namespace.onDelete)) {
+			const ids = map(idsToDelete, id => id.valueOf());
+
+			const hookData = {
+				action: 'delete',
+				ns: Namespace.ns,
+				documentName: request.document,
+				user: pick(this.user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
+				data: recordsToSaveInTrash,
+			};
+
+			const urls = [].concat(Namespace.onDelete);
+			for (var url of urls) {
+				if (!isEmpty(url)) {
+					url = url.replace('${dataId}', ids.join(','));
+					url = url.replace('${documentId}', `${Namespace.ns}:${request.document}`);
+
+					post({ url, json: hookData }, function (err, response) {
+						if (err) {
+							NotifyErrors.notify('HookOnDeleteError', err);
+							console.log('📠 ', `DELETE ERROR ${url}`.red, err);
+							return;
+						}
+
+						if (response.statusCode === 200) {
+							console.log('📠 ', `${response.statusCode} DELETE ${url}`.green);
+						} else {
+							console.log('📠 ', `${response.statusCode} DELETE ${url}`.red);
+						}
 					});
 				}
 			}
-
-			// Execute delete
-			try {
-				model.remove(query);
-			} catch (error1) {
-				e = error1;
-				NotifyErrors.notify('DataDeleteError', e, {
-					query
-				});
-				return e;
-			}
-
-			// Call hooks
-			if (!isEmpty(Namespace.onDelete)) {
-				const ids = map(idsToDelete, id => id.valueOf());
-
-				const hookData = {
-					action: 'delete',
-					ns: Namespace.ns,
-					documentName: request.document,
-					user: pick(this.user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
-					data: recordsToSaveInTrash
-				};
-
-				const urls = [].concat(Namespace.onDelete);
-				for (var url of urls) {
-					if (!isEmpty(url)) {
-						url = url.replace('${dataId}', ids.join(','));
-						url = url.replace('${documentId}', `${Namespace.ns}:${request.document}`);
-
-						post({ url, json: hookData }, function(err, response) {
-							if (err) {
-								NotifyErrors.notify('HookOnDeleteError', err);
-								console.log('📠 ', `DELETE ERROR ${url}`.red, err);
-								return;
-							}
-
-							if (response.statusCode === 200) {
-								console.log('📠 ', `${response.statusCode} DELETE ${url}`.green);
-							} else {
-								console.log('📠 ', `${response.statusCode} DELETE ${url}`.red);
-							}
-						});
-					}
-				}
-			}
-
-			// Set ids to response object
-			response.data = idsToDelete;
 		}
 
-		// If there are errors then set success of response as false, else delete the key errors
-		if (response.errors.length > 0) {
-			response.success = false;
-		} else {
-			delete response.errors;
-		}
-
-		// And finally, send the response
-		return response;
+		// Set ids to response object
+		response.data = idsToDelete;
 	}
-);
+
+	// If there are errors then set success of response as false, else delete the key errors
+	if (response.errors.length > 0) {
+		response.success = false;
+	} else {
+		delete response.errors;
+	}
+
+	// And finally, send the response
+	return response;
+});
 
 /* Create relation
 	@param authTokenId
@@ -2051,7 +1940,7 @@ Meteor.registerMethod(
 	@param fieldName
 	@param data
 */
-Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument', function(request) {
+Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument', function (request) {
 	let data, reverseLookupModel;
 	const context = this;
 
@@ -2074,10 +1963,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 
 	// Verofy if field has relations
 	if (!isArray(field.relations) || field.relations.length === 0) {
-		return new Meteor.Error(
-			'internal-error',
-			`[${request.document}] Field ${request.fieldName} must contains a property [relations] as array with at least one item`
-		);
+		return new Meteor.Error('internal-error', `[${request.document}] Field ${request.fieldName} must contains a property [relations] as array with at least one item`);
 	}
 
 	// Some validations of payload
@@ -2086,10 +1972,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 	}
 
 	if (!isObject(request.data) || !isArray(request.data.lookups) || !isArray(request.data.reverseLookups)) {
-		return new Meteor.Error(
-			'internal-error',
-			`[${request.document}] Payload must contain an object with properties [lookup] and [reverseLookups] as arrays`
-		);
+		return new Meteor.Error('internal-error', `[${request.document}] Payload must contain an object with properties [lookup] and [reverseLookups] as arrays`);
 	}
 
 	/*
@@ -2108,7 +1991,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 	const response = {
 		success: true,
 		data: [],
-		errors: []
+		errors: [],
 	};
 
 	if (!request.data.data) {
@@ -2138,26 +2021,19 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 			data[relation.lookup] = { _id: lookup };
 
 			data[relation.reverseLookup] = {
-				_id: reverseLookup
+				_id: reverseLookup,
 			};
 
 			if (sendEmail) {
 				if (!emailData[Meta[relation.document].fields[relation.reverseLookup].document]) {
 					emailData[Meta[relation.document].fields[relation.reverseLookup].document] = [];
 				}
-				if (
-					reverseLookupModel &&
-					!find(emailData[Meta[relation.document].fields[relation.reverseLookup].document], { _id: reverseLookup })
-				) {
+				if (reverseLookupModel && !find(emailData[Meta[relation.document].fields[relation.reverseLookup].document], { _id: reverseLookup })) {
 					const reverseLookupData = reverseLookupModel.findOne({ _id: reverseLookup });
-					metaUtils.populateLookupsData(
-						Meta[relation.document].fields[relation.reverseLookup].document,
-						reverseLookupData,
-						{
-							_user: 1,
-							contact: 1
-						}
-					);
+					metaUtils.populateLookupsData(Meta[relation.document].fields[relation.reverseLookup].document, reverseLookupData, {
+						_user: 1,
+						contact: 1,
+					});
 
 					emailData[Meta[relation.document].fields[relation.reverseLookup].document].push(reverseLookupData);
 				}
@@ -2189,7 +2065,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 					authTokenId: request.authTokenId,
 					document: relation.document,
 					data,
-					upsert
+					upsert,
 				});
 
 				if (isNumber(result)) {
@@ -2213,7 +2089,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 
 						populateFields = {};
 						populateFields[relation.lookup] = 1;
-						result.data.forEach(function(resultData) {
+						result.data.forEach(function (resultData) {
 							newData = JSON.parse(JSON.stringify(resultData));
 
 							metaUtils.populateLookupsData(relation.document, newData, populateFields);
@@ -2237,7 +2113,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 	}
 
 	if (sendEmail && size(get(emailData, relation.document)) > 0) {
-		const objectByString = function(o, s) {
+		const objectByString = function (o, s) {
 			s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
 			s = s.replace(/^\./, ''); // strip a leading dot
 			const a = s.split('.');
@@ -2285,7 +2161,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 			_updatedAt: new Date(),
 			_createdBy: createdByUser,
 			_updatedBy: updatedByUser,
-			_user: [userOwner]
+			_user: [userOwner],
 		};
 
 		if (has(relation, 'emailConf.template')) {
@@ -2306,11 +2182,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 					messageData.to = contactData.email[0].address;
 				}
 
-				utils.copyObjectFieldsByPathsIncludingIds(
-					contactData,
-					emailContactData,
-					Meta['Message'].fields['contact'].descriptionFields
-				);
+				utils.copyObjectFieldsByPathsIncludingIds(contactData, emailContactData, Meta['Message'].fields['contact'].descriptionFields);
 
 				messageData.contact = [emailContactData];
 			}
@@ -2322,7 +2194,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 			utils.copyObjectFieldsByPathsIncludingIds(
 				objectByString(emailData, relation.emailConf.opportunity),
 				emailOpportunityData,
-				Meta['Message'].fields['opportunity'].descriptionFields
+				Meta['Message'].fields['opportunity'].descriptionFields,
 			);
 
 			messageData.opportunity = emailOpportunityData;
@@ -2399,7 +2271,7 @@ KONDATA.call 'data:lead:save',
 		- Se não, verifica se a campanha informada possui uma roleta alvo:
 			- Adiciona como responsável do contato o próximo usuário da roleta alvo da campanha.
 */
-Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
+Meteor.registerMethod('data:lead:save', 'withUser', function (request) {
 	let createRequest, record, result;
 	const context = this;
 	// meta = @meta
@@ -2415,7 +2287,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	const response = {
 		success: true,
 		data: [],
-		errors: []
+		errors: [],
 	};
 
 	let phoneSent = [];
@@ -2426,12 +2298,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	// validate if phone or email was passed
 	if (!has(request, 'lead.email') && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [
-			new Meteor.Error(
-				'data-lead-save-validation',
-				'É obrigatório o preenchimento de ao menos um dos seguintes campos: email e telefone.'
-			)
-		];
+		response.errors = [new Meteor.Error('data-lead-save-validation', 'É obrigatório o preenchimento de ao menos um dos seguintes campos: email e telefone.')];
 		delete response.data;
 		return response;
 	}
@@ -2454,11 +2321,11 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					{
 						term: 'email.address',
 						operator: 'equals',
-						value: request.lead.email
-					}
-				]
+						value: request.lead.email,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -2477,16 +2344,16 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					{
 						term: 'phone.phoneNumber',
 						operator: 'equals',
-						value: phoneSent[0]
+						value: phoneSent[0],
 					},
 					{
 						term: 'name.full',
 						operator: 'contains',
-						value: regexName
-					}
-				]
+						value: regexName,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -2508,7 +2375,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 			const nameParts = words(request.lead.name);
 			contactData.name = {
 				first: _first(nameParts),
-				last: tail(nameParts).join(' ')
+				last: tail(nameParts).join(' '),
 			};
 		}
 	}
@@ -2517,12 +2384,12 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 		if (size(get(contact, 'email')) > 0) {
 			if (
 				!find(compact(contact.email), {
-					address: request.lead.email
+					address: request.lead.email,
 				})
 			) {
 				contactData.email = contact.email;
 				contactData.email.push({
-					address: request.lead.email
+					address: request.lead.email,
 				});
 			}
 		} else if (!isEmpty(request.lead.email)) {
@@ -2533,10 +2400,10 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	if (phoneSent.length > 0) {
 		if (size(get(contact, 'phone.length')) > 0) {
 			let firstPhoneNotFound = true;
-			phoneSent.forEach(function(leadPhone) {
+			phoneSent.forEach(function (leadPhone) {
 				if (
 					!find(compact(contact.phone), {
-						phoneNumber: leadPhone
+						phoneNumber: leadPhone,
 					})
 				) {
 					if (firstPhoneNotFound) {
@@ -2546,7 +2413,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 
 					contactData.phone.push({
 						countryCode: '55',
-						phoneNumber: leadPhone
+						phoneNumber: leadPhone,
 					});
 				}
 			});
@@ -2556,8 +2423,8 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 			phoneSent.forEach(leadPhone =>
 				contactData.phone.push({
 					countryCode: 55,
-					phoneNumber: leadPhone
-				})
+					phoneNumber: leadPhone,
+				}),
 			);
 		}
 	}
@@ -2590,24 +2457,24 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					{
 						term: 'username',
 						operator: 'equals',
-						value: request.lead.broker
-					}
-				]
+						value: request.lead.broker,
+					},
+				],
 			},
 			fields: '_id',
-			limit: 1
+			limit: 1,
 		});
 
 		if (size(get(record, 'data')) > 0) {
 			if (has(contact, '_user')) {
 				if (
 					!find(compact(contact._user), {
-						_id: record.data[0]._id
+						_id: record.data[0]._id,
 					})
 				) {
 					contactData._user = clone(contact._user);
 					contactData._user.push({
-						_id: record.data[0]._id
+						_id: record.data[0]._id,
 					});
 				}
 			} else {
@@ -2629,35 +2496,28 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: contact._id
+								value: contact._id,
 							},
 							{
 								term: 'status',
 								operator: 'in',
-								value: [
-									'Nova',
-									'Ofertando Imóveis',
-									'Em Visitação',
-									'Proposta',
-									'Contrato',
-									'Pré-Reserva de Lançamentos'
-								]
+								value: ['Nova', 'Ofertando Imóveis', 'Em Visitação', 'Proposta', 'Contrato', 'Pré-Reserva de Lançamentos'],
 							},
 							{
 								term: '_user.active',
 								operator: 'equals',
-								value: true
-							}
-						]
+								value: true,
+							},
+						],
 					},
 					limit: 1,
 					sort: [
 						{
 							property: '_updatedAt',
-							direction: 'DESC'
-						}
+							direction: 'DESC',
+						},
 					],
-					fields: '_id, _user'
+					fields: '_id, _user',
 				});
 
 				if (has(record, 'data.0._user')) {
@@ -2668,7 +2528,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
 					if (
 						!find(compact(contact._user), {
-							_id: record.data[0]._user[0]._id
+							_id: record.data[0]._user[0]._id,
 						})
 					) {
 						contactData._user = clone(contact._user);
@@ -2686,30 +2546,28 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: contact._id
+								value: contact._id,
 							},
 							{
 								term: '_createdAt',
 								operator: 'greater_or_equals',
-								value: moment()
-									.subtract(10, 'days')
-									.toDate()
+								value: moment().subtract(10, 'days').toDate(),
 							},
 							{
 								term: '_user.active',
 								operator: 'equals',
-								value: true
-							}
-						]
+								value: true,
+							},
+						],
 					},
 					limit: 1,
 					sort: [
 						{
 							property: '_createdAt',
-							direction: 'DESC'
-						}
+							direction: 'DESC',
+						},
 					],
-					fields: '_id, _user'
+					fields: '_id, _user',
 				});
 
 				if (has(record, 'data.0._user')) {
@@ -2720,7 +2578,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
 					if (
 						!find(compact(contact._user), {
-							_id: record.data[0]._user[0]._id
+							_id: record.data[0]._user[0]._id,
 						})
 					) {
 						contactData._user = clone(contact._user);
@@ -2743,7 +2601,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					if (contact) {
 						if (
 							!find(compact(contact._user), {
-								_id: userQueue.user._id
+								_id: userQueue.user._id,
 							})
 						) {
 							contactData._user = clone(contact._user);
@@ -2765,18 +2623,18 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 						{
 							term: '_id',
 							operator: 'equals',
-							value: request.lead.campaign
-						}
-					]
+							value: request.lead.campaign,
+						},
+					],
 				},
-				fields: '_id,targetQueue'
+				fields: '_id,targetQueue',
 			});
 
 			if (has(record, 'data.0.targetQueue')) {
 				// set targetQueue from campaign to contact if not set
 				if (!contactData.queue) {
 					contactData.queue = {
-						_id: record.data[0].targetQueue._id
+						_id: record.data[0].targetQueue._id,
 					};
 				}
 
@@ -2790,7 +2648,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					if (contact) {
 						if (
 							!find(compact(contact._user), {
-								_id: userQueue.user._id
+								_id: userQueue.user._id,
 							})
 						) {
 							contactData._user = clone(contact._user);
@@ -2818,7 +2676,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	if (!contact) {
 		createRequest = {
 			document: 'Contact',
-			data: contactData
+			data: contactData,
 		};
 
 		// default data
@@ -2840,12 +2698,12 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 					{
 						_id: contact._id,
 						_updatedAt: {
-							$date: moment(contact._updatedAt).toISOString()
-						}
-					}
+							$date: moment(contact._updatedAt).toISOString(),
+						},
+					},
 				],
-				data: contactData
-			}
+				data: contactData,
+			},
 		};
 
 		console.log('[data:update] ->'.yellow, JSON.stringify(updateRequest, null, '  '));
@@ -2854,7 +2712,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	} else {
 		result = {
 			success: true,
-			data: [contact]
+			data: [contact],
 		};
 	}
 
@@ -2877,17 +2735,17 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 			}
 
 			var saveRelations = (relations, contactId, parentObj) =>
-				relations.some(function(saveObj) {
+				relations.some(function (saveObj) {
 					createRequest = {
 						document: saveObj.document,
-						data: saveObj.data
+						data: saveObj.data,
 					};
 
 					if (has(Meta[saveObj.document], 'fields.contact.isList')) {
 						createRequest.data.contact = [{ _id: contactId }];
 					} else {
 						createRequest.data.contact = {
-							_id: contactId
+							_id: contactId,
 						};
 					}
 
@@ -2907,7 +2765,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 						if (saveObj.relations) {
 							const relationMap = {};
 							relationMap[saveObj.name] = {
-								_id: saveResult.data[0]._id
+								_id: saveResult.data[0]._id,
 							};
 
 							saveRelations(saveObj.relations, contactId, relationMap);
@@ -2941,7 +2799,7 @@ Meteor.registerMethod('data:lead:save', 'withUser', function(request) {
 	return response;
 });
 
-var processValidationScript = function(validationScript, validationData, fullData, context) {
+var processValidationScript = function (validationScript, validationData, fullData, context) {
 	const extraData = {};
 
 	if (validationData) {

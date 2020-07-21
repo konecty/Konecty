@@ -24,6 +24,23 @@
 -   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to ‘PLAIN’
 -   `DEFAULT_SMTP_DEBUG`: SMTP config `debug` for nodemailer, if set to true, then logs SMTP traffic, otherwise logs only transaction events
 
+## FILE STORAGE API
+
+-   `S3_DOMAIN`: required if different of AWS eg: `digitaloceanspaces.com`
+-   `S3_REGION`: S3 region
+-   `S3_BUCKET`: S3 bucket
+-   `S3_ACCESSKEY`: Generated for your aws account. Follow this instructions: [Where’s My Secret Access Key?](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/).
+-   `S3_SECREDKEY`: Generate with instructions above (👆).
+
+## NODE RED INTEGRATION
+
+Learn about this: [Node-RED](https://nodered.org)
+
+-   `NR_ENABLE`: true if you want to enable in process node-red instance
+-   `NR_NAMESPACE`: unique identifier for current instance. Default: `flows`
+-   `NR_ADMIN`: Nodered admin URL. Default: `/flows`
+-   `NR_API`: Nodered rest endpoints prefix. Default" `/api`
+
 ## How to run on Docker
 
 ```
