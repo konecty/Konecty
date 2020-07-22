@@ -36,14 +36,6 @@ process.on('SIGUSR2', function () {
 	}
 });
 
-Picker.middleware(function (req, res, next) {
-	let data = '';
-	req.startTime = process.hrtime();
-	req.on('data', chunk => (data += chunk));
-	req.on('end', () => (req.rawBody = data));
-	next();
-});
-
 Picker.middleware(cookieParser());
 
 var convertObjectIdsToOid = function (values) {
@@ -74,10 +66,6 @@ Picker.middleware(function (req, res, next) {
 		options = options || {};
 		options.url = req.url;
 		options.req = req;
-
-		if (isString(req.rawBody)) {
-			options.rawBody = JSON.parse(req.rawBody);
-		}
 
 		options.user = {
 			_id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
