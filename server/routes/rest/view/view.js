@@ -12,7 +12,7 @@ const getEnv = () => {
 	return '';
 };
 
-app.get('/login', function(req, res, next) {
+app.get('/login', function (req, res, next) {
 	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR') {
 		return next();
 	}
@@ -31,11 +31,12 @@ app.get('/login', function(req, res, next) {
 		btn_cancel_back: 'Cancelar e retornar ao login',
 		lbl_password_sent: 'Sua senha foi enviada para o seu email.',
 		lbl_browser_incompatible: 'Seu navegador não é compatível com o sistema.',
-		lbl_browser_install: 'Para acessar o sistema você deve instalar um dos navegadores abaixo.'
+		lbl_browser_install: 'Para acessar o sistema você deve instalar um dos navegadores abaixo.',
+		uiServer: process.env.UI_URL || 'ui.konecty.com',
 	});
 });
 
-app.get('/login.js', function(req, res, next) {
+app.get('/login.js', function (req, res, next) {
 	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR') {
 		return next();
 	}
@@ -52,13 +53,13 @@ app.get('/login.js', function(req, res, next) {
 	return res.end(login);
 });
 
-app.get('/', function(req, res, next) {
+app.get('/', function (req, res, next) {
 	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR' || req.query.mocha != null) {
 		return next();
 	}
 	const user = Meteor.call('auth:getUser', {
 		authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
-		dontSetLastLogin: true
+		dontSetLastLogin: true,
 	});
 
 	if (user === 401) {
@@ -78,16 +79,11 @@ app.get('/', function(req, res, next) {
 		locale: user.locale,
 		lbl_loading: 'Carregando o sistema...',
 		btn_close: 'Fechar',
-		timeInMilis: +new Date()
+		timeInMilis: +new Date(),
+		uiServer: process.env.UI_URL || 'ui.konecty.com',
+		blobUrl: process.env.BLOB_URL == null ? '' : `//${process.env.BLOB_URL}`,
+		previewUrl: process.env.PREVIEW_URL == null ? '' : `//${process.env.PREVIEW_URL}`,
 	};
-
-	if (process.env.BLOB_URL) {
-		config.blobUrl = process.env.BLOB_URL;
-	}
-
-	if (process.env.PREVIEW_URL || process.env.BLOB_URL) {
-		config.previewUrl = process.env.PREVIEW_URL || process.env.BLOB_URL;
-	}
 
 	res.render('index.html', config);
 });
