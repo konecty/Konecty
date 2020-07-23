@@ -1,5 +1,5 @@
-import { writeFile, rename, unlink, stat as _stat } from 'fs';
-import { join, dirname } from 'path';
+import { writeFile, rename, unlink } from 'fs';
+import { join } from 'path';
 import { promisify } from 'util';
 import mkdirp from 'mkdirp';
 import { createHash } from 'crypto';
@@ -50,12 +50,7 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 			};
 
 			if (/^s3$/i.test(process.env.STORAGE)) {
-				const storage = getStorage({
-					domain: process.env.S3_DOMAIN,
-					accessKeyId: process.env.S3_ACCESSKEY,
-					secretAccessKey: process.env.S3_SECRETKEY,
-					region: process.env.S3_REGION,
-				});
+				const storage = getStorage();
 
 				const { ETag, VersionId } = await storage
 					.putObject({

@@ -132,8 +132,6 @@ Picker.middleware(function (req, res, next) {
 
 		if (response instanceof Error) {
 			console.log(`Error: ${response.message}`.red);
-			console.log(response);
-
 			response = {
 				success: false,
 				errors: [
@@ -144,7 +142,7 @@ Picker.middleware(function (req, res, next) {
 				],
 			};
 
-			status = 200;
+			// status = 200;
 		}
 
 		if (!isBuffer(response)) {

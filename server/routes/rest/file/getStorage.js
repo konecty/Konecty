@@ -1,19 +1,19 @@
 import aws from 'aws-sdk';
 
-export default ({ domain, accessKeyId, secretAccessKey, region }) => {
-	if (domain != null) {
+export default () => {
+	if (process.env.S3_DOMAIN != null) {
 		return new aws.S3({
 			apiVersion: '2006-03-01',
-			endpoint: new aws.Endpoint(`${region}.${domain}`),
-			accessKeyId,
-			secretAccessKey,
-			region,
+			endpoint: new aws.Endpoint(`${process.env.S3_REGION}.${process.env.S3_DOMAIN}`),
+			accessKeyId: process.env.S3_ACCESSKEY,
+			secretAccessKey: process.env.S3_SECRETKEY,
+			region: process.env.S3_REGION,
 		});
 	}
 	return new aws.S3({
 		apiVersion: '2006-03-01',
-		accessKeyId,
-		secretAccessKey,
-		region,
+		accessKeyId: process.env.S3_ACCESSKEY,
+		secretAccessKey: process.env.S3_SECRETKEY,
+		region: process.env.S3_REGION,
 	});
 };
