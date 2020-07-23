@@ -53,6 +53,7 @@
 		"nodemailer-smtp-transport": "^2.7.4",
 		"ramda": "^0.26.1",
 		"request": "^2.88.0",
+		"send": "^0.17.1",
 		"sharp": "^0.24.1",
 		"slugify": "^1.4.0",
 		"swig": "^1.4.2",

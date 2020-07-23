@@ -1,7 +1,14 @@
 import axios from 'axios';
 import sharp from 'sharp';
+import { readFile, createReadStream } from 'fs';
+import { promisify } from 'util';
+import { join } from 'path';
 
 import fixedEncodeURIComponent from './urlencode_u300';
+
+const _readFile = promisify(readFile);
+
+import detectContentType from './detectContentType';
 
 const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
@@ -65,37 +72,54 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 			default:
 		}
 
-		const origin = `${/https?:\/\//.test(process.env.S3_PUBLIC_URL) ? process.env.S3_PUBLIC_URL : `https://${process.env.S3_PUBLIC_URL}`}`.replace(/\/$/, '');
+		let originData;
 
-		const fileUrl = new URL(`${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${document}/${recordId}/${fieldName}/${fixedEncodeURIComponent(fileName)}`);
+		if (/^s3$/i.test(process.env.STORAGE)) {
+			const origin = `${/https?:\/\//.test(process.env.S3_PUBLIC_URL) ? process.env.S3_PUBLIC_URL : `https://${process.env.S3_PUBLIC_URL}`}`.replace(/\/$/, '');
 
-		const { status, data: originData, headers } = await axios({ method: 'GET', url: fileUrl.toString(), responseType: 'stream' });
+			const fileUrl = new URL(`${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${document}/${recordId}/${fieldName}/${fixedEncodeURIComponent(fileName)}`);
 
-		res.setHeader('Content-Type', headers['content-type']);
-
-		if (corsFileTypes.includes(fileUrl.pathname.split('.').pop())) {
-			res.setHeader('Access-Control-Allow-Origin', '*');
-		}
-
-		if (status === 200) {
-			res.setHeader('Cache-Control', 'public, max-age=' + expiration);
+			const { status, data, headers } = await axios({ method: 'GET', url: fileUrl.toString(), responseType: 'stream' });
+			originData = data;
+			res.setHeader('Content-Type', headers['content-type']);
+			if (corsFileTypes.includes(fileUrl.pathname.split('.').pop())) {
+				res.setHeader('Access-Control-Allow-Origin', '*');
+			}
+			if (status === 200) {
+				res.setHeader('Cache-Control', 'public, max-age=' + expiration);
+			} else {
+				res.setHeader('Cache-Control', 'public, max-age=300');
+			}
+			const ETag = headers['x-bz-content-sha1'] || headers['x-bz-info-src_last_modified_millis'] || headers['x-bz-file-id'];
+			if (ETag) {
+				res.setHeader('ETag', ETag);
+			}
 		} else {
-			res.setHeader('Cache-Control', 'public, max-age=300');
-		}
-
-		const ETag = headers['x-bz-content-sha1'] || headers['x-bz-info-src_last_modified_millis'] || headers['x-bz-file-id'];
-		if (ETag) {
-			res.setHeader('ETag', ETag);
+			const origin = join(process.env.STORAGE_DIR, document, recordId, fieldName, fileName);
+			const contentType = await detectContentType(origin);
+			console.log(contentType);
+			originData = createReadStream(origin);
+			res.setHeader('Content-Type', contentType);
+			res.setHeader('Cache-Control', 'public, max-age=' + expiration);
 		}
 
 		if (preprocess != null) {
-			const { status, data } = await axios({
-				method: 'GET',
-				url: `${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${preprocess}.png`,
-				responseType: 'arraybuffer',
-			});
+			let preprocessBuffer;
 
-			if (status === 200) {
+			if (/^s3$/i.test(process.env.STORAGE)) {
+				const { status, data } = await axios({
+					method: 'GET',
+					url: `${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${preprocess}.png`,
+					responseType: 'arraybuffer',
+				});
+				if (status === 200) {
+					preprocessBuffer = data;
+				}
+			} else {
+				preprocessBuffer = await _readFile(join(process.env.STORAGE_DIR, `${preprocess}.png`));
+			}
+
+			if (preprocessBuffer != null) {
 				if (type === 'inner') {
 					const originBuffer = await new Promise((resolve, reject) => {
 						const bufs = [];
@@ -110,7 +134,7 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 					const origin = sharp(originBuffer);
 					const meta = await origin.metadata();
 
-					const overlay = await sharp(data)
+					const overlay = await sharp(preprocessBuffer)
 						.resize({
 							width: meta.width,
 							height: meta.height,
@@ -129,7 +153,7 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 					return res.send(output);
 				}
 
-				const overlay = await sharp(data)
+				const overlay = await sharp(preprocessBuffer)
 					.resize({
 						width,
 						height,
