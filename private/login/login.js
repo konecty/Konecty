@@ -9,7 +9,7 @@
  * Released under the BSD license
  * http://www.opensource.org/licenses/bsd-license
  */
-(function() {
+(function () {
 	function md5cycle(x, k) {
 		var a = x[0],
 			b = x[1],
@@ -160,7 +160,7 @@
 		return x.join('');
 	}
 
-	md5 = function(s) {
+	md5 = function (s) {
 		return hex(md51(s));
 	};
 
@@ -280,7 +280,7 @@ function SHA256(s) {
 			0x90befffa,
 			0xa4506ceb,
 			0xbef9a3f7,
-			0xc67178f2
+			0xc67178f2,
 		);
 		var HASH = new Array(0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19);
 		var W = new Array(64);
@@ -370,9 +370,7 @@ function SHA256(s) {
 		var hex_tab = hexcase ? '0123456789ABCDEF' : '0123456789abcdef';
 		var str = '';
 		for (var i = 0; i < binarray.length * 4; i++) {
-			str +=
-				hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8 + 4)) & 0xf) +
-				hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8)) & 0xf);
+			str += hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8 + 4)) & 0xf) + hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8)) & 0xf);
 		}
 		return str;
 	}
@@ -389,10 +387,7 @@ function createCookie(cookie, value, days, clearMyKonecty) {
 	if (/localhost/i.test(host)) {
 		var server = host;
 	} else {
-		var server = host
-			.split('.')
-			.slice(1)
-			.join('.');
+		var server = host.split('.').slice(1).join('.');
 	}
 
 	if (days) {
@@ -405,7 +400,7 @@ function createCookie(cookie, value, days, clearMyKonecty) {
 	if (/localhost/i.test(server)) {
 		var domain = '';
 	} else {
-		var domain = '; domain=.' + server;
+		var domain = '; domain=' + server;
 	}
 	document.cookie = cookie + '=' + value + domain + strExpires + '; path=/; ';
 }
@@ -432,7 +427,7 @@ function clearCookie(cookie, clearMyKonecty) {
 	createCookie(cookie, '', -1, clearMyKonecty);
 }
 
-(function() {
+(function () {
 	var input = document.createElement('input');
 	if (typeof input.placeholder === 'undefined') {
 		$('label').removeClass('hidden');
@@ -455,47 +450,33 @@ function clearCookie(cookie, clearMyKonecty) {
 	}
 
 	$('.login-panel').show();
-	$('.login-panel')
-		.find('input:first')
-		.focus();
+	$('.login-panel').find('input:first').focus();
 
-	$('.forgot-password').click(function(e) {
+	$('.forgot-password').click(function (e) {
 		$('.login-panel').hide();
 		$('.reset-panel').show();
-		$('.reset-panel')
-			.find('input:first')
-			.focus();
+		$('.reset-panel').find('input:first').focus();
 
 		return false;
 	});
 
-	$('.cancel-forgot-password').click(function() {
+	$('.cancel-forgot-password').click(function () {
 		$('.login-panel').show();
 		$('.reset-panel').hide();
-		$('.login-panel')
-			.find('input:first')
-			.focus();
+		$('.login-panel').find('input:first').focus();
 
 		return false;
 	});
 
-	$('.login-panel form').submit(function() {
+	$('.login-panel form').submit(function () {
 		$('.login-panel .alert-danger').addClass('hidden');
 
-		if (
-			$('#login')
-				.val()
-				.trim() === ''
-		) {
+		if ($('#login').val().trim() === '') {
 			$('#login').focus();
 			return false;
 		}
 
-		if (
-			$('#password')
-				.val()
-				.trim() === ''
-		) {
+		if ($('#password').val().trim() === '') {
 			$('#password').focus();
 			return false;
 		}
@@ -503,91 +484,59 @@ function clearCookie(cookie, clearMyKonecty) {
 		$('.login-panel').hide();
 		$('.loading-panel').show();
 
-		var continueLogin = function(position) {
+		var continueLogin = function (position) {
 			var geolocation;
 
 			if (position) {
 				geolocation = JSON.stringify({
 					lat: position.coords.latitude,
-					lng: position.coords.longitude
+					lng: position.coords.longitude,
 				});
 			}
 
-			createCookie(
-				'_authTokenNs',
-				$('#namespace')
-					.val()
-					.replace(/[\s-]/g, ''),
-				365
-			);
+			createCookie('_authTokenNs', $('#namespace').val().replace(/[\s-]/g, ''), 365);
 
 			$.ajax({
 				url: '/rest/auth/login',
 				dataType: 'json',
 				type: 'POST',
 				data: {
-					user: $('#login')
-						.val()
-						.trim(),
-					password: md5(
-						$('#password')
-							.val()
-							.trim()
-					),
-					password_SHA256: SHA256(
-						$('#password')
-							.val()
-							.trim()
-					),
-					ns: $('#namespace')
-						.val()
-						.replace(/[\s-]/g, ''),
+					user: $('#login').val().trim(),
+					password: md5($('#password').val().trim()),
+					password_SHA256: SHA256($('#password').val().trim()),
+					ns: $('#namespace').val().replace(/[\s-]/g, ''),
 					geolocation: geolocation,
 					resolution: JSON.stringify({
 						height: screen.height,
-						width: screen.width
-					})
+						width: screen.width,
+					}),
 				},
-				complete: function(r) {
+				complete: function (r) {
 					if (r.status === 200) {
 						var data = JSON.parse(r.responseText);
 						var duration = (data.cookieMaxAge || 2592000) / (24 * 60 * 60);
-						createCookie(
-							'KonectyNS',
-							$('#namespace')
-								.val()
-								.replace(/[\s-]/g, ''),
-							365
-						);
+						createCookie('KonectyNS', $('#namespace').val().replace(/[\s-]/g, ''), 365);
 						createCookie('KonectyUser', $('#login').val(), 365);
-						createCookie(
-							'_authTokenNs',
-							$('#namespace')
-								.val()
-								.replace(/[\s-]/g, ''),
-							duration
-						);
+						createCookie('_authTokenNs', $('#namespace').val().replace(/[\s-]/g, ''), duration);
 						createCookie('_authTokenId', data.authId, duration);
 						location.href = location.origin;
 					} else {
 						$('.loading-panel').hide();
 						$('.login-panel').show();
-						$('.login-panel')
-							.find('input:first')
-							.focus();
+						$('.login-panel').find('input:first').focus();
 						var json = JSON.parse(r.responseText);
 						$('.login-panel .alert-danger').html(json.errors[0].errors[0].msg);
 						$('.login-panel .alert-danger').removeClass('hidden');
 					}
-				}
+				},
 			});
 		};
 
-		var timeout = setTimeout(function() {
+		var timeout = setTimeout(function () {
 			continueLogin();
 		}, 8000);
 
-		window.navigator.geolocation.getCurrentPosition(continueLogin, function() {
+		window.navigator.geolocation.getCurrentPosition(continueLogin, function () {
 			// $( '.loading-panel' ).hide();
 
 			clearTimeout(timeout);
@@ -607,14 +556,10 @@ function clearCookie(cookie, clearMyKonecty) {
 		return false;
 	});
 
-	$('.reset-panel form').submit(function() {
+	$('.reset-panel form').submit(function () {
 		$('.reset-panel .alert-danger').addClass('hidden');
 
-		if (
-			$('#reset-login')
-				.val()
-				.trim() === ''
-		) {
+		if ($('#reset-login').val().trim() === '') {
 			$('#reset-login').focus();
 			return false;
 		}
@@ -627,27 +572,16 @@ function clearCookie(cookie, clearMyKonecty) {
 			type: 'POST',
 			dataType: 'json',
 			data: {
-				ns: $('#namespace')
-					.val()
-					.replace(/[\s-]/g, ''),
-				user: $('#reset-login').val()
+				ns: $('#namespace').val().replace(/[\s-]/g, ''),
+				user: $('#reset-login').val(),
 			},
-			complete: function(r) {
+			complete: function (r) {
 				var json = JSON.parse(r.responseText);
 
-				if (
-					json &&
-					json.errors &&
-					json.errors.length > 0 &&
-					json.errors[0].errors &&
-					json.errors[0].errors.length > 0 &&
-					json.errors[0].errors[0].msg
-				) {
+				if (json && json.errors && json.errors.length > 0 && json.errors[0].errors && json.errors[0].errors.length > 0 && json.errors[0].errors[0].msg) {
 					$('.loading-panel').hide();
 					$('.reset-panel').show();
-					$('.reset-panel')
-						.find('input:first')
-						.focus();
+					$('.reset-panel').find('input:first').focus();
 					$('.reset-panel .alert-danger').html(json.errors[0].errors[0].msg);
 					$('.reset-panel .alert-danger').removeClass('hidden');
 					return;
@@ -655,7 +589,7 @@ function clearCookie(cookie, clearMyKonecty) {
 
 				$('.loading-panel').hide();
 				$('.reset-panel-success').show();
-			}
+			},
 		});
 
 		return false;
