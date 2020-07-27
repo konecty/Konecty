@@ -10,7 +10,6 @@
 -   `MONGO_OPLOG_URL`: Mongo database oplog URL
 -   `DISABLE_REINDEX`: can be to `true` if you don't want to verify if all index are created.
 -   `ROOT_URL`: your public url
--   `BLOB_URL`: the URL where blob is running (file and images server)
 -   `ALLOWED_ORIGINS`: a list of cors alloweds URLs separated by `|`
 -   `LOG_REQUEST=true`: if provide all requests are loggeds
 -   `DEFAULT_SMTP_HOST`: SMTP host for default email sender (**required**)
@@ -23,14 +22,26 @@
 -   `DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED`: SMTP config `tls.rejectUnauthorized` for nodemailer, config would open a connection to TLS server with self-signed or invalid TLS certificate
 -   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to ‘PLAIN’
 -   `DEFAULT_SMTP_DEBUG`: SMTP config `debug` for nodemailer, if set to true, then logs SMTP traffic, otherwise logs only transaction events
+-   `UI_URL`: host for ui
 
 ## FILE STORAGE API
+
+-   `STORAGE`: Can be `s3` or `fs` for files and images uploads
+-   `BLOB_URL`: (optional) if use external server for file upload
+-   `PREVIEW_URL`: (optional) if use external file server
+
+### s3 STORAGE SETTINGS
 
 -   `S3_DOMAIN`: required if different of AWS eg: `digitaloceanspaces.com`
 -   `S3_REGION`: S3 region
 -   `S3_BUCKET`: S3 bucket
 -   `S3_ACCESSKEY`: Generated for your aws account. Follow this instructions: [Where’s My Secret Access Key?](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/).
 -   `S3_SECREDKEY`: Generate with instructions above (👆).
+-   `S3_PUBLIC_URL`: Bucket public url
+
+### fs STORAGE SETTINGS
+
+-   `STORAGE_DIR`: Filesystem directory for file storage
 
 ## NODE RED INTEGRATION
 
