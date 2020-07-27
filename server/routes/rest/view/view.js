@@ -1,6 +1,7 @@
 import { isDate } from 'lodash';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
+import getServer from '../../../../lib/getServer';
 
 const getEnv = () => {
 	if (process.env.KONECTY_MODE === 'development') {
@@ -19,7 +20,7 @@ app.get('/login', function (req, res, next) {
 
 	res.render('login.html', {
 		env: getEnv(),
-		host: process.env.KONECTY_HOST || 'my.konecty.com',
+		host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
 		namespace: process.env.KONMETA_NAMESPACE,
 		title_login_page: 'Entre na sua conta do Konecty',
 		lbl_login: 'Usuário',
@@ -32,7 +33,7 @@ app.get('/login', function (req, res, next) {
 		lbl_password_sent: 'Sua senha foi enviada para o seu email.',
 		lbl_browser_incompatible: 'Seu navegador não é compatível com o sistema.',
 		lbl_browser_install: 'Para acessar o sistema você deve instalar um dos navegadores abaixo.',
-		uiServer: process.env.UI_URL || 'ui.konecty.com',
+		uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
 	});
 });
 
@@ -75,14 +76,14 @@ app.get('/', function (req, res, next) {
 
 	const config = {
 		env: getEnv(),
-		host: process.env.KONECTY_HOST || 'my.konecty.com',
+		host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
 		locale: user.locale,
 		lbl_loading: 'Carregando o sistema...',
 		btn_close: 'Fechar',
 		timeInMilis: +new Date(),
-		uiServer: process.env.UI_URL || 'ui.konecty.com',
-		blobUrl: process.env.BLOB_URL == null ? '' : `//${process.env.BLOB_URL}`,
-		previewUrl: process.env.PREVIEW_URL == null ? '' : `//${process.env.PREVIEW_URL}`,
+		uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
+		blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
+		previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
 	};
 
 	res.render('index.html', config);
