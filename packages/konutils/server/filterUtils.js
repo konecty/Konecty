@@ -164,7 +164,7 @@ const operatoresByType = {
 
 filterUtils = {};
 
-filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
+filterUtils.parseConditionValue = function (condition, field, req, subTermPart) {
 	let group;
 	if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
 		const meta = Meta[field.document];
@@ -235,6 +235,9 @@ filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
 		case 'Number':
 			return parseInt(condition.value);
 		case 'encrypted':
+			if (condition.operator === 'exists') {
+				return condition.value;
+			}
 			return createHash('md5')
 				.update(condition.value)
 				.digest('hex');
@@ -243,7 +246,7 @@ filterUtils.parseConditionValue = function(condition, field, req, subTermPart) {
 	}
 };
 
-filterUtils.validateOperator = function(condition, field, subTermPart) {
+filterUtils.validateOperator = function (condition, field, subTermPart) {
 	let e;
 	if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
 		const meta = Meta[field.document];
@@ -278,7 +281,7 @@ filterUtils.validateOperator = function(condition, field, subTermPart) {
 		e = new Meteor.Error(
 			'utils-internal-error',
 			`Field [${condition.term}] only supports operators [${operatoresByType[type].join(', ')}]. Trying to use operator [${
-				condition.operator
+			condition.operator
 			}]`
 		);
 		NotifyErrors.notify('FilterError', e, { condition });
@@ -288,7 +291,7 @@ filterUtils.validateOperator = function(condition, field, subTermPart) {
 	return true;
 };
 
-filterUtils.parseFilterCondition = function(condition, metaObject, req, invert) {
+filterUtils.parseFilterCondition = function (condition, metaObject, req, invert) {
 	if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || !has(condition, 'value')) {
 		return new Meteor.Error('utils-internal-error', 'All conditions must contain term, operator and value');
 	}
@@ -327,7 +330,7 @@ filterUtils.parseFilterCondition = function(condition, metaObject, req, invert) 
 
 	const type = field.type + subTermPart;
 
-	const processValueByType = function(value) {
+	const processValueByType = function (value) {
 		switch (type) {
 			case 'ObjectId':
 				if (isString(value)) {
@@ -434,7 +437,7 @@ filterUtils.parseFilterCondition = function(condition, metaObject, req, invert) 
 	return queryCondition;
 };
 
-filterUtils.parseFilterObject = function(filter, metaObject, req) {
+filterUtils.parseFilterObject = function (filter, metaObject, req) {
 	let condition, result;
 	const query = [];
 
@@ -489,7 +492,7 @@ filterUtils.parseFilterObject = function(filter, metaObject, req) {
 	return { $and: query };
 };
 
-filterUtils.parseDynamicData = function(filter, keyword, data) {
+filterUtils.parseDynamicData = function (filter, keyword, data) {
 	if (!filter) {
 		return;
 	}
@@ -501,7 +504,7 @@ filterUtils.parseDynamicData = function(filter, keyword, data) {
 		};
 	}
 
-	const parseConditions = function(condition) {
+	const parseConditions = function (condition) {
 		if (condition && startsWith(condition.value, keyword)) {
 			return {
 				...condition,
