@@ -62,6 +62,8 @@ var convertObjectIdsToOid = function (values) {
 // Add res.send method and res.headers object to be sent on res.send
 // Add res.set and res.get to handle response headers
 Picker.middleware(function (req, res, next) {
+	req.startTime = process.hrtime();
+
 	req.notifyError = function (type, message, options) {
 		options = options || {};
 		options.url = req.url;

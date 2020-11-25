@@ -134,14 +134,19 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 
 			if (/^s3$/i.test(process.env.STORAGE)) {
 				const origin = `${/https?:\/\//.test(process.env.S3_PUBLIC_URL) ? process.env.S3_PUBLIC_URL : `https://${process.env.S3_PUBLIC_URL}`}`.replace(/\/$/, '');
-				const { status, data } = await axios({
-					method: 'GET',
-					url: `${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${preprocess}.png`,
-					responseType: 'arraybuffer',
-				});
-				if (status === 200) {
-					preprocessBuffer = data;
+				try {
+					const { status, data } = await axios({
+						method: 'GET',
+						url: `${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${preprocess}.png`,
+						responseType: 'arraybuffer',
+					});
+					if (status === 200) {
+						preprocessBuffer = data;
+					}	
+				} catch (_) {
+					preprocessBuffer = Buffer.from('R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64');
 				}
+				
 			} else {
 				preprocessBuffer = await _readFile(join(process.env.STORAGE_DIR, `${preprocess}.png`));
 			}
