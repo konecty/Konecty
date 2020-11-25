@@ -2,12 +2,12 @@ import moment from 'moment';
 
 import { createHash } from 'crypto';
 
-import { isArray, isNumber, isObject, isString, isBoolean, has, get } from 'lodash';
+import { isArray, isNumber, isObject, isString, isBoolean, has, get, size } from 'lodash';
 metaUtils = {};
 
 const NS_PER_SEC = 1e9;
 
-metaUtils.validateAndProcessValueFor = function(
+metaUtils.validateAndProcessValueFor = function (
 	meta,
 	fieldName,
 	value,
@@ -25,7 +25,9 @@ metaUtils.validateAndProcessValueFor = function(
 	}
 
 	// Validate required fields
-	if (field.isRequired === true && !value) {
+
+	if (field.isRequired === true && (value == null || (typeof value === 'string' && size(value) === 0))) {
+
 		return new Meteor.Error('utils-internal-error', `O Campo '${fieldName}' é obrigatório, mas não está presente no dado.`, {
 			meta,
 			fieldName,
@@ -114,7 +116,7 @@ metaUtils.validateAndProcessValueFor = function(
 
 	let result = true;
 
-	const removeUnauthorizedKeys = function(obj, keys, path) {
+	const removeUnauthorizedKeys = function (obj, keys, path) {
 		const objKeys = Object.keys(obj);
 
 		const unauthorizedKeys = objKeys.filter(key => keys.indexOf(key) === -1);
@@ -126,7 +128,7 @@ metaUtils.validateAndProcessValueFor = function(
 		return obj;
 	};
 
-	var mustBeValidFilter = function(v) {
+	var mustBeValidFilter = function (v) {
 		let condition;
 		if (['and', 'or'].includes(!v.match)) {
 			result = new Meteor.Error(
@@ -205,77 +207,77 @@ metaUtils.validateAndProcessValueFor = function(
 		}
 	};
 
-	var mustBeString = function(v, path) {
+	var mustBeString = function (v, path) {
 		if (!isString(v)) {
 			result = new Meteor.Error('utils-internal-error', `Value for field ${path || fieldName} must be a valid String`);
 			return false;
 		}
 	};
 
-	const mustBeStringOrNull = function(v, path) {
+	const mustBeStringOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeString(v, path);
 	};
 
-	const mustBeNumber = function(v, path) {
+	const mustBeNumber = function (v, path) {
 		if (!isNumber(v)) {
 			result = new Meteor.Error('utils-internal-error', `Value for field ${path || fieldName} must be a valid Number`);
 			return false;
 		}
 	};
 
-	const mustBeNumberOrNull = function(v, path) {
+	const mustBeNumberOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeNumber(v, path);
 	};
 
-	const mustBeBoolean = function(v, path) {
+	const mustBeBoolean = function (v, path) {
 		if (!isBoolean(v)) {
 			result = new Meteor.Error('utils-internal-error', `Value for field ${path || fieldName} must be a valid Boolean`);
 			return false;
 		}
 	};
 
-	const mustBeBooleanOrNull = function(v, path) {
+	const mustBeBooleanOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeBoolean(v, path);
 	};
 
-	const mustBeObject = function(v, path) {
+	const mustBeObject = function (v, path) {
 		if (!isObject(v)) {
 			result = new Meteor.Error('utils-internal-error', `Value for field ${path || fieldName} must be a valid Object`);
 			return false;
 		}
 	};
 
-	const mustBeObjectOrNull = function(v, path) {
+	const mustBeObjectOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeObject(v, path);
 	};
 
-	const mustBeArray = function(v, path) {
+	const mustBeArray = function (v, path) {
 		if (!isArray(v)) {
 			result = new Meteor.Error('utils-internal-error', `Value for field ${path || fieldName} must be a valid Array`);
 			return false;
 		}
 	};
 
-	const mustBeArrayOrNull = function(v, path) {
+	const mustBeArrayOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeArray(v, path);
 	};
 
-	const mustBeDate = function(v, path) {
+	const mustBeDate = function (v, path) {
 		const date = new Date(v);
 
 		if (isNaN(date)) {
@@ -287,14 +289,14 @@ metaUtils.validateAndProcessValueFor = function(
 		}
 	};
 
-	const mustBeDateOrNull = function(v, path) {
+	const mustBeDateOrNull = function (v, path) {
 		if (!v) {
 			return true;
 		}
 		return mustBeDate(v, path);
 	};
 
-	const validate = function(value) {
+	const validate = function (value) {
 		let optionalKeys, requiredKeys;
 		switch (field.type) {
 			case 'boolean':
@@ -693,7 +695,7 @@ metaUtils.validateAndProcessValueFor = function(
 					return result;
 				}
 
-				utils.recursiveObject(value, function(key, value, parent) {
+				utils.recursiveObject(value, function (key, value, parent) {
 					if (value ? value['$date'] : undefined) {
 						return (parent[key] = new Date(value['$date']));
 					}
@@ -824,7 +826,7 @@ metaUtils.validateAndProcessValueFor = function(
 	return value;
 };
 
-metaUtils.getNextUserFromQueue = function(queueStrId, user) {
+metaUtils.getNextUserFromQueue = function (queueStrId, user) {
 	const collection = Models.QueueUser.rawCollection();
 	const findOneAndUpdate = Meteor.wrapAsync(collection.findOneAndUpdate, collection);
 
@@ -881,7 +883,7 @@ metaUtils.getNextUserFromQueue = function(queueStrId, user) {
 	return queueUser;
 };
 
-metaUtils.getNextCode = function(documentName, fieldName) {
+metaUtils.getNextCode = function (documentName, fieldName) {
 	if (!fieldName) {
 		fieldName = 'code';
 	}
@@ -945,7 +947,7 @@ metaUtils.getNextCode = function(documentName, fieldName) {
 	@example
 		metaUtils.populateLookupsData('Recruitment', record, {job: {code: 1}, contact: {code: 1, name: 1}})
 */
-metaUtils.populateLookupsData = function(documentName, data, fields) {
+metaUtils.populateLookupsData = function (documentName, data, fields) {
 	check(fields, Object);
 
 	const meta = Meta[documentName];
