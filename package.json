@@ -1,85 +1,33 @@
 {
-	"name": "konecty",
-	"version": "1.1.0",
-	"description": "Konecty",
-	"directories": {
-		"test": "tests"
-	},
-	"dependencies": {
-		"@babel/runtime": "^7.12.5",
-		"@konecty/node-red-contrib-d3-array": "^0.1.1",
-		"async": "^3.2.0",
-		"aws-sdk": "^2.799.0",
-		"axios": "^0.21.0",
-		"bcrypt": "^5.0.0",
-		"body-parser": "^1.19.0",
-		"bugsnag": "^2.4.3",
-		"busboy": "^0.3.1",
-		"cheerio": "^1.0.0-rc.3",
-		"coffeescript": "^2.5.1",
-		"colors": "^1.4.0",
-		"cookie-parser": "^1.4.5",
-		"cors": "^2.8.5",
-		"crypto": "^1.0.1",
-		"crypto-js": "^4.0.0",
-		"d3": "^6.2.0",
-		"excel4node": "^1.7.2",
-		"flat": "^5.0.2",
-		"fuzzyset.js": "1.0.5",
-		"geolib": "^3.3.1",
-		"jquery": "^3.5.1",
-		"jsdom": "^16.4.0",
-		"jsonwebtoken": "^8.5.1",
-		"lodash": "^4.17.20",
-		"luxon": "^1.25.0",
-		"mkdirp": "^1.0.4",
-		"mmmagic": "^0.5.3",
-		"moment": "^2.29.1",
-		"moment-timezone": "^0.5.32",
-		"mongodb": "^3.6.3",
-		"mongodb-uri": "^0.9.7",
-		"node-red": "^1.2.5",
-		"node-red-contrib-better-sftp": "^0.0.12",
-		"node-red-contrib-br-validations": "^0.1.0",
-		"node-red-contrib-cache": "^2.0.3",
-		"node-red-contrib-ftp": "^0.0.6",
-		"node-red-contrib-konecty": "^1.6.8",
-		"node-red-contrib-queue-gate": "^1.5.1",
-		"node-red-contrib-rocketchat": "^1.0.4",
-		"node-red-contrib-validatejs": "^0.1.1",
-		"node-red-node-base64": "^0.2.1",
-		"node-red-node-email": "^1.8.2",
-		"nodemailer": "^6.4.16",
-		"nodemailer-smtp-transport": "^2.7.4",
-		"ramda": "^0.27.1",
-		"request": "^2.88.0",
-		"send": "^0.17.1",
-		"sharp": "^0.26.3",
-		"slugify": "^1.4.6",
-		"swig": "^1.4.2",
-		"swig-email-templates": "^6.0.0",
-		"underscore.string": "^3.3.5",
-		"useragent": "^2.3.0",
-		"uuid": "^8.3.1",
-		"xoauth2": "^1.2.0"
-	},
-	"devDependencies": {
-		"babel-eslint": "^10.1.0",
-		"eslint": "^7.14.0",
-		"eslint-plugin-meteor": "^7.2.2",
-		"prettier": "^2.2.0"
-	},
-	"scripts": {
-		"start": "meteor npm start"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git@github.com:Konecty/Konecty.git"
-	},
-	"author": "Konecty",
-	"license": "ISC",
-	"bugs": {
-		"url": "https://github.com/Konecty/Konecty/issues"
-	},
-	"homepage": "http://konecty.com"
+  "name": "konecty",
+  "version": "4.0.0",
+  "author": "Konecty",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Konecty/Konecty.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Konecty/Konecty/issues"
+  },
+  "homepage": "https://konecty.com",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "env-cmd concurrently \"wsrun --parallel start\"",
+    "build": "wsrun build"
+  },
+  "workspaces": [
+    "packages/utils",
+    "packages/database",
+    "packages/metadata",
+    "packages/api",
+    "packages/nodered"
+  ],
+  "devDependencies": {
+    "concurrently": "^5.3.0",
+    "wsrun": "^5.2.4"
+  },
+  "dependencies": {
+    "env-cmd": "^10.1.0"
+  }
 }

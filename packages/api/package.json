@@ -1,0 +1,35 @@
+{
+  "name": "@konecty/api",
+  "version": "1.0.0",
+  "description": "Konecty server",
+  "main": "dist/index.js",
+  "author": "Konecty",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "webpack --watch --mode=development"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.13",
+    "@babel/preset-env": "^7.12.13",
+    "babel-loader": "^8.2.2",
+    "nodemon-webpack-plugin": "^4.4.4",
+    "webpack": "^5.21.2",
+    "webpack-cli": "^4.5.0",
+    "webpack-node-externals": "^2.5.2"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "colors": "^1.4.0",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "excel4node": "^1.7.2",
+    "express": "^4.17.1",
+    "flat": "^5.0.2",
+    "lodash": "^4.17.20",
+    "mkdirp": "^1.0.4",
+    "mmmagic": "^0.5.3",
+    "sharp": "^0.27.1",
+    "useragent": "^2.3.0"
+  }
+}
