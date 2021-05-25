@@ -96,13 +96,6 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 			} else if (!/^s3$/i.test(process.env.STORAGE)) {
 				await _rename(join(process.env.STORAGE_DIR, directory, fileData.etag), join(process.env.STORAGE_DIR, directory, fileName));
 			}
-			console.log({
-				success: true,
-				...fileData,
-				coreResponse,
-				_id: coreResponse._id,
-				_updatedAt: coreResponse._updatedAt,
-			});
 			res.send({
 				success: true,
 				...fileData,

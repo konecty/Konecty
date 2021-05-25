@@ -120,7 +120,6 @@ export default {
 				host: `http://localhost:${process.env.PORT}`,
 			});
 			await save('flows', BASE_PATH, flows);
-			console.log('flows', flows);
 		}
 	},
 	getFlows: async () => {
