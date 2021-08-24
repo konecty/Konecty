@@ -1,33 +1,134 @@
 {
-  "name": "konecty",
-  "version": "4.0.0",
-  "author": "Konecty",
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:Konecty/Konecty.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Konecty/Konecty/issues"
-  },
-  "homepage": "https://konecty.com",
-  "license": "MIT",
-  "private": true,
-  "scripts": {
-    "start": "env-cmd concurrently \"wsrun --parallel start\"",
-    "build": "wsrun build"
-  },
-  "workspaces": [
-    "packages/utils",
-    "packages/database",
-    "packages/metadata",
-    "packages/api",
-    "packages/nodered"
-  ],
-  "devDependencies": {
-    "concurrently": "^5.3.0",
-    "wsrun": "^5.2.4"
-  },
-  "dependencies": {
-    "env-cmd": "^10.1.0"
-  }
+	"name": "konecty",
+	"version": "4.0.0",
+	"author": "Konecty",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:Konecty/Konecty.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Konecty/Konecty/issues"
+	},
+	"homepage": "https://konecty.com",
+	"license": "MIT",
+	"scripts": {
+		"clean": "rimraf dist",
+		"build:app": "webpack --mode production",
+		"build:server": "webpack --config webpack.server.config.js --mode production",
+		"build": "run-s clean build:*",
+		"start:app": "webpack --config webpack.config.js --watch --mode development",
+		"start:server": "webpack --config webpack.server.config.js --watch --mode development | pino-pretty",
+		"start": "env-cmd run-p start:*",
+		"format": "prettier --write \"src/**/*.+(js|jsx|json|css|md)\"",
+		"lint": "eslint src/",
+		"lint:fix": "eslint --fix src/"
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "lint-staged"
+		}
+	},
+	"lint-staged": {
+		"src/**/*.{js,jsx}": [
+			"eslint",
+			"pretty-quick — staged",
+			"git add"
+		]
+	},
+	"devDependencies": {
+		"@babel/core": "^7.15.0",
+		"@babel/plugin-transform-runtime": "^7.15.0",
+		"@babel/preset-env": "^7.15.0",
+		"@babel/preset-react": "^7.14.5",
+		"@loadable/babel-plugin": "^5.13.2",
+		"@loadable/webpack-plugin": "^5.15.1",
+		"@popperjs/core": "^2.9.3",
+		"@webpack-cli/serve": "^1.5.2",
+		"babel-eslint": "^10.1.0",
+		"babel-loader": "^8.2.2",
+		"babel-plugin-module-resolver": "^4.1.0",
+		"concurrently": "^6.2.1",
+		"copy-webpack-plugin": "^9.0.1",
+		"css-loader": "^6.2.0",
+		"env-cmd": "^10.1.0",
+		"eslint": "^7.32.0",
+		"eslint-config-airbnb": "^18.2.1",
+		"eslint-config-prettier": "^8.3.0",
+		"eslint-import-resolver-babel-module": "^5.3.1",
+		"eslint-plugin-import": "^2.24.1",
+		"eslint-plugin-jsx-a11y": "^6.4.1",
+		"eslint-plugin-prettier": "^3.4.1",
+		"eslint-plugin-react": "^7.24.0",
+		"eslint-plugin-react-hooks": "^4.2.0",
+		"html-webpack-plugin": "^5.3.2",
+		"husky": "^7.0.1",
+		"lint-staged": "^11.1.2",
+		"nodemon-webpack-plugin": "^4.5.2",
+		"npm-run-all": "^4.1.5",
+		"pino-pretty": "^6.0.0",
+		"prettier": "^2.3.2",
+		"pretty-quick": "^3.1.1",
+		"rimraf": "^3.0.2",
+		"terser-webpack-plugin": "^5.1.4",
+		"webpack": "^5.51.1",
+		"webpack-cli": "^4.8.0",
+		"webpack-dev-server": "^4.0.0",
+		"webpack-node-externals": "^3.0.0"
+	},
+	"dependencies": {
+		"@babel/runtime": "^7.15.3",
+		"@konecty/node-red-contrib-d3-array": "^0.1.1",
+		"@loadable/component": "^5.15.0",
+		"@loadable/server": "^5.15.1",
+		"aws-sdk": "^2.974.0",
+		"axios": "^0.21.1",
+		"bcrypt": "^5.0.1",
+		"body-parser": "^1.19.0",
+		"bootstrap": "^5.1.0",
+		"change-case": "^4.1.2",
+		"colors": "^1.4.0",
+		"cookie-parser": "^1.4.5",
+		"cors": "^2.8.5",
+		"d3": "^7.0.1",
+		"date-fns": "^2.23.0",
+		"excel4node": "^1.7.2",
+		"express": "^4.17.1",
+		"flat": "^5.0.2",
+		"fuzzyset.js": "^1.0.6",
+		"geolib": "^3.3.1",
+		"handlebars": "^4.7.7",
+		"isomorphic-fetch": "^3.0.0",
+		"jsdom": "^17.0.0",
+		"jsonwebtoken": "^8.5.1",
+		"livereload": "^0.9.3",
+		"lodash": "^4.17.21",
+		"luxon": "^2.0.2",
+		"mkdirp": "^1.0.4",
+		"mmmagic": "^0.5.3",
+		"moment": "^2.29.1",
+		"moment-timezone": "^0.5.33",
+		"mongodb": "^4.1.0",
+		"node-red": "^2.0.5",
+		"node-red-contrib-better-sftp": "^0.0.12",
+		"node-red-contrib-cache": "^2.0.3",
+		"node-red-contrib-ftp": "^0.0.6",
+		"node-red-contrib-konecty": "^1.6.10",
+		"node-red-contrib-queue-gate": "^1.5.3",
+		"node-red-contrib-rocketchat": "^1.0.5",
+		"node-red-contrib-validatejs": "^0.1.2",
+		"node-red-node-base64": "^0.3.0",
+		"node-red-node-email": "^1.12.3",
+		"pino": "^6.13.1",
+		"pino-http": "^5.7.0",
+		"prop-types": "^15.7.2",
+		"react": "^17.0.2",
+		"react-dom": "^17.0.2",
+		"react-helmet": "^6.1.0",
+		"react-router-dom": "^5.2.0",
+		"serialize-javascript": "^6.0.0",
+		"sharp": "^0.29.0",
+		"slugify": "^1.6.0",
+		"useragent": "^2.3.0",
+		"uuid": "^8.3.2"
+	}
 }
