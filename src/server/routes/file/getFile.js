@@ -1,5 +1,7 @@
 import Busboy from 'busboy';
 
+import logger from 'utils/logger';
+
 const processMultipart = req =>
 	new Promise((resolve, reject) => {
 		let partsCount = 0;
@@ -14,14 +16,14 @@ const processMultipart = req =>
 				let buffer = Buffer.concat(bufs);
 
 				if (encoding !== '7bit') {
-					buffer = new Buffer.from(buffer.toString('utf8'), encoding);
+					buffer = Buffer.from(buffer.toString('utf8'), encoding);
 				}
 				resolve({ filename: decodeURI(filename), buffer });
 			});
 		});
 
 		busboy.on('error', err => {
-			console.error(err.message);
+			logger.error(err, 'Error receiving file');
 			reject(err);
 		});
 

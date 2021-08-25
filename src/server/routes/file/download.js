@@ -2,12 +2,14 @@ import axios from 'axios';
 import { join } from 'path';
 import send from 'send';
 
+import logger from 'utils/logger';
+
 import fixedEncodeURIComponent from './urlencode_u300';
 
 const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
 
-const init = app => {
+export default app => {
 	app.get('(/rest/file|/file|/rest/image|/image)/:mode(preview|download)?/:namespace/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) => {
 		try {
 			const { mode, namespace, metaDocumentId, recordId, fieldName, fileName } = req.params;
@@ -39,26 +41,23 @@ const init = app => {
 
 				res.setHeader('Content-Type', headers['content-type']);
 
-				data.pipe(res);
-			} else {
-				const originPath = join(process.env.STORAGE_DIR, metaDocumentId, recordId, fieldName, fileName);
-				return send(req, originPath).pipe(res);
+				return data.pipe(res);
 			}
+			const originPath = join(process.env.STORAGE_DIR, metaDocumentId, recordId, fieldName, fileName);
+			return send(req, originPath).pipe(res);
 		} catch (error) {
 			const { message } = error;
+			logger.error(error, `Error on file download`);
 			if (/unathorized/i.test(message) || /status code 401/i.test(message)) {
-				return res._headerSent ? null : res.send(401, 'Unathorized');
+				return res.headersSent ? null : res.send(401, 'Unathorized');
 			}
 			if (/bad request/i.test(message)) {
-				return res._headerSent ? null : res.send(400, error);
+				return res.headersSent ? null : res.send(400, error);
 			}
 			if (/status code 404/i.test(message)) {
-				return res._headerSent ? null : res.send(404, error);
+				return res.headersSent ? null : res.send(404, error);
 			}
-			console.error(message);
-			return res._headerSent ? null : res.send(500, error);
+			return res.headersSent ? null : res.send(500, error);
 		}
 	});
 };
-
-export { init };

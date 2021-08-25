@@ -1,11 +1,11 @@
-import { writeFile, rename, unlink } from 'fs';
+import { writeFile, rename, unlink } from 'fs/promises';
 import { join } from 'path';
-import { promisify } from 'util';
 import mkdirp from 'mkdirp';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
 
 import { callMethod } from 'utils/methods';
+import logger from 'utils/logger';
 
 import getStorage from './getStorage';
 import getFile from './getFile';
@@ -13,12 +13,9 @@ import detectContentType from './detectContentType';
 
 import { sessionUserAndGetAccessFor } from '../../app/middlewares';
 
-const _writeFile = promisify(writeFile);
-const _unlink = promisify(unlink);
-const _rename = promisify(rename);
 const computeHash = buffer => createHash('md5').update(buffer).digest('hex');
 
-const init = app => {
+export default app => {
 	app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName', (req, res) =>
 		sessionUserAndGetAccessFor('metaDocumentId')(req, res, async () => {
 			try {
@@ -72,7 +69,7 @@ const init = app => {
 					fileData.etag = computeHash(fileContent);
 					const filePath = join(process.env.STORAGE_DIR, directory, fileData.etag);
 					await mkdirp(join(process.env.STORAGE_DIR, directory));
-					await _writeFile(filePath, fileContent);
+					await writeFile(filePath, fileContent);
 				}
 
 				const coreResponse = await callMethod('file:upload', {
@@ -88,6 +85,7 @@ const init = app => {
 
 				if (coreResponse.success === false) {
 					if (/^s3$/i.test(process.env.STORAGE)) {
+						const storage = getStorage();
 						await storage
 							.deleteObject({
 								Bucket: process.env.S3_BUCKET,
@@ -96,25 +94,25 @@ const init = app => {
 							})
 							.promise();
 					} else {
-						await _unlink(join(process.env.STORAGE_DIR, directory, fileData.etag));
+						await unlink(join(process.env.STORAGE_DIR, directory, fileData.etag));
 					}
 				} else if (!/^s3$/i.test(process.env.STORAGE)) {
-					await _rename(join(process.env.STORAGE_DIR, directory, fileData.etag), join(process.env.STORAGE_DIR, directory, fileName));
+					await rename(join(process.env.STORAGE_DIR, directory, fileData.etag), join(process.env.STORAGE_DIR, directory, fileName));
 				}
 
 				res.send({
 					success: true,
 					...fileData,
 					coreResponse,
+					// eslint-disable-next-line no-underscore-dangle
 					_id: coreResponse._id,
+					// eslint-disable-next-line no-underscore-dangle
 					_updatedAt: coreResponse._updatedAt,
 				});
 			} catch (error) {
-				console.error(error);
+				logger.error(error, 'Error uploading file');
 				res.send(error);
 			}
 		}),
 	);
 };
-
-export { init };

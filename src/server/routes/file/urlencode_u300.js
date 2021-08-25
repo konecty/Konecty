@@ -5,7 +5,8 @@ const fixedEncodeURIComponent = str =>
 		.replace(/[^ !'()~*]/gu, encodeURIComponent)
 		.replace(/ /g, '+')
 		.replace(/[!'()~*]/g, ch => `%${ch.charCodeAt().toString(16).slice(-2).toUpperCase()}`);
-const urlencode_u300 = str => {
+
+export default str => {
 	if (str == null || str === '') {
 		return '';
 	}
@@ -216,5 +217,3 @@ const urlencode_u300 = str => {
 		encoded,
 	);
 };
-
-export default urlencode_u300;

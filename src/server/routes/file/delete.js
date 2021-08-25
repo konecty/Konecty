@@ -1,16 +1,13 @@
-import { unlink } from 'fs';
+import { unlink } from 'fs/promises';
 import { join } from 'path';
-import { promisify } from 'util';
 
 import { callMethod } from 'utils/methods';
+import { sessionUserAndGetAccessFor } from 'server/app/middlewares';
+import logger from 'utils/logger';
 
 import getStorage from './getStorage';
 
-import { sessionUserAndGetAccessFor } from '../../app/middlewares';
-
-const _unlink = promisify(unlink);
-
-const init = app => {
+export default app => {
 	app.del('/rest/file/delete/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) =>
 		sessionUserAndGetAccessFor('metaDocumentId')(req, res, async () => {
 			try {
@@ -40,15 +37,13 @@ const init = app => {
 						})
 						.promise();
 				} else {
-					await _unlink(join(process.env.STORAGE_DIR, metaDocumentId, recordId, fieldName, fileName));
+					await unlink(join(process.env.STORAGE_DIR, metaDocumentId, recordId, fieldName, fileName));
 				}
-				res.send(coreResponse);
+				return res.send(coreResponse);
 			} catch (error) {
-				console.error(error);
-				res.send(error);
+				logger.error(error, `Error deleting file`);
+				return res.send(error);
 			}
 		}),
 	);
 };
-
-export { init };
