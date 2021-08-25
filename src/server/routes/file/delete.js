@@ -8,7 +8,7 @@ import logger from 'utils/logger';
 import getStorage from './getStorage';
 
 export default app => {
-	app.del('/rest/file/delete/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) =>
+	app.del('/api/v1/file/delete/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) =>
 		sessionUserAndGetAccessFor('metaDocumentId')(req, res, async () => {
 			try {
 				const { namespace, metaDocumentId, recordId, fieldName, fileName } = req.params;

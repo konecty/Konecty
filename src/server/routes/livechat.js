@@ -13,7 +13,7 @@ import { Namespace, Models } from 'metadata';
 import logger from 'utils/logger';
 
 export default app => {
-	app.post('/rest/rocketchat/livechat', async (req, res) => {
+	app.post('/api/v1/rocketchat/livechat', async (req, res) => {
 		if (
 			!req.headers['x-rocketchat-livechat-token'] ||
 			!Namespace.RocketChat ||
@@ -382,7 +382,7 @@ export default app => {
 		return res.send(response);
 	});
 
-	app.get('/rest/rocketchat/livechat/queue', async (req, res) => {
+	app.get('/api/v1/rocketchat/livechat/queue', async (req, res) => {
 		if (
 			!req.headers['x-rocketchat-secret-token'] ||
 			!Namespace.RocketChat ||

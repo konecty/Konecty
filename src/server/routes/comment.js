@@ -3,7 +3,7 @@ import { getAuthTokenIdFromReq } from 'utils/session';
 
 export default app => {
 	// Converted to method
-	app.get('/rest/comment/:document/:dataId', async (req, res) => {
+	app.get('/api/v1/comment/:document/:dataId', async (req, res) => {
 		const result = await callMethod('comments:find', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -13,7 +13,7 @@ export default app => {
 	});
 
 	// Converted to method
-	app.post('/rest/comment/:document/:dataId', async (req, res) => {
+	app.post('/api/v1/comment/:document/:dataId', async (req, res) => {
 		const result = await callMethod('comments:create', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,

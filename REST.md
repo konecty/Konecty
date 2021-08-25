@@ -1,6 +1,6 @@
 # LOGIN
 
-`curl https://[domain]/rest/auth/login -H "Content-Type: application/json" -d '{"user": "_LOGIN_", "password_SHA256": "_PASSWORD_SHA_256_", "ns": "[NAMESPACE]"}'`
+`curl https://[domain]/api/v1/auth/login -H "Content-Type: application/json" -d '{"user": "_LOGIN_", "password_SHA256": "_PASSWORD_SHA_256_", "ns": "[NAMESPACE]"}'`
 
 results in 
 ```
@@ -15,7 +15,7 @@ where `authId` should be stored for using in following requests.
 
 # SAVING LEADS
 
-`curl https://[domain]/rest/process/submit -H "Content-Type: application/json" --cookie "authTokenId=_AUTH_ID_" -d '{"data": [{"name": "contact", "data": {"name": "Konecty Support", "email": "support@konecty.com", "phone": "5130855151"} } ] }'`
+`curl https://[domain]/api/v1/process/submit -H "Content-Type: application/json" --cookie "authTokenId=_AUTH_ID_" -d '{"data": [{"name": "contact", "data": {"name": "Konecty Support", "email": "support@konecty.com", "phone": "5130855151"} } ] }'`
 
 results in
 ```
@@ -47,7 +47,7 @@ results in
 
 # LIST PRODUCTS
 
-`curl -G https://[domain]/rest/data/Product/find --cookie "authTokenId=_AUTH_ID_" -d 'filter={"match":"and","conditions":[{"term":"status","operator":"equals","value":"Ativo","editable":true,"disabled":false}]}'`
+`curl -G https://[domain]/api/v1/data/Product/find --cookie "authTokenId=_AUTH_ID_" -d 'filter={"match":"and","conditions":[{"term":"status","operator":"equals","value":"Ativo","editable":true,"disabled":false}]}'`
 
 ```
 {

@@ -10,7 +10,7 @@ const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
 
 export default app => {
-	app.get('(/rest/file|/file|/rest/image|/image)/:mode(preview|download)?/:namespace/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) => {
+	app.get('(/api/v1/file|/file|/api/v1/image|/image)/:mode(preview|download)?/:namespace/:metaDocumentId/:recordId/:fieldName/:fileName', async (req, res) => {
 		try {
 			const { mode, namespace, metaDocumentId, recordId, fieldName, fileName } = req.params;
 

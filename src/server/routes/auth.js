@@ -24,7 +24,7 @@ const getIp = req => {
 };
 
 export default app => {
-	app.get('/rest/auth/loginByUrl/:ns/:sessionId', (req, res) => {
+	app.get('/api/v1/auth/loginByUrl/:ns/:sessionId', (req, res) => {
 		req.params.sessionId = decodeURIComponent(req.params.sessionId.replace(/\s/g, '+'));
 
 		// Verify if Namespace have a session expiration metadata config and set
@@ -38,7 +38,7 @@ export default app => {
 	});
 
 	/* Login using email and password */
-	app.post('/rest/auth/login', async (req, res) => {
+	app.post('/api/v1/auth/login', async (req, res) => {
 		// Map body parameters
 		// eslint-disable-next-line camelcase
 		const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
@@ -79,10 +79,10 @@ export default app => {
 	});
 
 	/* Logout currently session */
-	app.get('/rest/auth/logout', async (req, res) => res.send(await callMethod('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) })));
+	app.get('/api/v1/auth/logout', async (req, res) => res.send(await callMethod('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) })));
 
 	/* Reset password */
-	app.post('/rest/auth/reset', async (req, res) => {
+	app.post('/api/v1/auth/reset', async (req, res) => {
 		// Map body parameters
 		const { user, ns } = req.body;
 
@@ -99,7 +99,7 @@ export default app => {
 	});
 
 	/* Set geolocation for current session */
-	app.post('/rest/auth/setgeolocation', async (req, res) => {
+	app.post('/api/v1/auth/setgeolocation', async (req, res) => {
 		// Map body parameters
 		const { longitude, latitude } = req.body;
 
@@ -119,13 +119,13 @@ export default app => {
 	});
 
 	/* Get information from current session */
-	app.get('/rest/auth/info', async (req, res) => {
+	app.get('/api/v1/auth/info', async (req, res) => {
 		const infoResult = await callMethod('auth:info', { authTokenId: getAuthTokenIdFromReq(req) });
 		res.send(infoResult);
 	});
 
 	/* Set User password */
-	app.get('/rest/auth/setPassword/:userId/:password', async (req, res) => {
+	app.get('/api/v1/auth/setPassword/:userId/:password', async (req, res) => {
 		const setPasswordResult = await callMethod('auth:setPassword', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			userId: req.params.userId,
@@ -135,7 +135,7 @@ export default app => {
 	});
 
 	/* Set a random password for User and send by email */
-	app.post('/rest/auth/setRandomPasswordAndSendByEmail', async (req, res) => {
+	app.post('/api/v1/auth/setRandomPasswordAndSendByEmail', async (req, res) => {
 		const result = await callMethod('auth:setRandomPasswordAndSendByEmail', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			userIds: req.body,

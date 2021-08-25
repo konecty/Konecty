@@ -14,7 +14,7 @@ const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
 
 export default app => {
-	app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/:recordId/:fieldName/:fileName', async (req, res) => {
+	app.get('(/api/v1/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/:recordId/:fieldName/:fileName', async (req, res) => {
 		try {
 			const { type, width: parW, height: parH, namespace, preprocess, document, recordId, fieldName, fileName } = req.params;
 

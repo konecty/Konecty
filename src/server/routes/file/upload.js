@@ -16,7 +16,7 @@ import { sessionUserAndGetAccessFor } from '../../app/middlewares';
 const computeHash = buffer => createHash('md5').update(buffer).digest('hex');
 
 export default app => {
-	app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName', (req, res) =>
+	app.post('/api/v1/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName', (req, res) =>
 		sessionUserAndGetAccessFor('metaDocumentId')(req, res, async () => {
 			try {
 				const { fileContent, fileName } = await getFile(req);

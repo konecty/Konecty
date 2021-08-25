@@ -260,7 +260,7 @@ const init = () => {
 			data: {
 				name: userRecord.name,
 				expireAt,
-				url: `https://${host}/rest/auth/loginByUrl/${ns}/${token}`,
+				url: `https://${host}/api/v1/auth/loginByUrl/${ns}/${token}`,
 			},
 		};
 

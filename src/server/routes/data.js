@@ -108,7 +108,7 @@ const xlsExport = (headers, data, name, res) => {
 };
 
 export default app => {
-	app.post('/rest/data/lead/save', async (req, res) => {
+	app.post('/api/v1/data/lead/save', async (req, res) => {
 		const result = await callMethod('data:lead:save', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			lead: req.body.lead,
@@ -119,7 +119,7 @@ export default app => {
 
 	/* @Find_Records */
 	// Converted to method
-	app.get('/rest/data/:document/find', async (req, res) => {
+	app.get('/api/v1/data/:document/find', async (req, res) => {
 		if (isString(req.query?.filter)) {
 			req.query.filter = JSON.parse(req.query.filter);
 		}
@@ -142,7 +142,7 @@ export default app => {
 	});
 
 	// Converted to method
-	app.get('/rest/data/:document/queue/next/:queueId', async (req, res) => {
+	app.get('/api/v1/data/:document/queue/next/:queueId', async (req, res) => {
 		const result = await callMethod('data:queue:next', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -152,7 +152,7 @@ export default app => {
 	});
 
 	// Converted to method
-	app.get('/rest/data/:document/:dataId', async (req, res) => {
+	app.get('/api/v1/data/:document/:dataId', async (req, res) => {
 		const result = await callMethod('data:find:byId', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -164,7 +164,7 @@ export default app => {
 	});
 
 	// Converted to method
-	app.get('/rest/data/:document/lookup/:field', async (req, res) => {
+	app.get('/api/v1/data/:document/lookup/:field', async (req, res) => {
 		let filter;
 		if (isString(req.query.filter)) {
 			filter = JSON.parse(req.query.filter);
@@ -185,7 +185,7 @@ export default app => {
 
 	/* @Create_Records */
 	// Converted to method
-	app.post('/rest/data/:document', async (req, res) => {
+	app.post('/api/v1/data/:document', async (req, res) => {
 		const result = await callMethod('data:create', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -196,7 +196,7 @@ export default app => {
 
 	/* @Update_Records */
 	// Converted to method
-	app.put('/rest/data/:document', async (req, res) => {
+	app.put('/api/v1/data/:document', async (req, res) => {
 		const result = await callMethod('data:update', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -207,7 +207,7 @@ export default app => {
 
 	/* @Delete_Records */
 	// Converted to method
-	app.del('/rest/data/:document', async (req, res) => {
+	app.del('/api/v1/data/:document', async (req, res) => {
 		const result = await callMethod('data:delete', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -218,7 +218,7 @@ export default app => {
 
 	/* @Create_Relations */
 	// Converted to method
-	app.post('/rest/data/:document/relations/:fieldName', async (req, res) => {
+	app.post('/api/v1/data/:document/relations/:fieldName', async (req, res) => {
 		const result = await callMethod('data:relation:create', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -228,7 +228,7 @@ export default app => {
 		res.send(result);
 	});
 
-	app.post('/rest/data/:document/relations/:fieldName/preview', async (req, res) => {
+	app.post('/api/v1/data/:document/relations/:fieldName/preview', async (req, res) => {
 		const result = await callMethod('data:relation:create', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -241,7 +241,7 @@ export default app => {
 
 	/* @History */
 	// Converted to method
-	app.get('/rest/data/:document/:dataId/history', async (req, res) => {
+	app.get('/api/v1/data/:document/:dataId/history', async (req, res) => {
 		const result = await callMethod('history:find', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -252,7 +252,7 @@ export default app => {
 	});
 
 	/* @Export */
-	app.get('/rest/data/:document/list/:listName/:type', (req, res) =>
+	app.get('/api/v1/data/:document/list/:listName/:type', (req, res) =>
 		sessionUserAndGetAccessFor('document')(req, res, async () => {
 			// Validate param type
 			if (!['csv', 'xls'].includes(req.params.type)) {

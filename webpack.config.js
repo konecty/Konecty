@@ -11,6 +11,18 @@ module.exports = (_, argv) => ({
 		publicPath: '/',
 	},
 
+	devServer: {
+		static: {
+			directory: path.join(__dirname, 'src/ui/static'),
+		},
+		port: parseInt(process.env.PORT ?? 3000, 10) + 1,
+		hot: true,
+		historyApiFallback: true,
+		proxy: {
+			'/api': `http://localhost:${process.env.PORT ?? 3000}`,
+		},
+	},
+
 	resolve: {
 		extensions: ['.jsx', '.js', '.json'],
 	},

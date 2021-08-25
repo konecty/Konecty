@@ -2111,7 +2111,7 @@ bl@^4.0.2, bl@^4.0.3:
     inherits "^2.0.4"
     readable-stream "^3.4.0"
 
-body-parser@1.19.0, body-parser@^1.19.0:
+body-parser@1.19.0:
   version "1.19.0"
   resolved "https://registry.yarnpkg.com/body-parser/-/body-parser-1.19.0.tgz#96b2709e57c9c4e09a6fd66a8fd979844f69f08a"
   integrity sha512-dhEPs72UPbDnAQJ9ZKMNTP6ptJaionhP5cBb541nXPlW60Jepo9RV/a4fX4XWW9CuFNK22krhrj1+rgzifNCsw==
@@ -4019,6 +4019,13 @@ expand-template@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/expand-template/-/expand-template-2.0.3.tgz#6e14b3fcee0f3a6340ecb57d2e8918692052a47c"
   integrity sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==
+
+express-pino-logger@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/express-pino-logger/-/express-pino-logger-6.0.0.tgz#ed8f71dbbc3c2affbd4104a287f9c2a6a39b435b"
+  integrity sha512-YjBnalqgsNylRnWEpQGf8YzBP54stpoqX/o+SnpGr04OB7dRIQlsC1qvutFOyRjhLhXIWCe43pYJcjp9zM1Ccg==
+  dependencies:
+    pino-http "^5.3.0"
 
 express-session@1.17.2:
   version "1.17.2"
@@ -7006,7 +7013,7 @@ pify@^3.0.0:
   resolved "https://registry.yarnpkg.com/pify/-/pify-3.0.0.tgz#e5a4acd2c101fdf3d9a4d07f0dbc4db49dd28176"
   integrity sha1-5aSs0sEB/fPZpNB/DbxNtJ3SgXY=
 
-pino-http@^5.7.0:
+pino-http@^5.3.0, pino-http@^5.7.0:
   version "5.7.0"
   resolved "https://registry.yarnpkg.com/pino-http/-/pino-http-5.7.0.tgz#5d30e8e67c8bdf7105e896ee94201b804f8efcbd"
   integrity sha512-BMpj8CKP48XALGGcEzf+rvaz+gVhVRAkxk08gvGPfyoOB4zAix6WKO7k2BHiw7UAwma1eoG1z2NzkAU/+fkyhA==
@@ -7747,7 +7754,7 @@ responselike@^2.0.0:
 
 restore-cursor@^3.1.0:
   version "3.1.0"
-  resolved "https://registry.yarnpkg.com/restore-cursor/-/restore-cursor-3.1.0.tgz#39f67c54b3a7a58cea5236d95cf0034239631f7e"
+  resolved "https://registry.yarnpkg.com/api/v1ore-cursor/-/api/v1ore-cursor-3.1.0.tgz#39f67c54b3a7a58cea5236d95cf0034239631f7e"
   integrity sha512-l+sSefzHpj5qimhFSE5a8nufZYAM3sBSVMAPtYkmC+4EH2anSGaEMXSD0izRQbu9nfyQ9y5JrVmp7E8oZrUjvA==
   dependencies:
     onetime "^5.1.0"

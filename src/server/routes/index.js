@@ -8,8 +8,9 @@ import file2Init from './file2';
 import menuInit from './menu';
 import processInit from './process';
 import livechatInit from './livechat';
+import uiInit from './ui';
 
-const init = app => {
+export default app => {
 	authInit(app);
 	changeUserInit(app);
 	commentInit(app);
@@ -20,7 +21,5 @@ const init = app => {
 	menuInit(app);
 	processInit(app);
 	livechatInit(app);
+	uiInit(app);
 };
-
-// eslint-disable-next-line import/prefer-default-export
-export { init };

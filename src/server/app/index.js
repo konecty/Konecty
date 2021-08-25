@@ -1,12 +1,11 @@
 import express from 'express';
 
 import cookieParser from 'cookie-parser';
-import bodyParser from 'body-parser';
 import cors from 'cors';
+import pino from 'express-pino-logger';
 
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
-import each from 'lodash/each';
 import isString from 'lodash/isString';
 import isNumber from 'lodash/isNumber';
 import get from 'lodash/get';
@@ -14,19 +13,15 @@ import isBuffer from 'lodash/isBuffer';
 
 import { rpad } from 'utils';
 
-const convertObjectIdsToOid = function (values) {
+import logger from 'utils/logger';
+
+const convertObjectIdsToOid = values => {
 	if (isArray(values)) {
-		values.forEach((item, index) => (values[index] = convertObjectIdsToOid(item)));
-		return values;
+		return values.map(item => convertObjectIdsToOid(item));
 	}
 
 	if (isObject(values)) {
-		// if (values instanceof Date) {
-		// 	return { $date: values.toISOString(), pog: undefined };
-		// }
-
-		each(values, (value, key) => (values[key] = convertObjectIdsToOid(value)));
-		return values;
+		return Object.keys(values).reduce((acc, key) => Object.assign(acc, { [key]: convertObjectIdsToOid(values[key]) }), {});
 	}
 
 	return values;
@@ -34,7 +29,7 @@ const convertObjectIdsToOid = function (values) {
 
 const expressApp = express();
 
-const init = () => {
+export default () => {
 	const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
 	const corsOptions = {
 		origin(origin, callback) {
@@ -42,7 +37,7 @@ const init = () => {
 				if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
 					callback(null, true);
 				} else {
-					console.error(`${origin} Not allowed by CORS`);
+					logger.error(`${origin} Not allowed by CORS`);
 					callback(new Error(`Not allowed by CORS`));
 				}
 			} else {
@@ -56,17 +51,18 @@ const init = () => {
 	expressApp.use(cors(corsOptions));
 
 	expressApp.use(cookieParser());
-	expressApp.use(bodyParser.json({ limit: '20mb' }));
-	expressApp.use(bodyParser.urlencoded({ extended: true }));
+	expressApp.use(express.json({ limit: '20mb' }));
+	expressApp.use(express.urlencoded({ extended: true }));
+	expressApp.use(pino());
 	expressApp.use((req, res, next) => {
 		req.startTime = process.hrtime();
 
-		req.notifyError = function (type, message, options) {
-			options = options || {};
-			options.url = req.url;
-			options.req = req;
+		req.notifyError = (type, message, options) => {
+			const errorData = { ...options, type, message };
+			errorData.url = req.url;
+			errorData.req = req;
 
-			options.user = {
+			errorData.user = {
 				_id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
 				name: get(req, 'user.name'),
 				login: get(req, 'user.username'),
@@ -74,7 +70,7 @@ const init = () => {
 				access: get(req, 'user.access'),
 				lastLogin: get(req, 'user.lastLogin'),
 			};
-			options.session = {
+			errorData.session = {
 				_id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
 				_createdAt: get(req, 'session._createdAt'),
 				ip: get(req, 'session.ip'),
@@ -82,7 +78,7 @@ const init = () => {
 				expireAt: get(req, 'session.expireAt'),
 			};
 
-			return NotifyErrors.notify(type, message, options);
+			return req.error(errorData, message);
 		};
 
 		req.set = (header, value) => (req.headers[header.toLowerCase()] = value);
@@ -93,17 +89,17 @@ const init = () => {
 
 		res.get = header => res.getHeader(header);
 
-		res.location = function (url) {
+		res.location = url => {
 			// "back" is an alias for the referrer
 			if (url === 'back') {
-				url = req.get('Referrer') || '/';
+				return res.set('Location', req.get('Referrer') || '/');
 			}
 
 			// Respond
-			res.set('Location', url);
+			return res.set('Location', url);
 		};
 
-		res.redirect = function (statusCode, url) {
+		res.redirect = (statusCode, url) => {
 			if (isNumber(statusCode)) {
 				res.location(url);
 				res.statusCode = statusCode;
@@ -115,75 +111,74 @@ const init = () => {
 			res.end();
 		};
 
-		res.send = function (status, response) {
+		res.send = (status, response) => {
 			res.hasErrors = false;
 
+			let result = response;
+			let resultStatus = status;
+
 			if (!isNumber(status)) {
-				response = status;
-				status = 200;
+				result = status;
+				resultStatus = 200;
 			}
 
-			if (response instanceof Error) {
-				console.error(`Error: ${response.message}`.red);
-				response = {
+			if (result instanceof Error) {
+				req.log.error(result, `Error: ${result.message}`);
+				result = {
 					success: false,
 					errors: [
 						{
-							message: response.message,
+							message: result.message,
 							bugsnag: false,
 						},
 					],
 				};
 			}
 
-			if (!isBuffer(response)) {
-				if (isObject(response) || isArray(response)) {
+			if (!isBuffer(result)) {
+				if (isObject(result) || isArray(result)) {
 					res.set('Content-Type', 'application/json');
 
-					if (response.errors) {
+					if (result.errors) {
 						res.hasErrors = true;
-						if (isArray(response.errors)) {
-							for (let index = 0; index < response.errors.length; index++) {
-								const error = response.errors[index];
-								response.errors[index] = { message: error.message };
-							}
+						if (isArray(result.errors)) {
+							result.errors = result.errors.map(({ message }) => message);
 						}
 					}
 
-					if (response.time) {
-						req.time = response.time;
+					if (result.time) {
+						req.time = result.time;
 					}
 
-					response = JSON.stringify(convertObjectIdsToOid(response));
+					result = JSON.stringify(convertObjectIdsToOid(result));
 				}
 			}
 
-			if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
-				console.info(status, response);
+			if ([200, 204, 304].includes(resultStatus) !== true || res.hasErrors === true) {
+				req.log.info({ resultStatus, result });
 			}
 
-			res.statusCode = status;
-
-			if (!response) {
-				res.end();
+			if (result == null) {
+				res.status(resultStatus).end();
 			}
 
-			res.end(response);
+			res.status(resultStatus).end(result);
 		};
 
-		res.render = function (templateName, data) {
-			const tmpl = compileFile(join(tplPath, templateName));
+		// TODO: Template render
+		// res.render = function (templateName, data) {
+		// 	const tmpl = compileFile(join(tplPath, templateName));
 
-			const renderedHtml = tmpl(data);
+		// 	const renderedHtml = tmpl(data);
 
-			res.writeHead(200, { 'Content-Type': 'text/html' });
-			res.end(renderedHtml);
-		};
+		// 	res.writeHead(200, { 'Content-Type': 'text/html' });
+		// 	res.end(renderedHtml);
+		// };
 
 		const resEnd = res.end;
 
-		res.end = function () {
-			resEnd.apply(res, arguments);
+		res.end = (...args) => {
+			resEnd.apply(res, args);
 
 			if (!res.statusCode) {
 				res.statusCode = 200;
@@ -198,17 +193,18 @@ const init = () => {
 				} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
 
 				if (res.statusCode === 401 && req.user) {
+					// eslint-disable-next-line no-underscore-dangle
 					log += ` ${req.user._id}`;
 				}
 
 				if (res.statusCode === 200 && res.hasErrors !== true) {
-					log = `${log}`.grey;
+					log = `${log}`;
 				} else if (res.statusCode === 500) {
-					log = `${log}`.red;
+					log = `${log}`;
 				} else {
-					log = `${log}`.yellow;
+					log = `${log}`;
 				}
-				console.log(log);
+				req.log.debug(log);
 			}
 		};
 
@@ -216,19 +212,17 @@ const init = () => {
 	});
 };
 
-const app = {
+export const app = {
 	rawApp: expressApp,
 	listen(port, cb) {
 		return expressApp.listen(port, cb);
 	},
 	get(path, cb) {
 		expressApp.get(path, (req, res, next) => {
-			for (const k in req?.params) {
-				const v = req.params[k];
-				req.params[k] = isString(v) ? decodeURI(v) : v;
-			}
-			if (req.query == null) {
-				req.query = req.query;
+			req.params = (req.params ?? []).map(v => (isString(v) ? decodeURI(v) : v));
+
+			if (req.query == null && req.params?.query != null) {
+				req.query = req.params.query;
 			}
 			cb(req, res, next);
 		});
@@ -236,7 +230,7 @@ const app = {
 	post(path, cb) {
 		expressApp.post(path, (req, res, next) => {
 			if (req.query == null && req?.params?.query != null) {
-				req.query = req.query;
+				req.query = req.params.query;
 			}
 			cb(req, res, next);
 		});
@@ -244,7 +238,7 @@ const app = {
 	put(path, cb) {
 		expressApp.put(path, (req, res, next) => {
 			if (req.query == null && req?.params?.query != null) {
-				req.query = req.query;
+				req.query = req.params.query;
 			}
 			cb(req, res, next);
 		});
@@ -252,11 +246,9 @@ const app = {
 	del(path, cb) {
 		expressApp.delete(path, (req, res, next) => {
 			if (req.query == null && req?.params?.query != null) {
-				req.query = req.query;
+				req.query = req.params.query;
 			}
 			cb(req, res, next);
 		});
 	},
 };
-
-export { init, app };
