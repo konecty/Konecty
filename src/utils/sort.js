@@ -9,7 +9,7 @@ const parseSortArray = function (sortArray) {
 		sortArray = [].concat(sortArray);
 	}
 
-	each(sortArray, function (item) {
+	each(sortArray, item => {
 		sort[item.property || item.term] = get(item, 'direction', 'ASC').toUpperCase() === 'ASC' ? 1 : -1;
 	});
 

@@ -6,7 +6,7 @@ const LoadablePlugin = require('@loadable/webpack-plugin');
 
 module.exports = {
 	entry: {
-		server: './src/api/index.js',
+		server: './src/server/index.js',
 	},
 	target: 'node',
 	output: {

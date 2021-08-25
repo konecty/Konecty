@@ -22,19 +22,17 @@ const hash = (token, saltBase64, iterations) => {
 };
 
 const equals = (storedPassword, token) => {
-	let array = storedPassword.split('$'),
-		iterations = array[array.length - 3],
-		salt = array[array.length - 2],
-		password = array[array.length - 1];
+	const array = storedPassword.split('$');
+	let iterations = array[array.length - 3];
+	const salt = array[array.length - 2];
+	const password = array[array.length - 1];
 	iterations = parseInt(iterations);
 	token = this.hash(token, salt, iterations);
 
 	return token === password;
 };
 
-const generateSalt = () => {
-	return randomBytes(16).toString('base64');
-};
+const generateSalt = () => randomBytes(16).toString('base64');
 
 const encrypt = (value, iterations) => {
 	if (!iterations) {
@@ -50,15 +48,15 @@ const hashLoginToken = loginToken => {
 	const hash = createHash('sha256');
 	hash.update(loginToken);
 	return hash.digest('base64');
-}
+};
 
 const getPasswordString = password => {
-	if (typeof password === "string") {
+	if (typeof password === 'string') {
 		password = SHA256(password);
-	} else { // 'password' is an object
-		if (password.algorithm !== "sha-256") {
-			throw new Error("Invalid password hash algorithm. " +
-				"Only 'sha-256' is allowed.");
+	} else {
+		// 'password' is an object
+		if (password.algorithm !== 'sha-256') {
+			throw new Error('Invalid password hash algorithm. ' + "Only 'sha-256' is allowed.");
 		}
 		password = password.digest;
 	}
@@ -73,18 +71,18 @@ const hashPassword = async password => {
 const setPassword = async (userId, newPlaintextPassword, options) => {
 	options = { logout: true, ...options };
 
-	const user = await Models.User.findOne({ _id: userId }, { projection: { _id: true } })
+	const user = await Models.User.findOne({ _id: userId }, { projection: { _id: true } });
 
 	if (!user) {
-		throw new Error("[password] User not found");
+		throw new Error('[password] User not found');
 	}
 
 	const update = {
 		$unset: {
 			'services.password.srp': 1,
-			'services.password.reset': 1
+			'services.password.reset': 1,
 		},
-		$set: { 'services.password.bcrypt': await hashPassword(newPlaintextPassword) }
+		$set: { 'services.password.bcrypt': await hashPassword(newPlaintextPassword) },
 	};
 
 	if (options.logout) {
@@ -107,41 +105,41 @@ const getRoundsFromBcryptHash = hash => {
 
 const checkPassword = async (user, password) => {
 	const result = {
-		userId: user._id
+		userId: user._id,
 	};
 
 	const formattedPassword = getPasswordString(password);
 	const hash = user.services.password.bcrypt;
 	const hashRounds = getRoundsFromBcryptHash(hash);
-	const isPasswordEqual = await bcrypt.compare(formattedPassword, hash)
+	const isPasswordEqual = await bcrypt.compare(formattedPassword, hash);
 	if (!isPasswordEqual) {
-		result.error = new Error("Incorrect password");
+		result.error = new Error('Incorrect password');
 	} else if (hash && BCRYPT_ROUNDS != hashRounds) {
 		// The password checks out, but the user's bcrypt hash needs to be updated.
 		const newHash = await bcrypt.hash((formattedPassword, BCRYPT_ROUNDS));
-		await Models.User.update({ _id: user._id }, {
-			$set: {
-				'services.password.bcrypt':
-					newHash
-			}
-		});
+		await Models.User.update(
+			{ _id: user._id },
+			{
+				$set: {
+					'services.password.bcrypt': newHash,
+				},
+			},
+		);
 	}
 
 	return result;
 };
 
-const generateStampedLoginToken = () => {
-	return {
-		token: randomSecret(),
-		when: new Date
-	};
-};
+const generateStampedLoginToken = () => ({
+	token: randomSecret(),
+	when: new Date(),
+});
 
-const hashStampedToken = (stampedToken) => {
+const hashStampedToken = stampedToken => {
 	const { token, ...hashedStampedToken } = stampedToken;
 	return {
 		...hashedStampedToken,
-		hashedToken: hashLoginToken(token)
+		hashedToken: hashLoginToken(token),
 	};
 };
 

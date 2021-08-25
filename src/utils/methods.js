@@ -7,21 +7,21 @@ const Methods = {};
 
 const registerAfterMethod = function (name, method) {
 	if (AfterMethods[name] != null) {
-		console.error(('[konecty:methods] Duplicated after method: ' + name).red);
+		console.error(`[konecty:methods] Duplicated after method: ${name}`.red);
 	}
 	return (AfterMethods[name] = method);
 };
 
 const registerBeforeMethod = function (name, method) {
 	if (BeforeMethods[name] != null) {
-		console.error(('[konecty:methods] Duplicated before method: ' + name).red);
+		console.error(`[konecty:methods] Duplicated before method: ${name}`.red);
 	}
 	return (BeforeMethods[name] = method);
 };
 
 const registerMiddleware = function (name, method) {
 	if (Middlewares[name] != null) {
-		console.error(('[konecty:methods] Duplicated middleware: ' + name).red);
+		console.error(`[konecty:methods] Duplicated middleware: ${name}`.red);
 	}
 	return (Middlewares[name] = method);
 };
@@ -36,7 +36,7 @@ const registerMethod = function () {
 	for (const middlewareName of middlewareNames) {
 		const middleware = Middlewares[middlewareName];
 		if (middleware == null) {
-			console.error(('[konecty:methods] Middleware not registered: ' + middlewareName).red);
+			console.error(`[konecty:methods] Middleware not registered: ${middlewareName}`.red);
 		} else {
 			middlewares.push(middleware);
 		}
@@ -60,7 +60,7 @@ const registerMethod = function () {
 			for (const afterMethodName in AfterMethods) {
 				const afterMethod = AfterMethods[afterMethodName];
 				const afterMethodParams = {
-					result: result,
+					result,
 					arguments: args,
 				};
 				const afterMethodResult = await afterMethod.call(scope, [afterMethodParams]);

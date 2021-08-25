@@ -1,8 +1,6 @@
 import { db } from 'database';
 
-const getCollection = async name => {
-	return db.collection(name);
-};
+const getCollection = async name => db.collection(name);
 
 getCollection.default = getCollection;
 

@@ -7,7 +7,7 @@ import getCollection from './getCollection';
 
 // for D3 compatibility on server
 const { JSDOM } = jsdom;
-const window = new JSDOM('').window;
+const { window } = new JSDOM('');
 global.window = window;
 global.document = window.document;
 
@@ -34,7 +34,7 @@ const init = async (server, app) => {
 			sharp: require('sharp'),
 			FuzzySet: require('fuzzyset.js'),
 			crypto: require('crypto'),
-			getCollection: getCollection,
+			getCollection,
 			geolib: require('geolib'),
 			uuid: require('uuid'),
 			jwt: require('jsonwebtoken'),

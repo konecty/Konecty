@@ -10,7 +10,6 @@ import { convertObjectIdsToFn } from './index';
 const NS_PER_SEC = 1e9;
 
 const getNextUserFromQueue = async function (queueStrId, user) {
-
 	// Mount query, sort, update, and options
 	const query = { 'queue._id': queueStrId };
 
@@ -35,7 +34,7 @@ const getNextUserFromQueue = async function (queueStrId, user) {
 
 	const options = {
 		new: true,
-		sort: sort,
+		sort,
 	};
 
 	// Execute findOneAndUpdate
@@ -124,14 +123,13 @@ const getNextCode = async function (documentName, fieldName) {
 		populateLookupsData('Recruitment', record, {job: {code: 1}, contact: {code: 1, name: 1}})
 */
 const populateLookupsData = function (documentName, data, fields) {
-
 	if (!isObject(fields)) {
-		throw new Error("[populateLookupsData] missing fields param")
+		throw new Error('[populateLookupsData] missing fields param');
 	}
 
 	const meta = Meta[documentName];
 
-	for (let fieldName in meta.fields) {
+	for (const fieldName in meta.fields) {
 		const field = meta.fields[fieldName];
 		if (field.type === 'lookup' && data[fieldName] && fields[fieldName]) {
 			const options = {};

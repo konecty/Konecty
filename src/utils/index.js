@@ -25,13 +25,13 @@ const numberFormat = (number, dec, dsep, tsep) => {
 	if (isNaN(number) || number == null) return '';
 
 	number = number.toFixed(~~dec);
-	tsep = typeof tsep == 'string' ? tsep : ',';
+	tsep = typeof tsep === 'string' ? tsep : ',';
 
-	var parts = number.split('.'),
-		fnums = parts[0],
-		decimals = parts[1] ? (dsep || '.') + parts[1] : '';
+	const parts = number.split('.');
+	const fnums = parts[0];
+	const decimals = parts[1] ? (dsep || '.') + parts[1] : '';
 
-	return fnums.replace(/(\d)(?=(?:\d{3})+$)/g, '$1' + tsep) + decimals;
+	return fnums.replace(/(\d)(?=(?:\d{3})+$)/g, `$1${tsep}`) + decimals;
 };
 
 const deepEqual = function (a, b) {
@@ -56,7 +56,7 @@ const deepEqual = function (a, b) {
 			return false;
 		}
 
-		for (let key in a) {
+		for (const key in a) {
 			const value = a[key];
 			if (deepEqual(value, b[key]) !== true) {
 				return false;
@@ -110,14 +110,14 @@ const deepEqual = function (a, b) {
 };
 
 const copyObjectFieldsByPaths = (fromObject, toObject, paths) => {
-	for (let path of paths) {
+	for (const path of paths) {
 		const sections = path.split('.');
 		const leaf = sections.pop();
 
 		let walkFrom = fromObject;
 		let walkTo = toObject;
 
-		for (let section of sections) {
+		for (const section of sections) {
 			if (!isObject(walkFrom[section])) {
 				continue;
 			}
@@ -143,7 +143,7 @@ const copyObjectFieldsByPathsIncludingIds = function (fromObject, toObject, path
 		pathsToAdd.push('_id');
 	}
 
-	for (let path of paths) {
+	for (const path of paths) {
 		const sections = path.split('.');
 		if (sections.length > 1) {
 			pathsToAdd.push(`${sections[0]}._id`);
@@ -167,14 +167,14 @@ const getTermsOfFilter = function (filter) {
 			terms.push(condition.term);
 		}
 	} else if (isObject(filter.conditions)) {
-		for (let key in filter.conditions) {
+		for (const key in filter.conditions) {
 			condition = filter.conditions[key];
 			terms.push(condition.term);
 		}
 	}
 
 	if (isArray(filter.filters)) {
-		for (let i of filter.filters) {
+		for (const i of filter.filters) {
 			terms = terms.concat(getTermsOfFilter(i));
 		}
 	}
@@ -211,7 +211,7 @@ const convertStringOfFieldsSeparatedByCommaIntoObjectToFind = function (fieldsSt
 
 	if (isString(fieldsString)) {
 		const fieldsArray = fieldsString.replace(/\s/g, '').split(',');
-		for (let key of fieldsArray) {
+		for (const key of fieldsArray) {
 			fields[key] = 1;
 		}
 	}
@@ -273,13 +273,13 @@ const recursiveObject = function (obj, fn) {
 		return obj;
 	}
 
-	each(obj, function (value, key) {
+	each(obj, (value, key) => {
 		if (isObject(value)) {
 			recursiveObject(value, fn);
 		}
 
 		if (isArray(value)) {
-			each(value, function (item) {
+			each(value, item => {
 				if (isObject(item)) {
 					recursiveObject(item, fn);
 				}
@@ -316,7 +316,7 @@ const runScriptBeforeValidation = async function (script, data, req, extraData) 
 		//	emails.push({ from: '', to: '', server: '', template: '_id', data: {  } });
 		if (sandbox.emails && isArray(sandbox.emails) && sandbox.emails.length > 0 && has(Models, 'Message')) {
 			sandbox.emails = JSON.parse(JSON.stringify(sandbox.emails));
-			for (let email of sandbox.emails) {
+			for (const email of sandbox.emails) {
 				if (email.relations != null) {
 					email.data = metapopulateLookupsData(req.meta._id, data, email.relations);
 				}
@@ -325,25 +325,24 @@ const runScriptBeforeValidation = async function (script, data, req, extraData) 
 				}
 
 				// HACK for dealing with modified date fields and inserting emails
-				for (let key in email.data) {
+				for (const key in email.data) {
 					const value = email.data[key];
 					if (isString(get(value, '$date'))) {
-						email.data[key] = new Date(value['$date']);
+						email.data[key] = new Date(value.$date);
 					}
 				}
 
 				email.type = 'Email';
 				email.status = 'Send';
 
-				await Models['Message'].insert(email);
+				await Models.Message.insert(email);
 			}
 		}
 
 		if (sandbox.result && isObject(sandbox.result)) {
 			return sandbox.result;
-		} else {
-			return {};
 		}
+		return {};
 	} catch (e) {
 		req.notifyError('runScriptBeforeValidation', e, { script, data });
 		return {};
@@ -370,9 +369,8 @@ const runValidationScript = function (script, data, req, extraData) {
 
 		if (sandbox.result && isObject(sandbox.result)) {
 			return sandbox.result;
-		} else {
-			return {};
 		}
+		return {};
 	} catch (e) {
 		req.notifyError('runValidationScript', e, { script, data });
 		return {};
@@ -414,9 +412,8 @@ const runScriptAfterSave = async function (script, data, context, extraData) {
 
 		if (sandbox.result && isObject(sandbox.result)) {
 			return sandbox.result;
-		} else {
-			return {};
 		}
+		return {};
 	} catch (e) {
 		console.error('scriptAfterSave Error ->'.red, e);
 		context.notifyError('runScriptAfterSave', e, { script, data });
@@ -431,7 +428,7 @@ const formatValue = function (value, field, ignoreIsList) {
 
 	if (field.isList === true && ignoreIsList !== true) {
 		const values = [];
-		for (let item of value) {
+		for (const item of value) {
 			values.push(formatValue(item, field, true));
 		}
 		return values.join(', ');
@@ -443,9 +440,9 @@ const formatValue = function (value, field, ignoreIsList) {
 		case 'boolean':
 			if (value === true) {
 				return 'Sim';
-			} else {
-				return 'Não';
 			}
+			return 'Não';
+
 		case 'personName':
 			return value.full;
 		case 'lookup':
@@ -456,7 +453,7 @@ const formatValue = function (value, field, ignoreIsList) {
 					const meta = Meta[field.document];
 					const recursiveValues = [];
 
-					each(field.descriptionFields, function (descriptionField) {
+					each(field.descriptionFields, descriptionField => {
 						descriptionField = descriptionField.split('.');
 
 						descriptionField = meta.fields[descriptionField[0]];
@@ -513,29 +510,29 @@ const formatValue = function (value, field, ignoreIsList) {
 			result = [];
 			if (get(value, 'currency') === 'BRL') {
 				return `R$ ${numberFormat(value.value, 2, ',', '.')}`;
-			} else {
-				return `$ ${numberFormat(value.value, 2)}`;
 			}
+			return `$ ${numberFormat(value.value, 2)}`;
+
 		case 'date':
 			if (value.toISOString != null) {
 				return value.toISOString().replace(/^(\d{4})-(\d{2})-(\d{2}).*/, '$3/$2/$1');
-			} else {
-				return value;
 			}
+			return value;
+
 		case 'dateTime':
 			if (value.toISOString != null) {
 				return value.toISOString().replace(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).*/, '$3/$2/$1 $4:$5:$6');
-			} else {
-				return value;
 			}
+			return value;
+
 		case 'filter':
 			return '(filtro)';
 		case 'picklist':
 			if (isArray(value)) {
 				return value.join(', ');
-			} else {
-				return value;
 			}
+			return value;
+
 		default:
 			return value;
 	}
@@ -568,7 +565,7 @@ const getObjectPathAgg = function (obj, path, defaultValue) {
 	if (isArray(obj[currentPath]) && !/^\d$/.test(path[1])) {
 		value = [];
 		path = path.slice(1);
-		for (let item of obj[currentPath]) {
+		for (const item of obj[currentPath]) {
 			value = value.concat(getObjectPathAgg(item, path, defaultValue));
 		}
 	} else {
@@ -580,7 +577,7 @@ const getObjectPathAgg = function (obj, path, defaultValue) {
 
 const setObjectByPath = function (obj, keyPath, value) {
 	const lastKeyIndex = keyPath.length - 1;
-	for (let i = 0, end = lastKeyIndex, asc = 0 <= end; asc ? i < end : i > end; asc ? i++ : i--) {
+	for (let i = 0, end = lastKeyIndex, asc = end >= 0; asc ? i < end : i > end; asc ? i++ : i--) {
 		const key = keyPath[i];
 		if (!obj.includes(key)) {
 			obj[key] = {};

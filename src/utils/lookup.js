@@ -5,7 +5,7 @@ import validateAndProcessValueFor from './validateAndProcessValueFor';
 
 const copyDescriptionAndInheritedFields = function (lookupField, lookupValue, lookupRecord, meta, actionType, model, objectOriginalValues, objectNewValues, idsToUpdate) {
 	// Remove all values from object to prevent unwanted values
-	for (let key in lookupValue) {
+	for (const key in lookupValue) {
 		if (key !== '_id') {
 			delete lookupValue[key];
 		}
@@ -18,7 +18,7 @@ const copyDescriptionAndInheritedFields = function (lookupField, lookupValue, lo
 	}
 
 	if (isArray(lookupField.inheritedFields)) {
-		for (let inheritedField of lookupField.inheritedFields) {
+		for (const inheritedField of lookupField.inheritedFields) {
 			var validation;
 			if (['always', 'hierarchy_always', 'once_readonly'].includes(inheritedField.inherit)) {
 				if (inheritedField.inherit === 'hierarchy_always') {
@@ -48,7 +48,7 @@ const copyDescriptionAndInheritedFields = function (lookupField, lookupValue, lo
 				}
 				objectNewValues[inheritedField.fieldName] = validation;
 			} else {
-				//until_edited, once_editable
+				// until_edited, once_editable
 
 				if (!objectOriginalValues[inheritedField.fieldName]) {
 					validation = validateAndProcessValueFor(
@@ -73,7 +73,7 @@ const copyDescriptionAndInheritedFields = function (lookupField, lookupValue, lo
 
 const removeInheritedFields = function (lookupField, objectNewValues) {
 	if (isArray(lookupField.inheritedFields)) {
-		for (let inheritedField of lookupField.inheritedFields) {
+		for (const inheritedField of lookupField.inheritedFields) {
 			if (['always', 'hierarchy_always'].includes(inheritedField.inherit)) {
 				objectNewValues[inheritedField.fieldName] = null;
 			}

@@ -5,10 +5,10 @@ import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
 import isEmpty from 'lodash/isEmpty';
 
-let Models = {};
-let Meta = {};
-let DisplayMeta = {};
-let Access = {};
+const Models = {};
+const Meta = {};
+const DisplayMeta = {};
+const Access = {};
 let References = {};
 let Namespace = {};
 let MetaObject;
@@ -22,7 +22,7 @@ const rebuildReferences = () => {
 
 	for (const metaName in Meta) {
 		const meta = Meta[metaName];
-		for (let fieldName in meta.fields) {
+		for (const fieldName in meta.fields) {
 			const field = meta.fields[fieldName];
 			if (field.type === 'lookup') {
 				if (!References[field.document]) {
@@ -55,7 +55,6 @@ const tryEnsureIndex = async (model, fields, options) => {
 		await model.createIndex(fields, options);
 	} catch (e) {
 		if (e.toString().indexOf('already exists with different options') !== -1 || e.toString().indexOf('already exists with a different name') !== -1) {
-			return;
 		} else if (e.toString().indexOf('too many indexes for') !== -1) {
 			console.error(`Too many indexes for ${collection.collectionName}`.red);
 		} else {
@@ -91,7 +90,11 @@ const registerMeta = function (meta) {
 		}
 
 		const processIndexes = async () => {
-			let fieldName, fields, key, keys, options;
+			let fieldName;
+			let fields;
+			let key;
+			let keys;
+			let options;
 
 			// Create index for TTL in ActiveSessions
 			if (meta.name === 'ActiveSessions') {
@@ -106,7 +109,7 @@ const registerMeta = function (meta) {
 
 			// Create indexes for history collections
 			const historyIndexes = ['dataId', 'createdAt'];
-			for (let historyIndex of historyIndexes) {
+			for (const historyIndex of historyIndexes) {
 				fields = {};
 				fields[historyIndex] = 1;
 				await tryEnsureIndex(Models[`${meta.name}.History`], fields, {
@@ -116,7 +119,7 @@ const registerMeta = function (meta) {
 
 			// Create indexes for comment collections
 			const commentIndexes = ['dataId', '_createdAt'];
-			for (let commentIndex of commentIndexes) {
+			for (const commentIndex of commentIndexes) {
 				fields = {};
 				fields[commentIndex] = 1;
 				await tryEnsureIndex(Models[`${meta.name}.Comment`], fields, {
@@ -172,7 +175,7 @@ const registerMeta = function (meta) {
 
 						fields = {};
 
-						for (let subField of subFields) {
+						for (const subField of subFields) {
 							fields[fieldName + subField] = 1;
 						}
 						await tryEnsureIndex(Models[meta.name], fields, options);
@@ -182,7 +185,7 @@ const registerMeta = function (meta) {
 
 			// Create indexes for internal fields
 			const metaDefaultIndexes = ['_user._id', '_user.group._id', '_updatedAt', '_updatedBy._id', '_createdAt', '_createdBy._id'];
-			for (let metaDefaultIndex of metaDefaultIndexes) {
+			for (const metaDefaultIndex of metaDefaultIndexes) {
 				fields = {};
 				fields[metaDefaultIndex] = 1;
 
@@ -191,7 +194,7 @@ const registerMeta = function (meta) {
 
 			// Create indexes defined in meta
 			if (isObject(meta.indexes) && !isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
-				for (let indexName in meta.indexes) {
+				for (const indexName in meta.indexes) {
 					const index = meta.indexes[indexName];
 					if (!index.keys) {
 						index.keys = {};
@@ -268,7 +271,6 @@ const loadMetas = async () => {
 	});
 
 	Namespace = await MetaObject.findOne({ type: 'namespace' });
-
 };
 
 const init = async () => {

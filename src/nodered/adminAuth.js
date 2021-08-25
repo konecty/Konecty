@@ -2,24 +2,15 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import getCollection from './getCollection';
 
-const SHA256 = password =>
-	crypto
-		.createHash('sha256')
-		.update(password)
-		.digest('hex');
+const SHA256 = password => crypto.createHash('sha256').update(password).digest('hex');
 
 export default {
 	type: 'credentials',
-	users: async username => {
-		return { username, permissions: '*' };
-	},
+	users: async username => ({ username, permissions: '*' }),
 	authenticate: async (username, password) => {
 		try {
 			const userCollection = await getCollection('users');
-			const user = await userCollection.findOne(
-				{ username, 'services.password.bcrypt': { $exists: true } },
-				{ projection: { 'services.password.bcrypt': true } },
-			);
+			const user = await userCollection.findOne({ username, 'services.password.bcrypt': { $exists: true } }, { projection: { 'services.password.bcrypt': true } });
 			if (user != null) {
 				const {
 					services: {

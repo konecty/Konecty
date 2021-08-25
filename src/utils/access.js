@@ -133,7 +133,7 @@ const removeUnauthorizedDataForRead = function (metaAccess, data) {
 		return data;
 	}
 
-	for (let fieldName in data) {
+	for (const fieldName in data) {
 		const value = data[fieldName];
 		const access = getFieldPermissions(metaAccess, fieldName);
 		if (access.isReadable !== true) {
@@ -171,7 +171,7 @@ const applyReadConditions = (data, metaObject, access, context) => {
 	}
 
 	return data.map(doc => {
-		const resultDoc = Object.assign({}, doc);
+		const resultDoc = { ...doc };
 		for (const { fieldName, conditionFn } of accessConditions) {
 			if (conditionFn(resultDoc) === false) {
 				delete resultDoc[fieldName];
@@ -182,7 +182,7 @@ const applyReadConditions = (data, metaObject, access, context) => {
 };
 
 const ensureReadConditionsFields = (fields, metaObject, access, emptyFields) => {
-	const resultFields = Object.assign({}, fields);
+	const resultFields = { ...fields };
 
 	for (const fieldName in metaObject.fields) {
 		const accessField = getFieldPermissions(access, fieldName);

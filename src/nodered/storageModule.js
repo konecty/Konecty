@@ -9,11 +9,7 @@ const BASE_PATH = `/${process.env.NR_NAMESPACE || 'flows'}`;
 const save = async (type, path, body, meta) => {
 	const flowCollection = await getCollection(FLOWS_COLLECTION);
 
-	await flowCollection.updateOne(
-		{ type, path },
-		{ $set: { body: JSON.stringify(body), meta: JSON.stringify(meta) }, $setOnInsert: { type, path } },
-		{ upsert: true },
-	);
+	await flowCollection.updateOne({ type, path }, { $set: { body: JSON.stringify(body), meta: JSON.stringify(meta) }, $setOnInsert: { type, path } }, { upsert: true });
 };
 
 const find = async (type, path, defaultValue = {}) => {
@@ -47,7 +43,7 @@ export default {
 			const userCollection = await getCollection('users');
 			const username = kebabCase(`${process.env.KONMETA_NAMESPACE}-nr-${process.env.NR_NAMESPACE}`);
 
-			let flowUser = await userCollection.findOne({ username });
+			const flowUser = await userCollection.findOne({ username });
 
 			if (flowUser != null) {
 				try {
@@ -122,34 +118,14 @@ export default {
 			await save('flows', BASE_PATH, flows);
 		}
 	},
-	getFlows: async () => {
-		return find('flows', BASE_PATH, []);
-	},
-	saveFlows: flows => {
-		return save('flows', BASE_PATH, flows);
-	},
-	getCredentials: async () => {
-		return find('credentials', BASE_PATH);
-	},
-	saveCredentials: credentials => {
-		return save('credentials', BASE_PATH, credentials);
-	},
-	getSettings: async () => {
-		return find('settings', BASE_PATH);
-	},
-	saveSettings: settings => {
-		return save('settings', BASE_PATH, settings);
-	},
-	getSessions: () => {
-		return find('sessions', BASE_PATH);
-	},
-	saveSessions: sessions => {
-		return save('sessions', BASE_PATH, sessions);
-	},
-	getLibraryEntry: (type, path) => {
-		return find(`library-${type}`, `${BASE_PATH}${path}`, []);
-	},
-	saveLibraryEntry: (type, path, meta, body) => {
-		return save(`library-${type}`, `${BASE_PATH}${path}`, body, meta);
-	},
+	getFlows: async () => find('flows', BASE_PATH, []),
+	saveFlows: flows => save('flows', BASE_PATH, flows),
+	getCredentials: async () => find('credentials', BASE_PATH),
+	saveCredentials: credentials => save('credentials', BASE_PATH, credentials),
+	getSettings: async () => find('settings', BASE_PATH),
+	saveSettings: settings => save('settings', BASE_PATH, settings),
+	getSessions: () => find('sessions', BASE_PATH),
+	saveSessions: sessions => save('sessions', BASE_PATH, sessions),
+	getLibraryEntry: (type, path) => find(`library-${type}`, `${BASE_PATH}${path}`, []),
+	saveLibraryEntry: (type, path, meta, body) => save(`library-${type}`, `${BASE_PATH}${path}`, body, meta),
 };

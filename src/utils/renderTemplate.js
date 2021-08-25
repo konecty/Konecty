@@ -3,7 +3,7 @@ import Handlebars from 'handlebars';
 
 // TODO: Test legacy templates
 export default function renderTemplate(templateID, data) {
-	const templateRecord = Models['Template'].findOne(templateID);
+	const templateRecord = Models.Template.findOne(templateID);
 
 	if (templateRecord == null) {
 		console.error(`Template ${templateID} not found`);
