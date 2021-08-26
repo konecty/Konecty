@@ -1,0 +1,18 @@
+{
+	"translation": {
+		"Loading...": "Carregando...",
+		"Enter your email": "Informe seu email",
+		"Enter a valid email": "Informe um email válido",
+		"Email is required": "Email é oebrigatório",
+		"Enter your password": "Informe sua senha",
+		"Password should be of minimum 8 characters length": "A senha deve ter no mínimo de 8 caracteres",
+		"Password is required": "Senha é obrigatória",
+		"Sign in": "Entre com suas credenciais",
+		"Email Address": "Seu Email",
+		"Password": "Senha",
+		"Sign In": "Entrar",
+		"Forgot password?": "Esqueceu sua senha?",
+		"Don't have an account? Sign Up": "Não tem uma conta? Solicite!",
+		"Remember me": "Lembrar-me"
+	}
+}

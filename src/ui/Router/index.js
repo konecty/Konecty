@@ -1,21 +1,25 @@
 import React from 'react';
-import { Switch, Route } from 'react-router-dom';
-import { ConnectedRouter } from 'connected-react-router';
+import { Switch, Route, BrowserRouter } from 'react-router-dom';
+import { useSnapshot } from 'valtio';
 
 import Home from 'ui/pages/Home';
 import Login from 'ui/pages/Login';
 
-import ProtectedRoute from './ProtectedRoute';
+import userStore from 'ui/store/user';
 
-import history from './history';
+const Router = () => {
+	const { isLogged } = useSnapshot(userStore);
 
-const Routes = () => (
-	<ConnectedRouter history={history}>
-		<Switch>
-			<Route path="/login" component={Login} />
-			<ProtectedRoute exact path="/" component={Home} />
-		</Switch>
-	</ConnectedRouter>
-);
+	if (isLogged === false) {
+		return <Login />;
+	}
+	return (
+		<BrowserRouter>
+			<Switch>
+				<Route exact path="/" component={Home} />
+			</Switch>
+		</BrowserRouter>
+	);
+};
 
-export default Routes;
+export default Router;

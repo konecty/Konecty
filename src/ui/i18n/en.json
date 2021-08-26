@@ -1,0 +1,14 @@
+{
+	"translation": {
+		"Loading...": "Loading...",
+		"Enter your email": "Enter your email",
+		"Enter a valid email": "Enter a valid email",
+		"Email is required": "Email is required",
+		"Enter your password": "Enter your password",
+		"Password should be of minimum 8 characters length": "Password should be of minimum 8 characters length",
+		"Password is required": "Password is required",
+		"Sign in": "Sign in",
+		"Email Address": "Email Address",
+		"Password": "Password"
+	}
+}
