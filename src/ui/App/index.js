@@ -1,14 +1,15 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import { ThemeProvider } from '@material-ui/core/styles';
+import { useMediaQuery } from '@material-ui/core';
 import i18n from 'i18next';
 import { useTranslation, initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import Router from 'ui/Router';
 
-import theme from 'ui/style/theme';
+import createTheme from 'ui/style/theme';
 
 i18n
 	.use(initReactI18next)
@@ -29,6 +30,8 @@ i18n
 
 const App = () => {
 	const { t } = useTranslation();
+	const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
+	const theme = useMemo(() => createTheme(prefersDarkMode ? 'dark' : 'light'), [prefersDarkMode]);
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
