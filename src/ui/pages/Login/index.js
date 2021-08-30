@@ -25,7 +25,10 @@ const Login = () => {
 	const validationSchema = useMemo(() =>
 		yup.object({
 			email: yup.string(t('Enter your email')).email(t('Enter a valid email')).required(t('Email is required')),
-			password: yup.string(t('Enter your password')).min(8, t('Password should be of minimum 8 characters length')).required(t('Password is required')),
+			password: yup
+				.string(t('Enter your password'))
+				.min(8, t('Insecure Password', { min: 8 }))
+				.required(t('Password is required')),
 		}),
 	);
 
@@ -50,7 +53,7 @@ const Login = () => {
 				<Typography component="h1" variant="h5">
 					{t('Sign in')}
 				</Typography>
-				<form className={classes.form} onSubmit={formik.handleSubmit}>
+				<form className={classes.form} onSubmit={formik.handleSubmit} noValidate>
 					<TextField
 						variant="outlined"
 						margin="normal"
