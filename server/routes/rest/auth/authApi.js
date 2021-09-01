@@ -147,7 +147,8 @@ app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res, next) =>
   res.send(
     Meteor.call('auth:setRandomPasswordAndSendByEmail', {
       authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
-      userIds: req.body
+      userIds: req.body,
+      host: req.get("Host")
     })
   )
 );
