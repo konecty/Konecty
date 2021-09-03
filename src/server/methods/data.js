@@ -197,12 +197,11 @@ const init = () => {
 		}
 
 		const options = {
-			limit: parseInt(request.limit),
-			skip: parseInt(request.start),
+			limit: parseInt(request.limit ?? 50, 10),
+			skip: parseInt(request.start ?? 0, 10),
 			projection: ensureReadConditionsFields(fields, metaObject, this.access, emptyFields),
 			sort,
 		};
-
 		if (_isNaN(options.limit) || !options.limit) {
 			options.limit = 50;
 		}
@@ -248,7 +247,7 @@ const init = () => {
 		};
 
 		if (request.getTotal === true) {
-			data.total = model.find(query).count();
+			data.total = await model.count(query);
 		}
 
 		if (request.withDetailFields === 'true') {

@@ -5,7 +5,7 @@ import size from 'lodash/size';
 import map from 'lodash/map';
 import identity from 'lodash/identity';
 
-import { MetaObject } from 'metadata';
+import { MetaObject, Namespace } from 'metadata';
 import { registerMethod } from 'utils/methods';
 import { getAccessFor } from 'utils/access';
 

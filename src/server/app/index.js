@@ -219,7 +219,8 @@ export const app = {
 	},
 	get(path, cb) {
 		expressApp.get(path, (req, res, next) => {
-			req.params = (req.params ?? []).map(v => (isString(v) ? decodeURI(v) : v));
+			// eslint-disable-next-line max-len
+			req.params = Object.keys(req.params ?? {}).reduce((acc, key) => Object.assign(acc, { [key]: isString(req.params[key]) ? decodeURI(req.params[key]) : req.params[key] }), {});
 
 			if (req.query == null && req.params?.query != null) {
 				req.query = req.params.query;
