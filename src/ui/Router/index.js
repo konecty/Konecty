@@ -2,8 +2,8 @@ import React from 'react';
 import { Switch, Route, BrowserRouter } from 'react-router-dom';
 import { useSnapshot } from 'valtio';
 
-import Home from 'ui/pages/Home';
-import Login from 'ui/pages/Login';
+import Home from 'ui/routes/Home';
+import Login from 'ui/routes/Login';
 
 import userStore from 'ui/store/user';
 
