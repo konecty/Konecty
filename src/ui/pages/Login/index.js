@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import LoadingButton from '@mui/lab/LoadingButton';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
@@ -13,13 +14,36 @@ import Container from '@mui/material/Container';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
+import kebabCase from 'lodash/kebabCase';
+
+import logger from 'utils/logger';
+import doLogin from 'ui/DAL/doLogin';
+import { SHA256 } from 'utils/sha256';
+
+import { setLogin } from 'ui/store/user';
 
 import Copyright from './Copyright';
 import useStyles from './style';
 
+const getGeolocation = () =>
+	new Promise(resolve => {
+		navigator.geolocation.getCurrentPosition(
+			({ coords } = {}) => {
+				resolve({ lat: coords?.latitude, lng: coords?.longitude });
+			},
+			error => {
+				logger.error(error, 'Error getting user location');
+				resolve({});
+			},
+			{ enableHighAccuracy: false, timeout: 8000, maximumAge: 0 },
+		);
+	});
+
 const Login = () => {
 	const classes = useStyles();
 	const { t } = useTranslation();
+	const [loading, setLoading] = useState(false);
+	const [errorMessages, setErrorMessages] = useState();
 
 	const validationSchema = useMemo(() =>
 		yup.object({
@@ -37,8 +61,41 @@ const Login = () => {
 			password: '',
 		},
 		validationSchema,
-		onSubmit: values => {
-			alert(JSON.stringify(values, null, 2));
+		onSubmit: async ({ email, password }) => {
+			setLoading(true);
+			const geolocation = await getGeolocation();
+			const loginData = {
+				user: email,
+				password: SHA256(password),
+				ns: window.location.hostname,
+				geolocation: JSON.stringify(geolocation),
+				resolution: JSON.stringify({
+					height: window.outerHeight,
+					width: window.outerWidth,
+				}),
+			};
+			const loginResult = await doLogin(loginData);
+
+			if (loginResult == null) {
+				setErrorMessages([
+					`Ops, we have a problem with your login.
+					Please check your personal data and internet connection and try again.
+					If the problem persists, please contact our support.`,
+				]);
+			}
+
+			const { success, errors } = loginResult;
+
+			if (success === false) {
+				setErrorMessages(errors);
+			}
+
+			if (success === true) {
+				setErrorMessages(null);
+			}
+
+			await setLogin(loginResult);
+			setLoading(false);
 		},
 	});
 
@@ -51,6 +108,16 @@ const Login = () => {
 				<Typography component="h1" variant="h5">
 					{t('Sign in')}
 				</Typography>
+				{errorMessages != null && (
+					<Alert severity="error">
+						<p>{t('Login Failed')}</p>
+						<ul>
+							{(errorMessages ?? ['Unexpected error']).map(e => (
+								<li key={kebabCase(e)}>{t(e)}</li>
+							))}
+						</ul>
+					</Alert>
+				)}
 				<form className={classes.form} onSubmit={formik.handleSubmit} noValidate>
 					<TextField
 						variant="outlined"
@@ -84,9 +151,9 @@ const Login = () => {
 						helperText={formik.touched.password && formik.errors.password}
 					/>
 					<FormControlLabel control={<Checkbox value="remember" color="primary" />} label={t('Remember me')} />
-					<Button type="submit" fullWidth variant="contained" color="primary" className={classes.submit}>
+					<LoadingButton type="submit" loading={loading} fullWidth variant="contained" color="primary" className={classes.submit}>
 						{t('Sign In')}
-					</Button>
+					</LoadingButton>
 					<Grid container>
 						<Grid item xs>
 							<Link href="/forgot" variant="body2">

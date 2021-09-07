@@ -13,23 +13,10 @@ import getLabel from 'utils/getLabel';
 const FIELD_LIST = ['_id', 'name', 'group', 'icon', 'plurals', 'label', 'menuSorter'];
 
 const userStore = proxy({
-	isLogged: new Promise(resolve => {
-		const token = Cookies.get('token');
-		if (token == null) {
-			return resolve(false);
-		}
-		return fetchUserInfo()
-			.then(({ logged, user }) => {
-				userStore.user = user;
-				if (logged === true) {
-					return fetchMenu().then(meta => {
-						userStore.metaObjects = Object.keys(meta).reduce((acc, key) => ({ ...acc, [key.split(':').slice(1).join(':')]: meta[key] }), {});
-						return logged;
-					});
-				}
-				return logged;
-			})
-			.then(logged =>
+	async loadMenu() {
+		return fetchMenu()
+			.then(meta => (userStore.metaObjects = Object.keys(meta).reduce((acc, key) => ({ ...acc, [key.split(':').slice(1).join(':')]: meta[key] }), {})))
+			.then(() =>
 				fetchUserPreferences().then(({ success, data = [] } = {}) => {
 					if (success === true) {
 						userStore.preferences = data;
@@ -52,10 +39,9 @@ const userStore = proxy({
 								userStore.metaObjects[code] = listMeta;
 							});
 					}
-					return logged;
 				}),
 			)
-			.then(logged => {
+			.then(() => {
 				const metaArr = Object.values(userStore.metaObjects);
 				let menuFixIndex = 9999;
 				const processItem = item => ({
@@ -88,6 +74,20 @@ const userStore = proxy({
 					.filter(({ type, group, menuSorter }) => group == null && type === 'document' && menuSorter > 0)
 					.map(processItem)
 					.sort(({ menuSorter: a }, { menuSorter: b }) => a - b);
+				return true;
+			});
+	},
+	isLogged: new Promise(resolve => {
+		const token = Cookies.get('token');
+		if (token == null) {
+			return resolve(false);
+		}
+		return fetchUserInfo()
+			.then(({ logged, user }) => {
+				userStore.user = user;
+				if (logged === true) {
+					return userStore.loadMenu().then(() => resolve(logged));
+				}
 				return resolve(logged);
 			})
 			.catch(err => {
@@ -96,8 +96,6 @@ const userStore = proxy({
 			});
 	}).then(),
 });
-
-devtools(userStore, 'User Store');
 
 export const toggleMenuOpen = ({ id, group }) => {
 	if (group != null) {
@@ -109,5 +107,14 @@ export const toggleMenuOpen = ({ id, group }) => {
 	// eslint-disable-next-line no-underscore-dangle
 	return (userStore.mainMenu = userStore.mainMenu.map(item => (item._id === id ? { ...item, isOpen: !item.isOpen } : item)));
 };
+
+export const setLogin = async ({ user, token, cookieMaxAge }) => {
+	Cookies.set('token', token, { path: '/', expires: Math.ceil((cookieMaxAge ?? 864e5) / 864e5) });
+	userStore.user = user;
+	await userStore.loadMenu();
+	userStore.isLogged = true;
+};
+
+devtools(userStore, 'User Store');
 
 export default userStore;

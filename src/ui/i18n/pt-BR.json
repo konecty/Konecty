@@ -13,6 +13,9 @@
 		"Sign In": "Entrar",
 		"Forgot password?": "Esqueceu sua senha?",
 		"Don't have an account? Sign Up": "Não tem uma conta? Solicite!",
-		"Remember me": "Lembrar-me"
+		"Remember me": "Lembrar-me",
+		"Login Failed": "Falha de Login",
+		"Wrong user or password": "Usuário ou senha incorretos",
+		"Inactive user": "Usuário inativo"
 	}
 }

@@ -1,7 +1,7 @@
 import { init as methodsHooksInit } from './hooks';
 import { init as methodsMiddlewaresInit } from './middlewares';
 
-import { init as authMethodsInit } from './auth';
+import authMethodsInit from './auth';
 import { init as changeUserMethodsInit } from './changeUser';
 import { init as commentsMethodsInit } from './comments';
 import { init as dataMethodsInit } from './data';

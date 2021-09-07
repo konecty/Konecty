@@ -85,6 +85,7 @@
 		"@loadable/server": "^5.15.1",
 		"@mui/core": "^5.0.0-alpha.45",
 		"@mui/icons-material": "^5.0.0-rc.0",
+		"@mui/lab": "^5.0.0-alpha.45",
 		"@mui/material": "^5.0.0-rc.0",
 		"@mui/styles": "^5.0.0-rc.0",
 		"@mui/system": "^5.0.0-rc.0",

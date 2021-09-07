@@ -21,23 +21,19 @@ import { randomPassword } from 'utils';
 
 import renderTemplate from 'utils/renderTemplate';
 
-const injectRequestInformation = function (userAgent, session) {
+const injectRequestInformation = (userAgent, session = {}) => {
 	const r = useragent.parse(userAgent);
 
-	session.browser = r.family;
-	session.browserVersion = r.toVersion();
-	session.os = r.os.toString();
-	session.platform = r.device.family;
-
-	if (isString(resolution)) {
-		var resolution = JSON.parse(resolution);
-		session.resolution = resolution;
-	}
-
-	return session;
+	return {
+		...session,
+		browser: r.family,
+		browserVersion: r.toVersion(),
+		os: r.os.toString(),
+		platform: r.device.family,
+	};
 };
 
-const init = () => {
+export default () => {
 	/* Login using email and password
 		@param user
 		@param password
@@ -48,7 +44,8 @@ const init = () => {
 		@param userAgent
 	*/
 	registerMethod('auth:login', async request => {
-		let { user, password, geolocation, userAgent, ip, password_SHA256 } = request;
+		// eslint-disable-next-line camelcase
+		const { user, password, geolocation, userAgent, ip, password_SHA256 } = request;
 
 		const accessLog = {
 			_createdAt: new Date(),
@@ -59,52 +56,52 @@ const init = () => {
 
 		// If there is a geolocation store it with session
 		if (isString(geolocation)) {
-			geolocation = JSON.parse(geolocation);
-			accessLog.geolocation = [geolocation.lng, geolocation.lat];
+			const coords = JSON.parse(geolocation);
+			accessLog.geolocation = [coords.lng, coords.lat];
 		} else if (Namespace.trackUserGeolocation === true) {
 			accessLog.reason = 'Geolocation required';
 			injectRequestInformation(userAgent, accessLog);
-			await Models.AccessFailedLog.insert(accessLog);
+			await Models.AccessFailedLog.insertOne(accessLog);
 
 			return new Error('[internal-error] O Konecty exige que você habilite a geolocalização do seu navegador.');
 		}
 
-		const userRecord = Models.User.findOne({ $or: [{ username: user }, { 'emails.address': user }] });
+		const userRecord = await Models.User.findOne({ $or: [{ username: user }, { 'emails.address': user }] });
 
-		if (!userRecord) {
+		if (userRecord == null) {
 			accessLog.reason = `User not found [${user}]`;
 			injectRequestInformation(userAgent, accessLog);
-			await Models.AccessFailedLog.insert(accessLog);
+			await Models.AccessFailedLog.insertOne(accessLog);
 
 			return new Error('[internal-error] Usuário ou senha inválidos.');
 		}
 
+		// eslint-disable-next-line no-underscore-dangle
 		accessLog._user = [
 			{
+				// eslint-disable-next-line no-underscore-dangle
 				_id: userRecord._id,
 				name: userRecord.name,
 				group: userRecord.group,
 			},
 		];
 
-		let p = password_SHA256 || password;
-		p = { algorithm: 'sha-256', digest: p };
+		// eslint-disable-next-line camelcase
+		const logged = await checkPassword(userRecord, { algorithm: 'sha-256', digest: password_SHA256 || password });
 
-		const logged = checkPassword(userRecord, p);
-
-		if (logged.error) {
-			accessLog.reason = logged.error.reason;
+		if (logged.error != null) {
+			accessLog.reason = logged.error.message;
 			injectRequestInformation(userAgent, accessLog);
-			await Models.AccessFailedLog.insert(accessLog);
+			await Models.AccessFailedLog.insertOne(accessLog);
 
-			return new Error('[internal-error] Usuário ou senha inválidos.');
+			return new Error('Wrong user or password');
 		}
 
 		if (userRecord.active !== true) {
 			accessLog.reason = `User inactive [${user}]`;
 			injectRequestInformation(userAgent, accessLog);
-			await Models.AccessFailedLog.insert(accessLog);
-			return new Error('[internal-error] Usuário inativo.', { bugsnag: false });
+			await Models.AccessFailedLog.insertOne(accessLog);
+			return new Error('Inactive user');
 		}
 
 		const stampedToken = generateStampedLoginToken();
@@ -119,18 +116,20 @@ const init = () => {
 			},
 		};
 
-		await Models.User.update({ _id: userRecord._id }, updateObj);
+		// eslint-disable-next-line no-underscore-dangle
+		await Models.User.updateOne({ _id: userRecord._id }, updateObj);
 
 		injectRequestInformation(userAgent, accessLog);
 		if (Models.AccessLog != null) {
-			await Models.AccessLog.insert(accessLog);
+			await Models.AccessLog.insertOne(accessLog);
 		}
 
 		return {
 			success: true,
 			logged: true,
-			authId: hashStampedToken.hashedToken,
+			token: hashStampedToken.hashedToken,
 			user: {
+				// eslint-disable-next-line no-underscore-dangle
 				_id: userRecord._id,
 				access: userRecord.access,
 				admin: userRecord.admin,
@@ -148,14 +147,15 @@ const init = () => {
 	/* Logout currently session
 		@param authTokenId
 	*/
-	registerMethod('auth:logout', 'withUser', async function (request) {
+	registerMethod('auth:logout', 'withUser', async function authLogout() {
 		const updateObj = {
 			$pull: {
 				'services.resume.loginTokens': { hashedToken: this.hashedToken },
 			},
 		};
 
-		await Models.User.update({ _id: this.user._id }, updateObj);
+		// eslint-disable-next-line no-underscore-dangle
+		await Models.User.updateOne({ _id: this.user._id }, updateObj);
 
 		return { success: true };
 	});
@@ -163,7 +163,7 @@ const init = () => {
 	/* Get information from current session
 		@param authTokenId
 	*/
-	registerMethod('auth:info', 'withUser', function (request) {
+	registerMethod('auth:info', 'withUser', function authInfo() {
 		// If no namespace was found return error
 		if (!Namespace) {
 			return new Error('[internal-error] Namespace not found');
@@ -172,6 +172,7 @@ const init = () => {
 		const response = {
 			logged: true,
 			user: {
+				// eslint-disable-next-line no-underscore-dangle
 				_id: this.user._id,
 				access: this.user.access,
 				admin: this.user.admin,
@@ -194,13 +195,14 @@ const init = () => {
 	/* Verify if user is logged
 		@param authTokenId
 	*/
-	registerMethod('auth:logged', 'withUser', request => true);
+	registerMethod('auth:logged', 'withUser', () => true);
 
 	/* Get publlic user info
 		@param authTokenId
 	*/
-	registerMethod('auth:getUser', 'withUser', function (request) {
+	registerMethod('auth:getUser', 'withUser', function authGetUser() {
 		return {
+			// eslint-disable-next-line no-underscore-dangle
 			_id: this.user._id,
 			access: this.user.access,
 			admin: this.user.admin,
@@ -222,7 +224,7 @@ const init = () => {
 	*/
 	registerMethod('auth:resetPassword', async request => {
 		// Map body parameters
-		const { user, ns, ip, host } = request;
+		const { user, host } = request;
 
 		const userRecord = Models.User.findOne({ $and: [{ active: true }, { $or: [{ username: user }, { 'emails.address': user }] }] });
 
@@ -242,7 +244,8 @@ const init = () => {
 			},
 		};
 
-		await Models.User.update({ _id: userRecord._id }, updateObj);
+		// eslint-disable-next-line no-underscore-dangle
+		await Models.User.updateOne({ _id: userRecord._id }, updateObj);
 
 		let expireAt = new Date();
 		expireAt = new Date(expireAt.setMinutes(expireAt.getMinutes() + 360));
@@ -260,11 +263,11 @@ const init = () => {
 			data: {
 				name: userRecord.name,
 				expireAt,
-				url: `https://${host}/api/v1/auth/loginByUrl/${ns}/${token}`,
+				url: `https://${host}/api/v1/auth/loginByUrl/${token}`,
 			},
 		};
 
-		await Models.Message.insert(emailData);
+		await Models.Message.insertOne(emailData);
 
 		// Respond to reset
 		return { success: true };
@@ -274,7 +277,7 @@ const init = () => {
 		@param userId
 		@param password
 	*/
-	registerMethod('auth:setPassword', 'withUser', async function (request) {
+	registerMethod('auth:setPassword', 'withUser', async function authSetPassword(request) {
 		// Map body parameters
 		const { userId, password } = request;
 
@@ -291,10 +294,12 @@ const init = () => {
 			return new Error('[internal-error] Usuário não encontrado.');
 		}
 
+		// eslint-disable-next-line no-underscore-dangle
 		if (this.user.admin !== true && this.user._id !== userRecord._id && access.changePassword !== true) {
 			return new Error('[internal-error] Permissão negada.');
 		}
 
+		// eslint-disable-next-line no-underscore-dangle
 		setPassword(userRecord._id, password);
 
 		return { success: true };
@@ -303,7 +308,7 @@ const init = () => {
 	/* Set a random password for User and send by email
 	@param userIds
 */
-	registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', async function (request) {
+	registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', async function authSetRandomPasswordAndSendByEmail(request) {
 		// Map body parameters
 		const { userIds } = request;
 
@@ -327,42 +332,45 @@ const init = () => {
 		}
 
 		const errors = [];
+		await Promise.all(
+			userRecords.map(async userRecord => {
+				if (!has(userRecord, 'emails.0.address')) {
+					errors.push(new Error(`[internal-error] Usuário [${userRecord.username}] sem email definido.`));
+					return;
+				}
 
-		for (const userRecord of userRecords) {
-			if (!has(userRecord, 'emails.0.address')) {
-				errors.push(new Error(`[internal-error] Usuário [${userRecord.username}] sem email definido.`));
-				continue;
-			}
+				// eslint-disable-next-line no-underscore-dangle
+				if (this.user.admin !== true && this.user._id !== userRecord._id && access.changePassword !== true) {
+					errors.push(new Error(`[internal-error] Permissão negada para alterar a senha do usuário [${userRecord.username}].`));
+					return;
+				}
 
-			if (this.user.admin !== true && this.user._id !== userRecord._id && access.changePassword !== true) {
-				errors.push(new Error(`[internal-error] Permissão negada para alterar a senha do usuário [${userRecord.username}].`));
-				continue;
-			}
+				const password = randomPassword(6).toLowerCase();
+				const data = {
+					username: userRecord.username,
+					password,
+					name: userRecord.name,
+				};
 
-			const password = randomPassword(6).toLowerCase();
-			const data = {
-				username: userRecord.username,
-				password,
-				name: userRecord.name,
-			};
+				// eslint-disable-next-line no-underscore-dangle
+				await setPassword(userRecord._id, password);
 
-			await setPassword(userRecord._id, password);
+				const html = renderTemplate('resetPassword', {
+					password,
+					data,
+				});
 
-			const html = renderTemplate('resetPassword', {
-				password,
-				data,
-			});
-
-			await Models.Message.insert({
-				from: 'Konecty <support@konecty.com>',
-				to: get(userRecord, 'emails.0.address'),
-				subject: '[Konecty] Sua nova senha',
-				body: html,
-				type: 'Email',
-				status: 'Send',
-				discard: true,
-			});
-		}
+				await Models.Message.insertOne({
+					from: 'Konecty <support@konecty.com>',
+					to: get(userRecord, 'emails.0.address'),
+					subject: '[Konecty] Sua nova senha',
+					body: html,
+					type: 'Email',
+					status: 'Send',
+					discard: true,
+				});
+			}),
+		);
 
 		if (errors.length > 0) {
 			return {
@@ -380,7 +388,7 @@ const init = () => {
 		@param userAgent
 		@param ip
 	*/
-	registerMethod('auth:setGeolocation', 'withUser', async function (request) {
+	registerMethod('auth:setGeolocation', 'withUser', async function authSetGeolocation(request) {
 		if (!Models.AccessLog) {
 			return new Error('[internal-error] Models.AccessLog not defined.');
 		}
@@ -399,6 +407,7 @@ const init = () => {
 			geolocation: [longitude, latitude],
 			_user: [
 				{
+					// eslint-disable-next-line no-underscore-dangle
 					_id: this.user._id,
 					name: this.user.name,
 					group: this.user.group,
@@ -407,7 +416,7 @@ const init = () => {
 		};
 
 		injectRequestInformation(userAgent, accessLog);
-		await Models.AccessLog.insert(accessLog);
+		await Models.AccessLog.insertOne(accessLog);
 
 		return {
 			success: true,
@@ -423,9 +432,9 @@ const init = () => {
 		@param ip
 		@param userAgent
 	*/
-	registerMethod('auth:loginWithToken', async function (request) {
+	registerMethod('auth:loginWithToken', async function authLoginWithToken(request) {
 		if (this.user) {
-			return;
+			return null;
 		}
 
 		const { resume = '' } = request;
@@ -454,12 +463,14 @@ const init = () => {
 			};
 		}
 
+		// eslint-disable-next-line no-underscore-dangle
 		this.setUserId(userRecord._id);
 
 		return {
 			success: true,
 			logged: true,
 			user: {
+				// eslint-disable-next-line no-underscore-dangle
 				_id: userRecord._id,
 				access: userRecord.access,
 				admin: userRecord.admin,
@@ -474,5 +485,3 @@ const init = () => {
 		};
 	});
 };
-
-export { init };

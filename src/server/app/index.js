@@ -126,12 +126,7 @@ export default () => {
 				req.log.error(result, `Error: ${result.message}`);
 				result = {
 					success: false,
-					errors: [
-						{
-							message: result.message,
-							bugsnag: false,
-						},
-					],
+					errors: [result.message],
 				};
 			}
 
@@ -142,7 +137,7 @@ export default () => {
 					if (result.errors) {
 						res.hasErrors = true;
 						if (isArray(result.errors)) {
-							result.errors = result.errors.map(({ message }) => message);
+							result.errors = result.errors.map(e => e.message ?? e);
 						}
 					}
 

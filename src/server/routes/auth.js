@@ -61,17 +61,7 @@ export default app => {
 			userAgent,
 		});
 
-		if (get(loginResult, 'success', false) === true) {
-			// Set cookie with session id
-			if (isString(ns)) {
-				// eslint-disable-next-line max-len
-				res.set('set-cookie', `_authTokenNs=${ns}; _authTokenId=${loginResult.authId}; domain=${getCookieDomain(req)} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
-			} else {
-				res.set('set-cookie', `_authTokenId=${loginResult.authId}; domain=${getCookieDomain(req)} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
-			}
-
-			res.send({ ...loginResult, cookieMaxAge });
-		} else if (has(loginResult, 'errors')) {
+		if (loginResult instanceof Error) {
 			res.send(401, loginResult);
 		} else {
 			res.send({ ...loginResult, cookieMaxAge });

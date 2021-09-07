@@ -1,3 +1,10 @@
+/* eslint-disable prefer-destructuring */
+/* eslint-disable no-param-reassign */
+/* eslint-disable no-var */
+/* eslint-disable vars-on-top */
+/* eslint-disable no-array-constructor */
+/* eslint-disable camelcase */
+/* eslint-disable no-bitwise */
 /**
  *
  *  Secure Hash Algorithm (SHA256)
@@ -44,6 +51,7 @@ function SHA256(s) {
 	}
 
 	function core_sha256(m, l) {
+		// eslint-disable-next-line no-array-constructor
 		const K = new Array(
 			0x428a2f98,
 			0x71374491,
@@ -120,8 +128,6 @@ function SHA256(s) {
 		let f;
 		let g;
 		let h;
-		var i;
-		var j;
 		let T1;
 		let T2;
 
@@ -138,6 +144,7 @@ function SHA256(s) {
 			g = HASH[6];
 			h = HASH[7];
 
+			// eslint-disable-next-line no-plusplus
 			for (var j = 0; j < 64; j++) {
 				if (j < 16) W[j] = m[j + i];
 				else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
@@ -185,6 +192,7 @@ function SHA256(s) {
 		// string = string.replace(/\r\n/g,"\n");
 		let utftext = '';
 
+		// eslint-disable-next-line no-plusplus
 		for (let n = 0; n < string.length; n++) {
 			const c = string.charCodeAt(n);
 
@@ -206,14 +214,17 @@ function SHA256(s) {
 	function binb2hex(binarray) {
 		const hex_tab = hexcase ? '0123456789ABCDEF' : '0123456789abcdef';
 		let str = '';
+		// eslint-disable-next-line no-plusplus
 		for (let i = 0; i < binarray.length * 4; i++) {
 			str += hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8 + 4)) & 0xf) + hex_tab.charAt((binarray[i >> 2] >> ((3 - (i % 4)) * 8)) & 0xf);
 		}
 		return str;
 	}
 
+	// eslint-disable-next-line no-param-reassign
 	s = Utf8Encode(s);
 	return binb2hex(core_sha256(str2binb(s), s.length * chrsz));
 }
 
+// eslint-disable-next-line import/prefer-default-export
 export { SHA256 };

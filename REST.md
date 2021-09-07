@@ -2,22 +2,25 @@
 
 `curl https://[domain]/api/v1/auth/login -H "Content-Type: application/json" -d '{"user": "_LOGIN_", "password_SHA256": "_PASSWORD_SHA_256_", "ns": "[NAMESPACE]"}'`
 
-results in 
+results in
+
 ```
 {
     "success": true,
     "logged": true,
-    "authId": "abcdefghijklmnopqrstuvwxyz=",
+    "token": "abcdefghijklmnopqrstuvwxyz=",
     "user": (...)
 }
-``` 
-where `authId` should be stored for using in following requests.
+```
+
+where `token` should be stored for using in following requests.
 
 # SAVING LEADS
 
 `curl https://[domain]/api/v1/process/submit -H "Content-Type: application/json" --cookie "authTokenId=_AUTH_ID_" -d '{"data": [{"name": "contact", "data": {"name": "Konecty Support", "email": "support@konecty.com", "phone": "5130855151"} } ] }'`
 
 results in
+
 ```
 {
     "success": true,
