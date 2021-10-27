@@ -302,7 +302,7 @@ Meteor.registerMethod('auth:setPassword', 'withUser', function(request) {
 */
 Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', function(request) {
 	// Map body parameters
-	const { userIds } = request;
+	const { userIds, host } = request;
 
 	check(userIds, [String]);
 
@@ -323,6 +323,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 		return new Meteor.Error('internal-error', 'Nenhum usuário encontrado.');
 	}
 
+  const { ns } = MetaObject.findOne({ _id: 'Namespace' });
 	const errors = [];
 
 	for (let userRecord of userRecords) {
@@ -336,11 +337,28 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 			continue;
 		}
 
+    // Create access token and save it on user record
+    const stampedToken = Accounts._generateStampedLoginToken();
+    const hashStampedToken = Accounts._hashStampedToken(stampedToken);
+    const updateObj = {
+      $set: {
+        lastLogin: new Date()
+      },
+      $push: {
+        'services.resume.loginTokens': hashStampedToken
+      }
+    };
+
+    Meteor.users.update({ _id: userRecord._id }, updateObj);
+    const token = encodeURIComponent(hashStampedToken.hashedToken);
+
+    const loginUrl = `http://${host}/rest/auth/loginByUrl/${ns}/${token}`;
 		const password = Random.id(6).toLowerCase();
 		const data = {
 			username: userRecord.username,
 			password,
-			name: userRecord.name
+			name: userRecord.name,
+      url: loginUrl
 		};
 
 		Accounts.setPassword(userRecord._id, password);

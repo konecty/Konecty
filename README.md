@@ -70,6 +70,7 @@ Examples of REST usage can be found here: [REST](REST.md)
 ## DEVELOPMENT
 
 ```
+sudo apt install build-essential
 meteor npm install
 meteor
 ```
