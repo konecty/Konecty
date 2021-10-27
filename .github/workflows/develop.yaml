@@ -1,6 +1,7 @@
 on:
     release:
-        type: created
+        types:
+            - created
 jobs:
     build:
         runs-on: ubuntu-latest
