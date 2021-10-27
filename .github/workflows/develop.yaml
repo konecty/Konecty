@@ -1,7 +1,6 @@
 on:
-    push:
-        tags:
-            - '*.*.*-dev.*'
+    release:
+        type: created
 jobs:
     build:
         runs-on: ubuntu-latest
