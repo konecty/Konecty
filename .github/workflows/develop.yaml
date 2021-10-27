@@ -1,7 +1,7 @@
 on:
     push:
         tags:
-            - '/^\d+\.\d+\.\d+(-dev\.\d+)$/'
+            - '*.*.*-dev.*'
 jobs:
     build:
         runs-on: ubuntu-latest
