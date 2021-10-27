@@ -1,7 +1,5 @@
 on:
     push:
-        branches:
-            - develop
         tags:
             - '/^\\d+\\.\\d+\\.\\d+(-dev\\.\\d+)$/'
 jobs:
