@@ -1,0 +1,24 @@
+on:
+    push:
+        branches:
+            - develop
+        tags:
+            - '/^\\d+\\.\\d+\\.\\d+(-dev\\.\\d+)$/'
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install Meteor
+              uses: meteorengineer/setup-meteor@v1
+              with:
+                  meteor-release: '2.5'
+            - name: Build
+              run: |
+                  meteor npm install
+                  meteor build --server-only /tmp/build
+            - name: Copy build to GitHub
+              uses: softprops/action-gh-release@v1
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  files: /tmp/build/Konecty.tar.gz
