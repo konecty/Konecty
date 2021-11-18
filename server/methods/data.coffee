@@ -150,7 +150,11 @@ Meteor.registerMethod 'data:find:all', 'withUser', 'withAccessForDocument', (req
 	if (options.limit >= 1000)
 		options.sort =  { _id: 1 }
 
-	records = model.find(query, options).fetch()
+	try
+		records = model.find(query, options).fetch()
+	catch error
+		context.notifyError 'Find - Mongo Error', error, request
+		return new Meteor.Error 'internal-error', "[#{request.document}] Mongo Error: #{error.message}"
 
 	local = collection: new Meteor.Collection null
 
