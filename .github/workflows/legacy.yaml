@@ -10,7 +10,7 @@ jobs:
             - name: Install Meteor
               uses: meteorengineer/setup-meteor@v1
               with:
-                  meteor-release: '1.5.4.2'
+                  meteor-release: '1.5'
             - name: Build
               run: |
                   export NODE_TLS_REJECT_UNAUTHORIZED=0
