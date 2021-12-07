@@ -8,7 +8,7 @@ bcryptCompare = Meteor.wrapAsync(compare);
 
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
-const injectRequestInformation = function(userAgent, session) {
+const injectRequestInformation = function (userAgent, session) {
 	const r = useragent.parse(userAgent);
 
 	session.browser = r.family;
@@ -33,115 +33,121 @@ const injectRequestInformation = function(userAgent, session) {
 	@param ip
 	@param userAgent
 */
-Meteor.registerMethod('auth:login', function(request) {
-	let { user, password, ns, geolocation, resolution, userAgent, ip, password_SHA256 } = request;
+Meteor.registerMethod('auth:login', function (request) {
+	try {
+		let { user, password, ns, geolocation, resolution, userAgent, ip, password_SHA256 } = request;
 
-	// Define a session with arguments based on java version
-	const accessLog = {
-		_createdAt: new Date(),
-		_updatedAt: new Date(),
-		ip,
-		login: user
-	};
+		// Define a session with arguments based on java version
+		const accessLog = {
+			_createdAt: new Date(),
+			_updatedAt: new Date(),
+			ip,
+			login: user,
+		};
 
-	const namespace = MetaObject.findOne({ _id: 'Namespace' });
+		const namespace = MetaObject.findOne({ _id: 'Namespace' });
 
-	// If there is a geolocation store it with session
-	if (isString(geolocation)) {
-		geolocation = JSON.parse(geolocation);
-		accessLog.geolocation = [geolocation.lng, geolocation.lat];
-	} else if (namespace.trackUserGeolocation === true) {
-		accessLog.reason = 'Geolocation required';
-		injectRequestInformation(userAgent, accessLog);
-		Models.AccessFailedLog.insert(accessLog);
+		// If there is a geolocation store it with session
+		if (isString(geolocation)) {
+			geolocation = JSON.parse(geolocation);
+			accessLog.geolocation = [geolocation.lng, geolocation.lat];
+		} else if (namespace.trackUserGeolocation === true) {
+			accessLog.reason = 'Geolocation required';
+			injectRequestInformation(userAgent, accessLog);
+			Models.AccessFailedLog.insert(accessLog);
 
-		return new Meteor.Error('internal-error', 'O Konecty exige que você habilite a geolocalização do seu navegador.');
-	}
-
-	const userRecord = Meteor.users.findOne({ $or: [{ username: user }, { 'emails.address': user }] });
-
-	if (!userRecord) {
-		accessLog.reason = `User not found [${user}]`;
-		injectRequestInformation(userAgent, accessLog);
-		Models.AccessFailedLog.insert(accessLog);
-
-		return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
-	}
-
-	accessLog._user = [
-		{
-			_id: userRecord._id,
-			name: userRecord.name,
-			group: userRecord.group
+			return new Meteor.Error('internal-error', 'O Konecty exige que você habilite a geolocalização do seu navegador.');
 		}
-	];
 
-	let p = password_SHA256 || password;
-	p = { algorithm: 'sha-256', digest: p };
+		// Only users with a password can login
+		const userRecord = Meteor.users.findOne({ 'services.password.bcrypt': { $exists: true }, $or: [{ username: user }, { 'emails.address': user }] });
 
-	const logged = Accounts._checkPassword(userRecord, p);
+		if (!userRecord) {
+			accessLog.reason = `User not found [${user}]`;
+			injectRequestInformation(userAgent, accessLog);
+			Models.AccessFailedLog.insert(accessLog);
 
-	if (logged.error) {
-		accessLog.reason = logged.error.reason;
-		injectRequestInformation(userAgent, accessLog);
-		Models.AccessFailedLog.insert(accessLog);
-
-		return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
-	}
-
-	if (userRecord.active !== true) {
-		accessLog.reason = `User inactive [${user}]`;
-		injectRequestInformation(userAgent, accessLog);
-		Models.AccessFailedLog.insert(accessLog);
-		return new Meteor.Error('internal-error', 'Usuário inativo.', { bugsnag: false });
-	}
-
-	const stampedToken = Accounts._generateStampedLoginToken();
-	const hashStampedToken = Accounts._hashStampedToken(stampedToken);
-
-	const updateObj = {
-		$set: {
-			lastLogin: new Date()
-		},
-		$push: {
-			'services.resume.loginTokens': hashStampedToken
+			return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
 		}
-	};
 
-	Meteor.users.update({ _id: userRecord._id }, updateObj);
+		accessLog._user = [
+			{
+				_id: userRecord._id,
+				name: userRecord.name,
+				group: userRecord.group,
+			},
+		];
 
-	injectRequestInformation(userAgent, accessLog);
-	if (Models.AccessLog) {
-		Models.AccessLog.insert(accessLog);
-	}
+		let p = password_SHA256 || password;
+		p = { algorithm: 'sha-256', digest: p };
 
-	return {
-		success: true,
-		logged: true,
-		authId: hashStampedToken.hashedToken,
-		user: {
-			_id: userRecord._id,
-			access: userRecord.access,
-			admin: userRecord.admin,
-			email: get(userRecord, 'emails.0.address'),
-			group: userRecord.group,
-			locale: userRecord.locale,
-			login: userRecord.username,
-			name: userRecord.name,
-			namespace: userRecord.namespace,
-			role: userRecord.role
+		const logged = Accounts._checkPassword(userRecord, p);
+
+		if (logged.error) {
+			accessLog.reason = logged.error.reason;
+			injectRequestInformation(userAgent, accessLog);
+			Models.AccessFailedLog.insert(accessLog);
+
+			return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
 		}
-	};
+
+		if (userRecord.active !== true) {
+			accessLog.reason = `User inactive [${user}]`;
+			injectRequestInformation(userAgent, accessLog);
+			Models.AccessFailedLog.insert(accessLog);
+			return new Meteor.Error('internal-error', 'Usuário inativo.', { bugsnag: false });
+		}
+
+		const stampedToken = Accounts._generateStampedLoginToken();
+		const hashStampedToken = Accounts._hashStampedToken(stampedToken);
+
+		const updateObj = {
+			$set: {
+				lastLogin: new Date(),
+			},
+			$push: {
+				'services.resume.loginTokens': hashStampedToken,
+			},
+		};
+
+		Meteor.users.update({ _id: userRecord._id }, updateObj);
+
+		injectRequestInformation(userAgent, accessLog);
+		if (Models.AccessLog) {
+			Models.AccessLog.insert(accessLog);
+		}
+
+		return {
+			success: true,
+			logged: true,
+			authId: hashStampedToken.hashedToken,
+			user: {
+				_id: userRecord._id,
+				access: userRecord.access,
+				admin: userRecord.admin,
+				email: get(userRecord, 'emails.0.address'),
+				group: userRecord.group,
+				locale: userRecord.locale,
+				login: userRecord.username,
+				name: userRecord.name,
+				namespace: userRecord.namespace,
+				role: userRecord.role,
+			},
+		};
+	} catch (error) {
+		console.error(error);
+		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`, { bugsnag: false });
+	}
 });
 
 /* Logout currently session
 	@param authTokenId
 */
-Meteor.registerMethod('auth:logout', 'withUser', function(request) {
+Meteor.registerMethod('auth:logout', 'withUser', function (request) {
 	const updateObj = {
 		$pull: {
-			'services.resume.loginTokens': { hashedToken: this.hashedToken }
-		}
+			'services.resume.loginTokens': { hashedToken: this.hashedToken },
+		},
 	};
 
 	Meteor.users.update({ _id: this.user._id }, updateObj);
@@ -152,7 +158,7 @@ Meteor.registerMethod('auth:logout', 'withUser', function(request) {
 /* Get information from current session
 	@param authTokenId
 */
-Meteor.registerMethod('auth:info', 'withUser', function(request) {
+Meteor.registerMethod('auth:info', 'withUser', function (request) {
 	// Get namespace information
 	const namespace = MetaObject.findOne({ _id: 'Namespace' });
 
@@ -181,8 +187,8 @@ Meteor.registerMethod('auth:info', 'withUser', function(request) {
 			login: this.user.username,
 			name: this.user.name,
 			namespace,
-			role: this.user.role
-		}
+			role: this.user.role,
+		},
 	};
 
 	return response;
@@ -196,7 +202,7 @@ Meteor.registerMethod('auth:logged', 'withUser', request => true);
 /* Get publlic user info
 	@param authTokenId
 */
-Meteor.registerMethod('auth:getUser', 'withUser', function(request) {
+Meteor.registerMethod('auth:getUser', 'withUser', function (request) {
 	return {
 		_id: this.user._id,
 		access: this.user.access,
@@ -207,7 +213,7 @@ Meteor.registerMethod('auth:getUser', 'withUser', function(request) {
 		username: this.user.username,
 		name: this.user.name,
 		role: this.user.role,
-		lastLogin: this.user.lastLogin
+		lastLogin: this.user.lastLogin,
 	};
 });
 
@@ -217,7 +223,7 @@ Meteor.registerMethod('auth:getUser', 'withUser', function(request) {
 	@param ip
 	@param host
 */
-Meteor.registerMethod('auth:resetPassword', function(request) {
+Meteor.registerMethod('auth:resetPassword', function (request) {
 	// Map body parameters
 	const { user, ns, ip, host } = request;
 
@@ -232,11 +238,11 @@ Meteor.registerMethod('auth:resetPassword', function(request) {
 
 	const updateObj = {
 		$set: {
-			lastLogin: new Date()
+			lastLogin: new Date(),
 		},
 		$push: {
-			'services.resume.loginTokens': hashStampedToken
-		}
+			'services.resume.loginTokens': hashStampedToken,
+		},
 	};
 
 	Meteor.users.update({ _id: userRecord._id }, updateObj);
@@ -257,8 +263,8 @@ Meteor.registerMethod('auth:resetPassword', function(request) {
 		data: {
 			name: userRecord.name,
 			expireAt,
-			url: `http://${host}/rest/auth/loginByUrl/${ns}/${token}`
-		}
+			url: `http://${host}/rest/auth/loginByUrl/${ns}/${token}`,
+		},
 	};
 
 	Models['Message'].insert(emailData);
@@ -271,7 +277,7 @@ Meteor.registerMethod('auth:resetPassword', function(request) {
 	@param userId
 	@param password
 */
-Meteor.registerMethod('auth:setPassword', 'withUser', function(request) {
+Meteor.registerMethod('auth:setPassword', 'withUser', function (request) {
 	// Map body parameters
 	const { userId, password } = request;
 
@@ -300,7 +306,7 @@ Meteor.registerMethod('auth:setPassword', 'withUser', function(request) {
 /* Set a random password for User and send by email
 	@param userIds
 */
-Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', function(request) {
+Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', function (request) {
 	// Map body parameters
 	const { userIds, host } = request;
 
@@ -314,7 +320,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 	}
 
 	let userRecords = Meteor.users.find({
-		$or: [{ _id: { $in: userIds } }, { username: { $in: userIds } }, { 'emails.address': { $in: userIds } }]
+		$or: [{ _id: { $in: userIds } }, { username: { $in: userIds } }, { 'emails.address': { $in: userIds } }],
 	});
 
 	userRecords = userRecords.fetch();
@@ -323,7 +329,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 		return new Meteor.Error('internal-error', 'Nenhum usuário encontrado.');
 	}
 
-  const { ns } = MetaObject.findOne({ _id: 'Namespace' });
+	const { ns } = MetaObject.findOne({ _id: 'Namespace' });
 	const errors = [];
 
 	for (let userRecord of userRecords) {
@@ -337,35 +343,35 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 			continue;
 		}
 
-    // Create access token and save it on user record
-    const stampedToken = Accounts._generateStampedLoginToken();
-    const hashStampedToken = Accounts._hashStampedToken(stampedToken);
-    const updateObj = {
-      $set: {
-        lastLogin: new Date()
-      },
-      $push: {
-        'services.resume.loginTokens': hashStampedToken
-      }
-    };
+		// Create access token and save it on user record
+		const stampedToken = Accounts._generateStampedLoginToken();
+		const hashStampedToken = Accounts._hashStampedToken(stampedToken);
+		const updateObj = {
+			$set: {
+				lastLogin: new Date(),
+			},
+			$push: {
+				'services.resume.loginTokens': hashStampedToken,
+			},
+		};
 
-    Meteor.users.update({ _id: userRecord._id }, updateObj);
-    const token = encodeURIComponent(hashStampedToken.hashedToken);
+		Meteor.users.update({ _id: userRecord._id }, updateObj);
+		const token = encodeURIComponent(hashStampedToken.hashedToken);
 
-    const loginUrl = `http://${host}/rest/auth/loginByUrl/${ns}/${token}`;
+		const loginUrl = `http://${host}/rest/auth/loginByUrl/${ns}/${token}`;
 		const password = Random.id(6).toLowerCase();
 		const data = {
 			username: userRecord.username,
 			password,
 			name: userRecord.name,
-      url: loginUrl
+			url: loginUrl,
 		};
 
 		Accounts.setPassword(userRecord._id, password);
 
 		const html = SSR.render('resetPassword', {
 			password,
-			data
+			data,
 		});
 
 		Models['Message'].insert({
@@ -375,14 +381,14 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 			body: html,
 			type: 'Email',
 			status: 'Send',
-			discard: true
+			discard: true,
 		});
 	}
 
 	if (errors.length > 0) {
 		return {
 			success: false,
-			errors
+			errors,
 		};
 	}
 
@@ -395,7 +401,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 	@param userAgent
 	@param ip
 */
-Meteor.registerMethod('auth:setGeolocation', 'withUser', function(request) {
+Meteor.registerMethod('auth:setGeolocation', 'withUser', function (request) {
 	if (!Models.AccessLog) {
 		return new Meteor.Error('internal-error', 'Models.AccessLog not defined.');
 	}
@@ -416,20 +422,20 @@ Meteor.registerMethod('auth:setGeolocation', 'withUser', function(request) {
 			{
 				_id: this.user._id,
 				name: this.user.name,
-				group: this.user.group
-			}
-		]
+				group: this.user.group,
+			},
+		],
 	};
 
 	injectRequestInformation(userAgent, accessLog);
 	Models.AccessLog.insert(accessLog);
 
 	return {
-		success: true
+		success: true,
 	};
 });
 
-Accounts.onCreateUser(function(options, user) {
+Accounts.onCreateUser(function (options, user) {
 	if (!user.code) {
 		user.code = metaUtils.getNextCode('User', 'code');
 	}
@@ -445,7 +451,7 @@ Accounts.onCreateUser(function(options, user) {
 	@param ip
 	@param userAgent
 */
-Meteor.registerMethod('auth:loginWithToken', function(request) {
+Meteor.registerMethod('auth:loginWithToken', function (request) {
 	if (this.user) {
 		return;
 	}
@@ -466,13 +472,13 @@ Meteor.registerMethod('auth:loginWithToken', function(request) {
 	// If no user was found return error
 	if (!userRecord) {
 		return {
-			error: new Meteor.Error(403, '[auth:loginWithToken] User not found using token.')
+			error: new Meteor.Error(403, '[auth:loginWithToken] User not found using token.'),
 		};
 	}
 
 	if (userRecord.active !== true) {
 		return {
-			error: new Meteor.Error(403, '[auth:loginWithToken] User not found using token.')
+			error: new Meteor.Error(403, '[auth:loginWithToken] User not found using token.'),
 		};
 	}
 
@@ -491,7 +497,7 @@ Meteor.registerMethod('auth:loginWithToken', function(request) {
 			login: userRecord.username,
 			name: userRecord.name,
 			namespace: userRecord.namespace,
-			role: userRecord.role
-		}
+			role: userRecord.role,
+		},
 	};
 });
