@@ -8,7 +8,8 @@ RUN set -x \
 	&& tar -zxf Konecty.tar.gz -C /app \
 	&& rm Konecty.tar.gz \
 	&& cd /app/bundle/programs/server/ \
-	&& npm install
+	&& npm install \
+	&& npm run install 
 
 WORKDIR /app/bundle
 
