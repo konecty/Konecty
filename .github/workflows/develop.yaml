@@ -8,9 +8,14 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - name: Install Meteor
-              uses: meteorengineer/setup-meteor@v1
-              with:
-                  meteor-release: '2.5'
+              run: |
+                apt-get update
+                apt-get install -y curl git build-essential
+                curl https://install.meteor.com/ | sh
+                export METEOR_ALLOW_SUPERUSER=true
+                meteor --version
+                meteor node --version
+                meteor npm --version
             - name: Build
               run: |
                   meteor npm install
