@@ -9,8 +9,6 @@ jobs:
             - uses: actions/checkout@v2
             - name: Install Meteor
               run: |
-                apt-get update
-                apt-get install -y curl git build-essential
                 curl https://install.meteor.com/ | sh
                 export METEOR_ALLOW_SUPERUSER=true
                 meteor --version
