@@ -2173,12 +2173,12 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 		}
 
 		// find a contact on source data of relation
-		if (has(meta, 'Message.fields.contact.descriptionFields') && has(relation, 'emailConf.contact')) {
+		if (has(Meta, 'Message.fields.contact.descriptionFields') && has(relation, 'emailConf.contact')) {
 			const emailContactData = {};
 			const contactData = objectByString(emailData, relation.emailConf.contact);
 
 			if (contactData) {
-				if ((size(get(contactData, 'email')) > 0 && !messageData.to) || isEmpty(messageData.to)) {
+				if (size(get(contactData, 'email')) > 0 && (!messageData.to || isEmpty(messageData.to))) {
 					messageData.to = contactData.email[0].address;
 				}
 
