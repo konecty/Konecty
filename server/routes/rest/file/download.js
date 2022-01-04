@@ -14,7 +14,7 @@ app.get('(/rest/file|/file|/rest/image|/image)/:mode(preview|download)?/:namespa
 		if (/^s3$/i.test(process.env.STORAGE)) {
 			const origin = `${/https?:\/\//.test(process.env.S3_PUBLIC_URL) ? process.env.S3_PUBLIC_URL : `https://${process.env.S3_PUBLIC_URL}`}`.replace(/\/$/, '');
 
-			const fileUrl = new URL(`${origin}/${process.env.S3_BUCKET}/konecty.${namespace}/${metaDocumentId}/${recordId}/${fieldName}/${fixedEncodeURIComponent(fileName)}`);
+			const fileUrl = new URL(`${origin}/konecty.${namespace}/${metaDocumentId}/${recordId}/${fieldName}/${fixedEncodeURIComponent(fileName)}`);
 
 			const { status, data, headers } = await axios({ method: 'GET', url: fileUrl.toString(), responseType: 'stream' });
 
