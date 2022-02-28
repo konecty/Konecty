@@ -1,29 +1,40 @@
-import { registerFirstUser, registerFirstGroup } from './initialData';
+import { Mongo } from 'meteor/mongo';
+
+import chokidar from 'chokidar';
+import glob from 'glob';
+import fs from 'fs';
+
+import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
+
+import { registerFirstUser, registerFirstGroup } from './initialData';
+
+const rebuildReferencesDelay = 1000;
 
 Meta = {};
 DisplayMeta = {};
 Access = {};
 References = {};
 Namespace = {};
+MetaObject = new Mongo.Collection('MetaObjects');
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
 const logIndexActionEnable = false;
 
-const logIndexAction = function(msg) {
+const logIndexAction = function (msg) {
 	if (logIndexActionEnable === true) {
 		console.log(msg);
 	}
 };
 
-const getIndexes = function(collectionName) {
+const getIndexes = function (collectionName) {
 	const collection = Models[collectionName]._getCollection();
 	const indexInformation = Meteor.wrapAsync(_.bind(collection.indexInformation, collection));
 	return indexInformation();
 };
 
-const rebuildReferences = function() {
+const rebuildReferences = debounce(function () {
 	console.log('[kondata] Rebuilding references');
 	global.References = {};
 
@@ -43,14 +54,14 @@ const rebuildReferences = function() {
 					field: fieldName,
 					isList: field.isList,
 					descriptionFields: field.descriptionFields,
-					detailFields: field.detailFields
+					detailFields: field.detailFields,
 				};
 			}
 		}
 	}
-};
+}, rebuildReferencesDelay);
 
-const tryEnsureIndex = function(model, fields, options) {
+const tryEnsureIndex = function (model, fields, options) {
 	try {
 		model._ensureIndex(fields, options);
 	} catch (e) {
@@ -67,14 +78,14 @@ const tryEnsureIndex = function(model, fields, options) {
 };
 
 const initialData = _.debounce(
-	Meteor.bindEnvironment(function() {
+	Meteor.bindEnvironment(function () {
 		registerFirstUser();
 		registerFirstGroup();
 	}),
-	2000
+	2000,
 );
 
-const registerMeta = function(meta) {
+const registerMeta = function (meta) {
 	if (!meta.collection) {
 		meta.collection = `data.${meta.name}`;
 	}
@@ -84,7 +95,7 @@ const registerMeta = function(meta) {
 		meta.fields._merge = {
 			name: '_merge',
 			type: 'text',
-			isList: true
+			isList: true,
 		};
 	}
 
@@ -102,7 +113,7 @@ const registerMeta = function(meta) {
 				Models[meta.name] = new Meteor.Collection(meta.collection);
 		}
 
-		Meteor.publish(`data.${meta.name}`, function(filter, limit) {
+		Meteor.publish(`data.${meta.name}`, function (filter, limit) {
 			if (!this.userId) {
 				return this.ready();
 			}
@@ -113,11 +124,7 @@ const registerMeta = function(meta) {
 			return Models[meta.name].find(filter, { limit: limit || 30 });
 		});
 
-		// Meteor.publish "data.#{meta.name}.History", (limit) ->
-		// 	return @ready() unless @userId?
-		// 	return Models["#{meta.name}.History"].find {}, {limit: limit or 30}
-
-		Meteor.publish(`data.${meta.name}.History`, function(filter, limit) {
+		Meteor.publish(`data.${meta.name}.History`, function (filter, limit) {
 			if (!this.userId) {
 				return this.ready();
 			}
@@ -128,7 +135,7 @@ const registerMeta = function(meta) {
 			return Models[`${meta.name}.History`].find(filter, { limit: limit || 30 });
 		});
 
-		const dropIndexes = function() {
+		const dropIndexes = function () {
 			// Drop data indexes
 			let indexInformation, value;
 			let indexesInformation = getIndexes(meta.name);
@@ -167,7 +174,7 @@ const registerMeta = function(meta) {
 			}
 		};
 
-		const processIndexes = function() {
+		const processIndexes = function () {
 			// Drop all indexes of meta
 			let fieldName, fields, key, keys, options;
 			if (dropAllIndexes === true) {
@@ -228,23 +235,13 @@ const registerMeta = function(meta) {
 								subFields = ['.phoneNumber', '.countryCode'];
 								break;
 							case 'address':
-								subFields = [
-									'.country',
-									'.state',
-									'.city',
-									'.district',
-									'.place',
-									'.number',
-									'.complement',
-									'.postalCode',
-									'.placeType'
-								];
+								subFields = ['.country', '.state', '.city', '.district', '.place', '.number', '.complement', '.postalCode', '.placeType'];
 								break;
 						}
 
 						options = {
 							unique: 0,
-							name: fieldName
+							name: fieldName,
 						};
 
 						if (field.type === 'autoNumber' || field.isUnique === true) {
@@ -315,7 +312,7 @@ const registerMeta = function(meta) {
 				options = {
 					name: 'TextIndex',
 					default_language: global.Namespace.language,
-					weights: {}
+					weights: {},
 				};
 
 				logIndexAction(`Ensure Index at ${meta.collection}: ${options.name}`.green);
@@ -343,7 +340,7 @@ const registerMeta = function(meta) {
 	}
 };
 
-const deregisterMeta = function(meta) {
+const deregisterMeta = function (meta) {
 	delete Meta[meta.name];
 
 	delete Models[`${meta.name}.Comment`];
@@ -353,12 +350,7 @@ const deregisterMeta = function(meta) {
 	delete Models[meta.name];
 };
 
-Meteor.startup(function() {
-	if (!!process.env.IS_MIRROR === true) {
-		MetaObject.remove({});
-		Meteor.users.remove({});
-	}
-
+const dbLoad = () => {
 	MetaObject.find({ type: 'access' }).observe({
 		added(meta) {
 			Access[meta._id] = meta;
@@ -370,33 +362,24 @@ Meteor.startup(function() {
 
 		removed(meta) {
 			delete Access[meta._id];
-		}
+		},
 	});
-
-	let rebuildReferencesTimer = null;
-	const rebuildReferencesDelay = 1000;
 
 	MetaObject.find({ type: { $in: ['document', 'composite'] } }).observe({
 		added(meta) {
 			registerMeta(meta);
-
-			clearTimeout(rebuildReferencesTimer);
-			rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
+			rebuildReferences();
 		},
 
 		changed(meta) {
 			registerMeta(meta);
-
-			clearTimeout(rebuildReferencesTimer);
-			rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
+			rebuildReferences();
 		},
 
 		removed(meta) {
 			deregisterMeta(meta);
-
-			clearTimeout(rebuildReferencesTimer);
-			rebuildReferencesTimer = setTimeout(rebuildReferences, rebuildReferencesDelay);
-		}
+			rebuildReferences();
+		},
 	});
 
 	MetaObject.find({ type: { $in: ['pivot', 'view', 'list'] } }).observe({
@@ -410,6 +393,111 @@ Meteor.startup(function() {
 
 		removed(meta) {
 			delete DisplayMeta[meta._id];
-		}
+		},
 	});
+};
+
+const fsLoad = () => {
+	console.log(`Loading Meta from directory ${process.env.METADATA_DIR} ...`);
+
+	const watcher = chokidar.watch(process.env.METADATA_DIR, {
+		ignored: /(^|[\/\\])\../, // ignore dotfiles
+		persistent: true,
+	});
+	const documentName = path =>
+		path
+			.replace(process.env.METADATA_DIR, '')
+			.replace(/^\/|\/$/g, '')
+			.split('/')
+			.shift();
+	const fileType = path => {
+		if (/.+document.json$/.test(path)) {
+			return 'document';
+		}
+		return path.split('/').slice(-2).shift();
+	};
+
+	const getDocumentData = path => {
+		const type = fileType(path);
+		if (type === 'document') {
+			return JSON.parse(fs.readFileSync(path, 'utf8'));
+		}
+		const documentFile = `${process.env.METADATA_DIR}/${documentName(path)}/document.json`;
+		if (fs.existsSync(documentFile)) {
+			return JSON.parse(fs.readFileSync(documentFile, 'utf8'));
+		}
+		return null;
+	};
+
+	const changeHandler = path => {
+		const type = fileType(path);
+		if (['document', 'hook'].includes(type)) {
+			const meta = getDocumentData(path);
+			if (meta == null) {
+				return;
+			}
+			const hooksDir = path.replace(/document.json$/, 'hook');
+			if (fs.existsSync(hooksDir)) {
+				glob.sync(hooksDir + '/*.js').forEach(file => {
+					const hookName = file.split('/').pop().split('.').shift();
+					const hook = fs.readFileSync(file, 'utf8');
+					meta[hookName] = hook;
+				});
+				glob.sync(hooksDir + '/*.json').forEach(file => {
+					const hookName = file.split('/').pop().split('.').shift();
+					const hook = JSON.parse(fs.readFileSync(file, 'utf8'));
+					meta[hookName] = hook;
+				});
+			}
+			registerMeta(meta);
+			return rebuildReferences();
+		}
+
+		if (type === 'access') {
+			const meta = JSON.parse(fs.readFileSync(path, 'utf8'));
+			Access[meta._id] = meta;
+			return;
+		}
+
+		if (['pivot', 'view', 'list'].includes(type)) {
+			const meta = JSON.parse(fs.readFileSync(path, 'utf8'));
+			DisplayMeta[meta._id] = meta;
+			return;
+		}
+	};
+
+	const removeHandler = path => {
+		const type = fileType(path);
+		const name = documentName(path);
+		if (['document'].includes(type)) {
+			deregisterMeta({ name });
+			return rebuildReferences();
+		}
+
+		if (type === 'hook') {
+			return changeHandler(`${process.env.METADATA_DIR}/${name}/document.json`);
+		}
+
+		if (type === 'access') {
+			const accessName = path.split('/').pop().split('.').shift();
+			const id = `${name}:access:${accessName}`;
+			console.log(id);
+			delete Access[id];
+		}
+		if (['pivot', 'view', 'list'].includes(type)) {
+			const typeName = path.split('/').pop().split('.').shift();
+			delete DisplayMeta[`${name}:${type}:${typeName}`];
+		}
+	};
+	watcher
+		.on('add', changeHandler)
+		.on('change', changeHandler)
+		.on('unlink', path => removeHandler);
+};
+
+Meteor.startup(function () {
+	if (process.env.METADATA_DIR != null) {
+		return fsLoad();
+	}
+	dbLoad();
 });

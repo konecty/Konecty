@@ -16,6 +16,7 @@
 		"bugsnag": "^2.4.3",
 		"busboy": "^0.3.1",
 		"cheerio": "^1.0.0-rc.10",
+		"chokidar": "^3.5.3",
 		"coffeescript": "^2.6.1",
 		"colors": "^1.4.0",
 		"cookie-parser": "^1.4.6",
@@ -27,6 +28,7 @@
 		"flat": "^5.0.2",
 		"fuzzyset.js": "1.0.6",
 		"geolib": "^3.3.3",
+		"glob": "^7.2.0",
 		"jquery": "^3.6.0",
 		"jsdom": "^19.0.0",
 		"jsonwebtoken": "^8.5.1",
@@ -65,12 +67,13 @@
 	},
 	"devDependencies": {
 		"babel-eslint": "^10.1.0",
+		"env-cmd": "^10.1.0",
 		"eslint": "^8.4.1",
 		"eslint-plugin-meteor": "^7.3.0",
 		"prettier": "^2.5.1"
 	},
 	"scripts": {
-		"start": "meteor npm start"
+		"start": "env-cmd meteor"
 	},
 	"repository": {
 		"type": "git",
