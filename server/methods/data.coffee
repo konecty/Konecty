@@ -404,6 +404,11 @@ Meteor.registerMethod 'data:find:byLookup', 'withUser', 'withAccessForDocument',
 
 	if not model?
 		return new Meteor.Error 'internal-error', "[#{request.document}] Document #{field.document} does not exists"
+	
+	try
+		new RegExp(request.search)
+	catch e
+		return new Meteor.Error 'internal-error', "Invalid search [#{request.search}]"
 
 	query = {}
 	fields =
