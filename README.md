@@ -43,15 +43,6 @@
 
 -   `STORAGE_DIR`: Filesystem directory for file storage
 
-## NODE RED INTEGRATION
-
-Learn about this: [Node-RED](https://nodered.org)
-
--   `NR_ENABLE`: true if you want to enable in process node-red instance
--   `NR_NAMESPACE`: unique identifier for current instance. Default: `flows`
--   `NR_ADMIN`: Nodered admin URL. Default: `/flows`
--   `NR_API`: Nodered rest endpoints prefix. Default" `/api`
-
 ## How to run on Docker
 
 ```
