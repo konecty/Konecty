@@ -93,7 +93,7 @@ import {
 
 			// console.log 'call ->'.blue, "process:#{piece.name}", params
 
-			if (Meteor.default_server.method_handlers[`process:${piece.name}`]) {
+			if (Meteor.server.method_handlers[`process:${piece.name}`]) {
 				piecesReturn[piece.name] = Meteor.call(`process:${piece.name}`, params, options);
 			} else if (piece.document) {
 				piecesReturn[piece.name] = Meteor.call('process:generic', piece.document, piece.name, params, options);
