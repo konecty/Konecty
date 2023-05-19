@@ -261,24 +261,22 @@ Konsistent.History.saveLastOplogTimestamp = function (ts) {
 		const query = { _id: 'LastProcessedOplog' };
 
 		const data = {
-			_id: 'LastProcessedOplog',
-			ts: saveLastOplogTimestampGratherValue,
+			$set: {
+				_id: 'LastProcessedOplog',
+				ts: saveLastOplogTimestampGratherValue,
+			},
 		};
 
 		const options = { upsert: true };
-
 		try {
-			return Konsistent.Models.Konsistent.update(query, data, options);
+			return Konsistent.Models.Konsistent.rawCollection().updateOne(query, data, options);
 		} catch (e) {
 			console.error(e);
-			return NotifyErrors.notify(
-				'SaveLastOplogTimestamp',
-				e({
-					query,
-					data,
-					options,
-				}),
-			);
+			return NotifyErrors.notify('SaveLastOplogTimestamp', {
+				query,
+				data,
+				options,
+			});
 		}
 	};
 

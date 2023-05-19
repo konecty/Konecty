@@ -511,6 +511,7 @@ filterUtils.parseDynamicData = function (filter, keyword, data) {
 				value: get(data, condition.value.replace(keyword + '.', ''))
 			};
 		}
+		return condition;
 	};
 
 	if (isArray(filter.conditions) && size(filter.conditions) > 0) {

@@ -36,14 +36,6 @@ process.on('SIGUSR2', function () {
 	}
 });
 
-Picker.middleware(function (req, res, next) {
-	let data = '';
-	req.startTime = process.hrtime();
-	req.on('data', chunk => (data += chunk));
-	req.on('end', () => (req.rawBody = data));
-	next();
-});
-
 Picker.middleware(cookieParser());
 
 var convertObjectIdsToOid = function (values) {
@@ -70,14 +62,12 @@ var convertObjectIdsToOid = function (values) {
 // Add res.send method and res.headers object to be sent on res.send
 // Add res.set and res.get to handle response headers
 Picker.middleware(function (req, res, next) {
+	req.startTime = process.hrtime();
+
 	req.notifyError = function (type, message, options) {
 		options = options || {};
 		options.url = req.url;
 		options.req = req;
-
-		if (isString(req.rawBody)) {
-			options.rawBody = JSON.parse(req.rawBody);
-		}
 
 		options.user = {
 			_id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
@@ -144,8 +134,6 @@ Picker.middleware(function (req, res, next) {
 
 		if (response instanceof Error) {
 			console.log(`Error: ${response.message}`.red);
-			console.log(response);
-
 			response = {
 				success: false,
 				errors: [
@@ -156,7 +144,7 @@ Picker.middleware(function (req, res, next) {
 				],
 			};
 
-			status = 200;
+			// status = 200;
 		}
 
 		if (!isBuffer(response)) {

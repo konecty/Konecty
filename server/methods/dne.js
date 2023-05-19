@@ -1,14 +1,11 @@
 import { isString, isNumber, size, get } from 'lodash';
 const connection = {};
 
-const getUtilDb = function() {
+const getUtilDb = function () {
 	const Mongodb = MongoInternals.NpmModule;
 	const { MongoClient } = Mongodb;
 
-	var mongoClient = new MongoClient(process.env.MONGO_URL, {
-		auto_reconnect: true,
-		poolSize: 2
-	});
+	var mongoClient = new MongoClient(process.env.MONGO_URL);
 
 	mongoClient.connect((err, mongoClient) => {
 		connection.db = mongoClient.db('utils');
@@ -17,7 +14,7 @@ const getUtilDb = function() {
 
 getUtilDb();
 
-const accentToRegex = function(str) {
+const accentToRegex = function (str) {
 	str = str.toLowerCase();
 
 	str = str.replace('a', '[aàáâãäåæ]');
@@ -50,7 +47,7 @@ Meteor.methods({
 				init: 1,
 				end: 1,
 				city: 1,
-				state: 1
+				state: 1,
 			},
 			sort: {
 				country: 1,
@@ -61,8 +58,8 @@ Meteor.methods({
 				number: 1,
 				complement: 1,
 				postalCode: 1,
-				placeType: 1
-			}
+				placeType: 1,
+			},
 		};
 
 		let find = placeCollection.find(query, options);
@@ -90,13 +87,13 @@ Meteor.methods({
 					_id: 0,
 					postalCode: 1,
 					city: 1,
-					state: 1
+					state: 1,
 				},
 				sort: {
 					state: 1,
 					city: 1,
-					postalCode: 1
-				}
+					postalCode: 1,
+				},
 			};
 
 			find = cityCollection.find(query, options);
@@ -122,11 +119,11 @@ Meteor.methods({
 				_id: 0,
 				postalCode: 1,
 				city: 1,
-				state: 1
+				state: 1,
 			},
 			sort: {
-				city: 1
-			}
+				city: 1,
+			},
 		};
 
 		const find = cityCollection.find(query, options);
@@ -159,11 +156,11 @@ Meteor.methods({
 				district: 1,
 				postalCode: 1,
 				city: 1,
-				state: 1
+				state: 1,
 			},
 			sort: {
-				district: 1
-			}
+				district: 1,
+			},
 		};
 
 		const find = districtCollection.find(query, options);
@@ -186,10 +183,7 @@ Meteor.methods({
 			}
 
 			if (district !== '*') {
-				query.$and = [
-					{ startNeighbourhood: new RegExp(accentToRegex(district), 'i') },
-					{ startNeighbourhood: { $nin: districts } }
-				];
+				query.$and = [{ startNeighbourhood: new RegExp(accentToRegex(district), 'i') }, { startNeighbourhood: { $nin: districts } }];
 			} else {
 				query.startNeighbourhood = { $nin: districts };
 			}
@@ -201,21 +195,21 @@ Meteor.methods({
 					_id: {
 						city: '$city',
 						state: '$state',
-						startNeighbourhood: '$startNeighbourhood'
+						startNeighbourhood: '$startNeighbourhood',
 					},
 					district: {
-						$first: '$startNeighbourhood'
+						$first: '$startNeighbourhood',
 					},
 					postalCode: {
-						$first: '$postalCode'
+						$first: '$postalCode',
 					},
 					city: {
-						$first: '$city'
+						$first: '$city',
 					},
 					state: {
-						$first: '$state'
-					}
-				}
+						$first: '$state',
+					},
+				},
 			};
 
 			const project = {
@@ -225,14 +219,14 @@ Meteor.methods({
 					postalCode: 1,
 					placeType: 1,
 					city: 1,
-					state: 1
-				}
+					state: 1,
+				},
 			};
 
 			const sort = {
 				$sort: {
-					place: 1
-				}
+					place: 1,
+				},
 			};
 
 			const pipeline = [match, group, project, sort];
@@ -259,7 +253,7 @@ Meteor.methods({
 
 		const query = {
 			state,
-			city
+			city,
 		};
 
 		if (district !== '*') {
@@ -273,10 +267,7 @@ Meteor.methods({
 		if (number && number !== '*' && /^\d+$/.test(number)) {
 			number = parseInt(number);
 
-			query['$and'] = [
-				{ $or: [{ init: { $exists: 0 } }, { init: { $lte: number } }] },
-				{ $or: [{ end: { $exists: 0 } }, { end: { $gte: number } }] }
-			];
+			query['$and'] = [{ $or: [{ init: { $exists: 0 } }, { init: { $lte: number } }] }, { $or: [{ end: { $exists: 0 } }, { end: { $gte: number } }] }];
 
 			if (number % 2 === 0) {
 				query.even = true;
@@ -291,33 +282,33 @@ Meteor.methods({
 				_id: {
 					city: '$city',
 					state: '$state',
-					place: '$place'
+					place: '$place',
 				},
 				district: {
-					$first: '$startNeighbourhood'
+					$first: '$startNeighbourhood',
 				},
 				postalCode: {
-					$addToSet: '$postalCode'
+					$addToSet: '$postalCode',
 				},
 				placeType: {
-					$first: '$placeType'
+					$first: '$placeType',
 				},
 				init: {
-					$min: '$init'
+					$min: '$init',
 				},
 				end: {
-					$max: '$end'
+					$max: '$end',
 				},
 				city: {
-					$first: '$city'
+					$first: '$city',
 				},
 				state: {
-					$first: '$state'
+					$first: '$state',
 				},
 				place: {
-					$first: '$place'
-				}
-			}
+					$first: '$place',
+				},
+			},
 		};
 
 		const project = {
@@ -330,14 +321,14 @@ Meteor.methods({
 				end: 1,
 				city: 1,
 				state: 1,
-				place: 1
-			}
+				place: 1,
+			},
 		};
 
 		const sort = {
 			$sort: {
-				place: 1
-			}
+				place: 1,
+			},
 		};
 
 		const pipeline = [match, group, project, sort];
@@ -382,5 +373,5 @@ Meteor.methods({
 		utils.unicodeSortArrayOfObjectsByParam(results, 'place');
 
 		return results;
-	}
+	},
 });
