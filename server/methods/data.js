@@ -195,7 +195,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 	var options = {
 		limit: parseInt(request.limit),
-		skip: parseInt(request.start),
+		skip: request.start != null ? parseInt(request.start) : 0,
 		fields,
 		sort,
 	};
@@ -700,7 +700,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 
 	let options = {
 		limit: parseInt(request.limit),
-		skip: parseInt(request.start),
+		skip: request.start != null ? parseInt(request.start) : 0,
 		fields,
 		sort,
 	};
