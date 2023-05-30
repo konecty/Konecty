@@ -1,7 +1,7 @@
 /*
  * @TODO test sincrony
  */
-import { isEmpty, bind, isObject, isString, uniq, intersection, isArray, compact, has, get, size, keys } from 'lodash';
+import { bind, compact, get, has, intersection, isArray, isEmpty, isObject, isString, keys, size, uniq } from 'lodash';
 import { parse } from 'mongodb-uri';
 
 Konsistent = {};
@@ -627,12 +627,9 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 
 		pipeline.push(group);
 
-		// Wrap aggregate method into an async metero's method
-		const aggregate = Meteor.wrapAsync(bind(collection.aggregate, collection));
-
 		// Try to execute agg and log error if fails
 		try {
-			const resultsCursor = aggregate(pipeline, { cursor: { batchSize: 1 } });
+			const resultsCursor = collection.aggregate(pipeline, { cursor: { batchSize: 1 } });
 			const aggregateToArray = Meteor.wrapAsync(resultsCursor.toArray, resultsCursor);
 
 			let result = aggregateToArray();
