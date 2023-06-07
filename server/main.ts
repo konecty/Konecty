@@ -4,8 +4,10 @@ import { NotifyErrors } from '/imports/utils/errors';
 import '/server/startup/_loadMetaObjects.js';
 import '/server/startup/color.js';
 import '/server/startup/konsistent.js';
+import '/server/methods/index';
 import '/server/routes/api/translation';
 import '/server/routes/rest';
+import '/server/publications/changeStream';
 
 process.on('uncaughtException', error => NotifyErrors.notify('uncaughtException', error));
 
