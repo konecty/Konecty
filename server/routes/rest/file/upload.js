@@ -9,6 +9,9 @@ import getStorage from './getStorage';
 import getFile from './getFile';
 import detectContentType from './detectContentType';
 
+import { app } from '/server/lib/routes/app'
+import { middlewares } from '/server/lib/routes/middlewares';
+
 const _writeFile = promisify(writeFile);
 const _unlink = promisify(unlink);
 const _rename = promisify(rename);

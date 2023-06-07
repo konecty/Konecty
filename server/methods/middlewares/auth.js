@@ -1,4 +1,7 @@
+import { Meteor } from 'meteor/meteor';
 import { isDate, isObject, get, has, toLower, size } from 'lodash';
+
+import { accessUtils } from '/imports/utils/konutils/accessUtils';
 
 // Middleware to get user and populate into request
 Meteor.registerMiddleware('withUser', function(request) {

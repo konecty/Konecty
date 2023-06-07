@@ -1,3 +1,6 @@
+import { Meteor } from 'meteor/meteor';
+import { utils } from '/imports/utils/konutils/utils';
+
 /* Simualte merge
 	@TODO: Permissões?
 

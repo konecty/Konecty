@@ -1,4 +1,10 @@
+import { Meteor } from 'meteor/meteor';
 import { isString, get, has } from 'lodash';
+
+import { app } from '/server/lib/routes/app.js';
+import { MetaObject } from '/imports/model/MetaObject';
+import { sessionUtils } from '/imports/utils/sessionUtils';
+
 
 app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 	let domain;

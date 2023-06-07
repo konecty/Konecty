@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
 import {
 	isArray,
@@ -18,6 +19,9 @@ import {
 	some,
 	size
 } from 'lodash';
+
+import { metaUtils } from '/imports/utils/konutils/metaUtils';
+import { utils } from '/imports/utils/konutils/utils';
 
 /* Process submit
 	@param authTokenId
@@ -52,7 +56,9 @@ import {
 				field: value
 			map:
 				contact: 'contact'
-*/ Meteor.registerMethod(
+*/ 
+
+Meteor.registerMethod(
 	'process:submit',
 	'withUser',
 	function(request) {

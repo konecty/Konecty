@@ -1,3 +1,6 @@
+import { app } from '../../../lib/routes/app'
+import { middlewares } from '../../../lib/routes/middlewares';
+
 /* @Add_File */
 app.post('/rest/file2/:document/:recordCode/:fieldName', (req, res) =>
 	middlewares.sessionUserAndGetAccessFor('document')(req, res, function () {

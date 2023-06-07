@@ -1,4 +1,9 @@
+import { Meteor } from 'meteor/meteor';
+
 import { toArray, isObject, isArray, get } from 'lodash';
+
+import { NotifyErrors } from '/imports/utils/errors';
+
 Meteor.registerLogs = false;
 Meteor.registerDoneLogs = false;
 Meteor.registerVerboseLogs = false;

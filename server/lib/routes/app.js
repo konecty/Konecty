@@ -10,6 +10,9 @@ import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
+import { NotifyErrors } from '/imports/utils/errors';
+import { utils } from '/imports/utils/konutils/utils';
+
 REQ_TIMEOUT = 1000 * 300;
 RES_TIMEOUT = 1000 * 300;
 
@@ -258,7 +261,7 @@ const corsOptions = {
 Picker.middleware(cors(corsOptions));
 
 // global helper to register REST endpoints
-global.app = {
+export const app = {
 	get(path, cb) {
 		pickerGet.route(path, function (params, req, res, next) {
 			for (let k in params) {
@@ -300,3 +303,5 @@ global.app = {
 		});
 	},
 };
+
+global.app = app;

@@ -1,3 +1,8 @@
+import { Meteor } from 'meteor/meteor';
+
+import { app } from '/server/lib/routes/app';
+import { sessionUtils } from '/imports/utils/sessionUtils';
+
 app.post('/rest/changeUser/:document/add', (req, res, next) =>
   res.send(
     Meteor.call('changeUser:add', {

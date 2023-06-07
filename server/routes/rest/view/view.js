@@ -1,7 +1,10 @@
 import { isDate } from 'lodash';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
-import getServer from '../../../../lib/getServer';
+import getServer from '/imports/utils/getServer';
+
+import { sessionUtils } from '/imports/utils/sessionUtils';
+import { app } from '/server/lib/routes/app';
 
 const getEnv = () => {
 	if (process.env.KONECTY_MODE === 'development') {

@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 
 import chokidar from 'chokidar';
@@ -8,15 +9,11 @@ import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
+import { Models } from '/imports/model/MetaObject';
 
 const rebuildReferencesDelay = 1000;
 
-Meta = {};
-DisplayMeta = {};
-Access = {};
-References = {};
-Namespace = {};
-MetaObject = new Mongo.Collection('MetaObjects');
+import { MetaObject, Meta, DisplayMeta, Access, References, Namespace } from '/imports/model/MetaObject';
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;

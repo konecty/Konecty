@@ -2,10 +2,7 @@ import moment from 'moment';
 import { mapObjIndexed } from 'ramda';
 
 import { isArray, isObject, map, isString, isDate, reduce, isFunction } from 'lodash';
-
-utils = {
-	...utils
-};
+import { utils } from '/imports/utils/konutils/utils';
 
 utils.accentsTidy = function(s) {
 	if (!_.isString(s)) {

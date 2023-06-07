@@ -1,0 +1,13 @@
+import './auth/authApi';
+import './changeUser/changeUserApi';
+import './file';
+import './file2/file2Api';
+import './comment/commentApi';
+import './health/index';
+import './dne/dne';
+import './changeUser/changeUserApi';
+import './menu/menu';
+import './view/view';
+import './data/dataApi';
+import './rocketchat/livechat';
+import './process/processApi';
