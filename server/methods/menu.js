@@ -9,6 +9,7 @@ import identity from 'lodash/identity';
 
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { MetaObject } from '/imports/model/MetaObject';
 
 /* Get system menu
 	@param authTokenId

@@ -1,3 +1,7 @@
+import { Meteor } from 'meteor/meteor';
+
+import { MetaObject } from '/imports/model/MetaObject';
+
 let readiness = false;
 
 app.get('/readiness', (_, res) => {

@@ -31,6 +31,7 @@ import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { sortUtils } from '/imports/utils/konutils/sortUtils';
 import { utils } from '/imports/utils/konutils/utils';
+import { Meta, Models } from '/imports/model/MetaObject';
 
 /* Get next user of queue
 	@param authTokenId

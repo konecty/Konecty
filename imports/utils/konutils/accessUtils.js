@@ -1,5 +1,7 @@
 import { isArray, isString, isObject, get, has } from 'lodash';
 
+import { Access } from '/imports/model/MetaObject';
+
 export const accessUtils = {
 	getFieldConditions(metaAccess, fieldName) {
 		const accessField = metaAccess.fields && metaAccess.fields[fieldName];
@@ -100,7 +102,7 @@ export const accessUtils = {
 
 			// Try to get named access of module
 			for (var name of accessName) {
-				access = global.Access[`${documentName}:access:${name}`];
+				access = Access[`${documentName}:access:${name}`];
 				if (access) {
 					return access;
 				}
@@ -108,7 +110,7 @@ export const accessUtils = {
 
 			// Try to get named access of Default
 			for (name of accessName) {
-				access = global.Access[`Default:access:${name}`];
+				access = Access[`Default:access:${name}`];
 				if (access) {
 					return access;
 				}

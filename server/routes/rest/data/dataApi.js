@@ -9,6 +9,7 @@ import { app } from '/server/lib/routes/app'
 import { middlewares } from '/server/lib/routes/middlewares';
 import { sessionUtils } from '/imports/utils/sessionUtils';
 import { utils } from '/imports/utils/konutils/utils';
+import { MetaObject } from '/imports/model/MetaObject';
 
 app.post('/rest/data/lead/save', (req, res, next) =>
 	res.send(
