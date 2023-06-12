@@ -2,9 +2,10 @@ import { Meteor } from 'meteor/meteor';
 import { isDate, isObject, get, has, toLower, size } from 'lodash';
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { Meta, Models } from '/imports/model/MetaObject';
 
 // Middleware to get user and populate into request
-Meteor.registerMiddleware('withUser', function(request) {
+Meteor.registerMiddleware('withUser', function (request) {
 	if (this.user) {
 		return;
 	}
@@ -53,7 +54,7 @@ Meteor.registerMiddleware('withUser', function(request) {
 });
 
 // Middleware to get access from document as parameter 'document'
-Meteor.registerMiddleware('withAccessForDocument', function(request) {
+Meteor.registerMiddleware('withAccessForDocument', function (request) {
 	if (this.access) {
 		return;
 	}
@@ -87,7 +88,7 @@ Meteor.registerMiddleware('withAccessForDocument', function(request) {
 });
 
 // Middleware to get meta from document as parameter 'document'
-Meteor.registerMiddleware('withMetaForDocument', function(request) {
+Meteor.registerMiddleware('withMetaForDocument', function (request) {
 	const documentName = request.document;
 
 	// If no param was found with document name return 401 (Unauthorized)
@@ -105,7 +106,7 @@ Meteor.registerMiddleware('withMetaForDocument', function(request) {
 });
 
 // Middleware to get model from document as parameter 'document'
-Meteor.registerMiddleware('withModelForDocument', function(request) {
+Meteor.registerMiddleware('withModelForDocument', function (request) {
 	const documentName = request.document;
 
 	// If no param was found with document name return 401 (Unauthorized)

@@ -8,7 +8,7 @@ import size from 'lodash/size';
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
-import { MetaObject } from '/imports/model/MetaObject';
+import { MetaObject, Models } from '/imports/model/MetaObject';
 
 bcryptHash = Meteor.wrapAsync(hash);
 bcryptCompare = Meteor.wrapAsync(compare);

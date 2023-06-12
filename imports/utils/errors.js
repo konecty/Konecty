@@ -52,6 +52,6 @@ export const NotifyErrors = {
 			},
 		};
 
-		notify(reportError, reportOptions);
+		logger.error({ reportError, reportOptions }, message);
 	},
 };
