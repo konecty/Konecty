@@ -5,7 +5,6 @@ import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'body-parser';
 import { compileFile } from 'swig';
 import { resolve, join } from 'path';
-import { register } from 'bugsnag';
 import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
@@ -19,8 +18,6 @@ RES_TIMEOUT = 1000 * 300;
 const uriObject = parse(process.env.MONGO_URL);
 process.env.dbName = uriObject.database;
 console.log(`[kondata] === ${process.env.dbName} ===`.green);
-
-register('3aff690ae2254498bb9a88dcf8bbb211');
 
 const basePath = resolve('.').split('.meteor')[0];
 let tplPath = 'assets/app/templates';
@@ -142,7 +139,7 @@ Picker.middleware(function (req, res, next) {
 				errors: [
 					{
 						message: response.message,
-						bugsnag: false,
+						notify: false,
 					},
 				],
 			};

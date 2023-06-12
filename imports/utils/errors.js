@@ -38,7 +38,7 @@ export const NotifyErrors = {
 
 		options = options || {};
 
-		if (get(message, 'details.bugsnag') === false) {
+		if (get(message, 'details.notify') === false) {
 			return;
 		}
 

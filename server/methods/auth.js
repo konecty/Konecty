@@ -101,7 +101,7 @@ Meteor.registerMethod('auth:login', function (request) {
 			accessLog.reason = `User inactive [${user}]`;
 			injectRequestInformation(userAgent, accessLog);
 			Models.AccessFailedLog.insert(accessLog);
-			return new Meteor.Error('internal-error', 'Usuário inativo.', { bugsnag: false });
+			return new Meteor.Error('internal-error', 'Usuário inativo.', { notify: false });
 		}
 
 		const stampedToken = Accounts._generateStampedLoginToken();
@@ -142,7 +142,7 @@ Meteor.registerMethod('auth:login', function (request) {
 		};
 	} catch (error) {
 		console.error(error);
-		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`, { bugsnag: false });
+		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`, { notify: false });
 	}
 });
 

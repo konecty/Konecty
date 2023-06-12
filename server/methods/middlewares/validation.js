@@ -3,7 +3,7 @@
 Meteor.registerMiddleware('ifAccessIsCreateable', function (request) {
 	if (this.access.isCreatable !== true) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create records`, {
-			bugsnag: false,
+			notify: false,
 		});
 	}
 });

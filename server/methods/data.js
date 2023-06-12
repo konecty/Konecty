@@ -242,7 +242,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 			errors: [
 				{
 					message: 'Oops something went wrong, please try again later... if this message persisits, please contact our support',
-					bugsnag: false,
+					notify: false,
 				},
 			],
 			data: [],
@@ -1301,7 +1301,7 @@ Meteor.registerMethod(
 			idMapItem = idMap[id];
 			if (idMapItem.exists !== true) {
 				if (idMapItem.userDontHasPermission === true) {
-					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { bugsnag: false }));
+					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { notify: false }));
 				} else {
 					response.errors.push(new Meteor.Error('internal-error', `Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`));
 				}
@@ -1730,7 +1730,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 		} else if (idMapItem.outOfDate === true) {
 			response.errors.push(
 				new Meteor.Error('internal-error', `Existe uma versão mais nova do dado que a que está tentando apagar [${id}]. Tente atualizar a tela e tente apagar novamente.`, {
-					bugsnag: false,
+					notify: false,
 				}),
 			);
 
@@ -1821,7 +1821,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 									new Meteor.Error(
 										'internal-error',
 										`Não é possivel apagar o dado com id:[${request.document}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
-										{ bugsnag: false },
+										{ notify: false },
 									),
 								);
 

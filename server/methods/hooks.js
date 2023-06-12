@@ -12,7 +12,7 @@ Meteor.registerBeforeMethod('startTime', function () {
 	this.startTime = new Date();
 });
 
-Meteor.registerBeforeMethod('bugsnag', function () {
+Meteor.registerBeforeMethod('notify', function () {
 	const context = this;
 
 	this.notifyError = function (type, message, options) {

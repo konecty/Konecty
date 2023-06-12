@@ -847,7 +847,7 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 				var inheritedMetaField = meta.fields[inheritedField.fieldName];
 
 				if (inheritedField.inherit === 'hierarchy_always') {
-					// If inherited field not is a lookup our not is list then notify to bugsnag and ignore process
+					// If inherited field not is a lookup our not is list then notify error and ignore process
 					if (get(inheritedMetaField, 'type') !== 'lookup' || inheritedMetaField.isList !== true) {
 						NotifyErrors.notify('updateLookupReference[hierarchy_always]', new Error('Not lookup or not isList'), {
 							inheritedMetaField,
