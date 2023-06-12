@@ -30,6 +30,7 @@ export class ErrorWithCode extends Error {
 
 export const NotifyErrors = {
 	notify(type, message, options) {
+		logger.trace( { type, message, options }, 'NotifyErrors.notify');
 		if (type instanceof Error && options === null) {
 			options = message;
 			message = type;

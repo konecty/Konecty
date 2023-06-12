@@ -1,16 +1,18 @@
 import { Meteor } from 'meteor/meteor';
 
-import { Models, MetaObject, Namespace } from '/imports/model/MetaObject';
+import { MetaObject, Namespace, Meta } from '/imports/model/MetaObject';
 import { buildReferences } from './buildReferences';
 import { Konsistent } from './consts';
 import { Templates, mailConsumer } from './mailConsumer';
 import './history';
+import { logger } from '/imports/utils/logger';
 
 const rebuildReferences = function () {
 	Konsistent.History.setup();
 
-	console.log('[konsistent] Rebuilding references');
+	logger.info('[konsistent] Rebuilding references');
 	Konsistent.References = buildReferences(Meta);
+	logger.debug('[konsistent] Rebuilding references done');
 };
 
 const registerMeta = function (meta) {
@@ -70,6 +72,7 @@ Konsistent.start = function (MetaObject, Models, rebuildMetas = true) {
 	const MetaObjectQuery = { type: 'document' };
 
 	if (Konsistent._Models.Template) {
+		logger.debug('[konsistent] Registering templates');
 		Konsistent._Models.Template.find({ type: 'email' }).observe({
 			added(record) {
 				registerTemplate(record);
@@ -87,11 +90,11 @@ Konsistent.start = function (MetaObject, Models, rebuildMetas = true) {
 
 	Konsistent.MetaObject.find({ type: 'namespace' }).observe({
 		added(meta) {
-			global.Namespace = meta;
+			Namespace = meta;
 		},
 
 		changed(meta) {
-			global.Namespace = meta;
+			Namespace = meta;
 		},
 	});
 

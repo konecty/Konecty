@@ -8,8 +8,14 @@ import '/server/methods/index';
 import '/server/routes/api/translation';
 import '/server/routes/rest';
 import '/server/publications/changeStream';
+import { logger } from '/imports/utils/logger';
 
-process.on('uncaughtException', error => NotifyErrors.notify('uncaughtException', error));
+if (process.env.NODE_ENV !== 'development') {
+	process.on('uncaughtException', error => {
+		logger.error(error, 'uncaughtException');
+		NotifyErrors.notify('uncaughtException', error);
+	});
+}
 
 const originalMeteorDebug = Meteor._debug;
 Meteor._debug = function (message: any, stack: any, ...args: any[]) {

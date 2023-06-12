@@ -1,5 +1,4 @@
 import { Meteor } from 'meteor/meteor';
-import { Mongo } from 'meteor/mongo';
 
 import chokidar from 'chokidar';
 import glob from 'glob';
@@ -9,11 +8,11 @@ import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
-import { Models } from '/imports/model/MetaObject';
+
+import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
 
 const rebuildReferencesDelay = 1000;
-
-import { MetaObject, Meta, DisplayMeta, Access, References, Namespace } from '/imports/model/MetaObject';
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
@@ -33,7 +32,7 @@ const getIndexes = function (collectionName) {
 
 const rebuildReferences = debounce(function () {
 	console.log('[kondata] Rebuilding references');
-	global.References = {};
+	References = {};
 
 	for (var metaName in Meta) {
 		var meta = Meta[metaName];
@@ -83,6 +82,7 @@ const initialData = _.debounce(
 );
 
 const registerMeta = function (meta) {
+	logger.debug(`Registering meta: ${meta.name}`);
 	if (!meta.collection) {
 		meta.collection = `data.${meta.name}`;
 	}
@@ -109,28 +109,6 @@ const registerMeta = function (meta) {
 			default:
 				Models[meta.name] = new Meteor.Collection(meta.collection);
 		}
-
-		Meteor.publish(`data.${meta.name}`, function (filter, limit) {
-			if (!this.userId) {
-				return this.ready();
-			}
-
-			if (!filter) {
-				filter = {};
-			}
-			return Models[meta.name].find(filter, { limit: limit || 30 });
-		});
-
-		Meteor.publish(`data.${meta.name}.History`, function (filter, limit) {
-			if (!this.userId) {
-				return this.ready();
-			}
-
-			if (!filter) {
-				filter = {};
-			}
-			return Models[`${meta.name}.History`].find(filter, { limit: limit || 30 });
-		});
 
 		const dropIndexes = function () {
 			// Drop data indexes
@@ -308,7 +286,7 @@ const registerMeta = function (meta) {
 				keys = {};
 				options = {
 					name: 'TextIndex',
-					default_language: global.Namespace.language,
+					default_language: Namespace.language,
 					weights: {},
 				};
 
@@ -494,7 +472,9 @@ const fsLoad = () => {
 
 Meteor.startup(function () {
 	if (process.env.METADATA_DIR != null) {
+		logger.info('Loading Meta from directory');
 		return fsLoad();
 	}
+	logger.info('Loading Meta from database');
 	dbLoad();
 });

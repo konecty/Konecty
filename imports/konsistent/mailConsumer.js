@@ -4,10 +4,11 @@ import { each } from 'async';
 import { createTransport } from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
 import EmailTemplates from 'swig-email-templates';
-import { createXOAuth2Generator } from 'xoauth2';
 import { isObject, extend, omit, isEmpty, bind, get, has, join as _join, map } from 'lodash';
 
 import { NotifyErrors } from '/imports/utils/errors';
+import { logger } from '../utils/logger';
+import { Models, MetaObject } from '/imports/model/MetaObject';
 
 export const Templates = {};
 const basePath = resolve('.').split('.meteor')[0];
@@ -47,7 +48,7 @@ export const mailConsumer = {
 		}
 
 		if (isObject(get(namespace, 'emailServers')) && get(namespace, `emailServers.${record.server}.useUserCredentials`) === true) {
-			user = Konsistent.Models['User'].findOne(record._user[0]._id, {
+			user = Models['User'].findOne(record._user[0]._id, {
 				fields: { name: 1, emails: 1, emailAuthLogin: 1, emailAuthPass: 1 },
 			});
 			console.log('IF -> user?.emailAuthLogin ->', get(user, 'emailAuthLogin'));
@@ -69,7 +70,7 @@ export const mailConsumer = {
 		}
 
 		if ((!record.from || isEmpty(record.from)) && get(record, '_user.length', 0) > 0) {
-			user = Konsistent.Models['User'].findOne(record._user[0]._id, { fields: { name: 1, emails: 1 } });
+			user = Models['User'].findOne(record._user[0]._id, { fields: { name: 1, emails: 1 } });
 
 			record.from = user.name + ' <' + get(user, 'emails.0.address') + '>';
 		}
@@ -78,7 +79,7 @@ export const mailConsumer = {
 			const err = { message: 'No address to send e-mail to.' };
 			err.host = serverHost || record.server;
 			NotifyErrors.notify('MailError', err, { err });
-			Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+			Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
 			console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
 			return cb();
 		} else {
@@ -117,16 +118,16 @@ export const mailConsumer = {
 							if (err) {
 								err.host = serverHost || record.server;
 								NotifyErrors.notify('MailError', err, { mail, err });
-								Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+								Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
 								console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
 								return cb();
 							}
 
 							if (get(response, 'accepted.length') > 0) {
 								if (record.discard === true) {
-									Konsistent.Models['Message'].remove({ _id: record._id });
+									Models['Message'].remove({ _id: record._id });
 								} else {
-									Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: record.sentStatus || 'Enviada' } });
+									Models['Message'].update({ _id: record._id }, { $set: { status: record.sentStatus || 'Enviada' } });
 								}
 								console.log('📧 ', `Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`.green);
 							}
@@ -155,7 +156,7 @@ export const mailConsumer = {
 				record.subject = Templates[record.template].subject;
 			}
 			record.body = SSR.render(record.template, extend({ message: { _id: record._id } }, record.data));
-			Konsistent.Models['Message'].update({ _id: record._id }, { $set: { body: record.body, subject: record.subject } });
+			Models['Message'].update({ _id: record._id }, { $set: { body: record.body, subject: record.subject } });
 			return mailConsumer.sendEmail(record, cb);
 		}
 
@@ -170,7 +171,7 @@ export const mailConsumer = {
 			Meteor.bindEnvironment(function (err, html, text) {
 				if (err) {
 					NotifyErrors.notify('MailError', err, { record });
-					Konsistent.Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: `${err}` } });
+					Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: `${err}` } });
 					console.log('📧 ', `Email error: ${err}`.red);
 					return cb();
 				}
@@ -181,7 +182,7 @@ export const mailConsumer = {
 	},
 
 	consume() {
-		if (!Konsistent.Models['Message']) {
+		if (!Models['Message']) {
 			return;
 		}
 
@@ -217,7 +218,8 @@ export const mailConsumer = {
 	},
 
 	start() {
-		namespace = Konsistent.MetaObject.findOne({ _id: 'Namespace' });
+		logger.info('Starting mail consumer');
+		namespace = MetaObject.findOne({ _id: 'Namespace' });
 
 		if (isObject(get(namespace, 'emailServers'))) {
 			for (let key in namespace.emailServers) {

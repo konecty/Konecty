@@ -7,6 +7,7 @@ import { NotifyErrors } from '/imports/utils/errors';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
 import { Models } from '/imports/model/MetaObject';
+import { regexUtils } from '/server/lib/regex';
 
 const NS_PER_SEC = 1e9;
 

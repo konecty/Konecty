@@ -52,6 +52,8 @@ Konsistent.History.setup = function () {
 	// Get record that define last processed oplog
 	const lastProcessedOplog = Konsistent.Models.Konsistent.findOne({ _id: 'LastProcessedOplog' });
 
+	console.log('lastProcessedOplog', lastProcessedOplog)
+
 	const metaNames = [];
 
 	for (let metaName in Meta) {
@@ -120,29 +122,7 @@ Konsistent.History.setup = function () {
 	);
 };
 
-// # Define query as tailable to receive insertions
-// options =
-// 	tailable: true
 
-// # Define a cursor with above query
-// global.oplogStream = stream = collection.find(query, options).stream()
-
-// stream.on 'error', Meteor.bindEnvironment (err) ->
-// 	if err? then throw err
-
-// stream.on 'data', Meteor.bindEnvironment (doc) ->
-// 	if doc?
-// 		ns = doc.ns.split '.'
-
-// 		Konsistent.History.processOplogItem doc
-
-// Process each result from tailable cursor bindind into Meteor's fibers
-// cursor.each Meteor.bindEnvironment (err, doc) ->
-// 	if err? then throw err
-// 	if doc?
-// 		ns = doc.ns.split '.'
-
-// 		Konsistent.History.processOplogItem doc
 
 // Process each oplog item to verify if there are data to save as history
 Konsistent.History.processOplogItem = function (doc) {
