@@ -1,11 +1,10 @@
-
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
 import { isString, isObject, isDate, isArray } from 'lodash';
 import { flatten } from 'flat';
 import { Workbook } from 'excel4node';
 
-import { app } from '/server/lib/routes/app'
+import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
 import { sessionUtils } from '/imports/utils/sessionUtils';
 import { utils } from '/imports/utils/konutils/utils';
@@ -16,14 +15,14 @@ app.post('/rest/data/lead/save', (req, res, next) =>
 		Meteor.call('data:lead:save', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			lead: req.body.lead,
-			save: req.body.save
-		})
-	)
+			save: req.body.save,
+		}),
+	),
 );
 
 /* @Find_Records */
 // Converted to method
-app.get('/rest/data/:document/find', function(req, res, next) {
+app.get('/rest/data/:document/find', function (req, res, next) {
 	if (isString(req.params.query.filter)) {
 		req.params.query.filter = JSON.parse(req.params.query.filter);
 	}
@@ -40,13 +39,13 @@ app.get('/rest/data/:document/find', function(req, res, next) {
 			limit: req.params.query.limit,
 			start: req.params.query.start,
 			withDetailFields: req.params.query.withDetailFields,
-			getTotal: true
-		})
+			getTotal: true,
+		}),
 	);
 });
 
 // Converted to method
-app.post('/rest/data/:document/find', function(req, res, next) {
+app.post('/rest/data/:document/find', function (req, res, next) {
 	if (isObject(req.body)) {
 		req.params.query.filter = req.body;
 	}
@@ -63,8 +62,8 @@ app.post('/rest/data/:document/find', function(req, res, next) {
 			limit: req.params.query.limit,
 			start: req.params.query.start,
 			withDetailFields: req.params.query.withDetailFields,
-			getTotal: true
-		})
+			getTotal: true,
+		}),
 	);
 });
 
@@ -74,9 +73,9 @@ app.get('/rest/data/:document/queue/next/:queueId', (req, res, next) =>
 		Meteor.call('data:queue:next', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			queueId: req.params.queueId
-		})
-	)
+			queueId: req.params.queueId,
+		}),
+	),
 );
 
 // Converted to method
@@ -87,13 +86,13 @@ app.get('/rest/data/:document/:dataId', (req, res, next) =>
 			document: req.params.document,
 			fields: req.params.query.fields,
 			dataId: req.params.dataId,
-			withDetailFields: req.params.query.withDetailFields
-		})
-	)
+			withDetailFields: req.params.query.withDetailFields,
+		}),
+	),
 );
 
 // Converted to method
-app.get('/rest/data/:document/lookup/:field', function(req, res, next) {
+app.get('/rest/data/:document/lookup/:field', function (req, res, next) {
 	let filter = undefined;
 	if (isString(req.params.query.filter)) {
 		filter = JSON.parse(req.params.query.filter);
@@ -108,8 +107,8 @@ app.get('/rest/data/:document/lookup/:field', function(req, res, next) {
 			filter,
 			start: req.params.query.start,
 			limit: req.params.query.limit,
-			useChangeUserFilter: req.params.query.useChangeUserFilter === 'true'
-		})
+			useChangeUserFilter: req.params.query.useChangeUserFilter === 'true',
+		}),
 	);
 });
 
@@ -120,9 +119,9 @@ app.post('/rest/data/:document', (req, res, next) =>
 		Meteor.call('data:create', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			data: req.body
-		})
-	)
+			data: req.body,
+		}),
+	),
 );
 
 /* @Update_Records */
@@ -132,9 +131,9 @@ app.put('/rest/data/:document', (req, res, next) =>
 		Meteor.call('data:update', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			data: req.body
-		})
-	)
+			data: req.body,
+		}),
+	),
 );
 
 /* @Delete_Records */
@@ -144,9 +143,9 @@ app.del('/rest/data/:document', (req, res, next) =>
 		Meteor.call('data:delete', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
-			data: req.body
-		})
-	)
+			data: req.body,
+		}),
+	),
 );
 
 /* @Create_Relations */
@@ -157,9 +156,9 @@ app.post('/rest/data/:document/relations/:fieldName', (req, res, next) =>
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			fieldName: req.params.fieldName,
-			data: req.body
-		})
-	)
+			data: req.body,
+		}),
+	),
 );
 
 app.post('/rest/data/:document/relations/:fieldName/preview', (req, res, next) =>
@@ -169,9 +168,9 @@ app.post('/rest/data/:document/relations/:fieldName/preview', (req, res, next) =
 			document: req.params.document,
 			fieldName: req.params.fieldName,
 			data: req.body,
-			preview: true
-		})
-	)
+			preview: true,
+		}),
+	),
 );
 
 /* @History */
@@ -182,13 +181,13 @@ app.get('/rest/data/:document/:dataId/history', (req, res, next) =>
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			dataId: req.params.dataId,
-			fields: req.params.query.fields
-		})
-	)
+			fields: req.params.query.fields,
+		}),
+	),
 );
 
 /* @Export_CSV */
-const csvExport = function(headers, data, name, res) {
+const csvExport = function (headers, data, name, res) {
 	// Define separator, sufix and prefix
 	const separator = '","';
 	const prefix = '"';
@@ -197,7 +196,7 @@ const csvExport = function(headers, data, name, res) {
 	// Send headers with content type and file name
 	res.writeHead(200, {
 		'Content-Type': 'application/csv',
-		'Content-Disposition': `attachment; filename=${name}.csv`
+		'Content-Disposition': `attachment; filename=${name}.csv`,
 	});
 
 	// Iterate over keys to send header line
@@ -235,20 +234,20 @@ const csvExport = function(headers, data, name, res) {
 };
 
 /* @Export_XLS */
-const xlsExport = function(headers, data, name, res) {
+const xlsExport = function (headers, data, name, res) {
 	let header, index;
 	const wb = new Workbook();
 	wb.debug = false;
 
 	const headerStyle = wb.createStyle({
 		font: {
-			bold: true
+			bold: true,
 		},
 		fill: {
 			type: 'pattern',
 			patternType: 'solid',
-			fgColor: '#F2F2F2'
-		}
+			fgColor: '#F2F2F2',
+		},
 	});
 
 	const ws = wb.addWorksheet(name);
@@ -297,7 +296,7 @@ const xlsExport = function(headers, data, name, res) {
 
 /* @Export */
 app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
-	middlewares.sessionUserAndGetAccessFor('document')(req, res, function() {
+	middlewares.sessionUserAndGetAccessFor('document')(req, res, function () {
 		// Validate param type
 		let fields;
 		if (!['csv', 'xls'].includes(req.params.type)) {
@@ -312,17 +311,12 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
 		const listMeta = MetaObject.findOne({
 			type: 'list',
 			document: req.params.document,
-			name: req.params.listName
+			name: req.params.listName,
 		});
 
 		// If no meta found then send an error
 		if (!listMeta) {
-			return res.send(
-				new Meteor.Error(
-					'internal-error',
-					`[${req.params.document}] Can't find meta for list ${req.params.listName} of document ${req.params.document}`
-				)
-			);
+			return res.send(new Meteor.Error('internal-error', `[${req.params.document}] Can't find meta for list ${req.params.listName} of document ${req.params.document}`));
 		}
 
 		// Try to get metadata
@@ -378,7 +372,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
 			limit: req.params.query.limit,
 			start: req.params.query.start,
 			withDetailFields: 'true',
-			getTotal: true
+			getTotal: true,
 		});
 
 		// If result is an erro send error
@@ -410,5 +404,5 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res, next) =>
 		} else {
 			csvExport(Object.keys(keys), flatData, name, res);
 		}
-	})
+	}),
 );

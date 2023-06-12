@@ -1,4 +1,4 @@
-@import "_lesshat.import.less";
+@import '_lesshat.import.less';
 *,
 *:before,
 *:after {
@@ -10,13 +10,13 @@
 }
 .cf:before,
 .cf:after {
-	content: " ";
+	content: ' ';
 	display: table;
 }
 .cf:after {
 	clear: both;
 }
-.holder{
+.holder {
 	.cf;
 }
 label {
@@ -30,7 +30,7 @@ label {
 	padding-right: 20px;
 	min-height: 35px;
 	display: table;
-	span{
+	span {
 		display: table-cell;
 		vertical-align: middle;
 		text-align: right;
@@ -40,44 +40,44 @@ label {
 	}
 }
 
-.switch{
+.switch {
 	font-family: inherit;
-	background-color: #FFF;
+	background-color: #fff;
 	font-size: 13px;
 	float: left;
 	width: 65%;
 	position: relative;
 	padding: 9px 3px;
-	i{
+	i {
 		display: block;
 		width: 38px;
 		height: 16px;
-		background-color: #E1E1E1;
+		background-color: #e1e1e1;
 		position: relative;
 		border-radius: 18px;
-		box-shadow: 0 0 4px rgba(0,0,0,0.15) inset;
-		.transition(background-color .15s ease-out);
-		&:after{
-			content: " ";
+		box-shadow: 0 0 4px rgba(0, 0, 0, 0.15) inset;
+		.transition(background-color 0.15s ease-out);
+		&:after {
+			content: ' ';
 			width: 22px;
 			height: 22px;
-			background-color: #F8F8F8;
+			background-color: #f8f8f8;
 			border-radius: 50%;
 			position: absolute;
 			top: -3px;
 			left: -3px;
-			box-shadow: 0 0 3px rgba(0,0,0,0.2);
-			.transition(transform .15s ease-out, background-color .15s ease-out);
-			.inactive &{
+			box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+			.transition(transform 0.15s ease-out, background-color 0.15s ease-out);
+			.inactive & {
 			}
 		}
 	}
 }
-.checked{
-	i{
-		background-color:#9bc3f2;
-		&:after{
-			background-color:#0064d9;
+.checked {
+	i {
+		background-color: #9bc3f2;
+		&:after {
+			background-color: #0064d9;
 			.transform(translateX(100%));
 		}
 	}

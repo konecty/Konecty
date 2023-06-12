@@ -1,5 +1,3 @@
-Template['ReplaceFirst'].helpers({
-});
+Template['ReplaceFirst'].helpers({});
 
-Template['ReplaceFirst'].events({
-});
+Template['ReplaceFirst'].events({});

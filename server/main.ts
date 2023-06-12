@@ -25,5 +25,4 @@ Meteor._debug = function (message: any, stack: any, ...args: any[]) {
 	originalMeteorDebug.apply(this, [message, stack, ...args]);
 };
 
-
 // Accounts.config({forbidClientAccountCreation: true});

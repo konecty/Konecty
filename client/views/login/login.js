@@ -39,11 +39,11 @@ Template.login.events({
 		if (!lbl.hasClass('focus')) {
 			lbl.removeClass('hovered');
 		}
-	}
+	},
 });
 
 // eslint-disable-next-line meteor/no-template-lifecycle-assignments
-Template.login.rendered = function() {
+Template.login.rendered = function () {
 	Login.init();
 	setTimeout(() => Login.start(), 1000);
 };

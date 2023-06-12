@@ -3,86 +3,109 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	</head>
 	<body
-		style="font-family: 'Open Sans','Lucida Grande', tahoma, arial, verdana, sans-serif; line-height: 17px; font-size: 11px; font-style: normal; font-weight: normal; font-variant: normal; text-align: left; color: #393939; margin-top: 4px;"
+		style="
+			font-family: 'Open Sans', 'Lucida Grande', tahoma, arial, verdana, sans-serif;
+			line-height: 17px;
+			font-size: 11px;
+			font-style: normal;
+			font-weight: normal;
+			font-variant: normal;
+			text-align: left;
+			color: #393939;
+			margin-top: 4px;
+		"
 	>
 		<a href="http://my.konecty.com"> <img src="http://cdn-ria.konecty.com/resources/images/logo/konecty.png" /> </a>
 		<p
-			style="color: #4383b4; font-size: 13px; font-weight: #393939; font-family: 'Open Sans','Lucida Grande',tahoma,arial,verdana,sans-serif; line-height: 15px; text-align: left; border-bottom-color: #4383b4; border-bottom-width: 1px; border-bottom-style: solid;"
+			style="
+				color: #4383b4;
+				font-size: 13px;
+				font-weight: #393939;
+				font-family: 'Open Sans', 'Lucida Grande', tahoma, arial, verdana, sans-serif;
+				line-height: 15px;
+				text-align: left;
+				border-bottom-color: #4383b4;
+				border-bottom-width: 1px;
+				border-bottom-style: solid;
+			"
 			align="left"
 		>
 			<b>Informações</b>
 		</p>
-		<table cellpadding="5px" cellspacing="5px" style="width: 100%; margin-top: 11px; border-collapse: collapse;">
+		<table cellpadding="5px" cellspacing="5px" style="width: 100%; margin-top: 11px; border-collapse: collapse">
 			<tr>
-				<td
-					style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right;"
-					align="right"
-				>
+				<td style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right" align="right">
 					<b>Módulo</b>
 				</td>
-				<td style="border-collapse: collapse;">{{ documentName }}</td>
+				<td style="border-collapse: collapse">{{ documentName }}</td>
 			</tr>
 			{% if code %}
 			<tr>
-				<td
-					style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right;"
-					align="right"
-				>
+				<td style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right" align="right">
 					<b>Código</b>
 				</td>
-				<td style="border-collapse: collapse;">{{ code }}</td>
+				<td style="border-collapse: collapse">{{ code }}</td>
 			</tr>
 			{% else %}
 			<tr>
-				<td
-					style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right;"
-					align="right"
-				>
+				<td style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right" align="right">
 					<b>ID único</b>
 				</td>
-				<td style="border-collapse: collapse;">{{ _id }}</td>
+				<td style="border-collapse: collapse">{{ _id }}</td>
 			</tr>
 			{% endif %}
 			<tr>
-				<td
-					style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right;"
-					align="right"
-				>
+				<td style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right" align="right">
 					<b> {{ actionText }} por </b>
 				</td>
-				<td style="border-collapse: collapse;">{{ _updatedBy.name }}</td>
+				<td style="border-collapse: collapse">{{ _updatedBy.name }}</td>
 			</tr>
 			<tr>
-				<td
-					style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right;"
-					align="right"
-				>
+				<td style="border-collapse: collapse; width: 200px; margin-right: 21px; color: rgb(136, 136, 136); text-align: right" align="right">
 					<b> {{ actionText }} em </b>
 				</td>
-				<td style="border-collapse: collapse;">{{ _updatedAt|date('d/m/Y H:i:s', 180) }}</td>
+				<td style="border-collapse: collapse">{{ _updatedAt|date('d/m/Y H:i:s', 180) }}</td>
 			</tr>
 		</table>
 
 		<p
-			style="color: #4383b4; font-size: 13px; font-weight: #393939; font-family: 'Open Sans','Lucida Grande',tahoma,arial,verdana,sans-serif; line-height: 15px; text-align: left; border-bottom-color: #4383b4; border-bottom-width: 1px; border-bottom-style: solid;"
+			style="
+				color: #4383b4;
+				font-size: 13px;
+				font-weight: #393939;
+				font-family: 'Open Sans', 'Lucida Grande', tahoma, arial, verdana, sans-serif;
+				line-height: 15px;
+				text-align: left;
+				border-bottom-color: #4383b4;
+				border-bottom-width: 1px;
+				border-bottom-style: solid;
+			"
 			align="left"
 		>
 			<b>Histórico</b>
 		</p>
-		<table cellpadding="5px" cellspacing="5px" style="width: 100%; margin-top: 11px; border-collapse: collapse;">
+		<table cellpadding="5px" cellspacing="5px" style="width: 100%; margin-top: 11px; border-collapse: collapse">
 			<tr
 				class="firstLine"
-				style="color: #666; font-style: normal; font-family: 'Open Sans','Lucida Grande', tahoma, arial, verdana, sans-serif; line-height: 15px; font-size: 11px; font-weight: bold; font-variant: normal; background-color: #f6f6f6; border-bottom-color: #e5e5e5; border-bottom-style: solid; border-bottom-width: 2px;"
+				style="
+					color: #666;
+					font-style: normal;
+					font-family: 'Open Sans', 'Lucida Grande', tahoma, arial, verdana, sans-serif;
+					line-height: 15px;
+					font-size: 11px;
+					font-weight: bold;
+					font-variant: normal;
+					background-color: #f6f6f6;
+					border-bottom-color: #e5e5e5;
+					border-bottom-style: solid;
+					border-bottom-width: 2px;
+				"
 				bgcolor="#f6f6f6"
 			>
-				<th
-					style="border-collapse: collapse; border-left-style: solid; border-left-width: 1px; border-left-color: #e5e5e5; width:50%"
-				>
+				<th style="border-collapse: collapse; border-left-style: solid; border-left-width: 1px; border-left-color: #e5e5e5; width: 50%">
 					<b>Campo</b>
 				</th>
-				<th
-					style="border-collapse: collapse; border-left-style: solid; border-left-width: 1px; border-left-color: #e5e5e5; width:50%"
-				>
+				<th style="border-collapse: collapse; border-left-style: solid; border-left-width: 1px; border-left-color: #e5e5e5; width: 50%">
 					<b> {% if action == 'delete' %} Valor antigo {% else %} Valor novo {% endif %} </b>
 				</th>
 			</tr>
@@ -91,9 +114,7 @@
 				<td style="border-collapse: collapse; background-color: #{% if loop.index0 % 2 == 0 %}FFF{% else %}F8F8F8{% endif %};">
 					<b> {{ item.field }} </b>
 				</td>
-				<td style="border-collapse: collapse; background-color: #{% if loop.index0 % 2 == 0 %}FFF{% else %}F8F8F8{% endif %};">
-					{{ item.value }}
-				</td>
+				<td style="border-collapse: collapse; background-color: #{% if loop.index0 % 2 == 0 %}FFF{% else %}F8F8F8{% endif %};">{{ item.value }}</td>
 			</tr>
 			{% endfor %}
 		</table>

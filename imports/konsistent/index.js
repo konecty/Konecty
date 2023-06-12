@@ -4,7 +4,7 @@ import { Models, MetaObject, Namespace } from '/imports/model/MetaObject';
 import { buildReferences } from './buildReferences';
 import { Konsistent } from './consts';
 import { Templates, mailConsumer } from './mailConsumer';
-import  './history'
+import './history';
 
 const rebuildReferences = function () {
 	Konsistent.History.setup();

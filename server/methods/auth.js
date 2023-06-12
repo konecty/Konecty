@@ -5,7 +5,6 @@ import { isString, isObject, get, has } from 'lodash';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
 
-
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { MetaObject, Models } from '/imports/model/MetaObject';

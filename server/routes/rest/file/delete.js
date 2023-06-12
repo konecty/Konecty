@@ -4,7 +4,7 @@ import { promisify } from 'util';
 
 import getStorage from './getStorage';
 
-import { app } from '/server/lib/routes/app'
+import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
 
 const _unlink = promisify(unlink);

@@ -1,4 +1,3 @@
 var assert = require('assert');
 
-suite('ReplaceFirst', function () {
-});
+suite('ReplaceFirst', function () {});

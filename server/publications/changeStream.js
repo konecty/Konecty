@@ -1,4 +1,4 @@
-Meteor.publish('changeStream', function(document) {
+Meteor.publish('changeStream', function (document) {
 	if (!this.userId) {
 		return this.ready();
 	}
@@ -11,12 +11,12 @@ Meteor.publish('changeStream', function(document) {
 			const {
 				operationType,
 				fullDocument,
-				documentKey: { _id }
+				documentKey: { _id },
 			} = next;
 
 			this.added(document, _id, {
 				type: operationType === 'replace' ? 'update' : operationType,
-				document: fullDocument
+				document: fullDocument,
 			});
 		});
 

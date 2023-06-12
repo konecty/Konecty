@@ -1,0 +1,7 @@
+.yarn
+.meteor
+dist
+node_modules
+private/metadata/test
+private/less
+client/stylesheets

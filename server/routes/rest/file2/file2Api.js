@@ -1,4 +1,4 @@
-import { app } from '../../../lib/routes/app'
+import { app } from '../../../lib/routes/app';
 import { middlewares } from '../../../lib/routes/middlewares';
 
 /* @Add_File */

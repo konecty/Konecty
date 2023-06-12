@@ -1,4 +1,4 @@
-import './upload'
-import './download'
-import './delete'
-import './image'
+import './upload';
+import './download';
+import './delete';
+import './image';

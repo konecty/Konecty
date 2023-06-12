@@ -4,8 +4,7 @@ import { readFile, createReadStream } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 
-
-import { app } from '/server/lib/routes/app'
+import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
 
 import fixedEncodeURIComponent from './urlencode_u300';
@@ -146,11 +145,10 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 					});
 					if (status === 200) {
 						preprocessBuffer = data;
-					}	
+					}
 				} catch (_) {
 					preprocessBuffer = Buffer.from('R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64');
 				}
-				
 			} else {
 				preprocessBuffer = await _readFile(join(process.env.STORAGE_DIR, `${preprocess}.png`));
 			}

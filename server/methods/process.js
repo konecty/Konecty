@@ -1,24 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
-import {
-	isArray,
-	extend,
-	pluck,
-	each,
-	pick,
-	uniq,
-	isEmpty,
-	first as _first,
-	words,
-	tail,
-	find,
-	compact,
-	clone,
-	has,
-	get,
-	some,
-	size
-} from 'lodash';
+import { isArray, extend, pluck, each, pick, uniq, isEmpty, first as _first, words, tail, find, compact, clone, has, get, some, size } from 'lodash';
 
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { utils } from '/imports/utils/konutils/utils';
@@ -56,90 +38,86 @@ import { utils } from '/imports/utils/konutils/utils';
 				field: value
 			map:
 				contact: 'contact'
-*/ 
+*/
 
-Meteor.registerMethod(
-	'process:submit',
-	'withUser',
-	function(request) {
-		const response = {
-			success: true,
-			processData: {},
-			errors: []
-		};
-
-		if (!isArray(request.data)) {
-			return new Meteor.Error('internal-error', 'Invalid payload');
-		}
-
-		const piecesReturn = {};
-
-		request.data.some(function(piece) {
-			if (!piece.name) {
-				return false;
-			}
-
-			const params = piece.data;
-
-			const options = piece.options || {};
-
-			if (piece.map) {
-				for (let field in piece.map) {
-					const lookup = piece.map[field];
-					const lookupValue = utils.getObjectPathAgg(response.processData, lookup);
-					if (lookupValue) {
-						utils.setObjectByPath(params, field.split('.'), lookupValue);
-					}
-				}
-			}
-
-			if (response.processData['user'] && !params['user']) {
-				params['user'] = response.processData['user'];
-			}
-
-			// console.log 'call ->'.blue, "process:#{piece.name}", params
-
-			if (Meteor.server.method_handlers[`process:${piece.name}`]) {
-				piecesReturn[piece.name] = Meteor.call(`process:${piece.name}`, params, options);
-			} else if (piece.document) {
-				piecesReturn[piece.name] = Meteor.call('process:generic', piece.document, piece.name, params, options);
-			} else {
-				response.success = false;
-				response.errors = [new Meteor.Error('process-invalid-piece', 'Invalid generic piece, no document specified.')];
-				return true;
-			}
-
-			// console.log 'retorno <-'.yellow, piecesReturn[piece.name]
-
-			if (get(piecesReturn, `${piece.name}.success`) !== true) {
-				response.success = false;
-				response.errors = response.errors.concat(piecesReturn[piece.name].errors);
-				return true;
-			}
-
-			response.processData = extend(response.processData, piecesReturn[piece.name].processData);
-
-			return false;
-		});
-
-		if (response.errors.length === 0) {
-			delete response.errors;
-		}
-
-		return response;
-	}
-);
-
-Meteor.registerMethod('process:generic', 'withUser', function(document, name, request) {
+Meteor.registerMethod('process:submit', 'withUser', function (request) {
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
+	};
+
+	if (!isArray(request.data)) {
+		return new Meteor.Error('internal-error', 'Invalid payload');
+	}
+
+	const piecesReturn = {};
+
+	request.data.some(function (piece) {
+		if (!piece.name) {
+			return false;
+		}
+
+		const params = piece.data;
+
+		const options = piece.options || {};
+
+		if (piece.map) {
+			for (let field in piece.map) {
+				const lookup = piece.map[field];
+				const lookupValue = utils.getObjectPathAgg(response.processData, lookup);
+				if (lookupValue) {
+					utils.setObjectByPath(params, field.split('.'), lookupValue);
+				}
+			}
+		}
+
+		if (response.processData['user'] && !params['user']) {
+			params['user'] = response.processData['user'];
+		}
+
+		// console.log 'call ->'.blue, "process:#{piece.name}", params
+
+		if (Meteor.server.method_handlers[`process:${piece.name}`]) {
+			piecesReturn[piece.name] = Meteor.call(`process:${piece.name}`, params, options);
+		} else if (piece.document) {
+			piecesReturn[piece.name] = Meteor.call('process:generic', piece.document, piece.name, params, options);
+		} else {
+			response.success = false;
+			response.errors = [new Meteor.Error('process-invalid-piece', 'Invalid generic piece, no document specified.')];
+			return true;
+		}
+
+		// console.log 'retorno <-'.yellow, piecesReturn[piece.name]
+
+		if (get(piecesReturn, `${piece.name}.success`) !== true) {
+			response.success = false;
+			response.errors = response.errors.concat(piecesReturn[piece.name].errors);
+			return true;
+		}
+
+		response.processData = extend(response.processData, piecesReturn[piece.name].processData);
+
+		return false;
+	});
+
+	if (response.errors.length === 0) {
+		delete response.errors;
+	}
+
+	return response;
+});
+
+Meteor.registerMethod('process:generic', 'withUser', function (document, name, request) {
+	const response = {
+		success: true,
+		processData: {},
+		errors: [],
 	};
 
 	const createRequest = {
 		document,
-		data: request
+		data: request,
 	};
 
 	if (has(request, 'contact._id')) {
@@ -167,11 +145,11 @@ Meteor.registerMethod('process:generic', 'withUser', function(document, name, re
 	return response;
 });
 
-Meteor.registerMethod('process:campaignTarget', 'withUser', function(request) {
+Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
 	};
 
 	if (Namespace.skipCampaignTargetForActiveOpportunities === true) {
@@ -182,16 +160,16 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function(request) {
 					{
 						term: '_id',
 						operator: 'equals',
-						value: request.contact._id
+						value: request.contact._id,
 					},
 					{
 						term: 'activeOpportunities',
 						operator: 'exists',
-						value: true
-					}
-				]
+						value: true,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (size(get(record, 'data')) > 0) {
@@ -206,7 +184,7 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function(request) {
 
 	const createRequest = {
 		document: 'CampaignTarget',
-		data: request
+		data: request,
 	};
 
 	createRequest.data.contact = { _id: request.contact._id };
@@ -228,12 +206,12 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function(request) {
 	return response;
 });
 
-Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
+Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 	let createRequest, opportunity, opportunityId;
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
 	};
 
 	let record = Meteor.call('data:find:all', {
@@ -243,34 +221,27 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 				{
 					term: 'contact._id',
 					operator: 'equals',
-					value: request.contact._id
+					value: request.contact._id,
 				},
 				{
 					term: 'status',
 					operator: 'in',
-					value: Namespace.activeOpportunityStatuses || [
-						'Nova',
-						'Ofertando Imóveis',
-						'Em Visitação',
-						'Proposta',
-						'Contrato',
-						'Pré-Reserva de Lançamentos'
-					]
+					value: Namespace.activeOpportunityStatuses || ['Nova', 'Ofertando Imóveis', 'Em Visitação', 'Proposta', 'Contrato', 'Pré-Reserva de Lançamentos'],
 				},
 				{
 					term: '_user._id',
 					operator: 'equals',
-					value: get(request, 'user._id', '')
-				}
-			]
+					value: get(request, 'user._id', ''),
+				},
+			],
 		},
 		limit: 1,
 		sort: [
 			{
 				property: '_updatedAt',
-				direction: 'DESC'
-			}
-		]
+				direction: 'DESC',
+			},
+		],
 	});
 
 	// don't create an opportunity if contact already has
@@ -284,7 +255,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 			const users = Models['User']
 				.find({ _id: { $in: pluck(opportunity._user, '_id') } })
 				.fetch()
-				.forEach(function(user) {
+				.forEach(function (user) {
 					const emails = [];
 					each(user.emails, email => emails.push(pick(email, 'address')));
 					Models['Message'].insert({
@@ -297,14 +268,14 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 						body: `Nova mensagem do cliente ${opportunity.contact.name.full} (${opportunity.contact.code})`,
 						_createdAt: date,
 						_updatedAt: date,
-						discard: true
+						discard: true,
 					});
 				});
 		}
 	} else {
 		createRequest = {
 			document: 'Opportunity',
-			data: {}
+			data: {},
 		};
 
 		// get info from product to save as interest on opportunity
@@ -318,7 +289,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 				productFilter = { _id: { $in: request.product.ids } };
 			}
 
-			Models['Product'].find(productFilter).forEach(function(product) {
+			Models['Product'].find(productFilter).forEach(function (product) {
 				if (product['inCondominium']) {
 					// @TODO how to decide multiple?
 					createRequest.data['inCondominium'] = product['inCondominium'];
@@ -360,14 +331,14 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 					if (product['sale'].value * 0.85 < createRequest.data['minSale'].value) {
 						createRequest.data['minSale'] = {
 							currency: 'BRL',
-							value: product['sale'].value * 0.85
+							value: product['sale'].value * 0.85,
 						};
 					}
 
 					if (product['sale'].value * 1.15 > createRequest.data['maxSale'].value) {
 						createRequest.data['maxSale'] = {
 							currency: 'BRL',
-							value: product['sale'].value * 1.15
+							value: product['sale'].value * 1.15,
 						};
 					}
 				}
@@ -487,12 +458,12 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 						{
 							term: 'code',
 							operator: 'equals',
-							value: request.product.code
-						}
-					]
+							value: request.product.code,
+						},
+					],
 				},
 				limit: 1,
-				fields: '_id'
+				fields: '_id',
 			});
 
 			// console.log 'record ->'.red,request.product.code,record
@@ -508,7 +479,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 		// console.log 'productsList ->'.yellow, productsList
 
 		if (productsList) {
-			productsList.forEach(function(productId) {
+			productsList.forEach(function (productId) {
 				record = Meteor.call('data:find:all', {
 					document: 'ProductsPerOpportunities',
 					filter: {
@@ -516,17 +487,17 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 							{
 								term: 'product._id',
 								operator: 'equals',
-								value: productId
+								value: productId,
 							},
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: request.contact._id
-							}
-						]
+								value: request.contact._id,
+							},
+						],
 					},
 					limit: 1,
-					fields: '_id'
+					fields: '_id',
 				});
 
 				// console.log 'record ->'.red,request.product.code,record
@@ -538,12 +509,12 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 						data: {
 							status: 'Nova',
 							product: {
-								_id: productId
+								_id: productId,
 							},
 							opportunity: {
-								_id: opportunityId
-							}
-						}
+								_id: opportunityId,
+							},
+						},
 					};
 
 					createRequest.data.contact = { _id: request.contact._id };
@@ -581,11 +552,11 @@ Meteor.registerMethod('process:opportunity', 'withUser', function(request) {
 	return response;
 });
 
-Meteor.registerMethod('process:message', 'withUser', function(request) {
+Meteor.registerMethod('process:message', 'withUser', function (request) {
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
 	};
 
 	const campaign = findCampaign(request.campaign);
@@ -605,7 +576,7 @@ Meteor.registerMethod('process:message', 'withUser', function(request) {
 
 	const createRequest = {
 		document: 'Message',
-		data: request
+		data: request,
 	};
 
 	createRequest.data.contact = [{ _id: request.contact._id }];
@@ -627,11 +598,11 @@ Meteor.registerMethod('process:message', 'withUser', function(request) {
 	return response;
 });
 
-Meteor.registerMethod('process:activity', 'withUser', function(request) {
+Meteor.registerMethod('process:activity', 'withUser', function (request) {
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
 	};
 
 	if (has(request, 'campaign.code') && !has(request, 'campaign._id')) {
@@ -642,11 +613,11 @@ Meteor.registerMethod('process:activity', 'withUser', function(request) {
 					{
 						term: 'code',
 						operator: 'equals',
-						value: parseInt(get(request, 'campaign.code'))
-					}
-				]
+						value: parseInt(get(request, 'campaign.code')),
+					},
+				],
 			},
-			fields: '_id'
+			fields: '_id',
 		});
 
 		if (has(record, 'data.0._id')) {
@@ -656,7 +627,7 @@ Meteor.registerMethod('process:activity', 'withUser', function(request) {
 
 	const createRequest = {
 		document: 'Activity',
-		data: request
+		data: request,
 	};
 
 	if (has(request, 'contact._id')) {
@@ -716,7 +687,7 @@ Meteor.registerMethod('process:activity', 'withUser', function(request) {
 		- Se não, pega o primeiro usuário ativo já responsável pelo cliente
 		- Se não possui um usuário ativo responsável pelo cliente, usa o usuário da conexão (provavelmente o usuário do site)
 */
-Meteor.registerMethod('process:contact', 'withUser', function(request, options) {
+Meteor.registerMethod('process:contact', 'withUser', function (request, options) {
 	let record, result;
 	const context = this;
 	// meta = @meta
@@ -743,7 +714,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	const response = {
 		success: true,
 		processData: {},
-		errors: []
+		errors: [],
 	};
 
 	let codeSent = false;
@@ -758,23 +729,13 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
 	let emailSent = [];
 	if (request.email && !isEmpty(request.email)) {
-		emailSent = emailSent.concat(
-			s(request.email)
-				.trim()
-				.toLowerCase()
-				.value()
-		);
+		emailSent = emailSent.concat(s(request.email).trim().toLowerCase().value());
 	}
 
 	// validate if phone or email was passed
 	if (codeSent === false && emailSent.length === 0 && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [
-			new Meteor.Error(
-				'process-contact-validation',
-				'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.'
-			)
-		];
+		response.errors = [new Meteor.Error('process-contact-validation', 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.')];
 		delete response.processData;
 		return response;
 	}
@@ -791,11 +752,11 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: 'code',
 						operator: 'equals',
-						value: codeSent
-					}
-				]
+						value: codeSent,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -813,11 +774,11 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: 'email.address',
 						operator: 'in',
-						value: emailSent
-					}
-				]
+						value: emailSent,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -836,16 +797,16 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: 'phone.phoneNumber',
 						operator: 'in',
-						value: phoneSent
+						value: phoneSent,
 					},
 					{
 						term: 'name.full',
 						operator: 'contains',
-						value: regexName
-					}
-				]
+						value: regexName,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -862,11 +823,11 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: 'phone.phoneNumber',
 						operator: 'in',
-						value: phoneSent
-					}
-				]
+						value: phoneSent,
+					},
+				],
 			},
-			limit: 1
+			limit: 1,
 		});
 
 		if (has(record, 'data.0')) {
@@ -892,7 +853,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 			const nameParts = words(request.name);
 			contactData.name = {
 				first: _first(nameParts),
-				last: tail(nameParts).join(' ')
+				last: tail(nameParts).join(' '),
 			};
 		}
 	}
@@ -900,7 +861,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	if (emailSent.length > 0) {
 		if (size(get(contact, 'email')) > 0) {
 			let firstEmailNotFound = true;
-			emailSent.forEach(function(emailAddress) {
+			emailSent.forEach(function (emailAddress) {
 				if (!find(compact(contact.email), { address: emailAddress })) {
 					if (firstEmailNotFound) {
 						contactData.email = contact.email;
@@ -908,7 +869,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					}
 
 					return contactData.email.push({
-						address: emailAddress
+						address: emailAddress,
 					});
 				}
 			});
@@ -917,8 +878,8 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
 			emailSent.forEach(emailAddress =>
 				contactData.email.push({
-					address: emailAddress
-				})
+					address: emailAddress,
+				}),
 			);
 		}
 	}
@@ -926,7 +887,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	if (phoneSent.length > 0) {
 		if (size(get(contact, 'phone')) > 0) {
 			let firstPhoneNotFound = true;
-			phoneSent.forEach(function(leadPhone) {
+			phoneSent.forEach(function (leadPhone) {
 				if (!find(compact(contact.phone), { phoneNumber: leadPhone })) {
 					if (firstPhoneNotFound) {
 						contactData.phone = contact.phone;
@@ -935,7 +896,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 
 					return contactData.phone.push({
 						countryCode: 55,
-						phoneNumber: leadPhone
+						phoneNumber: leadPhone,
 					});
 				}
 			});
@@ -945,8 +906,8 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 			phoneSent.forEach(leadPhone =>
 				contactData.phone.push({
 					countryCode: 55,
-					phoneNumber: leadPhone
-				})
+					phoneNumber: leadPhone,
+				}),
 			);
 		}
 	}
@@ -985,9 +946,9 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: 'username',
 						operator: 'equals',
-						value: request.user.username
-					}
-				]
+						value: request.user.username,
+					},
+				],
 			};
 		} else if (request.user._id) {
 			userFilter = {
@@ -995,9 +956,9 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 					{
 						term: '_id',
 						operator: 'equals',
-						value: request.user._id
-					}
-				]
+						value: request.user._id,
+					},
+				],
 			};
 		}
 	}
@@ -1007,7 +968,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 			document: 'User',
 			filter: userFilter,
 			fields: '_id',
-			limit: 1
+			limit: 1,
 		});
 
 		if (size(get(record, 'data')) > 0) {
@@ -1018,7 +979,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 						contactData._user = [];
 					}
 					contactData._user.push({
-						_id: record.data[0]._id
+						_id: record.data[0]._id,
 					});
 				}
 			} else {
@@ -1040,35 +1001,28 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: contact._id
+								value: contact._id,
 							},
 							{
 								term: 'status',
 								operator: 'in',
-								value: Namespace.activeOpportunityStatuses || [
-									'Nova',
-									'Ofertando Imóveis',
-									'Em Visitação',
-									'Proposta',
-									'Contrato',
-									'Pré-Reserva de Lançamentos'
-								]
+								value: Namespace.activeOpportunityStatuses || ['Nova', 'Ofertando Imóveis', 'Em Visitação', 'Proposta', 'Contrato', 'Pré-Reserva de Lançamentos'],
 							},
 							{
 								term: '_user.active',
 								operator: 'equals',
-								value: true
-							}
-						]
+								value: true,
+							},
+						],
 					},
 					limit: 1,
 					sort: [
 						{
 							property: '_updatedAt',
-							direction: 'DESC'
-						}
+							direction: 'DESC',
+						},
 					],
-					fields: '_id, _user'
+					fields: '_id, _user',
 				});
 
 				some(get(record, 'data.0._user'), userFromOpportunity => {
@@ -1097,30 +1051,28 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: contact._id
+								value: contact._id,
 							},
 							{
 								term: '_createdAt',
 								operator: 'greater_or_equals',
-								value: moment()
-									.subtract(10, 'days')
-									.toDate()
+								value: moment().subtract(10, 'days').toDate(),
 							},
 							{
 								term: '_user.active',
 								operator: 'equals',
-								value: true
-							}
-						]
+								value: true,
+							},
+						],
 					},
 					limit: 1,
 					sort: [
 						{
 							property: '_createdAt',
-							direction: 'DESC'
-						}
+							direction: 'DESC',
+						},
 					],
-					fields: '_id, _user'
+					fields: '_id, _user',
 				});
 
 				some(get(record, 'data.0._user'), userFromActivity => {
@@ -1175,11 +1127,11 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 						{
 							term: '_id',
 							operator: 'equals',
-							value: request.campaign._id
-						}
-					]
+							value: request.campaign._id,
+						},
+					],
 				},
-				fields: '_id,targetQueue'
+				fields: '_id,targetQueue',
 			});
 
 			if (has(record, 'data.0.targetQueue')) {
@@ -1244,23 +1196,23 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	if (contact == null) {
 		const createRequest = {
 			document: 'Contact',
-			data: contactData
+			data: contactData,
 		};
 
 		if (contactData.code) {
 			createRequest.ignoreAutoNumber = true;
 		}
 
-        const { fields: { status, type } } = Meteor.call('document', { document: 'Contact' });
+		const {
+			fields: { status, type },
+		} = Meteor.call('document', { document: 'Contact' });
 
 		// Use defaultValue field from status and type metas
 		if (!contactData.status) {
-		    if (status && status.defaultValue)
-			    createRequest.data.status = status.defaultValue;
+			if (status && status.defaultValue) createRequest.data.status = status.defaultValue;
 		}
 		if (!contactData.type) {
-		    if (type && type.defaultValue)
-			    createRequest.data.type = type.maxSelected > 1 || type.isList === true ? [].concat(type.defaultValue) : type.defaultValue;
+			if (type && type.defaultValue) createRequest.data.type = type.maxSelected > 1 || type.isList === true ? [].concat(type.defaultValue) : type.defaultValue;
 		}
 
 		// console.log '[data:create] ->'.yellow, JSON.stringify createRequest, null, '  '
@@ -1271,8 +1223,8 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 			document: 'Contact',
 			data: {
 				ids: [{ _id: contact._id, _updatedAt: { $date: moment(contact._updatedAt).toISOString() } }],
-				data: contactData
-			}
+				data: contactData,
+			},
 		};
 
 		// console.log '[data:update] ->'.yellow, JSON.stringify updateRequest, null, '  '
@@ -1281,7 +1233,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	} else {
 		result = {
 			success: true,
-			data: [contact]
+			data: [contact],
 		};
 	}
 
@@ -1360,7 +1312,7 @@ Meteor.registerMethod('process:contact', 'withUser', function(request, options) 
 	return response;
 });
 
-var findCampaign = function(search) {
+var findCampaign = function (search) {
 	let filter;
 	if (!search) {
 		return null;
@@ -1375,13 +1327,13 @@ var findCampaign = function(search) {
 		filter = {
 			term: 'code',
 			operator: 'equals',
-			value: parseInt(search.code)
+			value: parseInt(search.code),
 		};
 	} else if (has(search, 'identifier')) {
 		filter = {
 			term: 'identifier',
 			operator: 'equals',
-			value: search.identifier
+			value: search.identifier,
 		};
 	}
 
@@ -1392,9 +1344,9 @@ var findCampaign = function(search) {
 	const record = Meteor.call('data:find:all', {
 		document: 'Campaign',
 		filter: {
-			conditions: [filter]
+			conditions: [filter],
 		},
-		fields: '_id'
+		fields: '_id',
 	});
 
 	if (has(record, 'data.0._id')) {
@@ -1403,7 +1355,7 @@ var findCampaign = function(search) {
 	}
 };
 
-var findChannel = function(search) {
+var findChannel = function (search) {
 	if (!search) {
 		return null;
 	}
@@ -1421,11 +1373,11 @@ var findChannel = function(search) {
 					{
 						term: 'identifier',
 						operator: 'equals',
-						value: search.identifier
-					}
-				]
+						value: search.identifier,
+					},
+				],
 			},
-			fields: '_id'
+			fields: '_id',
 		});
 
 		if (has(record, 'data.0._id')) {

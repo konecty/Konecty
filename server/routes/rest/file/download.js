@@ -2,7 +2,7 @@ import axios from 'axios';
 import { join } from 'path';
 import send from 'send';
 
-import { app } from '/server/lib/routes/app'
+import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
 
 import fixedEncodeURIComponent from './urlencode_u300';
