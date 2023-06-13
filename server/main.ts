@@ -1,7 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 
 import '/server/startup/_loadMetaObjects.js';
-import '/server/startup/color.js';
 import '/server/startup/konsistent.js';
 import '/server/methods/index';
 import '/server/routes/api/translation';
