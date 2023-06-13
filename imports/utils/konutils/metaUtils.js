@@ -12,7 +12,12 @@ import isBoolean from 'lodash/isBoolean';
 import has from 'lodash/has';
 import get from 'lodash/get';
 import size from 'lodash/size';
-import changeCase from 'change-case';
+import isFunction from 'lodash/isFunction';
+
+import { camelCase, capitalCase, constantCase, dotCase, headerCase, noCase, paramCase, pascalCase, pathCase, sentenceCase, snakeCase } from 'change-case';
+import { titleCase } from 'title-case';
+import { upperCase } from 'upper-case';
+import { lowerCase } from 'lower-case';
 
 import { NotifyErrors } from '/imports/utils/errors';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
@@ -22,6 +27,23 @@ import { regexUtils } from '/server/lib/regex';
 import { Password } from '/server/lib/password';
 
 const NS_PER_SEC = 1e9;
+
+const CaseFunctions = {
+	camelCase,
+	capitalCase,
+	constantCase,
+	dotCase,
+	headerCase,
+	noCase,
+	paramCase,
+	pascalCase,
+	pathCase,
+	sentenceCase,
+	snakeCase,
+	titleCase,
+	upperCase,
+	lowerCase,
+};
 
 export const metaUtils = {
 	validateAndProcessValueFor(meta, fieldName, value, actionType, model, objectOriginalValues, objectNewValues, idsToUpdate) {
@@ -338,8 +360,8 @@ export const metaUtils = {
 						return result;
 					}
 
-					if (!field.normalization && changeCase[`${field.normalization}Case`]) {
-						value = changeCase[`${field.normalization}Case`](value);
+					if (field.normalization != null && isFunction(CaseFunctions[`${field.normalization}Case`])) {
+						value = CaseFunctions[`${field.normalization}Case`](value);
 					}
 
 					if (isNumber(field.size) && field.size > 0) {
@@ -463,7 +485,7 @@ export const metaUtils = {
 							return result;
 						}
 						if (isString(value[key])) {
-							value[key] = changeCase.titleCase(value[key]);
+							value[key] = titleCase(value[key]);
 							fullName.push(value[key]);
 						}
 					}
