@@ -22,7 +22,7 @@ import { parse } from 'mongodb-uri';
 
 import { NotifyErrors } from '/imports/utils/errors';
 
-import { Meta } from '/imports/model/MetaObject';
+import { Meta, Models, References, MetaByCollection } from '/imports/model/MetaObject';
 import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
@@ -30,10 +30,7 @@ import { utils } from '/imports/utils/konutils/utils';
 import { Konsistent } from './consts';
 import { logger } from '../utils/logger';
 
-Konsistent.MetaByCollection = {};
-Konsistent.Models = {};
 Konsistent.History = {};
-Konsistent.References = {};
 Konsistent.tailHandle = null;
 
 // Get db name from connection string
@@ -47,7 +44,7 @@ if (isEmpty(process.env.DISABLE_KONSISTENT) || process.env.DISABLE_KONSISTENT ==
 const keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_deletedBy', '_deletedBy', '$v'];
 
 // Define collection Konsistent to save last state
-Konsistent.Models.Konsistent = new Meteor.Collection('Konsistent');
+Models.Konsistent = new Meteor.Collection('Konsistent');
 
 const CursorDescription = function (collectionName, selector, options) {
 	this.collectionName = collectionName;
@@ -66,7 +63,7 @@ Konsistent.History.setup = function () {
 	}
 
 	// Get record that define last processed oplog
-	const lastProcessedOplog = Konsistent.Models.Konsistent.findOne({ _id: 'LastProcessedOplog' });
+	const lastProcessedOplog = Models.Konsistent.findOne({ _id: 'LastProcessedOplog' });
 
 	const metaNames = [];
 
@@ -147,8 +144,7 @@ Konsistent.History.processOplogItem = function (doc) {
 	let { _id } = doc.o;
 	let action = 'create';
 	const data = doc.o;
-	let metaName =
-		Konsistent.MetaByCollection[ns[Math.min(2, ns.length - 1)]] || Konsistent.MetaByCollection[`data.${ns[2]}`] || Konsistent.MetaByCollection[ns.slice(1).join('.')];
+	let metaName = MetaByCollection[ns[Math.min(2, ns.length - 1)]] || MetaByCollection[`data.${ns[2]}`] || MetaByCollection[ns.slice(1).join('.')];
 	if (!metaName) {
 		logger.error(doc, `Meta not found for collection [${doc.ns}]`);
 		return;
@@ -214,8 +210,8 @@ Konsistent.History.processOplogItem = function (doc) {
 	// Update documents with relations to this document
 	Konsistent.History.updateRelationReferences(metaName, action, _id, data);
 
-	const totalTime = process.hrtime(startTime);
-	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update relation references for ${metaName}`);
+	const updateRelationsTime = process.hrtime(startTime);
+	logger.debug(`${updateRelationsTime[0]}s ${updateRelationsTime[1] / 1000000}ms => Update relation references for ${metaName}`);
 
 	// Remove some internal data
 	for (key of keysToIgnore) {
@@ -231,8 +227,8 @@ Konsistent.History.processOplogItem = function (doc) {
 	// Save last processed ts
 	Konsistent.History.saveLastOplogTimestamp(doc.ts);
 
-	const totalTime = process.hrtime(startTime);
-	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Save last oplog timestamp`);
+	const oplogTime = process.hrtime(startTime);
+	logger.debug(`${oplogTime[0]}s ${oplogTime[1] / 1000000}ms => Save last oplog timestamp`);
 
 	return Konsistent.History.processAlertsForOplogItem(metaName, action, _id, data, updatedBy, updatedAt);
 };
@@ -262,7 +258,7 @@ Konsistent.History.saveLastOplogTimestamp = function (ts) {
 
 		const options = { upsert: true };
 		try {
-			return Konsistent.Models.Konsistent.rawCollection().updateOne(query, data, options);
+			return Models.Konsistent.rawCollection().updateOne(query, data, options);
 		} catch (e) {
 			logger.error(
 				{
@@ -315,7 +311,7 @@ Konsistent.History.createHistory = function (metaName, action, id, data, updated
 	}
 
 	// Get history collection
-	const history = Konsistent.Models[`${metaName}.History`];
+	const history = Models[`${metaName}.History`];
 
 	// If can't get history collection terminate this method
 	if (!history) {
@@ -338,19 +334,19 @@ Konsistent.History.createHistory = function (metaName, action, id, data, updated
 	try {
 		history.update(historyQuery, historyItem, { upsert: true });
 
-		const totalTime = process.hrtime(startTime);
+		const updateTime = process.hrtime(startTime);
 		// Log operation to shell
 		let log = metaName;
 
 		switch (action) {
 			case 'create':
-				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to create action over  ${log}`;
+				log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to create action over  ${log}`;
 				break;
 			case 'update':
-				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to update action over ${log}`;
+				log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to update action over ${log}`;
 				break;
 			case 'delete':
-				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to delete action over ${log}`;
+				log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to delete action over ${log}`;
 				break;
 		}
 
@@ -364,7 +360,7 @@ Konsistent.History.createHistory = function (metaName, action, id, data, updated
 Konsistent.History.updateRelationReferences = function (metaName, action, id, data) {
 	// Get references from meta
 	let relation, relations, relationsFromDocumentName;
-	const references = Konsistent.References[metaName];
+	const references = References[metaName];
 
 	// Verify if exists reverse relations
 	if (!isObject(references) || !isObject(references.relationsFrom) || Object.keys(references.relationsFrom).length === 0) {
@@ -372,11 +368,11 @@ Konsistent.History.updateRelationReferences = function (metaName, action, id, da
 	}
 
 	// Get model
-	let model = Konsistent.Models[metaName];
+	let model = Models[metaName];
 
 	// If action is delete then get collection trash
 	if (action === 'delete') {
-		model = Konsistent.Models[`${metaName}.Trash`];
+		model = Models[`${metaName}.Trash`];
 	}
 
 	const referencesToUpdate = {};
@@ -461,7 +457,7 @@ Konsistent.History.updateRelationReferences = function (metaName, action, id, da
 			// If action is update and the lookup field of relation was updated go to hitory to update old relation
 			if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
 				// Try to get history model
-				const historyModel = Konsistent.Models[`${metaName}.History`];
+				const historyModel = Models[`${metaName}.History`];
 
 				if (!historyModel) {
 					NotifyErrors.notify('updateRelationReferences', new Error(`Can't get model for document ${metaName}.History`));
@@ -532,7 +528,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 
 	// Get data colletion from native mongodb
 	// const relationMeta = Meta[relation.document];
-	const collection = Konsistent.Models[relation.document]._getCollection();
+	const collection = Models[relation.document]._getCollection();
 
 	// Init update object
 	const valuesToUpdate = {
@@ -655,7 +651,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 	}
 
 	// Try to get reference model
-	const referenceModel = Konsistent.Models[referenceDocumentName];
+	const referenceModel = Models[referenceDocumentName];
 	if (!referenceModel) {
 		return NotifyErrors.notify('updateRelationReference', new Error(`Can't get model for document ${referenceDocumentName}`));
 	}
@@ -692,7 +688,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 Konsistent.History.updateLookupReferences = function (metaName, id, data) {
 	// Get references from meta
 	let field, fieldName, fields;
-	const references = Konsistent.References[metaName];
+	const references = References[metaName];
 
 	// Verify if exists reverse relations
 	if (!isObject(references) || size(keys(references.from)) === 0) {
@@ -700,7 +696,7 @@ Konsistent.History.updateLookupReferences = function (metaName, id, data) {
 	}
 
 	// Get model
-	const model = Konsistent.Models[metaName];
+	const model = Models[metaName];
 
 	// Define object to receive only references that have reference fields in changed data
 	const referencesToUpdate = {};
@@ -775,7 +771,7 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 	}
 
 	// Try to get related model
-	const model = Konsistent.Models[metaName];
+	const model = Models[metaName];
 	if (!model) {
 		return NotifyErrors.notify('updateLookupReference', new Error(`Model ${metaName} does not exists`));
 	}
@@ -839,7 +835,7 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 				// If field is lookup
 				if (get(inheritedMetaField, 'type') === 'lookup') {
 					// Get model to find record
-					const lookupModel = Konsistent.Models[inheritedMetaField.document];
+					const lookupModel = Models[inheritedMetaField.document];
 
 					if (!lookupModel) {
 						logger.error(`Document ${inheritedMetaField.document} not found`);
@@ -955,7 +951,7 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 	}
 
 	const meta = Meta[metaName];
-	const model = Konsistent.Models[metaName];
+	const model = Models[metaName];
 
 	let reverseLookupCount = 0;
 	for (var fieldName in meta.fields) {
@@ -996,7 +992,7 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 				continue;
 			}
 
-			const reverseLookupModel = Konsistent.Models[field.document];
+			const reverseLookupModel = Models[field.document];
 
 			// Mount query and update to remove reverse lookup from another records
 			if (data[field.name] !== undefined) {
@@ -1090,13 +1086,13 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 		return;
 	}
 
-	const model = Konsistent.Models[metaName];
+	const model = Models[metaName];
 
 	if (!model) {
 		return NotifyErrors.notify('processAlertsForOplogItem', new Error(`Can't get model for ${metaName}`));
 	}
 
-	const userModel = Konsistent.Models['User'];
+	const userModel = Models['User'];
 
 	if (!userModel) {
 		return NotifyErrors.notify('processAlertsForOplogItem', new Error("Can't get model for User"));
@@ -1241,7 +1237,7 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 				status: 'Send',
 				discard: true,
 			};
-			Konsistent.Models['Message'].insert(emailData);
+			Models['Message'].insert(emailData);
 		}
 	}
 

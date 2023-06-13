@@ -25,6 +25,7 @@ Meteor._debug = function (message: any, stack: any, ...args: any[]) {
 	if (typeof stack === 'string') {
 		message += ` ${stack}`;
 	}
+	logger.error(message, `Meteor._debug`);
 
 	const error = new Error(message);
 	error.stack = stack;

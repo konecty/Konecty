@@ -13,7 +13,7 @@ import isNumber from 'lodash/isNumber';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
 
-import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models } from '/imports/model/MetaObject';
+import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models, MetaByCollection } from '/imports/model/MetaObject';
 import { logger } from '/imports/utils/logger';
 
 const rebuildReferencesDelay = 1000;
@@ -70,9 +70,9 @@ const tryEnsureIndex = function (model, fields, options) {
 			model._dropIndex(fields);
 			model._ensureIndex(fields, options);
 		} else if (e.toString().indexOf('too many indexes for') !== -1) {
-			logIndexAction('Too many indexes'.red);
+			logIndexAction('Too many indexes');
 		} else {
-			logIndexAction('Index Error: '.red, e);
+			logIndexAction('Index Error: ', e);
 		}
 	}
 };
@@ -91,6 +91,8 @@ const registerMeta = function (meta) {
 		meta.collection = `data.${meta.name}`;
 	}
 	Meta[meta.name] = meta;
+	
+	MetaByCollection[meta.collection] = meta;
 
 	if (meta.type === 'document') {
 		meta.fields._merge = {
@@ -121,7 +123,7 @@ const registerMeta = function (meta) {
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}: ${indexInformation}`.red);
+						logIndexAction(`Drop Index at ${meta.collection}: ${indexInformation}`);
 						Models[meta.name]._dropIndex(indexInformation);
 					}
 				}
@@ -132,7 +134,7 @@ const registerMeta = function (meta) {
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}.Comment: ${indexInformation}`.red);
+						logIndexAction(`Drop Index at ${meta.collection}.Comment: ${indexInformation}`);
 						Models[`${meta.name}.Comment`]._dropIndex(indexInformation);
 					}
 				}
@@ -143,7 +145,7 @@ const registerMeta = function (meta) {
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`.red);
+						logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`);
 						Models[`${meta.name}.History`]._dropIndex(indexInformation);
 					}
 				}

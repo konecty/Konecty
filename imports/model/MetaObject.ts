@@ -10,3 +10,4 @@ export const Access = {};
 export const References = {};
 export const Namespace = {};
 export const Models = {};
+export const MetaByCollection = {};
