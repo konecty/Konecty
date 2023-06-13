@@ -1,5 +1,5 @@
-import { Meteor } from 'meteor/meteor';
-import { get } from 'lodash';
+import get from 'lodash/get';
+
 import { logger } from '/imports/utils/logger';
 
 import { parse } from 'mongodb-uri';

@@ -1,5 +1,11 @@
 import { Meteor } from 'meteor/meteor';
-import { isDate, isObject, get, has, toLower, size } from 'lodash';
+import { Accounts } from 'meteor/accounts-base';
+
+import isDate from 'lodash/isDate'
+import isObject from 'lodash/isObject'
+import get from 'lodash/get'
+import toLower from 'lodash/toLower'
+import size from 'lodash/size'
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { Meta, Models } from '/imports/model/MetaObject';

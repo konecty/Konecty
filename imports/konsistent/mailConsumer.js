@@ -1,4 +1,6 @@
 import { Meteor } from 'meteor/meteor';
+import { SSR } from 'meteor/meteorhacks:ssr';
+
 import { resolve, join } from 'path';
 import { each } from 'async';
 import { createTransport } from 'nodemailer';
@@ -35,7 +37,6 @@ const transporters = {};
 export const mailConsumer = {
 	sendEmail(record, cb) {
 		let user;
-		let email;
 		let server = transporters.default;
 		if (record.server) {
 			if (transporters[record.server] == null) {
@@ -168,7 +169,7 @@ export const mailConsumer = {
 		return emailTemplates.render(
 			record.template,
 			record.data,
-			Meteor.bindEnvironment(function (err, html, text) {
+			Meteor.bindEnvironment(function (err, html) {
 				if (err) {
 					NotifyErrors.notify('MailError', err, { record });
 					Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: `${err}` } });

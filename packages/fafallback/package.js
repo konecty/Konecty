@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 Package.describe({
 	name: 'fafallback',
 	summary: '',

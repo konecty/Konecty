@@ -1,6 +1,8 @@
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { utils } from '/imports/utils/konutils/utils';
 
+import isArray from 'lodash/isArray';
+
 export const lookupUtils = {
 	copyDescriptionAndInheritedFields(lookupField, lookupValue, lookupRecord, meta, actionType, model, objectOriginalValues, objectNewValues, idsToUpdate) {
 		// Remove all values from object to prevent unwanted values
@@ -12,11 +14,11 @@ export const lookupUtils = {
 
 		lookupValue._id = lookupRecord._id;
 
-		if (_.isArray(lookupField.descriptionFields)) {
+		if (isArray(lookupField.descriptionFields)) {
 			utils.copyObjectFieldsByPathsIncludingIds(lookupRecord, lookupValue, lookupField.descriptionFields);
 		}
 
-		if (_.isArray(lookupField.inheritedFields)) {
+		if (isArray(lookupField.inheritedFields)) {
 			for (let inheritedField of lookupField.inheritedFields) {
 				var validation;
 				if (['always', 'hierarchy_always', 'once_readonly'].includes(inheritedField.inherit)) {
@@ -70,7 +72,7 @@ export const lookupUtils = {
 		}
 	},
 	removeInheritedFields(lookupField, objectNewValues) {
-		if (_.isArray(lookupField.inheritedFields)) {
+		if (isArray(lookupField.inheritedFields)) {
 			for (let inheritedField of lookupField.inheritedFields) {
 				if (['always', 'hierarchy_always'].includes(inheritedField.inherit)) {
 					objectNewValues[inheritedField.fieldName] = null;

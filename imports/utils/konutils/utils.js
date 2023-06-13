@@ -1,12 +1,26 @@
+import { Meteor } from 'meteor/meteor';
+import { Mongo, MongoInternals } from 'meteor/mongo';
 import { createContext, runInContext } from 'vm';
 import momentzone from 'moment-timezone';
 import moment from 'moment';
 import request from 'request';
-import { isArray, isDate, isObject, isString, each, has, get, map, reduce, isFunction } from 'lodash';
+
+import isArray from 'lodash/isArray';
+import isDate from 'lodash/isDate';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
+import each from 'lodash/each';
+import has from 'lodash/has';
+import get from 'lodash/get';
+import map from 'lodash/map';
+import reduce from 'lodash/reduce';
+import isFunction from 'lodash/isFunction';
+
 import numberFormat from 'underscore.string/numberFormat';
 
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { mapObjIndexed } from 'ramda';
+import { Meta, Models } from '/imports/model/MetaObject';
 
 export const utils = {
 	deepEqual(a, b) {
@@ -448,7 +462,7 @@ export const utils = {
 
 				result = recursive(field, value);
 
-				var sort = items => items.sort((a, b) => isArray(a));
+				var sort = items => items.sort((a) => isArray(a));
 
 				var resultRecursive = function (items) {
 					if (isArray(items)) {
@@ -567,7 +581,7 @@ export const utils = {
 	},
 
 	accentsTidy(s) {
-		if (!_.isString(s)) {
+		if (!isString(s)) {
 			return '';
 		}
 		let r = s.toLowerCase();

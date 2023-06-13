@@ -1,7 +1,23 @@
 /*
  * @TODO test sincrony
  */
-import { isEmpty, bind, isObject, isString, uniq, intersection, isArray, compact, has, get, size, keys } from 'lodash';
+
+import { Meteor } from 'meteor/meteor';
+import { Mongo, MongoInternals } from 'meteor/mongo';
+
+import isEmpty from 'lodash/isEmpty';
+import bind from 'lodash/bind';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
+import uniq from 'lodash/uniq';
+import intersection from 'lodash/intersection';
+import isArray from 'lodash/isArray';
+import compact from 'lodash/compact';
+import has from 'lodash/has';
+import get from 'lodash/get';
+import size from 'lodash/size';
+import keys from 'lodash/keys';
+
 import { parse } from 'mongodb-uri';
 
 import { NotifyErrors } from '/imports/utils/errors';
@@ -12,6 +28,7 @@ import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
 
 import { Konsistent } from './consts';
+import { logger } from '../utils/logger';
 
 Konsistent.MetaByCollection = {};
 Konsistent.Models = {};
@@ -23,7 +40,7 @@ Konsistent.tailHandle = null;
 const uriObject = parse(process.env.MONGO_URL);
 const dbName = uriObject.database;
 if (isEmpty(process.env.DISABLE_KONSISTENT) || process.env.DISABLE_KONSISTENT === 'false' || process.env.DISABLE_KONSISTENT === '0') {
-	console.log(`[konsistent] === ${dbName} ===`.green);
+	logger.info(`[konsistent] === ${dbName} ===`);
 }
 
 // Define fome keys to remove from saved data in history when data was created or updated
@@ -33,11 +50,10 @@ const keysToIgnore = ['_updatedAt', '_createdAt', '_updatedBy', '_createdBy', '_
 Konsistent.Models.Konsistent = new Meteor.Collection('Konsistent');
 
 const CursorDescription = function (collectionName, selector, options) {
-	const self = this;
-	self.collectionName = collectionName;
-	self.selector = Mongo.Collection._rewriteSelector(selector);
-	self.options = options || {};
-	return self;
+	this.collectionName = collectionName;
+	this.selector = Mongo.Collection._rewriteSelector(selector);
+	this.options = options || {};
+	return this;
 };
 
 // Method to init data obervation of all collections with meta.saveHistory equals to true
@@ -51,8 +67,6 @@ Konsistent.History.setup = function () {
 
 	// Get record that define last processed oplog
 	const lastProcessedOplog = Konsistent.Models.Konsistent.findOne({ _id: 'LastProcessedOplog' });
-
-	console.log('lastProcessedOplog', lastProcessedOplog)
 
 	const metaNames = [];
 
@@ -122,8 +136,6 @@ Konsistent.History.setup = function () {
 	);
 };
 
-
-
 // Process each oplog item to verify if there are data to save as history
 Konsistent.History.processOplogItem = function (doc) {
 	let startTime = process.hrtime();
@@ -138,7 +150,7 @@ Konsistent.History.processOplogItem = function (doc) {
 	let metaName =
 		Konsistent.MetaByCollection[ns[Math.min(2, ns.length - 1)]] || Konsistent.MetaByCollection[`data.${ns[2]}`] || Konsistent.MetaByCollection[ns.slice(1).join('.')];
 	if (!metaName) {
-		console.log(`Meta not found for collection [${doc.ns}]`);
+		logger.error(doc, `Meta not found for collection [${doc.ns}]`);
 		return;
 	}
 	metaName = metaName.name;
@@ -183,20 +195,19 @@ Konsistent.History.processOplogItem = function (doc) {
 	// Update relatinos if action was an update
 	if (action === 'update') {
 		Konsistent.History.updateLookupReferences(metaName, _id, data);
-		if (global.logAllRequests === true) {
-			const totalTime = process.hrtime(startTime);
-			console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update lookup references for ${metaName}`.brightMagenta);
-		}
+
+		const totalTime = process.hrtime(startTime);
+		logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update lookup references for ${metaName}`.brightMagenta);
 	}
 
 	startTime = process.hrtime();
 
 	Konsistent.History.processReverseLookups(metaName, _id, data, action);
 
-	if (global.logAllRequests === true) {
-		const totalTime = process.hrtime(startTime);
-		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process reverse lookups for ${metaName}`.brightMagenta);
-	}
+	const totalTime = process.hrtime(startTime);
+	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process reverse lookups for ${metaName}`.brightMagenta);
+
+	// Parei aqui
 
 	startTime = process.hrtime();
 
@@ -536,7 +547,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 	query[`${relation.lookup}._id`] = lookupId;
 
 	// Get data colletion from native mongodb
-	const relationMeta = Meta[relation.document];
+	// const relationMeta = Meta[relation.document];
 	const collection = Konsistent.Models[relation.document]._getCollection();
 
 	// Init update object
@@ -1249,26 +1260,7 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 			user,
 		};
 
-		if (has(Namespace, 'RocketChat.alertWebhook')) {
-			var urls = [].concat(Namespace.RocketChat.alertWebhook);
-			for (var url of urls) {
-				if (!isEmpty(url)) {
-					HTTP.post(url, { data: alertData }, function (err, response) {
-						if (err) {
-							NotifyErrors.notify('HookRocketChatAlertError', err);
-							console.log('🚀 ', `Rocket.Chat Alert ERROR ${url}`.red, err);
-							return;
-						}
-
-						if (response.statusCode === 200) {
-							return console.log('🚀 ', `${response.statusCode} Rocket.Chat Alert ${url}`.green);
-						} else {
-							return console.log('🚀 ', `${response.statusCode} Rocket.Chat Alert ${url}`.red);
-						}
-					});
-				}
-			}
-		} else if (has(user, 'emails.0.address')) {
+		if (has(user, 'emails.0.address')) {
 			const emailData = {
 				from: 'Konecty Alerts <alerts@konecty.com>',
 				to: get(user, 'emails.0.address'),

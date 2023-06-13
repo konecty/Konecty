@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 import { app } from '../../../lib/routes/app';
 import { middlewares } from '../../../lib/routes/middlewares';
 

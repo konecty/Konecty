@@ -1,5 +1,9 @@
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+
+
 const orig_updateOrCreateUserFromExternalService = Accounts.updateOrCreateUserFromExternalService;
-Accounts.updateOrCreateUserFromExternalService = function (serviceName, serviceData, options) {
+Accounts.updateOrCreateUserFromExternalService = function (serviceName, serviceData) {
 	const userId = Meteor.userId();
 
 	if (!userId) {

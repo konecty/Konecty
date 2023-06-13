@@ -4,7 +4,8 @@
 	"rules": {
 		"meteor/audit-argument-checks": 0,
 		"meteor/template-names": 0,
-		"meteor/eventmap-params": 0
+		"meteor/eventmap-params": 0,
+		"no-undef": ["error"]
 	},
 	"parser": "@typescript-eslint/parser",
 	"parserOptions": {

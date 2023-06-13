@@ -2,6 +2,7 @@ import { Meteor } from 'meteor/meteor';
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { utils } from '/imports/utils/konutils/utils';
+import { Models, Meta } from '/imports/model/MetaObject';
 
 /* List history for a record
 	@param authTokenId

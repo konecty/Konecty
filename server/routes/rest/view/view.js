@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import { isDate } from 'lodash';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';

@@ -1,6 +1,9 @@
 import { Meteor } from 'meteor/meteor';
+import { SSR, Template } from 'meteor/meteorhacks:ssr';
 
-import { MetaObject, Namespace, Meta } from '/imports/model/MetaObject';
+// TODO: Verificar o erro do lint com o Namespace
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Namespace, Meta } from '/imports/model/MetaObject';
 import { buildReferences } from './buildReferences';
 import { Konsistent } from './consts';
 import { Templates, mailConsumer } from './mailConsumer';

@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 import { writeFile, rename, unlink } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
@@ -86,6 +88,7 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 
 			if (coreResponse.success === false) {
 				if (/^s3$/i.test(process.env.STORAGE)) {
+					const storage = getStorage();
 					await storage
 						.deleteObject({
 							Bucket: process.env.S3_BUCKET,

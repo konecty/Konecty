@@ -2,6 +2,8 @@ import { Meteor } from 'meteor/meteor';
 
 import { MetaObject } from '/imports/model/MetaObject';
 
+import { app } from '/server/lib/routes/app';
+
 let readiness = false;
 
 app.get('/readiness', (_, res) => {

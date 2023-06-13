@@ -1,4 +1,8 @@
-import { has } from 'lodash';
+import { Meteor } from 'meteor/meteor';
+
+import has from 'lodash/has';
+
+import { Models } from '/imports/model/MetaObject';
 
 Meteor.methods({
 	undoHistory(meta, historyId, keys, runUpdate) {
@@ -47,7 +51,7 @@ Meteor.methods({
 					updateFields.$set[key] = history.diffs[key].from;
 				}
 
-				Models[meta].update({ _id: dataId }, updateFields, (err, results) => callback(err, { success: true, infos }));
+				Models[meta].update({ _id: dataId }, updateFields, (err) => callback(err, { success: true, infos }));
 			} else {
 				return callback(null, { success: false });
 			}

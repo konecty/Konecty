@@ -1,3 +1,8 @@
+import { Meteor } from 'meteor/meteor';
+
+import isString from 'lodash/isString';
+
+import { Models } from '/imports/model/MetaObject';
 /* Get a list of comments of one record
 	@param authTokenId
 	@param document
@@ -7,11 +12,11 @@ Meteor.registerMethod('comments:find', 'withUser', 'withAccessForDocument', func
 	// Get comment model
 	const modelComment = Models[`${request.document}.Comment`];
 	if (!modelComment) {
-		return new Meteor.Error('internal-error', `Document ${field.document}.Comment does not exists`);
+		return new Meteor.Error('internal-error', `Document ${request.document}.Comment does not exists`);
 	}
 
 	// Validate param dataId
-	if (!_.isString(request.dataId)) {
+	if (!isString(request.dataId)) {
 		return new Meteor.Error('internal-error', 'Param dataId must be a valid string id');
 	}
 
@@ -28,7 +33,7 @@ Meteor.registerMethod('comments:find', 'withUser', 'withAccessForDocument', func
 */
 Meteor.registerMethod('comments:create', 'withUser', 'withAccessForDocument', function (request) {
 	// Validate text field
-	if (!_.isString(request.text) || request.text.length === 0) {
+	if (!isString(request.text) || request.text.length === 0) {
 		return new Meteor.Error('internal-error', 'Comment must be a string with one or more characters');
 	}
 
@@ -45,7 +50,7 @@ Meteor.registerMethod('comments:create', 'withUser', 'withAccessForDocument', fu
 	}
 
 	// Validate param dataId
-	if (!_.isString(request.dataId)) {
+	if (!isString(request.dataId)) {
 		return new Meteor.Error('internal-error', 'Param dataId must be a valid string id');
 	}
 

@@ -1,9 +1,27 @@
 import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
-import { isArray, extend, pluck, each, pick, uniq, isEmpty, first as _first, words, tail, find, compact, clone, has, get, some, size } from 'lodash';
+
+import isArray from 'lodash/isArray';
+import extend from 'lodash/extend';
+import map from 'lodash/map';
+import each from 'lodash/each';
+import pick from 'lodash/pick';
+import uniq from 'lodash/uniq';
+import isEmpty from 'lodash/isEmpty';
+import _first from 'lodash/first';
+import words from 'lodash/words';
+import tail from 'lodash/tail';
+import find from 'lodash/find';
+import compact from 'lodash/compact';
+import clone from 'lodash/clone';
+import has from 'lodash/has';
+import get from 'lodash/get';
+import some from 'lodash/some';
+import size from 'lodash/size';
 
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { utils } from '/imports/utils/konutils/utils';
+import { Meta, Namespace, Models } from '/imports/model/MetaObject';
 
 /* Process submit
 	@param authTokenId
@@ -252,8 +270,8 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 		// console.log 'oportunidade já existe'.magenta, opportunityId
 		if (Namespace.alertUserOnExistingOpportunity) {
 			const date = new Date();
-			const users = Models['User']
-				.find({ _id: { $in: pluck(opportunity._user, '_id') } })
+			Models['User']
+				.find({ _id: { $in: map(opportunity._user, '_id') } })
 				.fetch()
 				.forEach(function (user) {
 					const emails = [];
@@ -689,7 +707,7 @@ Meteor.registerMethod('process:activity', 'withUser', function (request) {
 */
 Meteor.registerMethod('process:contact', 'withUser', function (request, options) {
 	let record, result;
-	const context = this;
+	// const context = this;
 	// meta = @meta
 
 	// # Some validations of payload
@@ -729,7 +747,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 	let emailSent = [];
 	if (request.email && !isEmpty(request.email)) {
-		emailSent = emailSent.concat(s(request.email).trim().toLowerCase().value());
+		emailSent = emailSent.concat(`${request.email}`.trim().toLowerCase().value());
 	}
 
 	// validate if phone or email was passed
@@ -1246,7 +1264,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	} else {
 		response.processData['contact'] = result.data[0];
 
-		const contactId = result.data[0]._id;
+		// const contactId = result.data[0]._id;
 
 		// set _user from created contact
 		if (!contactUser) {

@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
 import isEmpty from 'lodash/isEmpty';
 
 import { MetaObject, Models } from '/imports/model/MetaObject';

@@ -1,3 +1,8 @@
+import { Meteor } from 'meteor/meteor';
+
+import { Models } from '/imports/model/MetaObject';
+
+
 Meteor.publish('changeStream', function (document) {
 	if (!this.userId) {
 		return this.ready();

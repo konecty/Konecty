@@ -5,7 +5,6 @@ import { promisify } from 'util';
 import { join } from 'path';
 
 import { app } from '/server/lib/routes/app';
-import { middlewares } from '/server/lib/routes/middlewares';
 
 import fixedEncodeURIComponent from './urlencode_u300';
 

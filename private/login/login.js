@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-undef */
 /*!
  * Joseph Myer's md5() algorithm wrapped in a self-invoked function to prevent
  * global namespace polution, modified to hash unicode characters as UTF-8.

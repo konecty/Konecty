@@ -16,7 +16,6 @@ underscore@1.0.13
 sergeyt:typeahead
 reactive-var@1.0.12
 konecty:methods-middleware
-konecty:change-case
 
 npm-bcrypt@0.9.3
 sha@1.0.9

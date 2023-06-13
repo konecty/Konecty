@@ -1,11 +1,18 @@
 import moment from 'moment';
 import { mapObjIndexed } from 'ramda';
 
-import { isArray, isObject, map, isString, isDate, reduce, isFunction } from 'lodash';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import map from 'lodash/map';
+import isString from 'lodash/isString';
+import isDate from 'lodash/isDate';
+import reduce from 'lodash/reduce';
+import isFunction from 'lodash/isFunction';
+
 import { utils } from '/imports/utils/konutils/utils';
 
 utils.accentsTidy = function (s) {
-	if (!_.isString(s)) {
+	if (!isString(s)) {
 		return '';
 	}
 	let r = s.toLowerCase();

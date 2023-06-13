@@ -1,3 +1,6 @@
+import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+import { Accounts } from 'meteor/accounts-base';
 //
 /* @DEPENDS_ON_META */
 import { isObject, get } from 'lodash';

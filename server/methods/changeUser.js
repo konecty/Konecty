@@ -1,4 +1,9 @@
-import { map } from 'lodash';
+import { Meteor } from 'meteor/meteor';
+
+import map from 'lodash/map';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
 
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { utils } from '/imports/utils/konutils/utils';
@@ -13,24 +18,24 @@ const validateRequest = function (request, access) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to change users`);
 	}
 
-	if (!_.isArray(request.users) || request.users.length === 0) {
+	if (!isArray(request.users) || request.users.length === 0) {
 		return new Meteor.Error('internal-error', `[${request.document}] You need to provide the property [users] as an array with at least one item`, { request });
 	}
 
 	for (let user of request.users) {
-		if (!_.isObject(user) || !_.isString(user._id)) {
+		if (!isObject(user) || !isString(user._id)) {
 			return new Meteor.Error('internal-error', `[${request.document}] Each user must be and Object with an [_id] as String`, {
 				request,
 			});
 		}
 	}
 
-	if (!_.isArray(request.ids) || request.ids.length === 0) {
+	if (!isArray(request.ids) || request.ids.length === 0) {
 		return new Meteor.Error('internal-error', `[${request.document}] You need to provide the property [ids] as an array with at least one item`, { request });
 	}
 
 	for (let id of request.ids) {
-		if (_.isString(id) !== true) {
+		if (isString(id) !== true) {
 			return new Meteor.Error('internal-error', `[${request.document}] Each id must be String`, { request });
 		}
 	}
@@ -231,20 +236,20 @@ Meteor.registerMethod('changeUser:replace', 'withUser', 'withAccessForDocument',
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to change users`);
 	}
 
-	if (!_.isObject(request.from) || !_.isString(request.from._id)) {
+	if (!isObject(request.from) || !isString(request.from._id)) {
 		return new Meteor.Error('internal-error', `[${request.document}] You need to provide the property [from] as an Object with an [_id] as String`, { request });
 	}
 
-	if (!_.isObject(request.to) || !_.isString(request.to._id)) {
+	if (!isObject(request.to) || !isString(request.to._id)) {
 		return new Meteor.Error('internal-error', `[${request.document}] You need to provide the property [to] as an Object with an [_id] as String`, { request });
 	}
 
-	if (!_.isArray(request.ids) || request.ids.length === 0) {
+	if (!isArray(request.ids) || request.ids.length === 0) {
 		return new Meteor.Error('internal-error', `[${request.document}] You need to provide the property [ids] as an array with at least one item`, { request });
 	}
 
 	for (let id of request.ids) {
-		if (_.isString(id) !== true) {
+		if (isString(id) !== true) {
 			return new Meteor.Error('internal-error', `[${request.document}] Each id must be String`, { request });
 		}
 	}
@@ -338,7 +343,7 @@ Meteor.registerMethod('changeUser:countInactive', 'withUser', 'withAccessForDocu
 	}
 
 	for (let id of request.ids) {
-		if (_.isString(id) !== true) {
+		if (isString(id) !== true) {
 			return new Meteor.Error('internal-error', `[${request.document}] Each id must be String`, { request });
 		}
 	}
@@ -381,7 +386,7 @@ Meteor.registerMethod('changeUser:removeInactive', 'withUser', 'withAccessForDoc
 	}
 
 	for (let id of request.ids) {
-		if (_.isString(id) !== true) {
+		if (isString(id) !== true) {
 			return new Meteor.Error('internal-error', `[${request.document}] Each id must be String`, { request });
 		}
 	}

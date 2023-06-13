@@ -1,6 +1,9 @@
 /*
  * @TODO analize Meteor.Error(500, 'Internal server error')
  */
+import { Picker } from 'meteor/meteorhacks:picker';
+import { EJSON } from 'meteor/ejson';
+
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'body-parser';
 import { compileFile } from 'swig';
@@ -12,8 +15,8 @@ import cors from 'cors';
 import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
 
-REQ_TIMEOUT = 1000 * 300;
-RES_TIMEOUT = 1000 * 300;
+// const RES_TIMEOUT = 1000 * 300;
+// const REQ_TIMEOUT = 1000 * 300;
 
 const uriObject = parse(process.env.MONGO_URL);
 process.env.dbName = uriObject.database;
@@ -227,10 +230,10 @@ Picker.middleware(function (req, res, next) {
 });
 
 // register Picker filters based on HTTP methods
-const pickerGet = Picker.filter((req, res) => req.method === 'GET');
-const pickerPost = Picker.filter((req, res) => req.method === 'POST');
-const pickerPut = Picker.filter((req, res) => req.method === 'PUT');
-const pickerDel = Picker.filter((req, res) => req.method === 'DELETE' || req.method === 'DEL');
+const pickerGet = Picker.filter(req => req.method === 'GET');
+const pickerPost = Picker.filter(req => req.method === 'POST');
+const pickerPut = Picker.filter(req => req.method === 'PUT');
+const pickerDel = Picker.filter(req => req.method === 'DELETE' || req.method === 'DEL');
 
 Picker.middleware(json({ limit: '20mb' }));
 Picker.middleware(urlencoded({ extended: true }));

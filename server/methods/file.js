@@ -1,7 +1,9 @@
 import { Meteor } from 'meteor/meteor';
 import { findIndex, get, size } from 'lodash';
 
-import { sessionUtils } from '/imports/utils/sessionUtils.js';
+import { sessionUtils } from '/imports/utils/sessionUtils';
+
+import { Meta, Models } from '/imports/model/MetaObject';
 
 Meteor.registerMethod('file:upload', function (req) {
 	// Get meta of document

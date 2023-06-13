@@ -1,5 +1,17 @@
 import { Meteor } from 'meteor/meteor';
+import { Match } from 'meteor/check';
 import { utils } from '/imports/utils/konutils/utils';
+
+import isArray from 'lodash/isArray';
+import difference from 'lodash/difference';
+import isEqual from 'lodash/isEqual';
+import without from 'lodash/without';
+import uniq from 'lodash/uniq';
+import has from 'lodash/has';
+import get from 'lodash/get';
+
+
+import { Models, References } from '/imports/model/MetaObject';
 
 /* Simualte merge
 	@TODO: Permissões?
@@ -10,8 +22,7 @@ import { utils } from '/imports/utils/konutils/utils';
 	@param targetId
 */
 Meteor.registerMethod('merge:simulate', 'withUser', 'withAccessForDocument', 'withMetaForDocument', 'withModelForDocument', function (request) {
-	const context = this;
-	const { access, meta, model } = this;
+	const { meta, model } = this;
 
 	// Initial validations
 	if (!Match.test(request.ids, [String])) {
@@ -117,9 +128,9 @@ Meteor.registerMethod('merge:simulate', 'withUser', 'withAccessForDocument', 'wi
 				values = processIsListField(values);
 				merged[field.name] = values[0].value;
 			} else {
-				if (_.isArray(values[0].value) && _.difference(values[0].value, values[1].value).length === 0) {
+				if (isArray(values[0].value) && difference(values[0].value, values[1].value).length === 0) {
 					merged[field.name] = values[0].value;
-				} else if (_.isEqual(values[0].value, values[1].value)) {
+				} else if (isEqual(values[0].value, values[1].value)) {
 					merged[field.name] = values[0].value;
 				} else {
 					conflicts[field.name] = values;
@@ -155,8 +166,7 @@ Meteor.registerMethod('merge:simulate', 'withUser', 'withAccessForDocument', 'wi
 */
 Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMetaForDocument', 'withModelForDocument', function (request) {
 	let data;
-	const context = this;
-	let { access, meta, model } = this;
+	let { model } = this;
 
 	// Initial validations
 	if (!Match.test(request.ids, [String])) {
@@ -175,7 +185,7 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
 		return new Meteor.Error('internal-error', 'A propriedade [data] deve ser um objeto contendo valores', { request });
 	}
 
-	request.ids = _.without(request.ids, request.targetId);
+	request.ids = without(request.ids, request.targetId);
 
 	// Find data
 	let query = {
@@ -209,7 +219,7 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
 		request.data._merge = [];
 	}
 	request.data._merge = request.data._merge.concat(request.ids);
-	request.data._merge = _.uniq(request.data._merge);
+	request.data._merge = uniq(request.data._merge);
 
 	let update = {
 		ids: [
@@ -306,7 +316,7 @@ Meteor.registerMethod('merge:save', 'withUser', 'withAccessForDocument', 'withMe
 
 			update[referenceFieldName] = { _id: updateResult.data[0]._id };
 
-			if (_.isArray(referenceField.descriptionFields)) {
+			if (isArray(referenceField.descriptionFields)) {
 				utils.copyObjectFieldsByPathsIncludingIds(updateResult.data[0], update[referenceFieldName], referenceField.descriptionFields);
 			}
 

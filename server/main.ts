@@ -18,6 +18,9 @@ if (process.env.NODE_ENV !== 'development') {
 }
 
 const originalMeteorDebug = Meteor._debug;
+
+// TODO: remove this when we have a better way to handle errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 Meteor._debug = function (message: any, stack: any, ...args: any[]) {
 	if (typeof stack === 'string') {
 		message += ` ${stack}`;

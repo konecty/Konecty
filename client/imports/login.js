@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Meteor } from 'meteor/meteor';
+import { $ } from 'meteor/jquery';
+
 module.exports.Login = (function () {
 	let login = {};
 	let logging = false;

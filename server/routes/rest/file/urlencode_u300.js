@@ -1,4 +1,4 @@
-const reduce = require('lodash/reduce');
+import reduce from 'lodash/reduce';
 
 const fixedEncodeURIComponent = str =>
 	String(str)

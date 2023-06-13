@@ -1,13 +1,25 @@
+import { Meteor } from 'meteor/meteor';
+import { Match, check } from 'meteor/check';
 import moment from 'moment';
 
 import { createHash } from 'crypto';
 
-import { isArray, isNumber, isObject, isString, isBoolean, has, get, size } from 'lodash';
+import isArray from 'lodash/isArray';
+import isNumber from 'lodash/isNumber';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
+import isBoolean from 'lodash/isBoolean';
+import has from 'lodash/has';
+import get from 'lodash/get';
+import size from 'lodash/size';
+import changeCase from 'change-case';
+
 import { NotifyErrors } from '/imports/utils/errors';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
-import { Models } from '/imports/model/MetaObject';
+import { Meta, Models } from '/imports/model/MetaObject';
 import { regexUtils } from '/server/lib/regex';
+import { Password } from '/server/lib/password';
 
 const NS_PER_SEC = 1e9;
 
@@ -102,7 +114,7 @@ export const metaUtils = {
 
 		let result = true;
 
-		const removeUnauthorizedKeys = function (obj, keys, path) {
+		const removeUnauthorizedKeys = function (obj, keys) {
 			const objKeys = Object.keys(obj);
 
 			const unauthorizedKeys = objKeys.filter(key => keys.indexOf(key) === -1);
@@ -202,12 +214,12 @@ export const metaUtils = {
 			}
 		};
 
-		const mustBeNumberOrNull = function (v, path) {
-			if (!v) {
-				return true;
-			}
-			return mustBeNumber(v, path);
-		};
+		// const mustBeNumberOrNull = function (v, path) {
+		// 	if (!v) {
+		// 		return true;
+		// 	}
+		// 	return mustBeNumber(v, path);
+		// };
 
 		const mustBeBoolean = function (v, path) {
 			if (!isBoolean(v)) {
@@ -216,12 +228,12 @@ export const metaUtils = {
 			}
 		};
 
-		const mustBeBooleanOrNull = function (v, path) {
-			if (!v) {
-				return true;
-			}
-			return mustBeBoolean(v, path);
-		};
+		// const mustBeBooleanOrNull = function (v, path) {
+		// 	if (!v) {
+		// 		return true;
+		// 	}
+		// 	return mustBeBoolean(v, path);
+		// };
 
 		const mustBeObject = function (v, path) {
 			if (!isObject(v)) {
@@ -230,12 +242,12 @@ export const metaUtils = {
 			}
 		};
 
-		const mustBeObjectOrNull = function (v, path) {
-			if (!v) {
-				return true;
-			}
-			return mustBeObject(v, path);
-		};
+		// const mustBeObjectOrNull = function (v, path) {
+		// 	if (!v) {
+		// 		return true;
+		// 	}
+		// 	return mustBeObject(v, path);
+		// };
 
 		const mustBeArray = function (v, path) {
 			if (!isArray(v)) {
@@ -260,12 +272,12 @@ export const metaUtils = {
 			}
 		};
 
-		const mustBeDateOrNull = function (v, path) {
-			if (!v) {
-				return true;
-			}
-			return mustBeDate(v, path);
-		};
+		// const mustBeDateOrNull = function (v, path) {
+		// 	if (!v) {
+		// 		return true;
+		// 	}
+		// 	return mustBeDate(v, path);
+		// };
 
 		const validate = function (value) {
 			let optionalKeys, requiredKeys;
@@ -538,7 +550,7 @@ export const metaUtils = {
 						return result;
 					}
 
-					value = password.encrypt(value);
+					value = Password.create().encrypt(value);
 					break;
 
 				case 'encrypted':
@@ -794,7 +806,7 @@ export const metaUtils = {
 		try {
 			const startTime = process.hrtime();
 			const elapsedTimeInSeconds = time => {
-				const [sec, nanosec] = process.hrtime(startTime);
+				const [sec, nanosec] = process.hrtime(time);
 				return sec + Math.ceil(nanosec / NS_PER_SEC);
 			};
 			while (elapsedTimeInSeconds(startTime) < 10) {

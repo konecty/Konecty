@@ -28,7 +28,7 @@ app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 });
 
 /* Login using email and password */
-app.post('/rest/auth/login', function (req, res, next) {
+app.post('/rest/auth/login', function (req, res) {
 	// Map body parameters
 	let domain;
 	const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
@@ -86,10 +86,10 @@ app.post('/rest/auth/login', function (req, res, next) {
 });
 
 /* Logout currently session */
-app.get('/rest/auth/logout', (req, res, next) => res.send(Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/logout', (req, res) => res.send(Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
 
 /* Reset password */
-app.post('/rest/auth/reset', function (req, res, next) {
+app.post('/rest/auth/reset', function (req, res) {
 	// Map body parameters
 	const { user, ns } = req.body;
 
@@ -109,7 +109,7 @@ app.post('/rest/auth/reset', function (req, res, next) {
 });
 
 /* Set geolocation for current session */
-app.post('/rest/auth/setgeolocation', function (req, res, next) {
+app.post('/rest/auth/setgeolocation', function (req, res) {
 	// Map body parameters
 	const { longitude, latitude } = req.body;
 
@@ -132,10 +132,10 @@ app.post('/rest/auth/setgeolocation', function (req, res, next) {
 });
 
 /* Get information from current session*/
-app.get('/rest/auth/info', (req, res, next) => res.send(Meteor.call('auth:info', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/info', (req, res) => res.send(Meteor.call('auth:info', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
 
 /* Set User password */
-app.get('/rest/auth/setPassword/:userId/:password', (req, res, next) =>
+app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
 	res.send(
 		Meteor.call('auth:setPassword', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
@@ -146,7 +146,7 @@ app.get('/rest/auth/setPassword/:userId/:password', (req, res, next) =>
 );
 
 /* Set a random password for User and send by email */
-app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res, next) =>
+app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) =>
 	res.send(
 		Meteor.call('auth:setRandomPasswordAndSendByEmail', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),

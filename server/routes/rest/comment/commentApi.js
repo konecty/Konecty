@@ -1,5 +1,10 @@
+import { Meteor } from 'meteor/meteor';
+
+import { app } from '/server/lib/routes/app';
+import { sessionUtils } from '/imports/utils/sessionUtils';
+
 // Converted to method
-app.get('/rest/comment/:document/:dataId', (req, res, next) =>
+app.get('/rest/comment/:document/:dataId', (req, res) =>
 	res.send(
 		Meteor.call('comments:find', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
@@ -10,7 +15,7 @@ app.get('/rest/comment/:document/:dataId', (req, res, next) =>
 );
 
 // Converted to method
-app.post('/rest/comment/:document/:dataId', (req, res, next) =>
+app.post('/rest/comment/:document/:dataId', (req, res) =>
 	res.send(
 		Meteor.call('comments:create', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),

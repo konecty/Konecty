@@ -1,27 +1,28 @@
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
+
 import moment from 'moment';
-import {
-	isObject,
-	isString,
-	isNaN as _isNaN,
-	each,
-	isArray,
-	uniq,
-	compact,
-	extend,
-	isEmpty,
-	pick,
-	find,
-	clone,
-	isNumber,
-	first as _first,
-	words,
-	tail,
-	has,
-	map,
-	get,
-	size,
-} from 'lodash';
+
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
+import _isNaN from 'lodash/isNaN';
+import each from 'lodash/each';
+import isArray from 'lodash/isArray';
+import uniq from 'lodash/uniq';
+import compact from 'lodash/compact';
+import extend from 'lodash/extend';
+import isEmpty from 'lodash/isEmpty';
+import pick from 'lodash/pick';
+import find from 'lodash/find';
+import clone from 'lodash/clone';
+import isNumber from 'lodash/isNumber';
+import _first from 'lodash/first';
+import words from 'lodash/words';
+import tail from 'lodash/tail';
+import has from 'lodash/has';
+import map from 'lodash/map';
+import get from 'lodash/get';
+import size from 'lodash/size';
 
 import { post } from 'request';
 
@@ -31,7 +32,9 @@ import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { sortUtils } from '/imports/utils/konutils/sortUtils';
 import { utils } from '/imports/utils/konutils/utils';
-import { Meta, Models, Namespace } from '/imports/model/MetaObject';
+import { Meta, Models, Namespace, DisplayMeta, References } from '/imports/model/MetaObject';
+import { renderTemplate } from '/lib/renderTemplate';
+import { logger } from '/imports/utils/logger';
 
 /* Get next user of queue
 	@param authTokenId
@@ -62,10 +65,9 @@ Meteor.registerMethod('data:queue:next', 'withUser', 'withAccessForDocument', fu
 */
 Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', function (request) {
 	let accessField, condition;
-	const context = this;
 
 	// Verify if user have permission to read records
-	if (context.access.isReadable !== true) {
+	if (this.access.isReadable !== true) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read records`);
 	}
 
@@ -98,8 +100,8 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		}
 	}
 
-	if (isObject(context.access.readFilter)) {
-		filter.filters.push(context.access.readFilter);
+	if (isObject(this.access.readFilter)) {
+		filter.filters.push(this.access.readFilter);
 	}
 
 	if (isObject(request.filter)) {
@@ -107,9 +109,9 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	}
 
 	// Parse filters
-	const readFilter = filterUtils.parseFilterObject(filter, metaObject, context);
+	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
-		context.notifyError('Find - Filter Error', readFilter, request);
+		this.notifyError('Find - Filter Error', readFilter, request);
 		return readFilter;
 	}
 
@@ -125,7 +127,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	// Validate if user have permission to view each field
 	const emptyFields = Object.keys(fields).length === 0;
 	for (var fieldName in metaObject.fields) {
-		accessField = accessUtils.getFieldPermissions(context.access, fieldName);
+		accessField = accessUtils.getFieldPermissions(this.access, fieldName);
 		if (accessField.isReadable !== true) {
 			if (emptyFields === true) {
 				fields[fieldName] = 0;
@@ -143,14 +145,13 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 		sort = sortUtils.parseSortArray(request.sort);
 		if (sort instanceof Error) {
-			context.notifyError('Find - Sort Error', sort, request);
+			this.notifyError('Find - Sort Error', sort, request);
 			return sort;
 		}
 	}
 
 	// Force money to filter with .value
 	for (let key in sort) {
-		const value = sort[key];
 		if (get(metaObject, `fields.${key}.type`) === 'money') {
 			sort[`${key}.value`] = sort[key];
 			delete sort[key];
@@ -177,7 +178,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		if (accessField.isReadable === true) {
 			const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
 			if (accessFieldConditions.READ) {
-				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, context, true);
+				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
 					this.notifyError('FindOne - Access Filter Error', condition, { accessFilter: accessFieldConditions.READ });
 					return condition;
@@ -268,6 +269,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		options = { multi: true };
 
 		const affected = local.collection.update(accessCondition.condition, update, options);
+		logger.trace(affected, 'records affected by access condition', accessCondition.condition, update, options);
 	}
 
 	records = local.collection.find().fetch();
@@ -310,10 +312,8 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	@param field
 */
 Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument', function (request) {
-	const context = this;
-
 	// Verify if user have permission to read records
-	if (context.access.isReadable !== true) {
+	if (this.access.isReadable !== true) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read records`);
 	}
 
@@ -336,14 +336,14 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 		filters: [],
 	};
 
-	if (isObject(context.access.readFilter)) {
-		filter.filters.push(context.access.readFilter);
+	if (isObject(this.access.readFilter)) {
+		filter.filters.push(this.access.readFilter);
 	}
 
 	// Parse filters
-	const readFilter = filterUtils.parseFilterObject(filter, metaObject, context);
+	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
-		context.notifyError('Find - Filter Error', readFilter, request);
+		this.notifyError('Find - Filter Error', readFilter, request);
 		return readFilter;
 	}
 
@@ -354,7 +354,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 
 	// Validate if user have permission to view field
 
-	const accessField = accessUtils.getFieldPermissions(context.access, request.field);
+	const accessField = accessUtils.getFieldPermissions(this.access, request.field);
 	if (accessField.isReadable !== true) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read field`);
 	}
@@ -393,7 +393,6 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 */
 Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', function (request) {
 	let accessField, condition;
-	const context = this;
 
 	// Verify if user have permission to read records
 	if (this.access.isReadable !== true) {
@@ -424,7 +423,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	}
 
 	// Parse filters
-	const readFilter = filterUtils.parseFilterObject(filter, metaObject, context);
+	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
 		this.notifyError('Find - Filter Error', readFilter, request);
 		return readFilter;
@@ -459,7 +458,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 		if (accessField.isReadable === true) {
 			const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
 			if (accessFieldConditions.READ) {
-				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, context, true);
+				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
 					this.notifyError('FindOne - Access Filter Error', condition, { accessFilter: accessFieldConditions.READ });
 					return condition;
@@ -501,6 +500,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 			options = { multi: true };
 
 			const affected = local.collection.update(accessCondition.condition, update, options);
+			logger.trace(affected, 'affected records');
 		}
 
 		data = local.collection.find({}).fetch();
@@ -541,8 +541,6 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	@param useChangeUserFilter
 */
 Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument', function (request) {
-	const context = this;
-
 	const meta = Meta[request.document];
 
 	if (!meta) {
@@ -683,7 +681,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	}
 
 	// Parse filters
-	const readFilter = filterUtils.parseFilterObject(filter, lookupMeta, context);
+	const readFilter = filterUtils.parseFilterObject(filter, lookupMeta, this);
 	if (readFilter instanceof Error) {
 		this.notifyError('Lookup - Access Filter Error', readFilter, request);
 		return readFilter;
@@ -700,7 +698,6 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 
 	// Validate if user have permission to view each field
 	for (let fieldName in fields) {
-		const value = fields[fieldName];
 		const accessField = accessUtils.getFieldPermissions(access, fieldName.split('.')[0]);
 		if (accessField.isReadable !== true) {
 			delete fields[fieldName];
@@ -734,14 +731,13 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	@param record
 */
 Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAccessForDocument', function (request) {
-	const context = this;
 	if (!request.record) {
 		return;
 	}
 
 	const populateDetailFields = function (field, value, parent) {
 		if (!has(value, '_id')) {
-			context.notifyError(
+			this.notifyError(
 				new Meteor.Error('internal-error', 'populateDetailFields: value without _id', {
 					field,
 					value,
@@ -756,7 +752,7 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
 			fields: field.detailFields.join(','),
 			dataId: value._id,
 			__scope__: {
-				user: context.user,
+				user: this.user,
 			},
 		});
 
@@ -803,7 +799,6 @@ Meteor.registerMethod(
 	'processCollectionLogin',
 	function (request) {
 		let field, k, resultOfValidation, value;
-		const context = this;
 		const { meta } = this;
 		const { model } = this;
 
@@ -901,7 +896,7 @@ Meteor.registerMethod(
 				request: request.data,
 				validated: newRecord,
 			};
-			request.data = extend(request.data, utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend(request.data, newRecord), context, extraData));
+			request.data = extend(request.data, utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend(request.data, newRecord), this, extraData));
 		}
 
 		// Iterate over all fields, except autoNumbers, of meta to validate values and insert default values
@@ -950,7 +945,7 @@ Meteor.registerMethod(
 
 		// If meta includes validationScript, run it in a sandboxed environment
 		if (meta.validationScript) {
-			const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, request.data, newRecord), context);
+			const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, request.data, newRecord), this);
 			if (get(validation, 'success') !== true) {
 				const error = new Meteor.Error(validation.reason);
 				this.notifyError('Create - Script Validation Error', error, request);
@@ -1097,7 +1092,7 @@ Meteor.registerMethod(
 
 			// Apply read access filter
 			if (isObject(this.access.readFilter)) {
-				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, context);
+				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, this);
 				if (readFilter instanceof Error) {
 					this.notifyError('Create - Read Filter', readFilter, { accessFilter: this.access.readFilter });
 					response.errors.push(readFilter);
@@ -1110,7 +1105,7 @@ Meteor.registerMethod(
 			let insertedRecord = model.findOne(query);
 
 			if (meta.scriptAfterSave) {
-				utils.runScriptAfterSave(meta.scriptAfterSave, [insertedRecord], context);
+				utils.runScriptAfterSave(meta.scriptAfterSave, [insertedRecord], this);
 			}
 
 			// Set update reords to response object
@@ -1151,23 +1146,17 @@ Meteor.registerMethod(
 	function (request) {
 		let idMapItem, validateResult;
 		let id;
-		const context = this;
 		const { meta } = this;
 		const { model } = this;
 		if (this.access.changeUser !== true && has(request, 'data.data._user')) {
 			delete request.data.data._user;
 		}
 
-		const data = [];
-
 		// Define response object to be populated later
 		const response = {
 			errors: [],
 			success: true,
 		};
-
-		// Separate queue from data
-		const { queue } = request.data.data;
 
 		// Define array to get all conditions of changed fields
 		const fieldFilterConditions = [];
@@ -1208,7 +1197,7 @@ Meteor.registerMethod(
 		}
 
 		// Parse filters
-		const updateFilter = filterUtils.parseFilterObject(filter, meta, context);
+		const updateFilter = filterUtils.parseFilterObject(filter, meta, this);
 		if (updateFilter instanceof Error) {
 			this.notifyError('Update - Update Filter', updateFilter, request);
 			return updateFilter;
@@ -1410,7 +1399,7 @@ Meteor.registerMethod(
 				bodyData = extend(
 					{},
 					request.data.data,
-					utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend({}, records[0], request.data.data, validatedData), context, extraData),
+					utils.runScriptBeforeValidation(meta.scriptBeforeValidation, extend({}, records[0], request.data.data, validatedData), this, extraData),
 				);
 			} else {
 				bodyData = extend({}, request.data.data);
@@ -1436,7 +1425,7 @@ Meteor.registerMethod(
 
 			// If meta includes validationScript, run it in a sandboxed environment
 			if (meta.validationScript) {
-				const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, records[0], validatedData), context);
+				const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, records[0], validatedData), this);
 				if (get(validation, 'success') !== true) {
 					const error = new Meteor.Error(validation.reason);
 					this.notifyError('Update - Script Validation Error', error, request);
@@ -1559,7 +1548,7 @@ Meteor.registerMethod(
 
 			// Apply read access filter
 			if (isObject(this.access.readFilter)) {
-				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, context);
+				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, this);
 				if (readFilter instanceof Error) {
 					this.notifyError('Update - Validation Error', readFilter, { accessFilter: this.access.readFilter });
 					response.errors.push(readFilter);
@@ -1573,7 +1562,7 @@ Meteor.registerMethod(
 
 			if (meta.scriptAfterSave) {
 				const extraData = { original: records };
-				utils.runScriptAfterSave(meta.scriptAfterSave, updatedRecords, context, extraData);
+				utils.runScriptAfterSave(meta.scriptAfterSave, updatedRecords, this, extraData);
 			}
 
 			// Set update reords to response object
@@ -1603,9 +1592,6 @@ Meteor.registerMethod(
 Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAccessIsDeletable', 'withMetaForDocument', 'withModelForDocument', function (request) {
 	let idMapItem;
 	let id;
-	const context = this;
-
-	const data = [];
 
 	// Define response object to be populated later
 	const response = {
@@ -1650,7 +1636,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 	let query = {};
 
 	if (isObject(this.access.deleteFilter)) {
-		const deleteFilter = filterUtils.parseFilterObject(this.access.deleteFilter, meta, context);
+		const deleteFilter = filterUtils.parseFilterObject(this.access.deleteFilter, meta, this);
 		if (deleteFilter instanceof Error) {
 			this.notifyError('Delete - Validation Error', deleteFilter, request);
 			return deleteFilter;
@@ -1762,7 +1748,6 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 				const referenceConditions = [];
 				// Get all fields that reference this meta and create one condition with all ids
 				for (let referenceFieldName in referenceMeta) {
-					const referenceField = referenceMeta[referenceFieldName];
 					const condition = {};
 
 					const ref = referenceFieldName;
@@ -1951,7 +1936,6 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 */
 Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument', function (request) {
 	let data, reverseLookupModel;
-	const context = this;
 
 	// Try to get metadata
 	const meta = Meta[request.document];
@@ -2282,7 +2266,6 @@ KONDATA.call 'data:lead:save',
 */
 Meteor.registerMethod('data:lead:save', 'withUser', function (request) {
 	let createRequest, record, result;
-	const context = this;
 	// meta = @meta
 
 	console.log('data:lead:save ->'.yellow, global.Namespace.ns, '->'.green, JSON.stringify(request));

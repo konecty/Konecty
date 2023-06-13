@@ -1,4 +1,7 @@
-import { isArray, isString, isObject, get, has } from 'lodash';
+import isArray from 'lodash/isArray'
+import isString from 'lodash/isString'
+import isObject from 'lodash/isObject'
+import has from 'lodash/has'
 
 import { Access } from '/imports/model/MetaObject';
 
@@ -130,7 +133,6 @@ export const accessUtils = {
 		}
 
 		for (let fieldName in data) {
-			const value = data[fieldName];
 			const access = accessUtils.getFieldPermissions(metaAccess, fieldName);
 			if (access.isReadable !== true) {
 				delete data[fieldName];

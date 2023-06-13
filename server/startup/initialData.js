@@ -1,3 +1,8 @@
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+
+import { Models } from '/imports/model/MetaObject';
+
 export function getFirstUser() {
 	return Meteor.users.findOne({ username: process.env.KONDATA_ADMIN_USERNAME || 'admin' }, { fields: { _id: 1, group: 1 } });
 }

@@ -1,11 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { MetaObject } from '../../types/metadata';
 
 import { MetaObjectCollection } from '../../model/MetaObject';
 
 const buildI18N = async (): Promise<Record<string, any>> => {
-	const metas: MetaObject[] = await MetaObjectCollection.find(
+	const metas: MetaObject[] = await MetaObjectCollection.find<MetaObject>(
 		{},
 		{
+			projection: {
 			_id: true,
 			type: true,
 			name: true,
@@ -16,7 +19,7 @@ const buildI18N = async (): Promise<Record<string, any>> => {
 			columns: true,
 			rows: true,
 			values: true,
-		},
+		}},
 	).toArray();
 
 	const setKey = (acc: Record<string, any>, lang: string, path: string | string[], label: string) => {
@@ -64,6 +67,7 @@ const buildI18N = async (): Promise<Record<string, any>> => {
 					// @ts-ignore
 					meta[metaProp].forEach(field => {
 						if (field.label != null) {
+							// @ts-ignore
 							Object.entries(field.label).forEach(([lang, label]) => setKey(acc, lang, keyPath.concat(metaProp, field.name, 'label'), label));
 						}
 					});

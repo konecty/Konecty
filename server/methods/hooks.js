@@ -13,7 +13,6 @@ Meteor.registerBeforeMethod('startTime', function () {
 });
 
 Meteor.registerBeforeMethod('notify', function () {
-	const context = this;
 
 	this.notifyError = function (type, message, options) {
 		if (type instanceof Error && !options) {
@@ -23,15 +22,15 @@ Meteor.registerBeforeMethod('notify', function () {
 		}
 
 		options = options || {};
-		options.url = context.__methodName__;
+		options.url = this.__methodName__;
 
 		options.user = {
-			_id: get(context, 'user._id', { valueOf: () => undefined }).valueOf(),
-			name: get(context, 'user.name :'),
-			login: get(context, 'user.username'),
-			email: get(context, 'user.emails'),
-			access: get(context, 'user.access'),
-			lastLogin: get(context, 'user.lastLogin'),
+			_id: get(this, 'user._id', { valueOf: () => undefined }).valueOf(),
+			name: get(this, 'user.name :'),
+			login: get(this, 'user.username'),
+			email: get(this, 'user.emails'),
+			access: get(this, 'user.access'),
+			lastLogin: get(this, 'user.lastLogin'),
 		};
 
 		return NotifyErrors.notify(type, message, options);

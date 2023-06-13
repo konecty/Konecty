@@ -1,4 +1,8 @@
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+
 import size from 'lodash/size';
+import isObject from 'lodash/isObject';
 
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 
@@ -45,7 +49,7 @@ export const middlewares = {
 			}
 
 			// If return is object then set access into requrest
-			if (_.isObject(access)) {
+			if (isObject(access)) {
 				req.access = access;
 				return next();
 			}

@@ -6,6 +6,10 @@ import fs from 'fs';
 
 import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
+import bind from 'lodash/bind';
+import isObject from 'lodash/isObject';
+import isArray from 'lodash/isArray';
+import isNumber from 'lodash/isNumber';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
 
@@ -26,7 +30,7 @@ const logIndexAction = function (msg) {
 
 const getIndexes = function (collectionName) {
 	const collection = Models[collectionName]._getCollection();
-	const indexInformation = Meteor.wrapAsync(_.bind(collection.indexInformation, collection));
+	const indexInformation = Meteor.wrapAsync(bind(collection.indexInformation, collection));
 	return indexInformation();
 };
 
@@ -73,7 +77,7 @@ const tryEnsureIndex = function (model, fields, options) {
 	}
 };
 
-const initialData = _.debounce(
+const initialData = debounce(
 	Meteor.bindEnvironment(function () {
 		registerFirstUser();
 		registerFirstGroup();
@@ -112,11 +116,10 @@ const registerMeta = function (meta) {
 
 		const dropIndexes = function () {
 			// Drop data indexes
-			let indexInformation, value;
+			let indexInformation;
 			let indexesInformation = getIndexes(meta.name);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
 						logIndexAction(`Drop Index at ${meta.collection}: ${indexInformation}`.red);
 						Models[meta.name]._dropIndex(indexInformation);
@@ -128,7 +131,6 @@ const registerMeta = function (meta) {
 			indexesInformation = getIndexes(`${meta.name}.Comment`);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
 						logIndexAction(`Drop Index at ${meta.collection}.Comment: ${indexInformation}`.red);
 						Models[`${meta.name}.Comment`]._dropIndex(indexInformation);
@@ -140,7 +142,6 @@ const registerMeta = function (meta) {
 			indexesInformation = getIndexes(`${meta.name}.History`);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
 						logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`.red);
 						Models[`${meta.name}.History`]._dropIndex(indexInformation);
@@ -255,7 +256,7 @@ const registerMeta = function (meta) {
 			}
 
 			// Create indexes defined in meta
-			if (_.isObject(meta.indexes) && !_.isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
+			if (isObject(meta.indexes) && !isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
 				for (let indexName in meta.indexes) {
 					const index = meta.indexes[indexName];
 					if (!index.keys) {
@@ -282,7 +283,7 @@ const registerMeta = function (meta) {
 			}
 
 			// Create text index
-			if (_.isObject(meta.indexText) && !_.isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
+			if (isObject(meta.indexText) && !isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
 				keys = {};
 				options = {
 					name: 'TextIndex',
@@ -295,7 +296,7 @@ const registerMeta = function (meta) {
 					const weight = meta.indexText[key];
 					key = key.replace(/:/g, '.');
 					keys[key] = 'text';
-					if (_.isNumber(weight) && weight > 0) {
+					if (isNumber(weight) && weight > 0) {
 						options.weights[key] = weight;
 					}
 				}
@@ -467,7 +468,7 @@ const fsLoad = () => {
 	watcher
 		.on('add', changeHandler)
 		.on('change', changeHandler)
-		.on('unlink', path => removeHandler);
+		.on('unlink', path => removeHandler(path));
 };
 
 Meteor.startup(function () {

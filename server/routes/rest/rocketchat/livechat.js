@@ -1,4 +1,13 @@
+import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
+
+import isEmpty from 'lodash/isEmpty';
+import isArray from 'lodash/isArray';
+import extend from 'lodash/extend';
+import pick from 'lodash/pick';
+
+import { app } from '/server/lib/routes/app';
+import { Namespace, Meta, Models } from '/imports/model/MetaObject';
 
 app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 	if (
@@ -39,13 +48,13 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 					};
 				}
 
-				if (!_.isEmpty(hookData.visitor.email)) {
-					contactProcess.data.email = _.isArray(hookData.visitor.email) ? hookData.visitor.email[0].address : hookData.visitor.email;
+				if (!isEmpty(hookData.visitor.email)) {
+					contactProcess.data.email = isArray(hookData.visitor.email) ? hookData.visitor.email[0].address : hookData.visitor.email;
 				}
 
-				if (!_.isEmpty(hookData.visitor.phone)) {
+				if (!isEmpty(hookData.visitor.phone)) {
 					var phoneTreatment = function (p) {
-						var phone = s
+						var phone = ''
 							.trim(p)
 							.replace(/[^0-9]/g, '')
 							.replace(/^0+/g, '');
@@ -57,7 +66,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 
 					var phone = [];
 
-					if (_.isArray(hookData.visitor.phone)) {
+					if (isArray(hookData.visitor.phone)) {
 						phone = hookData.visitor.phone.map(phone => phoneTreatment(phone.phoneNumber));
 					} else {
 						phone.push(phoneTreatment(hookData.visitor.phone));
@@ -71,21 +80,21 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 					contactProcess.data.email = null;
 				}
 
-				if (_.isEmpty(contactProcess.data.phone) && _.isEmpty(contactProcess.data.email)) {
+				if (isEmpty(contactProcess.data.phone) && isEmpty(contactProcess.data.email)) {
 					res.statusCode = 200;
 					return res.end();
 				}
 
 				contactProcess.data.notes = '';
 
-				if (!_.isEmpty(hookData.tags)) {
+				if (!isEmpty(hookData.tags)) {
 					contactProcess.data.notes += 'Tags: ' + hookData.tags.join(', ') + '\n';
 				}
 
-				if (!_.isEmpty(hookData.customFields) || !_.isEmpty(hookData.visitor.customFields)) {
-					var customFields = _.extend(hookData.visitor.customFields || {}, hookData.customFields || {});
+				if (!isEmpty(hookData.customFields) || !isEmpty(hookData.visitor.customFields)) {
+					var customFields = extend(hookData.visitor.customFields || {}, hookData.customFields || {});
 					for (var customField in customFields) {
-						if (customFields.hasOwnProperty(customField) && !_.isEmpty(customFields[customField])) {
+						if (customFields.hasOwnProperty(customField) && !isEmpty(customFields[customField])) {
 							switch (customField) {
 								case 'campaign':
 									contactProcess.data.campaign = {
@@ -280,7 +289,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				},
 			};
 
-			if (!_.isEmpty(hookData.visitor.email)) {
+			if (!isEmpty(hookData.visitor.email)) {
 				contactProcess.data.email = hookData.visitor.email;
 			}
 
@@ -361,7 +370,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 		// get _id from all saved documents
 		Object.keys(result.processData).forEach(function (key) {
 			if (result.processData[key]._id) {
-				processData[key] = _.pick(result.processData[key], '_id', 'code');
+				processData[key] = pick(result.processData[key], '_id', 'code');
 			}
 		});
 

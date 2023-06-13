@@ -1,9 +1,21 @@
+import { Meteor } from 'meteor/meteor';
+
 import { createHash } from 'crypto';
-import { isArray, isString, isObject, get, has, map, size, keys, reduce, startsWith } from 'lodash';
+import isArray from 'lodash/isArray';
+import isString from 'lodash/isString';
+import isObject from 'lodash/isObject';
+import get from 'lodash/get';
+import has from 'lodash/has';
+import map from 'lodash/map';
+import size from 'lodash/size';
+import keys from 'lodash/keys';
+import reduce from 'lodash/reduce';
+import startsWith from 'lodash/startsWith';
 
 import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
 
+import { Meta } from '/imports/model/MetaObject';
 /*
 rest/data/OK Activity/find
 	&fields=_user,_updatedAt,code
