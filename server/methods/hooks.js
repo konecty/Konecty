@@ -1,8 +1,11 @@
 import { Meteor } from 'meteor/meteor';
 
-import { toArray, isObject, isArray, get } from 'lodash';
+import isObject from 'lodash/isObject';
+import isArray from 'lodash/isArray';
+import get from 'lodash/get';
 
 import { NotifyErrors } from '/imports/utils/errors';
+import { logger } from '/imports/utils/logger';
 
 Meteor.registerLogs = false;
 Meteor.registerDoneLogs = false;
@@ -13,7 +16,6 @@ Meteor.registerBeforeMethod('startTime', function () {
 });
 
 Meteor.registerBeforeMethod('notify', function () {
-
 	this.notifyError = function (type, message, options) {
 		if (type instanceof Error && !options) {
 			options = message;
@@ -38,25 +40,16 @@ Meteor.registerBeforeMethod('notify', function () {
 });
 
 Meteor.registerAfterMethod('catchErrors', function (params) {
-	const notifyError = function (error) {
-		console.log('DDPCatchErrors'.red, error);
-
-		return this.notifyError('DDPCatchErrors', error, {
-			errorDetail: error,
-			methodResult: params.result,
-			methodArguments: toArray(params.arguments),
-		});
-	}.bind(this);
-
 	if (params.result instanceof Error) {
-		notifyError(params.result);
+		logger.error(params.result, `Method ${this.__methodName__} error: ${params.result.message}`);
+
 		params.result = {
 			success: false,
 			errors: [{ message: params.result.message }],
 		};
 	} else if (isObject(params.result) && isArray(params.result.errors)) {
 		for (let error of params.result.errors) {
-			notifyError(error);
+			logger.error(error, `Method ${this.__methodName__} error: ${error.message}`);
 		}
 	}
 });

@@ -1,19 +1,27 @@
 import { Meteor } from 'meteor/meteor';
 import { SSR } from 'meteor/meteorhacks:ssr';
 
-import { resolve, join } from 'path';
+import path from 'path';
 import { each } from 'async';
 import { createTransport } from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
 import EmailTemplates from 'swig-email-templates';
-import { isObject, extend, omit, isEmpty, bind, get, has, join as _join, map } from 'lodash';
 
-import { NotifyErrors } from '/imports/utils/errors';
+import isObject from 'lodash/isObject';
+import extend from 'lodash/extend';
+import omit from 'lodash/omit';
+import isEmpty from 'lodash/isEmpty';
+import bind from 'lodash/bind';
+import get from 'lodash/get';
+import has from 'lodash/has';
+import join from 'lodash/join';
+import map from 'lodash/map';
+
 import { logger } from '../utils/logger';
 import { Models, MetaObject } from '/imports/model/MetaObject';
 
 export const Templates = {};
-const basePath = resolve('.').split('.meteor')[0];
+const basePath = path.resolve('.').split('.meteor')[0];
 
 let tplPath = 'imports/konsistent/templates/mail';
 
@@ -22,7 +30,7 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 }
 
 const emailTemplateOptions = {
-	root: join(basePath, tplPath),
+	root: path.join(basePath, tplPath),
 	filters: {
 		upper: function (str) {
 			return str.toUpperCase();
@@ -42,7 +50,7 @@ export const mailConsumer = {
 			if (transporters[record.server] == null) {
 				server = transporters[record.server];
 			} else {
-				NotifyErrors.notify('MailError', new Error(`Server ${record.server} not found`), { record });
+				logger.error(`Server ${record.server} not found`);
 			}
 		} else {
 			record.server = 'default';
@@ -52,7 +60,7 @@ export const mailConsumer = {
 			user = Models['User'].findOne(record._user[0]._id, {
 				fields: { name: 1, emails: 1, emailAuthLogin: 1, emailAuthPass: 1 },
 			});
-			console.log('IF -> user?.emailAuthLogin ->', get(user, 'emailAuthLogin'));
+			logger.debug('IF -> user?.emailAuthLogin ->', get(user, 'emailAuthLogin'));
 			if (has(user, 'emailAuthLogin')) {
 				record.from = user.name + ' <' + get(user, 'emails.0.address') + '>';
 				server = createTransport(
@@ -64,7 +72,7 @@ export const mailConsumer = {
 		}
 
 		if ((!record.to || isEmpty(record.to)) && record.email) {
-			record.to = _join(
+			record.to = join(
 				map(record.email, email => email.address),
 				',',
 			);
@@ -79,9 +87,8 @@ export const mailConsumer = {
 		if (!record.to) {
 			const err = { message: 'No address to send e-mail to.' };
 			err.host = serverHost || record.server;
-			NotifyErrors.notify('MailError', err, { err });
 			Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
-			console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
+			logger.error(`📧 Email error: ${JSON.stringify(err, null, ' ')}`);
 			return cb();
 		} else {
 			const mail = {
@@ -118,9 +125,8 @@ export const mailConsumer = {
 						Meteor.bindEnvironment(function (err, response) {
 							if (err) {
 								err.host = serverHost || record.server;
-								NotifyErrors.notify('MailError', err, { mail, err });
 								Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
-								console.log('📧 ', `Email error: ${JSON.stringify(err, null, ' ')}`.red);
+								logger.error(err, `📧 Email error: ${err.message}`);
 								return cb();
 							}
 
@@ -130,15 +136,13 @@ export const mailConsumer = {
 								} else {
 									Models['Message'].update({ _id: record._id }, { $set: { status: record.sentStatus || 'Enviada' } });
 								}
-								console.log('📧 ', `Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`.green);
+								logger.info(`📧 Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`);
 							}
 							return cb();
 						}),
 					);
 				} else {
-					console.log('📧 ', `There are no mail server configured`.red);
-					console.log('📧 ', `Email NOT sent to ${mail.to}`.red);
-					console.log(JSON.stringify(mail, null, 2));
+					logger.error(`📧 There are no mail server configured, Email NOT sent`);
 					return cb();
 				}
 			} else {
@@ -171,9 +175,8 @@ export const mailConsumer = {
 			record.data,
 			Meteor.bindEnvironment(function (err, html) {
 				if (err) {
-					NotifyErrors.notify('MailError', err, { record });
 					Models['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: `${err}` } });
-					console.log('📧 ', `Email error: ${err}`.red);
+					logger.error(err, `📧 Email error: ${err.message}`);
 					return cb();
 				}
 				record.body = html;
@@ -226,7 +229,7 @@ export const mailConsumer = {
 			for (let key in namespace.emailServers) {
 				const value = namespace.emailServers[key];
 				if (!value.useUserCredentials) {
-					console.log(`Setup email server [${key}]`.green);
+					logger.info(`Setup email server [${key}]`);
 					transporters[key] = createTransport(smtpTransport(value));
 				}
 			}
@@ -266,7 +269,7 @@ export const mailConsumer = {
 				defaultSMTPConfig.debug = process.env.DEFAULT_SMTP_DEBUG === 'true';
 			}
 
-			console.log(`Setup default email server -> [${JSON.stringify(defaultSMTPConfig)}]`.green);
+			logger.info(`Setup default email server -> [${JSON.stringify(defaultSMTPConfig)}]`);
 			transporters.default = createTransport(smtpTransport(defaultSMTPConfig));
 		}
 

@@ -13,6 +13,7 @@ import detectContentType from './detectContentType';
 
 import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
+import { logger } from '/imports/utils/logger';
 
 const _writeFile = promisify(writeFile);
 const _unlink = promisify(unlink);
@@ -110,7 +111,7 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 				_updatedAt: coreResponse._updatedAt,
 			});
 		} catch (error) {
-			console.error(error);
+			logger.error(error, `Error uploading file ${req.params.fileName}: ${error.message}`);
 			res.send(error);
 		}
 	}),

@@ -94,8 +94,6 @@ Meteor.registerMethod('process:submit', 'withUser', function (request) {
 			params['user'] = response.processData['user'];
 		}
 
-		// console.log 'call ->'.blue, "process:#{piece.name}", params
-
 		if (Meteor.server.method_handlers[`process:${piece.name}`]) {
 			piecesReturn[piece.name] = Meteor.call(`process:${piece.name}`, params, options);
 		} else if (piece.document) {
@@ -105,8 +103,6 @@ Meteor.registerMethod('process:submit', 'withUser', function (request) {
 			response.errors = [new Meteor.Error('process-invalid-piece', 'Invalid generic piece, no document specified.')];
 			return true;
 		}
-
-		// console.log 'retorno <-'.yellow, piecesReturn[piece.name]
 
 		if (get(piecesReturn, `${piece.name}.success`) !== true) {
 			response.success = false;
@@ -267,7 +263,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 		opportunity = record.data[0];
 		opportunityId = record.data[0]._id;
 		response.processData['opportunity'] = record.data[0];
-		// console.log 'oportunidade já existe'.magenta, opportunityId
+
 		if (Namespace.alertUserOnExistingOpportunity) {
 			const date = new Date();
 			Models['User']
@@ -449,8 +445,6 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 			createRequest.data._user = [].concat(request.user);
 		}
 
-		// console.log 'opportunity ->'.green, JSON.stringify createRequest, null, '  '
-
 		const saveResult = Meteor.call('data:create', createRequest);
 
 		if (saveResult.success !== true) {
@@ -484,8 +478,6 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 				fields: '_id',
 			});
 
-			// console.log 'record ->'.red,request.product.code,record
-
 			// don't create an opportunity if concat already has
 			if (size(get(record, 'data')) > 0) {
 				productsList = [record.data[0]._id];
@@ -493,8 +485,6 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 		} else if (request.product.ids) {
 			productsList = request.product.ids;
 		}
-
-		// console.log 'productsList ->'.yellow, productsList
 
 		if (productsList) {
 			productsList.forEach(function (productId) {
@@ -518,8 +508,6 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 					fields: '_id',
 				});
 
-				// console.log 'record ->'.red,request.product.code,record
-
 				// don't create an opportunity if concat already has
 				if (size(get(record, 'data')) === 0) {
 					createRequest = {
@@ -537,13 +525,9 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 
 					createRequest.data.contact = { _id: request.contact._id };
 
-					// console.log 'user product ->',request.lead[0]._user[0]
-
 					if (request.user) {
 						createRequest.data._user = [].concat(request.user);
 					}
-
-					// console.log 'ProductsPerOpportunities ->'.green, JSON.stringify createRequest, null, '  '
 
 					const saveProductResult = Meteor.call('data:create', createRequest);
 
@@ -1097,8 +1081,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 					if (userFromActivity.active === true) {
 						contactUser = userFromActivity;
 
-						// console.log 'user from Activity ->'.magenta,contactUser
-
 						// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
 						if (!find(compact(contact._user), { _id: userFromActivity._id })) {
 							contactData._user = clone(contact._user);
@@ -1118,8 +1100,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 			userQueue = metaUtils.getNextUserFromQueue(request.queue._id, this.user);
 
 			contactUser = userQueue.user;
-
-			// console.log 'user from queue ->'.magenta,contactUser
 
 			if (has(userQueue, 'user._id')) {
 				if (contact) {
@@ -1162,8 +1142,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 				contactUser = userQueue.user;
 
-				// console.log 'user from campaign ->'.magenta,contactUser
-
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
 						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
@@ -1185,7 +1163,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 			some(get(contact, '_user'), user => {
 				if (user.active === true) {
 					contactUser = user;
-					// console.log 'user from active user ->'.magenta,contactUser
+
 					return true;
 				}
 			});
@@ -1233,8 +1211,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 			if (type && type.defaultValue) createRequest.data.type = type.maxSelected > 1 || type.isList === true ? [].concat(type.defaultValue) : type.defaultValue;
 		}
 
-		// console.log '[data:create] ->'.yellow, JSON.stringify createRequest, null, '  '
-
 		result = Meteor.call('data:create', createRequest);
 	} else if (!isEmpty(contactData)) {
 		const updateRequest = {
@@ -1244,8 +1220,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				data: contactData,
 			},
 		};
-
-		// console.log '[data:update] ->'.yellow, JSON.stringify updateRequest, null, '  '
 
 		result = Meteor.call('data:update', updateRequest);
 	} else {

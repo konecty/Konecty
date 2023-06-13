@@ -43,12 +43,10 @@ app.post('/rest/auth/login', function (req, res) {
 	const host = req.headers['host'];
 
 	if (host == null || /^localhost/.test(host)) {
-		console.log('Local');
 		domain = '';
 	} else {
 		const server = host.split('.').slice(1).join('.');
 		domain = `domain=${server}`;
-		console.log(domain);
 	}
 
 	let ip = req.get('x-forwarded-for');

@@ -14,6 +14,7 @@ import startsWith from 'lodash/startsWith';
 
 import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
+import { logger } from '/imports/utils/logger';
 
 import { Meta } from '/imports/model/MetaObject';
 /*
@@ -368,7 +369,7 @@ export const filterUtils = {
 			for (let subFilter of filter.filters) {
 				result = filterUtils.parseFilterObject(subFilter, metaObject, req);
 				if (result instanceof Error) {
-					console.log(result);
+					logger.error(result, `Error parsing sub filter [${result.message}}]`);
 					return result;
 				}
 				query.push(result);
@@ -380,7 +381,7 @@ export const filterUtils = {
 				if (condition && condition.disabled !== true) {
 					result = filterUtils.parseFilterCondition(condition, metaObject, req);
 					if (result instanceof Error) {
-						console.log(result);
+						logger.error(result, `Error parsing condition [${result.message}}]`);
 						return result;
 					}
 					query.push(result);
@@ -392,7 +393,7 @@ export const filterUtils = {
 				if (condition.disabled !== true) {
 					result = filterUtils.parseFilterCondition(condition, metaObject, req);
 					if (result instanceof Error) {
-						console.log(result);
+						logger.error(result, `Error parsing condition [${result.message}}]`);
 						return result;
 					}
 					query.push(result);

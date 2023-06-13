@@ -3,6 +3,8 @@ import { Meteor } from 'meteor/meteor';
 import isString from 'lodash/isString';
 
 import { Models } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
+
 /* Get a list of comments of one record
 	@param authTokenId
 	@param document
@@ -74,8 +76,7 @@ Meteor.registerMethod('comments:create', 'withUser', 'withAccessForDocument', fu
 	try {
 		modelComment.insert(data);
 	} catch (e) {
-		console.log(e);
-		this.notifyError('Comment - Insert Error', e);
+		logger.error(e, `Comment - Insert Error ${e.message}`);
 	}
 
 	return { success: true, data: [data] };

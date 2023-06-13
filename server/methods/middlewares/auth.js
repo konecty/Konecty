@@ -10,6 +10,8 @@ import size from 'lodash/size'
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { Meta, Models } from '/imports/model/MetaObject';
 
+import { logger } from '/imports/utils/logger';
+
 // Middleware to get user and populate into request
 Meteor.registerMiddleware('withUser', function (request) {
 	if (this.user) {
@@ -30,8 +32,8 @@ Meteor.registerMiddleware('withUser', function (request) {
 
 		this.user = Meteor.users.findOne({ 'services.resume.loginTokens.hashedToken': this.hashedToken });
 		// If no user was found return error
-		if (!this.user) {
-			console.log(`[withUser] User not found using token ${this.hashedToken}`);
+		if (this.user == null) {
+			logger.info(`[withUser] User not found using token `);
 			return 401;
 		}
 
@@ -39,12 +41,12 @@ Meteor.registerMiddleware('withUser', function (request) {
 	} else if (this.userId) {
 		this.user = Meteor.users.findOne({ _id: this.userId });
 	} else {
-		console.log('[withUser] No authTokenId or user was passed');
+		logger.info('[withUser] No authTokenId or user was passed');
 		return 401;
 	}
 
 	if (this.user.active !== true) {
-		console.log(`[withUser] User inactive for token ${this.hashedToken}`);
+		logger.info(`[withUser] User inactive for token`);
 		return 401;
 	}
 
@@ -68,8 +70,8 @@ Meteor.registerMiddleware('withAccessForDocument', function (request) {
 	const documentName = request.document;
 
 	// If no param was found with document name return 401 (Unauthorized)
-	if (!documentName) {
-		console.log('[withAccessForDocument] No documentName was passaed');
+	if (documentName == null) {
+		logger.warn('[withAccessForDocument] No documentName was passaed');
 		return 401;
 	}
 
@@ -78,7 +80,7 @@ Meteor.registerMiddleware('withAccessForDocument', function (request) {
 
 	// If return is false no access was found then return 401 (Unauthorized)
 	if (access === false) {
-		console.log('[withAccessForDocument] User have no access');
+		logger.warn('[withAccessForDocument] User have no access');
 		return 401;
 	}
 
@@ -89,7 +91,7 @@ Meteor.registerMiddleware('withAccessForDocument', function (request) {
 	}
 
 	// Return 401 (Unauthorized) if no access was found
-	console.log('[withAccessForDocument] No access found');
+	logger.warn('[withAccessForDocument] No access found');
 	return 401;
 });
 

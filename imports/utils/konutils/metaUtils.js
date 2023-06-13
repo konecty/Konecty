@@ -25,6 +25,7 @@ import { utils } from '/imports/utils/konutils/utils';
 import { Meta, Models } from '/imports/model/MetaObject';
 import { regexUtils } from '/server/lib/regex';
 import { Password } from '/server/lib/password';
+import { logger } from '/imports/utils/logger';
 
 const NS_PER_SEC = 1e9;
 
@@ -848,7 +849,7 @@ export const metaUtils = {
 				if (maxRes == null) {
 					return next_val;
 				}
-				console.log(`Duplicated key found on ${documentName}.${fieldName}: ${next_val}`);
+				logger.error(`Duplicated key found on ${documentName}.${fieldName}: ${next_val}`);
 			}
 			throw new Error(`Error creating new ${fieldName} value from ${documentName}: Timeout exceed!`);
 		} catch (e) {

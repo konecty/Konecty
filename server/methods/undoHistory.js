@@ -7,8 +7,6 @@ import { Models } from '/imports/model/MetaObject';
 Meteor.methods({
 	undoHistory(meta, historyId, keys, runUpdate) {
 		return Meteor.wrapAsync(function (callback) {
-			console.log(`[Server Method] undoHistory (${meta}, ${historyId}, ${JSON.stringify(keys)}, ${JSON.stringify(runUpdate)})`);
-
 			const metaHistory = `${meta}.History`;
 			const history = Models[metaHistory].findOne({ _id: historyId });
 			const { dataId } = history;
@@ -51,7 +49,7 @@ Meteor.methods({
 					updateFields.$set[key] = history.diffs[key].from;
 				}
 
-				Models[meta].update({ _id: dataId }, updateFields, (err) => callback(err, { success: true, infos }));
+				Models[meta].update({ _id: dataId }, updateFields, err => callback(err, { success: true, infos }));
 			} else {
 				return callback(null, { success: false });
 			}

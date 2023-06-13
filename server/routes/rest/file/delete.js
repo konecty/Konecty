@@ -8,6 +8,7 @@ import getStorage from './getStorage';
 
 import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
+import { logger } from '/imports/utils/logger';
 
 const _unlink = promisify(unlink);
 
@@ -44,7 +45,7 @@ app.del('/rest/file/delete/:namespace/:accessId/:metaDocumentId/:recordId/:field
 			}
 			res.send(coreResponse);
 		} catch (error) {
-			console.error(error);
+			logger.error(error, `Error on delete file: ${error.message}`);
 			res.send(error);
 		}
 	}),

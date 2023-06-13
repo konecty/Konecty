@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { MetaObject } from '/imports/model/MetaObject';
 
 import { app } from '/server/lib/routes/app';
+import { logger } from '/imports/utils/logger';
 
 let readiness = false;
 
@@ -20,7 +21,7 @@ app.get('/liveness', async (_, res) => {
 			await MetaObject.findOne({ _id: 'Namespace' });
 			res.send('OK');
 		} catch (error) {
-			console.error(`${new Date().toISOString()} - ${error.message}`);
+			logger.error(error, `Error on liveness (${new Date().toISOString()}): ${error.message}`);
 			res.send(503, 'The king is dead, long live the king!');
 		}
 	} else {

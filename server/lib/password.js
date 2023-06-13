@@ -44,4 +44,3 @@ export class Password {
 	}
 }
 
-// console.log @password.equals "$shiro1$SHA-256$500000$uRdvxDqLnWKdGEH8y/fqKw==$9+8VwNX0GLx8tvF1NWELRLkpOyzqtrEQJQaseGM6BDE=", '698dc19d489c4e4db73e28a713eab07b'

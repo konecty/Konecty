@@ -14,6 +14,7 @@ import size from 'lodash/size';
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { MetaObject, Models } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
 
 
 // eslint-disable-next-line no-undef
@@ -146,7 +147,7 @@ Meteor.registerMethod('auth:login', function (request) {
 			},
 		};
 	} catch (error) {
-		console.error(error);
+		logger.error(error, `Something went wrong. ${error.message}`);
 		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`, { notify: false });
 	}
 });

@@ -223,21 +223,13 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		const startTime = process.hrtime();
 
 		records = model.find(query, options).fetch();
-		if (global.logAllRequests) {
-			const totalTime = process.hrtime(startTime);
-			const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${request.document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(options)}`
-				.brightCyan;
-			console.log(log);
-		}
+
+		const totalTime = process.hrtime(startTime);
+		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${request.document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(options)}`.brightCyan;
+		logger.trace(log);
 	} catch (error) {
-		console.error('Error executing query');
-		console.error('========================================');
-		console.error(error);
-		console.error('========================================');
-		console.error(`authTokenId: ${request.authTokenId}`);
-		console.error(JSON.stringify(query, null, 2));
-		console.error(JSON.stringify(options, null, 2));
-		console.error('========================================');
+		logger.error(error, `Error executing query: ${error.message}`);
+
 		return {
 			success: false,
 			errors: [
@@ -258,8 +250,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 		try {
 			local.collection.insert(utils.mapDateValue(record));
 		} catch (error) {
-			console.log(error);
-			console.log(record);
+			logger.error(error, `Error inserting record into local collection ${request.document}: ${error.message}`);
 		}
 	}
 
@@ -627,7 +618,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 					}
 				}
 			} else {
-				console.error(`Inconsistent metadata, field [${lookupField}] does not exists in [${field.document}]`);
+				logger.error(`Inconsistent metadata, field [${lookupField}] does not exists in [${field.document}]`);
 			}
 		}
 
@@ -1043,15 +1034,12 @@ Meteor.registerMethod(
 					insertResult = model.insert(utils.processDate(newRecord));
 				}
 			} catch (e) {
-				console.error(e);
+				logger.error(e, `Error on insert ${Namespace.ns}.${request.document}: ${e.message}`);
 				if (e.code === 11000) {
 					e = new Meteor.Error('internal-error', 'Erro ao inserir: registro já existe');
-					NotifyErrors.notify('catchErrors', e);
-					return e;
-				} else {
-					NotifyErrors.notify('DataInsertError', e);
-					return e;
 				}
+					return e;
+				
 			}
 
 			let query = { _id: insertResult };
@@ -1075,15 +1063,14 @@ Meteor.registerMethod(
 
 						post({ url, json: hookData }, function (err, response) {
 							if (err) {
-								NotifyErrors.notify('HookOnCreateError', err);
-								console.log('📠 ', `CREATE ERROR ${url}`.red, err);
+								logger.error(err, `CREATE ERROR ${url}: ${err.message}`);
 								return;
 							}
 
 							if (response.statusCode === 200) {
-								console.log('📠 ', `${response.statusCode} CREATE ${url}`.green);
+								logger.info(`📠 ${response.statusCode} CREATE ${url}`);
 							} else {
-								console.log('📠 ', `${response.statusCode} CREATE ${url}`.red);
+								logger.error(`📠 ${response.statusCode} CREATE ${url}`);
 							}
 						});
 					}
@@ -1094,7 +1081,7 @@ Meteor.registerMethod(
 			if (isObject(this.access.readFilter)) {
 				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, this);
 				if (readFilter instanceof Error) {
-					this.notifyError('Create - Read Filter', readFilter, { accessFilter: this.access.readFilter });
+					logger.error(`Create - Read Filter Error: ${readFilter.message}`);
 					response.errors.push(readFilter);
 				} else {
 					query = { $and: [query, readFilter] };
@@ -1531,15 +1518,14 @@ Meteor.registerMethod(
 
 						post({ url, json: hookData }, function (err, response) {
 							if (err) {
-								NotifyErrors.notify('HookOnUpdateError', err);
-								console.log('📠 ', `UPDATE ERROR ${url}`.red, err);
+								logger.error(`UPDATE ERROR ${url}`, err);
 								return;
 							}
 
 							if (response.statusCode === 200) {
-								console.log('📠 ', `${response.statusCode} UPDATE ${url}`.green);
+								logger.info(`📠  ${response.statusCode} UPDATE ${url}`);
 							} else {
-								console.log('📠 ', `${response.statusCode} UPDATE ${url}`.red);
+								logger.error(`📠  ${response.statusCode} UPDATE ${url}`);
 							}
 						});
 					}
@@ -1898,15 +1884,14 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 
 					post({ url, json: hookData }, function (err, response) {
 						if (err) {
-							NotifyErrors.notify('HookOnDeleteError', err);
-							console.log('📠 ', `DELETE ERROR ${url}`.red, err);
+							logger.error(err, `DELETE ERROR ${url}: ${err.message}`);
 							return;
 						}
 
 						if (response.statusCode === 200) {
-							console.log('📠 ', `${response.statusCode} DELETE ${url}`.green);
+							logger.info(`${response.statusCode} DELETE ${url}`);
 						} else {
-							console.log('📠 ', `${response.statusCode} DELETE ${url}`.red);
+							logger.warn(`📠 ${response.statusCode} DELETE ${url}`);
 						}
 					});
 				}
@@ -2266,9 +2251,6 @@ KONDATA.call 'data:lead:save',
 */
 Meteor.registerMethod('data:lead:save', 'withUser', function (request) {
 	let createRequest, record, result;
-	// meta = @meta
-
-	console.log('data:lead:save ->'.yellow, global.Namespace.ns, '->'.green, JSON.stringify(request));
 
 	// Some validations of payload
 	if (!isObject(request.lead)) {
@@ -2679,8 +2661,6 @@ Meteor.registerMethod('data:lead:save', 'withUser', function (request) {
 			createRequest.data.type = ['Cliente'];
 		}
 
-		console.log('[data:create] ->'.yellow, JSON.stringify(createRequest, null, '  '));
-
 		result = Meteor.call('data:create', createRequest);
 	} else if (!isEmpty(contactData)) {
 		const updateRequest = {
@@ -2697,8 +2677,6 @@ Meteor.registerMethod('data:lead:save', 'withUser', function (request) {
 				data: contactData,
 			},
 		};
-
-		console.log('[data:update] ->'.yellow, JSON.stringify(updateRequest, null, '  '));
 
 		result = Meteor.call('data:update', updateRequest);
 	} else {

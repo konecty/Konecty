@@ -21,6 +21,7 @@ import numberFormat from 'underscore.string/numberFormat';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { mapObjIndexed } from 'ramda';
 import { Meta, Models } from '/imports/model/MetaObject';
+import { logger } from '../logger';
 
 export const utils = {
 	deepEqual(a, b) {
@@ -405,8 +406,7 @@ export const utils = {
 				return {};
 			}
 		} catch (e) {
-			console.log('scriptAfterSave Error ->'.red, e);
-			context.notifyError('runScriptAfterSave', e, { script, data });
+			logger.error(e, `runScriptAfterSave error: ${e.message}`);
 			return {};
 		}
 	},

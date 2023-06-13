@@ -21,7 +21,7 @@ const registerTemplate = function (record) {
 			Template[record._id].helpers(helper);
 		}
 	} catch (err) {
-		console.error(`Error register template ${record.name}: ${err.message}`);
+		logger.error(err, `Error register template ${record.name}: ${err.message}`);
 	}
 };
 

@@ -2,6 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 
 import { Models } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
 
 export function getFirstUser() {
 	return Meteor.users.findOne({ username: process.env.KONDATA_ADMIN_USERNAME || 'admin' }, { fields: { _id: 1, group: 1 } });
@@ -17,7 +18,7 @@ export function registerFirstGroup() {
 	const group = Models['Group'].findOne({ name: 'SYSTEM' });
 
 	if (!group) {
-		console.log('[kondata] Create first group');
+		logger.info('[kondata] Create first group');
 
 		const newGroup = {
 			_createdAt: new Date(),
@@ -52,7 +53,7 @@ export function registerFirstUser() {
 	let admin = getFirstUser();
 
 	if (!admin) {
-		console.log('[kondata] Create first user');
+		logger.info('[kondata] Create first user');
 
 		const adminId = Accounts.createUser({
 			username: process.env.KONDATA_ADMIN_USERNAME || 'admin',

@@ -14,13 +14,14 @@ import cors from 'cors';
 
 import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
+import { logger } from '/imports/utils/logger';
 
 // const RES_TIMEOUT = 1000 * 300;
 // const REQ_TIMEOUT = 1000 * 300;
 
 const uriObject = parse(process.env.MONGO_URL);
 process.env.dbName = uriObject.database;
-console.log(`[kondata] === ${process.env.dbName} ===`.green);
+logger.info(`[kondata] === ${process.env.dbName} ===`);
 
 const basePath = resolve('.').split('.meteor')[0];
 let tplPath = 'assets/app/templates';
@@ -29,15 +30,6 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 }
 
 global.logAllRequests = /true|1|enable/i.test(process.env.LOG_REQUEST);
-
-process.on('SIGUSR2', function () {
-	global.logAllRequests = !global.logAllRequests;
-	if (global.logAllRequests === true) {
-		console.log('Log all requests ENABLED'.green);
-	} else {
-		console.log('Log all requests DISABLED'.red);
-	}
-});
 
 Picker.middleware(cookieParser());
 
@@ -136,7 +128,7 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if (response instanceof Error) {
-			console.log(`Error: ${response.message}`.red);
+			logger.error(response, `Error: ${response.message}`);
 			response = {
 				success: false,
 				errors: [
@@ -173,7 +165,7 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
-			console.log(status, response);
+			logger.error({ status, response }, `Response: ${status} ${req.method} ${req.url}`);
 		}
 
 		res.statusCode = status;
@@ -203,27 +195,25 @@ Picker.middleware(function (req, res, next) {
 			res.statusCode = 200;
 		}
 
-		if (global.logAllRequests === true || [200, 204, 304].includes(res.statusCode) !== true || res.hasErrors === true) {
-			// Log API Calls
-			const totalTime = process.hrtime(req.startTime);
+		// Log API Calls
+		const totalTime = process.hrtime(req.startTime);
 
-			let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
-				req.headers.host != null ? `${req.headers.host}` : ''
-			} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
+		let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
+			req.headers.host != null ? `${req.headers.host}` : ''
+		} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
 
-			if (res.statusCode === 401 && req.user) {
-				log += ` ${req.user._id}`;
-			}
-
-			if (res.statusCode === 200 && res.hasErrors !== true) {
-				log = `${log}`.grey;
-			} else if (res.statusCode === 500) {
-				log = `${log}`.red;
-			} else {
-				log = `${log}`.yellow;
-			}
-			console.log(log);
+		if (res.statusCode === 401 && req.user) {
+			log += ` ${req.user._id}`;
 		}
+
+		if (res.statusCode === 200 && res.hasErrors !== true) {
+			log = `${log}`.grey;
+		} else if (res.statusCode === 500) {
+			log = `${log}`.red;
+		} else {
+			log = `${log}`.yellow;
+		}
+		logger.trace(log);
 	};
 
 	next();
@@ -246,7 +236,7 @@ const corsOptions = {
 			if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
 				callback(null, true);
 			} else {
-				console.error(`${origin} Not allowed by CORS`);
+				logger.error(`${origin} Not allowed by CORS`);
 				callback(new Error(`Not allowed by CORS`));
 			}
 		} else {
