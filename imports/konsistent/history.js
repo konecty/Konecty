@@ -197,7 +197,7 @@ Konsistent.History.processOplogItem = function (doc) {
 		Konsistent.History.updateLookupReferences(metaName, _id, data);
 
 		const totalTime = process.hrtime(startTime);
-		logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update lookup references for ${metaName}`.brightMagenta);
+		logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update lookup references for ${metaName}`);
 	}
 
 	startTime = process.hrtime();
@@ -205,7 +205,7 @@ Konsistent.History.processOplogItem = function (doc) {
 	Konsistent.History.processReverseLookups(metaName, _id, data, action);
 
 	const totalTime = process.hrtime(startTime);
-	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process reverse lookups for ${metaName}`.brightMagenta);
+	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process reverse lookups for ${metaName}`);
 
 	// Parei aqui
 
@@ -214,10 +214,8 @@ Konsistent.History.processOplogItem = function (doc) {
 	// Update documents with relations to this document
 	Konsistent.History.updateRelationReferences(metaName, action, _id, data);
 
-	if (global.logAllRequests === true) {
-		const totalTime = process.hrtime(startTime);
-		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update relation references for ${metaName}`.brightMagenta);
-	}
+	const totalTime = process.hrtime(startTime);
+	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Update relation references for ${metaName}`);
 
 	// Remove some internal data
 	for (key of keysToIgnore) {
@@ -233,10 +231,8 @@ Konsistent.History.processOplogItem = function (doc) {
 	// Save last processed ts
 	Konsistent.History.saveLastOplogTimestamp(doc.ts);
 
-	if (global.logAllRequests === true) {
-		const totalTime = process.hrtime(startTime);
-		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Save last oplog timestamp`.brightMagenta);
-	}
+	const totalTime = process.hrtime(startTime);
+	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Save last oplog timestamp`);
 
 	return Konsistent.History.processAlertsForOplogItem(metaName, action, _id, data, updatedBy, updatedAt);
 };
@@ -268,12 +264,12 @@ Konsistent.History.saveLastOplogTimestamp = function (ts) {
 		try {
 			return Konsistent.Models.Konsistent.rawCollection().updateOne(query, data, options);
 		} catch (e) {
-			console.error(e);
-			return NotifyErrors.notify('SaveLastOplogTimestamp', {
-				query,
-				data,
-				options,
-			});
+			logger.error(
+				{
+					error: e,
+				},
+				'Error on save last oplog timestamp',
+			);
 		}
 	};
 
@@ -341,32 +337,26 @@ Konsistent.History.createHistory = function (metaName, action, id, data, updated
 	// Create history!
 	try {
 		history.update(historyQuery, historyItem, { upsert: true });
-		if (global.logAllRequests === true) {
-			const totalTime = process.hrtime(startTime);
-			// Log operation to shell
-			let log = metaName;
 
-			switch (action) {
-				case 'create':
-					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to create action over  ${log}`.green;
-					break;
-				case 'update':
-					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to update action over ${log}`.blue;
-					break;
-				case 'delete':
-					log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to delete action over ${log}`.red;
-					break;
-			}
+		const totalTime = process.hrtime(startTime);
+		// Log operation to shell
+		let log = metaName;
 
-			console.log(log);
+		switch (action) {
+			case 'create':
+				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to create action over  ${log}`;
+				break;
+			case 'update':
+				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to update action over ${log}`;
+				break;
+			case 'delete':
+				log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Create history to delete action over ${log}`;
+				break;
 		}
+
+		logger.debug(log);
 	} catch (e) {
-		console.error(e);
-		NotifyErrors.notify('createHistory', e, {
-			historyQuery,
-			historyItem,
-			upsert: true,
-		});
+		logger.error(e, 'Error on create history');
 	}
 };
 
@@ -445,15 +435,9 @@ Konsistent.History.updateRelationReferences = function (metaName, action, id, da
 	// Find record with all information, not only udpated data, to calc aggregations
 	const record = model.findOne({ _id: id });
 
-	// If no record was found log error to console and abort
+	// If no record was found log error and abort
 	if (!record) {
-		return NotifyErrors.notify('updateRelationReferences', new Error(`Can't find record ${id} from ${metaName}`), {
-			metaName,
-			action,
-			id,
-			data,
-			referencesToUpdate,
-		});
+		return logger.error(`Can't find record ${id} from ${metaName}`);
 	}
 
 	// # Iterate over relations to process
@@ -686,25 +670,21 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 		// If there are affected records
 		if (affected > 0) {
 			// Log Status
-			console.log(`∑ ${referenceDocumentName} < ${metaName} (${affected})`.yellow);
+			logger.info(`∑ ${referenceDocumentName} < ${metaName} (${affected})`);
 			// And log all aggregatores for this status
 			for (fieldName in relation.aggregators) {
 				aggregator = relation.aggregators[fieldName];
 				if (aggregator.field) {
-					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`.yellow);
+					logger.info(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`);
 				} else {
-					console.log(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`.yellow);
+					logger.info(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`);
 				}
 			}
 		}
 
 		return affected;
 	} catch (error1) {
-		e = error1;
-		return NotifyErrors.notify('updateRelationReference', e, {
-			updateQuery,
-			valuesToUpdate,
-		});
+		logger.error(error1, 'Error on updateRelationReference');
 	}
 };
 
@@ -771,9 +751,9 @@ Konsistent.History.updateLookupReferences = function (metaName, id, data) {
 	// Find record with all information, not only udpated data, to can copy all related fields
 	const record = model.findOne({ _id: id });
 
-	// If no record was found log error to console and abort
+	// If no record was found log error and abort
 	if (!record) {
-		return NotifyErrors.notify('updateLookupReferences', new Error(`Can't find record ${id} from ${metaName}`));
+		return logger.error(`Can't find record ${id} from ${metaName}`);
 	}
 
 	// Iterate over relations to process and iterate over each related field to execute a method to update relations
@@ -862,7 +842,7 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 					const lookupModel = Konsistent.Models[inheritedMetaField.document];
 
 					if (!lookupModel) {
-						console.log(new Error(`Document ${inheritedMetaField.document} not found`));
+						logger.error(`Document ${inheritedMetaField.document} not found`);
 						continue;
 					}
 
@@ -876,10 +856,8 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 
 							// If no record found log error
 							if (!lookupRecord) {
-								console.log(
-									new Error(
-										`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`,
-									),
+								logger.error(
+									`Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`,
 								);
 								continue;
 							}
@@ -928,10 +906,8 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 
 								// If no record found log error
 								if (!lookupRecord) {
-									console.log(
-										new Error(
-											`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`,
-										),
+									logger.error(
+										`Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`,
 									);
 									return;
 								}
@@ -960,20 +936,14 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 		// Execute update and get affected records
 		const affectedRecordsCount = model.update(query, updateData, { multi: true });
 
-		// If there are affected records then log into console
+		// If there are affected records then log
 		if (affectedRecordsCount > 0) {
-			console.log(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${affectedRecordsCount})`.yellow);
+			logger.debug(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${affectedRecordsCount})`);
 		}
 
 		return affectedRecordsCount;
 	} catch (e) {
-		console.error(e);
-		// Log if update get some error
-		NotifyErrors.notify('updateLookupReference', e, {
-			query,
-			updateData,
-			options,
-		});
+		logger.error(e, 'Error updating lookup reference');
 	}
 };
 
@@ -1050,7 +1020,7 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 				affectedRecordsCount = reverseLookupModel.update(reverseLookupQuery, reverseLookupUpdate, { multi: true });
 
 				if (affectedRecordsCount > 0) {
-					console.log(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${affectedRecordsCount})`.yellow);
+					logger.info(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${affectedRecordsCount})`);
 				}
 			}
 
@@ -1089,7 +1059,7 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 				affectedRecordsCount = reverseLookupModel.update(reverseLookupQuery, reverseLookupUpdate, { multi: true });
 
 				if (affectedRecordsCount > 0) {
-					console.log(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${affectedRecordsCount})`.yellow);
+					logger.info(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${affectedRecordsCount})`);
 				}
 			}
 		}
@@ -1274,8 +1244,7 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 			Konsistent.Models['Message'].insert(emailData);
 		}
 	}
-	if (global.logAllRequests === true) {
-		const totalTime = process.hrtime(startTime);
-		console.log(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process alerts for oplog item for ${metaName}`.brightMagenta);
-	}
+
+	const totalTime = process.hrtime(startTime);
+	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => Process alerts for oplog item for ${metaName}`);
 };
