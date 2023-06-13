@@ -9,6 +9,7 @@ import { middlewares } from '/server/lib/routes/middlewares';
 import { sessionUtils } from '/imports/utils/sessionUtils';
 import { utils } from '/imports/utils/konutils/utils';
 import { MetaObject, Namespace, Meta } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
 
 app.post('/rest/data/lead/save', (req, res) =>
 	res.send(
@@ -377,7 +378,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res) =>
 
 		// If result is an erro send error
 		if (result instanceof Error) {
-			req.notifyError('Export - Error', result);
+			logger.error(result, `Export - Error ${result.message}`)
 			return res.send(result);
 		}
 

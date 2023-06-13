@@ -8,9 +8,7 @@ import isString from 'lodash/isString';
 /* @DEPENDS_ON_ACCESS */
 Meteor.registerMiddleware('ifAccessIsCreateable', function (request) {
 	if (this.access.isCreatable !== true) {
-		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create records`, {
-			notify: false,
-		});
+		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create records`);
 	}
 });
 

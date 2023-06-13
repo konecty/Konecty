@@ -12,7 +12,6 @@ import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
-import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
 import { logger } from '/imports/utils/logger';
 
@@ -58,30 +57,6 @@ var convertObjectIdsToOid = function (values) {
 // Add res.set and res.get to handle response headers
 Picker.middleware(function (req, res, next) {
 	req.startTime = process.hrtime();
-
-	req.notifyError = function (type, message, options) {
-		options = options || {};
-		options.url = req.url;
-		options.req = req;
-
-		options.user = {
-			_id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
-			name: get(req, 'user.name'),
-			login: get(req, 'user.username'),
-			email: get(req, 'user.emails'),
-			access: get(req, 'user.access'),
-			lastLogin: get(req, 'user.lastLogin'),
-		};
-		options.session = {
-			_id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
-			_createdAt: get(req, 'session._createdAt'),
-			ip: get(req, 'session.ip'),
-			geolocation: get(req, 'session.geolocation'),
-			expireAt: get(req, 'session.expireAt'),
-		};
-
-		return NotifyErrors.notify(type, message, options);
-	};
 
 	req.set = (header, value) => (req.headers[header.toLowerCase()] = value);
 
@@ -134,7 +109,6 @@ Picker.middleware(function (req, res, next) {
 				errors: [
 					{
 						message: response.message,
-						notify: false,
 					},
 				],
 			};

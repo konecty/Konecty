@@ -20,8 +20,6 @@ import keys from 'lodash/keys';
 
 import { parse } from 'mongodb-uri';
 
-import { NotifyErrors } from '/imports/utils/errors';
-
 import { Meta, Models, References, MetaByCollection } from '/imports/model/MetaObject';
 import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
@@ -315,7 +313,7 @@ Konsistent.History.createHistory = function (metaName, action, id, data, updated
 
 	// If can't get history collection terminate this method
 	if (!history) {
-		return NotifyErrors.notify('SaveLastOplogTimestamp', new Error(`Can't get History collection from ${metaName}`));
+		return logger.error(`Can't get History collection from ${metaName}`);
 	}
 
 	const historyQuery = { _id: oplogDoc.ts.getHighBits() * 100000 + oplogDoc.ts.getLowBits() };
@@ -460,7 +458,7 @@ Konsistent.History.updateRelationReferences = function (metaName, action, id, da
 				const historyModel = Models[`${metaName}.History`];
 
 				if (!historyModel) {
-					NotifyErrors.notify('updateRelationReferences', new Error(`Can't get model for document ${metaName}.History`));
+					logger.error(`Can't get model for document ${metaName}.History`);
 				}
 
 				// Define query of history with data id
@@ -507,7 +505,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 	const meta = Meta[metaName];
 
 	if (!meta) {
-		return NotifyErrors.notify('updateRelationReference', new Error(`Can't get meta of document ${metaName}`));
+		return logger.error(`Can't get meta of document ${metaName}`);
 	}
 
 	if (isObject(relation)) {
@@ -629,9 +627,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 			}
 		} catch (error) {
 			e = error;
-			NotifyErrors.notify('updateRelationReference', e, {
-				pipeline,
-			});
+			logger.error(e, `Error on aggregate relation ${relation.document} on document ${metaName}: ${e.message}`);
 		}
 	}
 
@@ -653,7 +649,7 @@ Konsistent.History.updateRelationReference = function (metaName, relation, looku
 	// Try to get reference model
 	const referenceModel = Models[referenceDocumentName];
 	if (!referenceModel) {
-		return NotifyErrors.notify('updateRelationReference', new Error(`Can't get model for document ${referenceDocumentName}`));
+		return logger.error(`Can't get model for document ${referenceDocumentName}`);
 	}
 
 	// Define a query to udpate records with aggregated values
@@ -767,13 +763,13 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 	// Try to get related meta
 	const meta = Meta[metaName];
 	if (!meta) {
-		return NotifyErrors.notify('updateLookupReference', new Error(`Meta ${metaName} does not exists`));
+		return logger.error(`Meta ${metaName} does not exists`);
 	}
 
 	// Try to get related model
 	const model = Models[metaName];
 	if (!model) {
-		return NotifyErrors.notify('updateLookupReference', new Error(`Model ${metaName} does not exists`));
+		return logger.error(`Model ${metaName} does not exists`);
 	}
 
 	// Define field to query and field to update
@@ -814,14 +810,9 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 				var inheritedMetaField = meta.fields[inheritedField.fieldName];
 
 				if (inheritedField.inherit === 'hierarchy_always') {
-					// If inherited field not is a lookup our not is list then notify error and ignore process
+
 					if (get(inheritedMetaField, 'type') !== 'lookup' || inheritedMetaField.isList !== true) {
-						NotifyErrors.notify('updateLookupReference[hierarchy_always]', new Error('Not lookup or not isList'), {
-							inheritedMetaField,
-							query,
-							updateData,
-							options,
-						});
+						logger.error(`Not lookup or not isList field ${inheritedField.fieldName} in ${metaName}`);
 						continue;
 					}
 					if (!record[inheritedField.fieldName]) {
@@ -971,7 +962,7 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 	const record = model.findOne(query);
 
 	if (!record) {
-		return NotifyErrors.notify('ReverseLoockup Error', new Error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`));
+		return logger.error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`);
 	}
 
 	// Process reverse lookups
@@ -983,12 +974,12 @@ Konsistent.History.processReverseLookups = function (metaName, id, data, action)
 			const reverseLookupMeta = Meta[field.document];
 
 			if (!reverseLookupMeta) {
-				NotifyErrors.notify('ReverseLoockup Error', new Error(`Meta [${field.document}] not found`));
+				logger.error(`Meta [${field.document}] not found`);
 				continue;
 			}
 
 			if (!reverseLookupMeta.fields[field.reverseLookup]) {
-				NotifyErrors.notify('ReverseLoockup Error', new Error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`));
+				logger.error(`Field [${field.reverseLookup}] does not exists in [${field.document}]`);
 				continue;
 			}
 
@@ -1079,7 +1070,7 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 	const meta = Meta[metaName];
 
 	if (!meta) {
-		return NotifyErrors.notify('processAlertsForOplogItem', new Error(`Can't get meta for ${metaName}`));
+		return logger.error(`Can't get meta for ${metaName}`);
 	}
 
 	if (meta.sendAlerts !== true) {
@@ -1089,13 +1080,13 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 	const model = Models[metaName];
 
 	if (!model) {
-		return NotifyErrors.notify('processAlertsForOplogItem', new Error(`Can't get model for ${metaName}`));
+		return logger.error(`Can't get model for ${metaName}`);
 	}
 
 	const userModel = Models['User'];
 
 	if (!userModel) {
-		return NotifyErrors.notify('processAlertsForOplogItem', new Error("Can't get model for User"));
+		return logger.error("Can't get model for User");
 	}
 	const startTime = process.hrtime();
 	let { code } = data;
@@ -1150,10 +1141,7 @@ Konsistent.History.processAlertsForOplogItem = function (metaName, action, _id, 
 	try {
 		userRecords = userModel.find(userQuery, userOptions).fetch();
 	} catch (e) {
-		NotifyErrors.notify('updateLookupReference', e, {
-			userQuery,
-			userOptions,
-		});
+		logger.error(e, `Error on find users for ${metaName} ${_id}`);
 	}
 
 	let actionText = 'Apagado';

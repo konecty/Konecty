@@ -26,7 +26,6 @@ import size from 'lodash/size';
 
 import { post } from 'request';
 
-import { NotifyErrors } from '/imports/utils/errors';
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
@@ -111,7 +110,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	// Parse filters
 	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
-		this.notifyError('Find - Filter Error', readFilter, request);
+		logger.error(readFilter, `Find - Filter Error: ${readFilter.message}`);
 		return readFilter;
 	}
 
@@ -145,7 +144,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 
 		sort = sortUtils.parseSortArray(request.sort);
 		if (sort instanceof Error) {
-			this.notifyError('Find - Sort Error', sort, request);
+			logger.error(sort, `Find - Sort Error: ${sort.message}`);
 			return sort;
 		}
 	}
@@ -180,7 +179,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 			if (accessFieldConditions.READ) {
 				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
-					this.notifyError('FindOne - Access Filter Error', condition, { accessFilter: accessFieldConditions.READ });
+					logger.error(condition, `Find - Access Filter Error: ${condition.message}`);
 					return condition;
 				}
 
@@ -235,7 +234,6 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 			errors: [
 				{
 					message: 'Oops something went wrong, please try again later... if this message persisits, please contact our support',
-					notify: false,
 				},
 			],
 			data: [],
@@ -334,7 +332,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 	// Parse filters
 	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
-		this.notifyError('Find - Filter Error', readFilter, request);
+		logger.error(readFilter, `Find - Filter Error: ${readFilter.message}`);
 		return readFilter;
 	}
 
@@ -416,7 +414,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	// Parse filters
 	const readFilter = filterUtils.parseFilterObject(filter, metaObject, this);
 	if (readFilter instanceof Error) {
-		this.notifyError('Find - Filter Error', readFilter, request);
+		logger.error(readFilter, `Find - Filter Error: ${readFilter.message}`);
 		return readFilter;
 	}
 
@@ -451,7 +449,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 			if (accessFieldConditions.READ) {
 				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
-					this.notifyError('FindOne - Access Filter Error', condition, { accessFilter: accessFieldConditions.READ });
+					logger.error(condition, `FindOne - Access Filter Error: ${condition.message}`);
 					return condition;
 				}
 
@@ -674,7 +672,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	// Parse filters
 	const readFilter = filterUtils.parseFilterObject(filter, lookupMeta, this);
 	if (readFilter instanceof Error) {
-		this.notifyError('Lookup - Access Filter Error', readFilter, request);
+		logger.error(readFilter, `Lookup - Access Filter Error: ${readFilter.message}`);
 		return readFilter;
 	}
 
@@ -728,14 +726,7 @@ Meteor.registerMethod('data:populate:detailFieldsInRecord', 'withUser', 'withAcc
 
 	const populateDetailFields = function (field, value, parent) {
 		if (!has(value, '_id')) {
-			this.notifyError(
-				new Meteor.Error('internal-error', 'populateDetailFields: value without _id', {
-					field,
-					value,
-					document: request.document,
-					parent,
-				}),
-			);
+			logger.error({ field, document: request.document, parent }, 'populateDetailFields: value without _id');
 		}
 
 		const record = Meteor.call('data:find:byId', {
@@ -923,7 +914,7 @@ Meteor.registerMethod(
 					value = request.data[field.name];
 					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
 					if (resultOfValidation instanceof Error) {
-						this.notifyError('Create - Validation Error', resultOfValidation, request);
+						logger.error(resultOfValidation, `Create - Validation Error - ${resultOfValidation.message}`);
 						response.errors.push(resultOfValidation);
 					}
 
@@ -939,7 +930,7 @@ Meteor.registerMethod(
 			const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, request.data, newRecord), this);
 			if (get(validation, 'success') !== true) {
 				const error = new Meteor.Error(validation.reason);
-				this.notifyError('Create - Script Validation Error', error, request);
+				logger.error(error, `Create - Script Validation Error - ${error.message}`);
 				response.errors.push(error);
 			}
 		}
@@ -955,7 +946,7 @@ Meteor.registerMethod(
 					if (request.ignoreAutoNumber !== true || !value) {
 						resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'insert', model, request.data, newRecord);
 						if (resultOfValidation instanceof Error) {
-							this.notifyError('Create - Validation Error', resultOfValidation, request);
+							logger.error(resultOfValidation, `Create - Validation Error - ${resultOfValidation.message}`);
 							response.errors.push(resultOfValidation);
 						}
 
@@ -1038,8 +1029,7 @@ Meteor.registerMethod(
 				if (e.code === 11000) {
 					e = new Meteor.Error('internal-error', 'Erro ao inserir: registro já existe');
 				}
-					return e;
-				
+				return e;
 			}
 
 			let query = { _id: insertResult };
@@ -1186,7 +1176,7 @@ Meteor.registerMethod(
 		// Parse filters
 		const updateFilter = filterUtils.parseFilterObject(filter, meta, this);
 		if (updateFilter instanceof Error) {
-			this.notifyError('Update - Update Filter', updateFilter, request);
+			logger.error(updateFilter, `Update - Update Filter Error: ${updateFilter.message}`);
 			return updateFilter;
 		}
 
@@ -1277,7 +1267,7 @@ Meteor.registerMethod(
 			idMapItem = idMap[id];
 			if (idMapItem.exists !== true) {
 				if (idMapItem.userDontHasPermission === true) {
-					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`, { notify: false }));
+					response.errors.push(new Meteor.Error('internal-error', `Sem premissão para atualizar o dado ${id}`));
 				} else {
 					response.errors.push(new Meteor.Error('internal-error', `Id [${id}] de dado inválido. Não existe dado em [${request.document}] para o id passado: ${id}`));
 				}
@@ -1398,7 +1388,7 @@ Meteor.registerMethod(
 				if (validatedData[key] === undefined) {
 					resultOfValidation = metaUtils.validateAndProcessValueFor(meta, key, value, 'update', model, bodyData, validatedData, idsToUpdate);
 					if (resultOfValidation instanceof Error) {
-						this.notifyError('Update - Validation Error', resultOfValidation, request);
+						logger.error(resultOfValidation, `Update - Validation Error: ${resultOfValidation.message}`);
 						return resultOfValidation;
 					}
 					if (resultOfValidation !== undefined) {
@@ -1415,7 +1405,7 @@ Meteor.registerMethod(
 				const validation = processValidationScript(meta.validationScript, meta.validationData, extend({}, records[0], validatedData), this);
 				if (get(validation, 'success') !== true) {
 					const error = new Meteor.Error(validation.reason);
-					this.notifyError('Update - Script Validation Error', error, request);
+					logger.error(error, `Update - Script Validation Error: ${error.message}`);
 					return error;
 				}
 			}
@@ -1475,7 +1465,7 @@ Meteor.registerMethod(
 					model.update(query, utils.processDate(update), options);
 					return (updatedIds = updatedIds.concat(query._id.$in));
 				} catch (e) {
-					NotifyErrors.notify('DataUpdateError', e);
+					logger.error(e, `Update - Data Update Error: ${e.message}`);
 					return e;
 				}
 			}
@@ -1485,14 +1475,14 @@ Meteor.registerMethod(
 			for (let recordToUpdate of recordsToUpdate) {
 				validateResult = validateAndUpdateRecords([recordToUpdate]);
 				if (validateResult instanceof Error) {
-					this.notifyError('Update - Validation Error', validateResult, request);
+					logger.error(validateResult, `Update - Validation Error: ${validateResult.message}`);
 					return validateResult;
 				}
 			}
 		} else {
 			validateResult = validateAndUpdateRecords(recordsToUpdate);
 			if (validateResult instanceof Error) {
-				this.notifyError('Update - Validation Error', validateResult, request);
+				logger.error(validateResult, `Update - Validation Error: ${validateResult.message}`);
 				return validateResult;
 			}
 		}
@@ -1536,7 +1526,7 @@ Meteor.registerMethod(
 			if (isObject(this.access.readFilter)) {
 				const readFilter = filterUtils.parseFilterObject(this.access.readFilter, meta, this);
 				if (readFilter instanceof Error) {
-					this.notifyError('Update - Validation Error', readFilter, { accessFilter: this.access.readFilter });
+					logger.error(readFilter, `Update - Validation Error: ${readFilter.message}`);
 					response.errors.push(readFilter);
 				} else {
 					query = { $and: [query, readFilter] };
@@ -1624,7 +1614,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 	if (isObject(this.access.deleteFilter)) {
 		const deleteFilter = filterUtils.parseFilterObject(this.access.deleteFilter, meta, this);
 		if (deleteFilter instanceof Error) {
-			this.notifyError('Delete - Validation Error', deleteFilter, request);
+			logger.error(deleteFilter, `Delete - Validation Error: ${deleteFilter.message}`);
 			return deleteFilter;
 		}
 
@@ -1701,9 +1691,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 			delete idMap[id];
 		} else if (idMapItem.outOfDate === true) {
 			response.errors.push(
-				new Meteor.Error('internal-error', `Existe uma versão mais nova do dado que a que está tentando apagar [${id}]. Tente atualizar a tela e tente apagar novamente.`, {
-					notify: false,
-				}),
+				new Meteor.Error('internal-error', `Existe uma versão mais nova do dado que a que está tentando apagar [${id}]. Tente atualizar a tela e tente apagar novamente.`),
 			);
 
 			delete idMap[id];
@@ -1792,7 +1780,6 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 									new Meteor.Error(
 										'internal-error',
 										`Não é possivel apagar o dado com id:[${request.document}] pois existem dados referenciando o mesmo do modulo [${referenceMetaName}].`,
-										{ notify: false },
 									),
 								);
 
@@ -1847,9 +1834,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 				trashModel.insert(record);
 			} catch (error) {
 				e = error;
-				NotifyErrors.notify('TrashInsertError', e, {
-					record,
-				});
+				logger.error(e, `Error on insert record into trash ${e.message}`);
 			}
 		}
 
@@ -1858,9 +1843,7 @@ Meteor.registerMethod('data:delete', 'withUser', 'withAccessForDocument', 'ifAcc
 			model.remove(query);
 		} catch (error1) {
 			e = error1;
-			NotifyErrors.notify('DataDeleteError', e, {
-				query,
-			});
+			logger.error(e, `Error on delete record ${e.message}`);
 			return e;
 		}
 
@@ -2052,7 +2035,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 
 				// If result is an error return
 				if (result instanceof Error) {
-					this.notifyError('Relations - Lookup Error', result, request);
+					logger.error(result, `Relations - Lookup Error: ${result.message}}`)
 					return result;
 				}
 

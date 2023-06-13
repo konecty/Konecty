@@ -1,5 +1,4 @@
 import { Meteor } from 'meteor/meteor';
-import { NotifyErrors } from '/imports/utils/errors';
 
 import '/server/startup/_loadMetaObjects.js';
 import '/server/startup/color.js';
@@ -12,8 +11,7 @@ import { logger } from '/imports/utils/logger';
 
 if (process.env.NODE_ENV !== 'development') {
 	process.on('uncaughtException', error => {
-		logger.error(error, 'uncaughtException');
-		NotifyErrors.notify('uncaughtException', error);
+		logger.error(error, `uncaughtException ${error.message}`);
 	});
 }
 
@@ -30,9 +28,5 @@ Meteor._debug = function (message: any, stack: any, ...args: any[]) {
 	const error = new Error(message);
 	error.stack = stack;
 
-	NotifyErrors.notify('Meteor._debug', error);
-
 	originalMeteorDebug.apply(this, [message, stack, ...args]);
 };
-
-// Accounts.config({forbidClientAccountCreation: true});

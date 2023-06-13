@@ -4,7 +4,6 @@ import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
 import get from 'lodash/get';
 
-import { NotifyErrors } from '/imports/utils/errors';
 import { logger } from '/imports/utils/logger';
 
 Meteor.registerLogs = false;
@@ -13,30 +12,6 @@ Meteor.registerVerboseLogs = false;
 
 Meteor.registerBeforeMethod('startTime', function () {
 	this.startTime = new Date();
-});
-
-Meteor.registerBeforeMethod('notify', function () {
-	this.notifyError = function (type, message, options) {
-		if (type instanceof Error && !options) {
-			options = message;
-			message = type;
-			type = undefined;
-		}
-
-		options = options || {};
-		options.url = this.__methodName__;
-
-		options.user = {
-			_id: get(this, 'user._id', { valueOf: () => undefined }).valueOf(),
-			name: get(this, 'user.name :'),
-			login: get(this, 'user.username'),
-			email: get(this, 'user.emails'),
-			access: get(this, 'user.access'),
-			lastLogin: get(this, 'user.lastLogin'),
-		};
-
-		return NotifyErrors.notify(type, message, options);
-	};
 });
 
 Meteor.registerAfterMethod('catchErrors', function (params) {

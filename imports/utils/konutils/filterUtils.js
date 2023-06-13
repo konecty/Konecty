@@ -12,7 +12,6 @@ import keys from 'lodash/keys';
 import reduce from 'lodash/reduce';
 import startsWith from 'lodash/startsWith';
 
-import { NotifyErrors } from '/imports/utils/errors';
 import { utils } from '/imports/utils/konutils/utils';
 import { logger } from '/imports/utils/logger';
 
@@ -97,8 +96,8 @@ export const filterUtils = {
 		if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
 			const meta = Meta[field.document];
 			if (!meta) {
+				logger.error(`Meta ${field.document} of field ${field.name} not found`);
 				const e = new Meteor.Error('utils-internal-error', `Meta ${field.document} of field ${field.name} not found`);
-				NotifyErrors.notify('FilterError', e);
 				return e;
 			}
 
@@ -177,8 +176,8 @@ export const filterUtils = {
 		if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
 			const meta = Meta[field.document];
 			if (!meta) {
+				logger.error(`Meta ${field.document} of field ${field.name} not found`);
 				e = new Meteor.Error('utils-internal-error', `Meta ${field.document} of field ${field.name} not found`);
-				NotifyErrors.notify('FilterError', e);
 				return e;
 			}
 
@@ -198,17 +197,17 @@ export const filterUtils = {
 
 		const type = field.type + subTermPart;
 		if (!operatoresByType[type]) {
+			logger.error(`Field type [${type}] of [${field.name}] not supported to filter`);
 			e = new Meteor.Error('utils-internal-error', `Field type [${type}] of [${field.name}] not supported to filter`);
-			NotifyErrors.notify('FilterError', e, { condition, field });
 			return e;
 		}
 
 		if (operatoresByType[type].indexOf(condition.operator) === -1) {
+			logger.error(`Field [${condition.term}] only supports operators [${operatoresByType[type].join(', ')}]. Trying to use operator [${condition.operator}]`);
 			e = new Meteor.Error(
 				'utils-internal-error',
 				`Field [${condition.term}] only supports operators [${operatoresByType[type].join(', ')}]. Trying to use operator [${condition.operator}]`,
 			);
-			NotifyErrors.notify('FilterError', e, { condition });
 			return e;
 		}
 
@@ -217,6 +216,7 @@ export const filterUtils = {
 
 	parseFilterCondition(condition, metaObject, req, invert) {
 		if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || !has(condition, 'value')) {
+			logger.error('All conditions must contain term, operator and value');
 			return new Meteor.Error('utils-internal-error', 'All conditions must contain term, operator and value');
 		}
 
@@ -349,8 +349,8 @@ export const filterUtils = {
 				queryCondition[condition.term] = { $exists: value };
 				break;
 			default:
+				logger.error(`Operator [${condition.operator}] not supported`);
 				var e = new Meteor.Error('utils-internal-error', `Operator [${condition.operator}] not supported`);
-				NotifyErrors.notify('FilterError', e, { condition });
 				return e;
 		}
 

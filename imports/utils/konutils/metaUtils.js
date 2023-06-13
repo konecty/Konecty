@@ -19,7 +19,6 @@ import { titleCase } from 'title-case';
 import { upperCase } from 'upper-case';
 import { lowerCase } from 'lower-case';
 
-import { NotifyErrors } from '/imports/utils/errors';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
 import { Meta, Models } from '/imports/model/MetaObject';
@@ -713,8 +712,8 @@ export const metaUtils = {
 					break;
 
 				default:
+					logger.error(`Field ${fieldName} of type ${field.type} can not be validated`);
 					var e = new Meteor.Error('utils-internal-error', `Field ${fieldName} of type ${field.type} can not be validated`);
-					NotifyErrors.notify('ValidateError', e);
 					return e;
 			}
 

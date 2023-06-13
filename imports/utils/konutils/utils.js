@@ -335,7 +335,7 @@ export const utils = {
 				return {};
 			}
 		} catch (e) {
-			req.notifyError('runScriptBeforeValidation', e, { script, data });
+			logger.error(e, `Error running script before validation ${e.message}`);
 			return {};
 		}
 	},
@@ -364,7 +364,7 @@ export const utils = {
 				return {};
 			}
 		} catch (e) {
-			req.notifyError('runValidationScript', e, { script, data });
+			logger.error(e, `Error running validation script ${e.message}`);
 			return {};
 		}
 	},
