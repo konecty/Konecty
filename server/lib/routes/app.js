@@ -181,11 +181,11 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if (res.statusCode === 200 && res.hasErrors !== true) {
-			log = `${log}`.grey;
+			log = `${log}`;
 		} else if (res.statusCode === 500) {
-			log = `${log}`.red;
+			log = `${log}`;
 		} else {
-			log = `${log}`.yellow;
+			log = `${log}`;
 		}
 		logger.trace(log);
 	};

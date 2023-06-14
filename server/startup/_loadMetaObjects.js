@@ -59,7 +59,7 @@ const tryEnsureIndex = function (model, fields, options) {
 		model._ensureIndex(fields, options);
 	} catch (e) {
 		if (overwriteExitingIndexes && e.toString().indexOf('already exists with different options') !== -1) {
-			logger.trace(`Overwriting index: ${JSON.stringify(fields)}`.yellow);
+			logger.trace(`Overwriting index: ${JSON.stringify(fields)}`);
 			model._dropIndex(fields);
 			model._ensureIndex(fields, options);
 		} else if (e.toString().indexOf('too many indexes for') !== -1) {
@@ -158,7 +158,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[fieldName] = 1;
 
-				logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
 				tryEnsureIndex(Models[meta.name], fields, { name: fieldName, expireAfterSeconds: 60 });
 			}
 
@@ -168,7 +168,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[historyIndex] = 1;
 
-				logger.info(`Ensure Index at ${meta.collection}.History: ${historyIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}.History: ${historyIndex}`);
 				tryEnsureIndex(Models[`${meta.name}.History`], fields, { name: historyIndex });
 			}
 
@@ -178,7 +178,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[commentIndex] = 1;
 
-				logger.info(`Ensure Index at ${meta.collection}.Comment: ${commentIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}.Comment: ${commentIndex}`);
 				tryEnsureIndex(Models[`${meta.name}.Comment`], fields, { name: commentIndex });
 			}
 
@@ -234,7 +234,7 @@ const registerMeta = function (meta) {
 							fields[fieldName + subField] = 1;
 						}
 
-						logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`.green);
+						logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
 						tryEnsureIndex(Models[meta.name], fields, options);
 					}
 				}
@@ -246,7 +246,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[metaDefaultIndex] = 1;
 
-				logger.info(`Ensure Index at ${meta.collection}: ${metaDefaultIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${metaDefaultIndex}`);
 				tryEnsureIndex(Models[meta.name], fields, { name: metaDefaultIndex });
 			}
 
@@ -264,7 +264,7 @@ const registerMeta = function (meta) {
 						index.options.name = indexName;
 					}
 
-					logger.info(`Ensure Index at ${meta.collection}: ${index.options.name}`.green);
+					logger.info(`Ensure Index at ${meta.collection}: ${index.options.name}`);
 					if (Object.keys(index.keys).length > 0) {
 						keys = {};
 						for (key in index.keys) {
@@ -286,7 +286,7 @@ const registerMeta = function (meta) {
 					weights: {},
 				};
 
-				logger.info(`Ensure Index at ${meta.collection}: ${options.name}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${options.name}`);
 				for (key in meta.indexText) {
 					const weight = meta.indexText[key];
 					key = key.replace(/:/g, '.');
