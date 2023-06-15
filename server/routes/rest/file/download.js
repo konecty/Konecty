@@ -2,7 +2,11 @@ import axios from 'axios';
 import { join } from 'path';
 import send from 'send';
 
+import { app } from '/server/lib/routes/app';
+
 import fixedEncodeURIComponent from './urlencode_u300';
+
+import { logger } from '/imports/utils/logger';
 
 const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
@@ -52,7 +56,7 @@ app.get('(/rest/file|/file|/rest/image|/image)/:mode(preview|download)?/:namespa
 		} else if (/status code 404/i.test(message)) {
 			return res._headerSent ? null : res.send(404, error);
 		} else {
-			console.error(message);
+			logger.error(message, `Error on download file: ${message}`);
 			return res._headerSent ? null : res.send(500, error);
 		}
 	}

@@ -1,6 +1,8 @@
-@import "_lesshat.import.less";
+@import '_lesshat.import.less';
 
-*, *:before, *:after {
+*,
+*:before,
+*:after {
 	.box-sizing(border-box);
 }
 
@@ -8,13 +10,13 @@
 	font-family: inherit;
 }
 
-.btn{
+.btn {
 	display: inline-block;
 	font-size: 14px;
 	cursor: pointer;
 	position: relative;
-	&:before{
-		content: " ";
+	&:before {
+		content: ' ';
 		left: 0;
 		top: 0;
 		width: 100%;
@@ -22,19 +24,19 @@
 		z-index: 1;
 		position: absolute;
 		opacity: 0;
-		background-color: rgba(0,0,0,0.075);
+		background-color: rgba(0, 0, 0, 0.075);
 		.transform(scale(0.5));
-		.transition(transform .2s cubic-bezier(.5, .6, .3, 1.35), opacity .1s ease-out);
+		.transition(transform 0.2s cubic-bezier(0.5, 0.6, 0.3, 1.35), opacity 0.1s ease-out);
 	}
-	&.icon{
+	&.icon {
 		text-align: center;
 		padding: 0;
 		width: 30px;
 		height: 30px;
-		&:before{
+		&:before {
 			border-radius: 50%;
 		}
-		span{
+		span {
 			display: block;
 			width: 100%;
 			height: 100%;
@@ -42,7 +44,7 @@
 			padding: 3px;
 			vertical-align: middle;
 		}
-		i{
+		i {
 			font-size: 17px;
 			cursor: pointer;
 			width: 100%;
@@ -50,15 +52,15 @@
 			text-align: center;
 			display: inline-block;
 			vertical-align: middle;
-			&.fa-file-o{
+			&.fa-file-o {
 				font-size: 16px;
 			}
-			&.fa-edit{
+			&.fa-edit {
 				vertical-align: text-top;
 				margin-top: -2px;
 				margin-left: 1px;
 			}
-			&:before{
+			&:before {
 				vertical-align: text-top;
 				display: inline-block;
 				width: 100%;
@@ -66,34 +68,34 @@
 				margin-top: 3px;
 			}
 		}
-		&.small{
+		&.small {
 			width: 24px;
-			i{
+			i {
 				font-size: 14px;
-				&:before{
+				&:before {
 					margin-top: 1px;
 				}
 			}
 		}
 	}
-	&.small{
+	&.small {
 		height: 24px;
 		font-size: 12px;
-		span{
+		span {
 			height: 24px;
 			padding: 3px;
 			line-height: 18px;
 		}
 	}
-	&.scale{
-		&:hover{
-			&:before{
+	&.scale {
+		&:hover {
+			&:before {
 				.transform(scale(1));
 				opacity: 1;
 			}
 		}
 	}
-	span{
+	span {
 		display: block;
 		position: relative;
 		z-index: 10;

@@ -1,14 +1,18 @@
 import moment from 'moment';
 import { mapObjIndexed } from 'ramda';
 
-import { isArray, isObject, map, isString, isDate, reduce, isFunction } from 'lodash';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import map from 'lodash/map';
+import isString from 'lodash/isString';
+import isDate from 'lodash/isDate';
+import reduce from 'lodash/reduce';
+import isFunction from 'lodash/isFunction';
 
-utils = {
-	...utils
-};
+import { utils } from '/imports/utils/konutils/utils';
 
-utils.accentsTidy = function(s) {
-	if (!_.isString(s)) {
+utils.accentsTidy = function (s) {
+	if (!isString(s)) {
 		return '';
 	}
 	let r = s.toLowerCase();
@@ -27,7 +31,7 @@ utils.accentsTidy = function(s) {
 };
 
 utils.unicodeSortArrayOfObjectsByParam = (arr, param) =>
-	arr.sort(function(a, b) {
+	arr.sort(function (a, b) {
 		if (a[param] != null) {
 			return utils.accentsTidy(a[param]).localeCompare(utils.accentsTidy(b[param]));
 		}
@@ -35,7 +39,7 @@ utils.unicodeSortArrayOfObjectsByParam = (arr, param) =>
 	});
 
 utils.sortArrayOfObjectsByParam = (arr, param) =>
-	arr.sort(function(a, b) {
+	arr.sort(function (a, b) {
 		if (a[param]) {
 			return a[param].localeCompare(b[param]);
 		}
@@ -76,27 +80,27 @@ utils.mapDateValue = record => {
 				if (isDate(value)) {
 					return {
 						...acc,
-						[key]: moment(value).toISOString()
+						[key]: moment(value).toISOString(),
 					};
 				}
 				if (isArray(value)) {
 					return {
 						...acc,
-						[key]: map(value, utils.mapDateValue)
+						[key]: map(value, utils.mapDateValue),
 					};
 				}
 				if (isObject(value)) {
 					return {
 						...acc,
-						[key]: utils.mapDateValue(value)
+						[key]: utils.mapDateValue(value),
 					};
 				}
 				return {
 					...acc,
-					[key]: value
+					[key]: value,
 				};
 			},
-			{}
+			{},
 		);
 	} else {
 		return record;

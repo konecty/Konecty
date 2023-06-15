@@ -4,11 +4,14 @@ import { readFile, createReadStream } from 'fs';
 import { promisify } from 'util';
 import { join } from 'path';
 
+import { app } from '/server/lib/routes/app';
+
 import fixedEncodeURIComponent from './urlencode_u300';
 
 const _readFile = promisify(readFile);
 
 import detectContentType from './detectContentType';
+import { logger } from '/imports/utils/logger';
 
 const expiration = 31536000;
 const corsFileTypes = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
@@ -142,11 +145,10 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 					});
 					if (status === 200) {
 						preprocessBuffer = data;
-					}	
+					}
 				} catch (_) {
 					preprocessBuffer = Buffer.from('R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64');
 				}
-				
 			} else {
 				preprocessBuffer = await _readFile(join(process.env.STORAGE_DIR, `${preprocess}.png`));
 			}
@@ -212,7 +214,7 @@ app.get('(/rest/|/)image/:type/:width/:height/:namespace/:preprocess?/:document/
 		} else if (/status code 404/i.test(message)) {
 			return res._headerSent ? null : res.send(404, error);
 		} else {
-			console.error(message);
+			logger.error(error, `Error on ${req.url}: ${error.message}`);
 			return res._headerSent ? null : res.send(500, error);
 		}
 	}

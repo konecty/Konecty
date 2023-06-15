@@ -1,4 +1,4 @@
-@import "_lesshat.import.less";
+@import '_lesshat.import.less';
 *,
 *:before,
 *:after {
@@ -11,7 +11,7 @@
 
 .cf:before,
 .cf:after {
-	content: " ";
+	content: ' ';
 	display: table;
 }
 
@@ -28,20 +28,21 @@ label {
 	font-family: inherit;
 	font-weight: inherit;
 	margin: 0;
-	&:hover{
-		i{
-			border-color: #CFCFCF;
+	&:hover {
+		i {
+			border-color: #cfcfcf;
 		}
-		&.checked{
-			i{
+		&.checked {
+			i {
 				border-color: #0564ac;
 			}
 		}
 	}
 	&.checked {
-		i{
+		i {
 			border-color: #0476cb;
-			&:before,&:after{
+			&:before,
+			&:after {
 				opacity: 1;
 				.transform(scale(1));
 			}
@@ -57,15 +58,16 @@ i {
 	background-color: transparent;
 	border-radius: 50%;
 	position: relative;
-	border: 2px solid #E4E4E4;
-	.transition(border .1s ease-out);
-	&:before, &:after{
+	border: 2px solid #e4e4e4;
+	.transition(border 0.1s ease-out);
+	&:before,
+	&:after {
 		opacity: 0;
 		.transform(scale(0));
-		.transition(transform .2s cubic-bezier(.25, .15, .4, 1.4), opacity .1s ease-out);
+		.transition(transform 0.2s cubic-bezier(0.25, 0.15, 0.4, 1.4), opacity 0.1s ease-out);
 	}
 	&:before {
-		content: " ";
+		content: ' ';
 		background-color: #fff;
 		width: 100%;
 		height: 100%;
@@ -73,8 +75,8 @@ i {
 		border-radius: 50%;
 		z-index: 1;
 	}
-	&:after{
-		content: " ";
+	&:after {
+		content: ' ';
 		background-color: #2570ff;
 		width: 60%;
 		height: 60%;
@@ -90,5 +92,5 @@ span {
 	display: block;
 	margin-left: 23px;
 	line-height: 16px;
-	.calc(width, ~"100% - 23px");
+	.calc(width, ~'100% - 23px');
 }

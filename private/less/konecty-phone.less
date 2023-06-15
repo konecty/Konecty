@@ -1,4 +1,4 @@
-@import "_lesshat.import.less";
+@import '_lesshat.import.less';
 *,
 *:before,
 *:after {
@@ -9,11 +9,12 @@
 	font-family: inherit;
 }
 .cf {
-	&:before, &:after{
-		content: " ";
+	&:before,
+	&:after {
+		content: ' ';
 		display: table;
 	}
-	&:after{
+	&:after {
 		clear: both;
 	}
 }
@@ -33,7 +34,7 @@ label {
 	padding-right: 20px;
 	min-height: 35px;
 	display: table;
-	span{
+	span {
 		display: table-cell;
 		vertical-align: middle;
 		text-align: right;
@@ -43,7 +44,7 @@ label {
 	}
 }
 
-div{
+div {
 	float: left;
 	width: 65%;
 }
@@ -56,15 +57,15 @@ div{
 	width: 100%;
 }
 
-konecty-select{
+konecty-select {
 	display: block;
 	float: left;
 	width: 70px;
 	margin-right: 5px;
 }
 
-konecty-text{
+konecty-text {
 	display: block;
 	float: left;
-	.calc(width, ~"100% - 75px");
+	.calc(width, ~'100% - 75px');
 }

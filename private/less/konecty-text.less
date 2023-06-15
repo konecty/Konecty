@@ -1,4 +1,4 @@
-@import "_lesshat.import.less";
+@import '_lesshat.import.less';
 *,
 *:before,
 *:after {
@@ -28,7 +28,7 @@ input:focus {
 
 .cf:before,
 .cf:after {
-	content: " ";
+	content: ' ';
 	display: table;
 }
 
@@ -36,7 +36,7 @@ input:focus {
 	clear: both;
 }
 
-@border-color: #F0F0F0;
+@border-color: #f0f0f0;
 
 section {
 	.cf;
@@ -50,12 +50,13 @@ input {
 	border-color: transparent transparent @border-color transparent;
 	//border-color: transparent;
 	font-family: inherit;
-	background-color: #FFF;
+	background-color: #fff;
 	font-size: 13px;
 	width: 100%;
 	position: relative;
-	.transition(border-color .2s ease-out);
-	&:hover, &:focus{
+	.transition(border-color 0.2s ease-out);
+	&:hover,
+	&:focus {
 		border-color: @border-color @border-color darken(@border-color, 5%) @border-color;
 	}
 }
@@ -71,7 +72,7 @@ label {
 	padding-right: 20px;
 	min-height: 35px;
 	display: table;
-	span{
+	span {
 		display: table-cell;
 		vertical-align: middle;
 		text-align: right;
@@ -81,28 +82,28 @@ label {
 	}
 }
 
-div{
+div {
 	float: left;
 	width: 65%;
 	position: relative;
 	padding-top: 1px;
 }
 
-content[select="konecty-button"]::content * {
+content[select='konecty-button']::content * {
 	display: inline-block;
 	height: 24px;
 	width: 24px;
 	margin-top: 4px;
 }
 
-.required{
-	input{
+.required {
+	input {
 		border-bottom-color: #0476cb;
 	}
 }
 
-.dbl{
-	label{
+.dbl {
+	label {
 		float: none;
 		display: block;
 		width: 100%;
@@ -111,18 +112,18 @@ content[select="konecty-button"]::content * {
 		min-height: 0;
 		margin-bottom: 3px;
 	}
-	div{
+	div {
 		width: 100%;
 	}
 }
 
-.url{
-	div{
-		&:before{
-			content: "http://";
+.url {
+	div {
+		&:before {
+			content: 'http://';
 			width: 55px;
 			height: 30px;
-			background-color: #DFDFDF;
+			background-color: #dfdfdf;
 			display: block;
 			position: absolute;
 			line-height: 32px;
@@ -132,65 +133,65 @@ content[select="konecty-button"]::content * {
 			font-family: inherit;
 		}
 	}
-	input{
+	input {
 		padding-left: 70px;
 	}
 }
 
-.invalid{
-	input{
+.invalid {
+	input {
 		border-bottom-color: #a51900;
 	}
 }
 
-.btns-1{
-	input{
-		.calc(width, ~"100% - 27px");
+.btns-1 {
+	input {
+		.calc(width, ~'100% - 27px');
 		float: left;
 		margin-right: 3px;
 	}
-	&.dbl{
-		input{
-			.calc(width, ~"100% - 27px");
+	&.dbl {
+		input {
+			.calc(width, ~'100% - 27px');
 		}
 	}
 }
 
-.btns-2{
-	input{
-		.calc(width, ~"100% - 51px");
+.btns-2 {
+	input {
+		.calc(width, ~'100% - 51px');
 		float: left;
 		margin-right: 3px;
 	}
-	&.dbl{
-		input{
-			.calc(width, ~"100% - 51px");
+	&.dbl {
+		input {
+			.calc(width, ~'100% - 51px');
 		}
 	}
 }
 
-.btns-3{
-	input{
-		.calc(width, ~"100% - 75px");
+.btns-3 {
+	input {
+		.calc(width, ~'100% - 75px');
 		float: left;
 		margin-right: 3px;
 	}
-	&.dbl{
-		input{
-			.calc(width, ~"100% - 75px");
+	&.dbl {
+		input {
+			.calc(width, ~'100% - 75px');
 		}
 	}
 }
 
-.btns-4{
-	input{
-		.calc(width, ~"100% - 99px");
+.btns-4 {
+	input {
+		.calc(width, ~'100% - 99px');
 		float: left;
 		margin-right: 3px;
 	}
-	&.dbl{
-		input{
-			.calc(width, ~"100% - 99px");
+	&.dbl {
+		input {
+			.calc(width, ~'100% - 99px');
 		}
 	}
 }

@@ -1,17 +1,13 @@
-app.post('/rest/process/submit', (req, res, next) =>
-  res.send(
-    Meteor.call('process:submit', {
-      authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
-      data: req.body.data
-    })
-  )
-);
+import { Meteor } from 'meteor/meteor';
 
-app.post('/rest/process/zapier', (req, res, next) =>
-  res.send(
-    Meteor.call('process:zapier', {
-      authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
-      data: req.body
-    })
-  )
+import { app } from '/server/lib/routes/app';
+import { sessionUtils } from '/imports/utils/sessionUtils';
+
+app.post('/rest/process/submit', (req, res) =>
+	res.send(
+		Meteor.call('process:submit', {
+			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			data: req.body.data,
+		}),
+	),
 );

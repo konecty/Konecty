@@ -1,11 +1,23 @@
-const useragent = require('useragent');
-import { hash, compare } from 'bcrypt';
+import { Meteor } from 'meteor/meteor';
+import { SSR } from 'meteor/meteorhacks:ssr';
+import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
+import { check } from 'meteor/check';
+
+import useragent from 'useragent';
+
+
 import { isString, isObject, get, has } from 'lodash';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
-bcryptHash = Meteor.wrapAsync(hash);
-bcryptCompare = Meteor.wrapAsync(compare);
 
+import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { metaUtils } from '/imports/utils/konutils/metaUtils';
+import { MetaObject, Models } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
+
+
+// eslint-disable-next-line no-undef
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
 const injectRequestInformation = function (userAgent, session) {
@@ -35,7 +47,7 @@ const injectRequestInformation = function (userAgent, session) {
 */
 Meteor.registerMethod('auth:login', function (request) {
 	try {
-		let { user, password, ns, geolocation, resolution, userAgent, ip, password_SHA256 } = request;
+		let { user, password, geolocation, userAgent, ip, password_SHA256 } = request;
 
 		// Define a session with arguments based on java version
 		const accessLog = {
@@ -95,7 +107,7 @@ Meteor.registerMethod('auth:login', function (request) {
 			accessLog.reason = `User inactive [${user}]`;
 			injectRequestInformation(userAgent, accessLog);
 			Models.AccessFailedLog.insert(accessLog);
-			return new Meteor.Error('internal-error', 'Usuário inativo.', { bugsnag: false });
+			return new Meteor.Error('internal-error', 'Usuário inativo.');
 		}
 
 		const stampedToken = Accounts._generateStampedLoginToken();
@@ -135,15 +147,15 @@ Meteor.registerMethod('auth:login', function (request) {
 			},
 		};
 	} catch (error) {
-		console.error(error);
-		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`, { bugsnag: false });
+		logger.error(error, `Something went wrong. ${error.message}`);
+		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`);
 	}
 });
 
 /* Logout currently session
 	@param authTokenId
 */
-Meteor.registerMethod('auth:logout', 'withUser', function (request) {
+Meteor.registerMethod('auth:logout', 'withUser', function () {
 	const updateObj = {
 		$pull: {
 			'services.resume.loginTokens': { hashedToken: this.hashedToken },
@@ -158,7 +170,7 @@ Meteor.registerMethod('auth:logout', 'withUser', function (request) {
 /* Get information from current session
 	@param authTokenId
 */
-Meteor.registerMethod('auth:info', 'withUser', function (request) {
+Meteor.registerMethod('auth:info', 'withUser', function () {
 	// Get namespace information
 	const namespace = MetaObject.findOne({ _id: 'Namespace' });
 
@@ -197,12 +209,12 @@ Meteor.registerMethod('auth:info', 'withUser', function (request) {
 /* Verify if user is logged
 	@param authTokenId
 */
-Meteor.registerMethod('auth:logged', 'withUser', request => true);
+Meteor.registerMethod('auth:logged', 'withUser', () => true);
 
 /* Get publlic user info
 	@param authTokenId
 */
-Meteor.registerMethod('auth:getUser', 'withUser', function (request) {
+Meteor.registerMethod('auth:getUser', 'withUser', function () {
 	return {
 		_id: this.user._id,
 		access: this.user.access,
@@ -225,7 +237,7 @@ Meteor.registerMethod('auth:getUser', 'withUser', function (request) {
 */
 Meteor.registerMethod('auth:resetPassword', function (request) {
 	// Map body parameters
-	const { user, ns, ip, host } = request;
+	const { user, ns, host } = request;
 
 	const userRecord = Meteor.users.findOne({ $and: [{ active: true }, { $or: [{ username: user }, { 'emails.address': user }] }] });
 

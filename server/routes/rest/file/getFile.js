@@ -1,4 +1,5 @@
 import Busboy from 'busboy';
+import { logger } from '/imports/utils/logger';
 
 const processMultipart = req =>
 	new Promise((resolve, reject) => {
@@ -21,7 +22,7 @@ const processMultipart = req =>
 		});
 
 		busboy.on('error', err => {
-			console.error(err.message);
+			logger.error(err, `Error processing multipart request: ${err.message}`);
 			reject(err);
 		});
 

@@ -1,0 +1,16 @@
+import './hooks';
+import './middlewares/auth';
+import './middlewares/validation';
+import './middlewares/collectionLogin';
+import './dne';
+import './merge';
+import './auth';
+import './index';
+import './changeUser';
+import './undoHistory';
+import './history';
+import './comments';
+import './data';
+import './file';
+import './menu';
+import './process';

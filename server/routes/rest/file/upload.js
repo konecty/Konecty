@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 import { writeFile, rename, unlink } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
@@ -8,6 +10,10 @@ import sharp from 'sharp';
 import getStorage from './getStorage';
 import getFile from './getFile';
 import detectContentType from './detectContentType';
+
+import { app } from '/server/lib/routes/app';
+import { middlewares } from '/server/lib/routes/middlewares';
+import { logger } from '/imports/utils/logger';
 
 const _writeFile = promisify(writeFile);
 const _unlink = promisify(unlink);
@@ -83,6 +89,7 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 
 			if (coreResponse.success === false) {
 				if (/^s3$/i.test(process.env.STORAGE)) {
+					const storage = getStorage();
 					await storage
 						.deleteObject({
 							Bucket: process.env.S3_BUCKET,
@@ -104,7 +111,7 @@ app.post('/rest/file/upload/:namespace/:accessId/:metaDocumentId/:recordId/:fiel
 				_updatedAt: coreResponse._updatedAt,
 			});
 		} catch (error) {
-			console.error(error);
+			logger.error(error, `Error uploading file ${req.params.fileName}: ${error.message}`);
 			res.send(error);
 		}
 	}),

@@ -1,4 +1,4 @@
-import { Mongo } from 'meteor/mongo';
+import { Meteor } from 'meteor/meteor';
 
 import chokidar from 'chokidar';
 import glob from 'glob';
@@ -6,37 +6,30 @@ import fs from 'fs';
 
 import debounce from 'lodash/debounce';
 import isEmpty from 'lodash/isEmpty';
+import bind from 'lodash/bind';
+import isObject from 'lodash/isObject';
+import isArray from 'lodash/isArray';
+import isNumber from 'lodash/isNumber';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
 
-const rebuildReferencesDelay = 1000;
+import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models, MetaByCollection } from '/imports/model/MetaObject';
+import { logger } from '/imports/utils/logger';
 
-Meta = {};
-DisplayMeta = {};
-Access = {};
-References = {};
-Namespace = {};
-MetaObject = new Mongo.Collection('MetaObjects');
+const rebuildReferencesDelay = 1000;
 
 const dropAllIndexes = false;
 const overwriteExitingIndexes = false;
-const logIndexActionEnable = false;
-
-const logIndexAction = function (msg) {
-	if (logIndexActionEnable === true) {
-		console.log(msg);
-	}
-};
 
 const getIndexes = function (collectionName) {
 	const collection = Models[collectionName]._getCollection();
-	const indexInformation = Meteor.wrapAsync(_.bind(collection.indexInformation, collection));
+	const indexInformation = Meteor.wrapAsync(bind(collection.indexInformation, collection));
 	return indexInformation();
 };
 
 const rebuildReferences = debounce(function () {
-	console.log('[kondata] Rebuilding references');
-	global.References = {};
+	logger.info('[kondata] Rebuilding references');
+	References = {};
 
 	for (var metaName in Meta) {
 		var meta = Meta[metaName];
@@ -66,18 +59,18 @@ const tryEnsureIndex = function (model, fields, options) {
 		model._ensureIndex(fields, options);
 	} catch (e) {
 		if (overwriteExitingIndexes && e.toString().indexOf('already exists with different options') !== -1) {
-			logIndexAction(`Overwriting index: ${JSON.stringify(fields)}`.yellow);
+			logger.trace(`Overwriting index: ${JSON.stringify(fields)}`);
 			model._dropIndex(fields);
 			model._ensureIndex(fields, options);
 		} else if (e.toString().indexOf('too many indexes for') !== -1) {
-			logIndexAction('Too many indexes'.red);
+			logger.trace('Too many indexes');
 		} else {
-			logIndexAction('Index Error: '.red, e);
+			logger.trace('Index Error: ', e);
 		}
 	}
 };
 
-const initialData = _.debounce(
+const initialData = debounce(
 	Meteor.bindEnvironment(function () {
 		registerFirstUser();
 		registerFirstGroup();
@@ -86,10 +79,13 @@ const initialData = _.debounce(
 );
 
 const registerMeta = function (meta) {
+	logger.debug(`Registering meta: ${meta.name}`);
 	if (!meta.collection) {
 		meta.collection = `data.${meta.name}`;
 	}
 	Meta[meta.name] = meta;
+	
+	MetaByCollection[meta.collection] = meta;
 
 	if (meta.type === 'document') {
 		meta.fields._merge = {
@@ -113,37 +109,14 @@ const registerMeta = function (meta) {
 				Models[meta.name] = new Meteor.Collection(meta.collection);
 		}
 
-		Meteor.publish(`data.${meta.name}`, function (filter, limit) {
-			if (!this.userId) {
-				return this.ready();
-			}
-
-			if (!filter) {
-				filter = {};
-			}
-			return Models[meta.name].find(filter, { limit: limit || 30 });
-		});
-
-		Meteor.publish(`data.${meta.name}.History`, function (filter, limit) {
-			if (!this.userId) {
-				return this.ready();
-			}
-
-			if (!filter) {
-				filter = {};
-			}
-			return Models[`${meta.name}.History`].find(filter, { limit: limit || 30 });
-		});
-
 		const dropIndexes = function () {
 			// Drop data indexes
-			let indexInformation, value;
+			let indexInformation;
 			let indexesInformation = getIndexes(meta.name);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}: ${indexInformation}`.red);
+						logger.info(`Drop Index at ${meta.collection}: ${indexInformation}`);
 						Models[meta.name]._dropIndex(indexInformation);
 					}
 				}
@@ -153,9 +126,8 @@ const registerMeta = function (meta) {
 			indexesInformation = getIndexes(`${meta.name}.Comment`);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}.Comment: ${indexInformation}`.red);
+						logger.info(`Drop Index at ${meta.collection}.Comment: ${indexInformation}`);
 						Models[`${meta.name}.Comment`]._dropIndex(indexInformation);
 					}
 				}
@@ -165,9 +137,8 @@ const registerMeta = function (meta) {
 			indexesInformation = getIndexes(`${meta.name}.History`);
 			if (indexesInformation) {
 				for (indexInformation in indexesInformation) {
-					value = indexesInformation[indexInformation];
 					if (indexInformation !== '_id_') {
-						logIndexAction(`Drop Index at ${meta.collection}.History: ${indexInformation}`.red);
+						logger.info(`Drop Index at ${meta.collection}.History: ${indexInformation}`);
 						Models[`${meta.name}.History`]._dropIndex(indexInformation);
 					}
 				}
@@ -187,7 +158,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[fieldName] = 1;
 
-				logIndexAction(`Ensure Index at ${meta.collection}: ${fieldName}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
 				tryEnsureIndex(Models[meta.name], fields, { name: fieldName, expireAfterSeconds: 60 });
 			}
 
@@ -197,7 +168,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[historyIndex] = 1;
 
-				logIndexAction(`Ensure Index at ${meta.collection}.History: ${historyIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}.History: ${historyIndex}`);
 				tryEnsureIndex(Models[`${meta.name}.History`], fields, { name: historyIndex });
 			}
 
@@ -207,7 +178,7 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[commentIndex] = 1;
 
-				logIndexAction(`Ensure Index at ${meta.collection}.Comment: ${commentIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}.Comment: ${commentIndex}`);
 				tryEnsureIndex(Models[`${meta.name}.Comment`], fields, { name: commentIndex });
 			}
 
@@ -263,7 +234,7 @@ const registerMeta = function (meta) {
 							fields[fieldName + subField] = 1;
 						}
 
-						logIndexAction(`Ensure Index at ${meta.collection}: ${fieldName}`.green);
+						logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
 						tryEnsureIndex(Models[meta.name], fields, options);
 					}
 				}
@@ -275,12 +246,12 @@ const registerMeta = function (meta) {
 				fields = {};
 				fields[metaDefaultIndex] = 1;
 
-				logIndexAction(`Ensure Index at ${meta.collection}: ${metaDefaultIndex}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${metaDefaultIndex}`);
 				tryEnsureIndex(Models[meta.name], fields, { name: metaDefaultIndex });
 			}
 
 			// Create indexes defined in meta
-			if (_.isObject(meta.indexes) && !_.isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
+			if (isObject(meta.indexes) && !isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
 				for (let indexName in meta.indexes) {
 					const index = meta.indexes[indexName];
 					if (!index.keys) {
@@ -293,7 +264,7 @@ const registerMeta = function (meta) {
 						index.options.name = indexName;
 					}
 
-					logIndexAction(`Ensure Index at ${meta.collection}: ${index.options.name}`.green);
+					logger.info(`Ensure Index at ${meta.collection}: ${index.options.name}`);
 					if (Object.keys(index.keys).length > 0) {
 						keys = {};
 						for (key in index.keys) {
@@ -307,20 +278,20 @@ const registerMeta = function (meta) {
 			}
 
 			// Create text index
-			if (_.isObject(meta.indexText) && !_.isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
+			if (isObject(meta.indexText) && !isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
 				keys = {};
 				options = {
 					name: 'TextIndex',
-					default_language: global.Namespace.language,
+					default_language: Namespace.language,
 					weights: {},
 				};
 
-				logIndexAction(`Ensure Index at ${meta.collection}: ${options.name}`.green);
+				logger.info(`Ensure Index at ${meta.collection}: ${options.name}`);
 				for (key in meta.indexText) {
 					const weight = meta.indexText[key];
 					key = key.replace(/:/g, '.');
 					keys[key] = 'text';
-					if (_.isNumber(weight) && weight > 0) {
+					if (isNumber(weight) && weight > 0) {
 						options.weights[key] = weight;
 					}
 				}
@@ -398,7 +369,7 @@ const dbLoad = () => {
 };
 
 const fsLoad = () => {
-	console.log(`Loading Meta from directory ${process.env.METADATA_DIR} ...`);
+	logger.info(`Loading Meta from directory ${process.env.METADATA_DIR} ...`);
 
 	const watcher = chokidar.watch(process.env.METADATA_DIR, {
 		ignored: /(^|[\/\\])\../, // ignore dotfiles
@@ -481,7 +452,6 @@ const fsLoad = () => {
 		if (type === 'access') {
 			const accessName = path.split('/').pop().split('.').shift();
 			const id = `${name}:access:${accessName}`;
-			console.log(id);
 			delete Access[id];
 		}
 		if (['pivot', 'view', 'list'].includes(type)) {
@@ -492,12 +462,14 @@ const fsLoad = () => {
 	watcher
 		.on('add', changeHandler)
 		.on('change', changeHandler)
-		.on('unlink', path => removeHandler);
+		.on('unlink', path => removeHandler(path));
 };
 
 Meteor.startup(function () {
 	if (process.env.METADATA_DIR != null) {
+		logger.info('Loading Meta from directory');
 		return fsLoad();
 	}
+	logger.info('Loading Meta from database');
 	dbLoad();
 });

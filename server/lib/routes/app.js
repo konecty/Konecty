@@ -1,23 +1,26 @@
 /*
  * @TODO analize Meteor.Error(500, 'Internal server error')
  */
+import { Picker } from 'meteor/meteorhacks:picker';
+import { EJSON } from 'meteor/ejson';
+
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'body-parser';
 import { compileFile } from 'swig';
 import { resolve, join } from 'path';
-import { register } from 'bugsnag';
 import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
-REQ_TIMEOUT = 1000 * 300;
-RES_TIMEOUT = 1000 * 300;
+import { utils } from '/imports/utils/konutils/utils';
+import { logger } from '/imports/utils/logger';
+
+// const RES_TIMEOUT = 1000 * 300;
+// const REQ_TIMEOUT = 1000 * 300;
 
 const uriObject = parse(process.env.MONGO_URL);
 process.env.dbName = uriObject.database;
-console.log(`[kondata] === ${process.env.dbName} ===`.green);
-
-register('3aff690ae2254498bb9a88dcf8bbb211');
+logger.info(`[kondata] === ${process.env.dbName} ===`);
 
 const basePath = resolve('.').split('.meteor')[0];
 let tplPath = 'assets/app/templates';
@@ -26,15 +29,6 @@ if (basePath.indexOf('bundle/programs/server') > 0) {
 }
 
 global.logAllRequests = /true|1|enable/i.test(process.env.LOG_REQUEST);
-
-process.on('SIGUSR2', function () {
-	global.logAllRequests = !global.logAllRequests;
-	if (global.logAllRequests === true) {
-		console.log('Log all requests ENABLED'.green);
-	} else {
-		console.log('Log all requests DISABLED'.red);
-	}
-});
 
 Picker.middleware(cookieParser());
 
@@ -63,30 +57,6 @@ var convertObjectIdsToOid = function (values) {
 // Add res.set and res.get to handle response headers
 Picker.middleware(function (req, res, next) {
 	req.startTime = process.hrtime();
-
-	req.notifyError = function (type, message, options) {
-		options = options || {};
-		options.url = req.url;
-		options.req = req;
-
-		options.user = {
-			_id: get(req, 'user._id', { valueOf: () => undefined }).valueOf(),
-			name: get(req, 'user.name'),
-			login: get(req, 'user.username'),
-			email: get(req, 'user.emails'),
-			access: get(req, 'user.access'),
-			lastLogin: get(req, 'user.lastLogin'),
-		};
-		options.session = {
-			_id: get(req, 'session._id', { valueOf: () => undefined }).valueOf(),
-			_createdAt: get(req, 'session._createdAt'),
-			ip: get(req, 'session.ip'),
-			geolocation: get(req, 'session.geolocation'),
-			expireAt: get(req, 'session.expireAt'),
-		};
-
-		return NotifyErrors.notify(type, message, options);
-	};
 
 	req.set = (header, value) => (req.headers[header.toLowerCase()] = value);
 
@@ -133,13 +103,12 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if (response instanceof Error) {
-			console.log(`Error: ${response.message}`.red);
+			logger.error(response, `Error: ${response.message}`);
 			response = {
 				success: false,
 				errors: [
 					{
 						message: response.message,
-						bugsnag: false,
 					},
 				],
 			};
@@ -170,7 +139,7 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		if ([200, 204, 304].includes(status) !== true || res.hasErrors === true) {
-			console.log(status, response);
+			logger.error({ status, response }, `Response: ${status} ${req.method} ${req.url}`);
 		}
 
 		res.statusCode = status;
@@ -200,37 +169,35 @@ Picker.middleware(function (req, res, next) {
 			res.statusCode = 200;
 		}
 
-		if (global.logAllRequests === true || [200, 204, 304].includes(res.statusCode) !== true || res.hasErrors === true) {
-			// Log API Calls
-			const totalTime = process.hrtime(req.startTime);
+		// Log API Calls
+		const totalTime = process.hrtime(req.startTime);
 
-			let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
-				req.headers.host != null ? `${req.headers.host}` : ''
-			} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
+		let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
+			req.headers.host != null ? `${req.headers.host}` : ''
+		} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
 
-			if (res.statusCode === 401 && req.user) {
-				log += ` ${req.user._id}`;
-			}
-
-			if (res.statusCode === 200 && res.hasErrors !== true) {
-				log = `${log}`.grey;
-			} else if (res.statusCode === 500) {
-				log = `${log}`.red;
-			} else {
-				log = `${log}`.yellow;
-			}
-			console.log(log);
+		if (res.statusCode === 401 && req.user) {
+			log += ` ${req.user._id}`;
 		}
+
+		if (res.statusCode === 200 && res.hasErrors !== true) {
+			log = `${log}`;
+		} else if (res.statusCode === 500) {
+			log = `${log}`;
+		} else {
+			log = `${log}`;
+		}
+		logger.trace(log);
 	};
 
 	next();
 });
 
 // register Picker filters based on HTTP methods
-const pickerGet = Picker.filter((req, res) => req.method === 'GET');
-const pickerPost = Picker.filter((req, res) => req.method === 'POST');
-const pickerPut = Picker.filter((req, res) => req.method === 'PUT');
-const pickerDel = Picker.filter((req, res) => req.method === 'DELETE' || req.method === 'DEL');
+const pickerGet = Picker.filter(req => req.method === 'GET');
+const pickerPost = Picker.filter(req => req.method === 'POST');
+const pickerPut = Picker.filter(req => req.method === 'PUT');
+const pickerDel = Picker.filter(req => req.method === 'DELETE' || req.method === 'DEL');
 
 Picker.middleware(json({ limit: '20mb' }));
 Picker.middleware(urlencoded({ extended: true }));
@@ -243,7 +210,7 @@ const corsOptions = {
 			if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
 				callback(null, true);
 			} else {
-				console.error(`${origin} Not allowed by CORS`);
+				logger.error(`${origin} Not allowed by CORS`);
 				callback(new Error(`Not allowed by CORS`));
 			}
 		} else {
@@ -258,7 +225,7 @@ const corsOptions = {
 Picker.middleware(cors(corsOptions));
 
 // global helper to register REST endpoints
-global.app = {
+export const app = {
 	get(path, cb) {
 		pickerGet.route(path, function (params, req, res, next) {
 			for (let k in params) {
@@ -300,3 +267,5 @@ global.app = {
 		});
 	},
 };
+
+global.app = app;

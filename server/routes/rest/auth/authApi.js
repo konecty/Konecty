@@ -1,4 +1,9 @@
+import { Meteor } from 'meteor/meteor';
 import { isString, get, has } from 'lodash';
+
+import { app } from '/server/lib/routes/app.js';
+import { MetaObject } from '/imports/model/MetaObject';
+import { sessionUtils } from '/imports/utils/sessionUtils';
 
 app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 	let domain;
@@ -23,7 +28,7 @@ app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 });
 
 /* Login using email and password */
-app.post('/rest/auth/login', function (req, res, next) {
+app.post('/rest/auth/login', function (req, res) {
 	// Map body parameters
 	let domain;
 	const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
@@ -38,12 +43,10 @@ app.post('/rest/auth/login', function (req, res, next) {
 	const host = req.headers['host'];
 
 	if (host == null || /^localhost/.test(host)) {
-		console.log('Local');
 		domain = '';
 	} else {
 		const server = host.split('.').slice(1).join('.');
 		domain = `domain=${server}`;
-		console.log(domain);
 	}
 
 	let ip = req.get('x-forwarded-for');
@@ -81,10 +84,10 @@ app.post('/rest/auth/login', function (req, res, next) {
 });
 
 /* Logout currently session */
-app.get('/rest/auth/logout', (req, res, next) => res.send(Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/logout', (req, res) => res.send(Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
 
 /* Reset password */
-app.post('/rest/auth/reset', function (req, res, next) {
+app.post('/rest/auth/reset', function (req, res) {
 	// Map body parameters
 	const { user, ns } = req.body;
 
@@ -104,7 +107,7 @@ app.post('/rest/auth/reset', function (req, res, next) {
 });
 
 /* Set geolocation for current session */
-app.post('/rest/auth/setgeolocation', function (req, res, next) {
+app.post('/rest/auth/setgeolocation', function (req, res) {
 	// Map body parameters
 	const { longitude, latitude } = req.body;
 
@@ -127,10 +130,10 @@ app.post('/rest/auth/setgeolocation', function (req, res, next) {
 });
 
 /* Get information from current session*/
-app.get('/rest/auth/info', (req, res, next) => res.send(Meteor.call('auth:info', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/info', (req, res) => res.send(Meteor.call('auth:info', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
 
 /* Set User password */
-app.get('/rest/auth/setPassword/:userId/:password', (req, res, next) =>
+app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
 	res.send(
 		Meteor.call('auth:setPassword', {
 			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
@@ -141,12 +144,12 @@ app.get('/rest/auth/setPassword/:userId/:password', (req, res, next) =>
 );
 
 /* Set a random password for User and send by email */
-app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res, next) =>
-  res.send(
-    Meteor.call('auth:setRandomPasswordAndSendByEmail', {
-      authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
-      userIds: req.body,
-      host: req.get("Host")
-    })
-  )
+app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) =>
+	res.send(
+		Meteor.call('auth:setRandomPasswordAndSendByEmail', {
+			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			userIds: req.body,
+			host: req.get('Host'),
+		}),
+	),
 );

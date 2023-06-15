@@ -1,8 +1,12 @@
-module.exports.Login = (function() {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Meteor } from 'meteor/meteor';
+import { $ } from 'meteor/jquery';
+
+module.exports.Login = (function () {
 	let login = {};
 	let logging = false;
 
-	const wait = function(time, callback) {
+	const wait = function (time, callback) {
 		if (new Date().getTime() - time < 2000) {
 			setTimeout(() => callback(), 200);
 			return false;
@@ -10,22 +14,22 @@ module.exports.Login = (function() {
 		return true;
 	};
 
-	const load = function() {
+	const load = function () {
 		login.started = new Date().getTime();
 		login.submit.addClass('active');
 		login.submit.find('span').html(login.submit.data('wait'));
 	};
 
-	var unload = function(err) {
+	var unload = function (err) {
 		const ok = wait(login.started, () => unload(err));
 		if (!ok) {
 			return;
 		}
 		login.submit.addClass('finished');
-		setTimeout(function() {
+		setTimeout(function () {
 			if (err) {
 				login.submit.addClass('done');
-				setTimeout(function() {
+				setTimeout(function () {
 					login.submit.removeClass('finished active');
 					login.submit.find('span').html(login.submit.defaultText);
 					error('Revise seu nome de usuário e senha');
@@ -37,7 +41,7 @@ module.exports.Login = (function() {
 		}, 300);
 	};
 
-	const keyDown = function(e) {
+	const keyDown = function (e) {
 		const key = e.which();
 		if (key === 13) {
 			e.preventDefault();
@@ -46,23 +50,23 @@ module.exports.Login = (function() {
 		}
 	};
 
-	const validate = function() {
+	const validate = function () {
 		if (!login.user.val().length || !login.pass.val().length) {
 			return false;
 		}
 		return true;
 	};
 
-	var error = function(msg) {
+	var error = function (msg) {
 		login.status.addClass('error blink-background');
 		login.status.html(msg);
-		setTimeout(function() {
+		setTimeout(function () {
 			login.status.removeClass('blink-background');
 			logging = false;
 		}, 1000);
 	};
 
-	var submit = function(e) {
+	var submit = function (e) {
 		if (logging) {
 			return;
 		}
@@ -71,7 +75,7 @@ module.exports.Login = (function() {
 			error('Você deve preencher os campos de login e senha');
 		} else {
 			load();
-			Meteor.loginWithPassword(login.user.val(), login.pass.val(), function(err) {
+			Meteor.loginWithPassword(login.user.val(), login.pass.val(), function (err) {
 				if (err && err.error) {
 					unload(err.error);
 				} else {
@@ -81,13 +85,13 @@ module.exports.Login = (function() {
 		}
 	};
 
-	const start = function() {
+	const start = function () {
 		if (login) {
 			login.removeClass('hidden');
 		}
 	};
 
-	const init = function() {
+	const init = function () {
 		login = $('#konecty-login');
 		login.submit = login.find('button');
 		login.user = login.find('input[name=user]');
@@ -99,6 +103,6 @@ module.exports.Login = (function() {
 	return {
 		init,
 		start,
-		submit
+		submit,
 	};
 })();

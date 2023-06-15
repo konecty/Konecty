@@ -1,4 +1,12 @@
+import { Meteor } from 'meteor/meteor';
+import { MongoInternals } from 'meteor/mongo';
+
 import { isString, isNumber, size, get } from 'lodash';
+
+import { utils } from '/imports/utils/konutils/utils';
+
+import { Models } from '/imports/model/MetaObject';
+
 const connection = {};
 
 const getUtilDb = function () {
