@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import getServer from '/imports/utils/getServer';
 
-import { sessionUtils } from '/imports/utils/sessionUtils';
+import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { app } from '/server/lib/routes/app';
 
 const getEnv = () => {
@@ -63,7 +63,7 @@ app.get('/', function (req, res, next) {
 		return next();
 	}
 	const user = Meteor.call('auth:getUser', {
-		authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+		authTokenId: getAuthTokenIdFromReq(req),
 		dontSetLastLogin: true,
 	});
 
@@ -74,7 +74,7 @@ app.get('/', function (req, res, next) {
 	const time = 21600000; // 6h
 
 	if (!user.lastLogin || !isDate(user.lastLogin) || Date.now() - user.lastLogin.getTime() > time) {
-		Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) });
+		Meteor.call('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) });
 		return res.redirect('/login');
 	}
 
