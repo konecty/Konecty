@@ -1,4 +1,5 @@
 crypto = require 'crypto'
+_ = Npm.require 'lodash'
 
 ###
 rest/data/OK Activity/find
@@ -336,3 +337,12 @@ filterUtils.parseDynamicData = (filter, keyword, data) ->
 				parseConditions condition
 
 	return filter
+
+# Deduplicate projection keys so as to not trigger Mongo Path Collision error, implemented after version 4.4
+# ex: { group: 1, group._id: 1, _user: 1 } => { group: 1, _user: 1 }
+filterUtils.clearProjectionPathCollision = (projection) ->
+	fields = Object.entries projection
+	cleaned = _.uniqBy fields, (field) ->
+		field[0].split('.')[0]
+	
+	return _.fromPairs cleaned

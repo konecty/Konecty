@@ -141,7 +141,7 @@ Meteor.registerMethod 'data:find:all', 'withUser', 'withAccessForDocument', (req
 	options =
 		limit: parseInt request.limit
 		skip: parseInt request.start
-		fields: fields
+		fields: filterUtils.clearProjectionPathCollision fields
 		sort: sort
 
 	if _.isNaN(options.limit) or not options.limit?
@@ -343,7 +343,7 @@ Meteor.registerMethod 'data:find:byId', 'withUser', 'withAccessForDocument', (re
 							fields[conditionField] = 1
 
 	options =
-		fields: fields
+		fields: filterUtils.clearProjectionPathCollision fields
 
 	data = model.findOne query, options
 
@@ -527,7 +527,7 @@ Meteor.registerMethod 'data:find:byLookup', 'withUser', 'withAccessForDocument',
 	options =
 		limit: parseInt request.limit
 		skip: parseInt request.start
-		fields: fields
+		fields: filterUtils.clearProjectionPathCollision fields
 		sort: sort
 
 	if _.isNaN(options.limit) or not options.limit?
