@@ -1,12 +1,11 @@
-import isArray from 'lodash/isArray'
-import isString from 'lodash/isString'
-import isObject from 'lodash/isObject'
-import has from 'lodash/has'
+	import isArray from 'lodash/isArray';
+	import isString from 'lodash/isString';
+	import isObject from 'lodash/isObject';
+	import has from 'lodash/has';
 
-import { Access } from '/imports/model/MetaObject';
+	import { Access } from '/imports/model/MetaObject';
 
-export const accessUtils = {
-	getFieldConditions(metaAccess, fieldName) {
+	export function getFieldConditions(metaAccess, fieldName) {
 		const accessField = metaAccess.fields && metaAccess.fields[fieldName];
 
 		const conditions = {};
@@ -24,9 +23,9 @@ export const accessUtils = {
 		}
 
 		return conditions;
-	},
+	}
 
-	getFieldPermissions(metaAccess, fieldName) {
+	export function getFieldPermissions(metaAccess, fieldName) {
 		const accessField = metaAccess.fields && metaAccess.fields[fieldName];
 
 		const access = {
@@ -73,9 +72,9 @@ export const accessUtils = {
 		}
 
 		return access;
-	},
+	}
 
-	getAccessFor(documentName, user) {
+	export function getAccessFor(documentName, user) {
 		// If user has no access defined set access as defaults: 'Default'
 		if (user.access == null) {
 			user.access = { defaults: 'Default' };
@@ -125,20 +124,19 @@ export const accessUtils = {
 
 		// Return false if no access was found
 		return false;
-	},
+	}
 
-	removeUnauthorizedDataForRead(metaAccess, data) {
+	export function removeUnauthorizedDataForRead(metaAccess, data) {
 		if (!isObject(data)) {
 			return data;
 		}
 
 		for (let fieldName in data) {
-			const access = accessUtils.getFieldPermissions(metaAccess, fieldName);
+			const access = getFieldPermissions(metaAccess, fieldName);
 			if (access.isReadable !== true) {
 				delete data[fieldName];
 			}
 		}
 
 		return data;
-	},
-};
+	}

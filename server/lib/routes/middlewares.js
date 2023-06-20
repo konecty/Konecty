@@ -4,7 +4,7 @@ import { Accounts } from 'meteor/accounts-base';
 import size from 'lodash/size';
 import isObject from 'lodash/isObject';
 
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { getAccessFor } from '/imports/utils/accessUtils';
 
 export const middlewares = {
 	user(req, res, next) {
@@ -41,7 +41,7 @@ export const middlewares = {
 			}
 
 			// Find access
-			const access = accessUtils.getAccessFor(documentName, req.user);
+			const access = getAccessFor(documentName, req.user);
 
 			// If return is false no access was found then return 401 (Unauthorized)
 			if (access === false) {

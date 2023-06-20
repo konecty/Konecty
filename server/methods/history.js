@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { getFieldPermissions, getFieldConditions } from '/imports/utils/accessUtils';
 import { utils } from '/imports/utils/konutils/utils';
 import { Models, Meta } from '/imports/model/MetaObject';
 
@@ -29,8 +29,8 @@ Meteor.registerMethod('history:find', 'withUser', 'withAccessForDocument', funct
 	// Validate if user have permission to view each field
 	const emptyFields = Object.keys(fields).length === 0;
 	for (let fieldName in metaObject.fields) {
-		const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
-		const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
+		const accessField = getFieldPermissions(this.access, fieldName);
+		const accessFieldConditions = getFieldConditions(this.access, fieldName);
 		if (accessField.isReadable !== true || has(accessFieldConditions, 'READ')) {
 			if (emptyFields === true) {
 				fields[fieldName] = 0;

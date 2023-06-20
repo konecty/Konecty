@@ -11,7 +11,7 @@ import { isString, isObject, get, has } from 'lodash';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
 
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { getAccessFor } from '/imports/utils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { MetaObject, Models } from '/imports/model/MetaObject';
 import { logger } from '/imports/utils/logger';
@@ -293,7 +293,7 @@ Meteor.registerMethod('auth:setPassword', 'withUser', function (request) {
 	// Map body parameters
 	const { userId, password } = request;
 
-	const access = accessUtils.getAccessFor('User', this.user);
+	const access = getAccessFor('User', this.user);
 
 	// If return is false no access was found then return 401 (Unauthorized)
 	if (!isObject(access)) {
@@ -324,7 +324,7 @@ Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', functi
 
 	check(userIds, [String]);
 
-	const access = accessUtils.getAccessFor('User', this.user);
+	const access = getAccessFor('User', this.user);
 
 	// If return is false no access was found then return 401 (Unauthorized)
 	if (!isObject(access)) {
