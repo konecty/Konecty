@@ -3,37 +3,37 @@ import { Random } from 'meteor/random';
 
 import moment from 'moment';
 
+import clone from 'lodash/clone';
+import compact from 'lodash/compact';
+import each from 'lodash/each';
+import extend from 'lodash/extend';
+import find from 'lodash/find';
+import _first from 'lodash/first';
+import get from 'lodash/get';
+import has from 'lodash/has';
+import isArray from 'lodash/isArray';
+import isEmpty from 'lodash/isEmpty';
+import _isNaN from 'lodash/isNaN';
+import isNumber from 'lodash/isNumber';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
-import _isNaN from 'lodash/isNaN';
-import each from 'lodash/each';
-import isArray from 'lodash/isArray';
-import uniq from 'lodash/uniq';
-import compact from 'lodash/compact';
-import extend from 'lodash/extend';
-import isEmpty from 'lodash/isEmpty';
-import pick from 'lodash/pick';
-import find from 'lodash/find';
-import clone from 'lodash/clone';
-import isNumber from 'lodash/isNumber';
-import _first from 'lodash/first';
-import words from 'lodash/words';
-import tail from 'lodash/tail';
-import has from 'lodash/has';
 import map from 'lodash/map';
-import get from 'lodash/get';
+import pick from 'lodash/pick';
 import size from 'lodash/size';
+import tail from 'lodash/tail';
+import uniq from 'lodash/uniq';
+import words from 'lodash/words';
 
 import { post } from 'request';
 
+import { DisplayMeta, Meta, Models, Namespace, References } from '/imports/model/MetaObject';
 import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { sortUtils } from '/imports/utils/konutils/sortUtils';
 import { utils } from '/imports/utils/konutils/utils';
-import { Meta, Models, Namespace, DisplayMeta, References } from '/imports/model/MetaObject';
-import { renderTemplate } from '/lib/renderTemplate';
 import { logger } from '/imports/utils/logger';
+import { renderTemplate } from '/lib/renderTemplate';
 
 /* Get next user of queue
 	@param authTokenId
@@ -205,7 +205,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	var options = {
 		limit: parseInt(request.limit),
 		skip: request.start != null ? parseInt(request.start) : 0,
-		fields,
+		fields: filterUtils.clearProjectionPathCollision(fields),
 		sort,
 	};
 
@@ -472,7 +472,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 		}
 	}
 
-	let options = { fields };
+	let options = { fields: filterUtils.clearProjectionPathCollision(fields) };
 
 	let data = model.findOne(query, options);
 
@@ -696,7 +696,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	let options = {
 		limit: parseInt(request.limit),
 		skip: request.start != null ? parseInt(request.start) : 0,
-		fields,
+		fields: filterUtils.clearProjectionPathCollision(fields),
 		sort,
 	};
 
@@ -1308,8 +1308,7 @@ Meteor.registerMethod(
 								response.errors.push(
 									new Meteor.Error(
 										'internal-error',
-										`O Campo ${fieldName} do dado com id ${id} que está tentando salvar está desatualizado. A Modificação foi feita por [${
-											outOfDateRecordsByDataId[id].createdBy.name
+										`O Campo ${fieldName} do dado com id ${id} que está tentando salvar está desatualizado. A Modificação foi feita por [${outOfDateRecordsByDataId[id].createdBy.name
 										}] at [${outOfDateRecordsByDataId[id].createdAt.toISOString()}]`,
 									),
 								);
