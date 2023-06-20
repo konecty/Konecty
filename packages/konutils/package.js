@@ -5,7 +5,7 @@ Package.describe({
   git: ''
 });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   api.use('ecmascript');
   api.use('mongo');
   api.use('coffeescript');
@@ -30,6 +30,7 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
+  lodash: '4.17.10',
   moment: '2.18.1',
   'moment-timezone': '0.5.13',
   request: '2.88.0'
