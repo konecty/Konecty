@@ -72,19 +72,19 @@ export function getFieldPermissions(metaAccess: MetaAccess, fieldName: string) {
 	return access;
 }
 
-export function getAccessFor(documentName: string, user: User) {
+export function getAccessFor(documentName: string, user: User): MetaAccess | false {
 	// If user has no access defined, set access as defaults: 'Default'
 	if (!user.access) {
 		user.access = { defaults: 'Default' };
 	}
 
 	// If user has no default access, set it as 'Default'
-	if (!user.access.defaults) {
+	if (user.access.defaults == null) {
 		user.access.defaults = 'Default';
 	}
 
 	// If user has no access for Document Name, set it as defaults
-	if (!user.access[documentName]) {
+	if (user.access[documentName] == null) {
 		user.access[documentName] = user.access.defaults;
 	}
 

@@ -13,7 +13,7 @@ import isNumber from 'lodash/isNumber';
 
 import { registerFirstUser, registerFirstGroup } from './initialData';
 
-import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models, MetaByCollection } from '/imports/model/MetaObject';
+import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models, MetaByCollection, Collections } from '/imports/model/MetaObject';
 import { logger } from '/imports/utils/logger';
 
 const rebuildReferencesDelay = 1000;
@@ -84,7 +84,7 @@ const registerMeta = function (meta) {
 		meta.collection = `data.${meta.name}`;
 	}
 	Meta[meta.name] = meta;
-	
+
 	MetaByCollection[meta.collection] = meta;
 
 	if (meta.type === 'document') {
@@ -101,12 +101,19 @@ const registerMeta = function (meta) {
 		Models[`${meta.name}.Trash`] = new Meteor.Collection(`${meta.collection}.Trash`);
 		Models[`${meta.name}.AutoNumber`] = new Meteor.Collection(`${meta.collection}.AutoNumber`);
 
+		Collections[`${meta.name}.Comment`] = Models[`${meta.name}.Comment`].rawCollection();
+		Collections[`${meta.name}.History`] = Models[`${meta.name}.History`].rawCollection();
+		Collections[`${meta.name}.Trash`] = Models[`${meta.name}.Trash`].rawCollection();
+		Collections[`${meta.name}.AutoNumber`] = Models[`${meta.name}.AutoNumber`].rawCollection();
+
 		switch (meta.collection) {
 			case 'users':
 				Models[meta.name] = Meteor.users;
+				Collections[meta.name] = Meteor.users.rawCollection();
 				break;
 			default:
 				Models[meta.name] = new Meteor.Collection(meta.collection);
+				Collections[meta.name] = Models[meta.name].rawCollection();
 		}
 
 		const dropIndexes = function () {

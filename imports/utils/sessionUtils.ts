@@ -5,7 +5,7 @@ export function getAuthTokenIdFromReq(req: IncomingMessage): string | undefined 
 	if (req.headers['authorization'] != null) {
 		return req.headers['authorization'] as string;
 	}
-	const cookies = cookie.parse(req.headers.cookie ?? '');
+	const cookies = cookie.parse(req.headers?.cookie ?? '');
 
 	if (cookies['authTokenId'] != null) {
 		return cookies['authTokenId'];
