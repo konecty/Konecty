@@ -5,6 +5,7 @@ import { MetaObject } from '/imports/types/metadata';
 import { MetaObjectCollection } from '/imports/model/MetaObject';
 import { User } from '/imports/model/User';
 import { getAccessFor, getFieldPermissions } from '/imports/utils/accessUtils';
+import { MetaAccess } from '/imports/model/MetaAccess';
 
 export const buildI18N = async (user: User): Promise<Record<string, unknown>> => {
 	const metas: MetaObject[] = await MetaObjectCollection.find<MetaObject>(
@@ -28,12 +29,16 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 	const fixISO = (lang: string) => (lang ?? 'en').replace('_', '-');
 
 	return metas.reduce((acc: Record<string, unknown>, meta: MetaObject) => {
-		const keyPath = meta.type === 'document' || meta.type === 'composite' ? [meta.name] : [meta.document, meta.type, meta.name];
-		const document = meta.type === 'document' || meta.type === 'composite' ? meta.name : meta.document;
+		const keyPath = ['group', 'document', 'composite'].includes(meta.type) ? [meta.name] : ([get(meta, 'document'), meta.type, meta.name] as string[]);
+		const document = ['document', 'composite'].includes(meta.type) ? meta.name : get(meta, 'document');
 
-		const access = getAccessFor(document, user);
+		if (meta.type !== 'group' && document == null) {
+			return acc;
+		}
 
-		if (access === false) {
+		const access = getAccessFor(document as string, user);
+
+		if (meta.type !== 'group' && access === false) {
 			return acc;
 		}
 
@@ -45,7 +50,10 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 		}
 
 		const hasAccess = (fieldName: string) => {
-			const fieldAccess = getFieldPermissions(access, fieldName);
+			if (meta.type === 'group') {
+				return true;
+			}
+			const fieldAccess = getFieldPermissions(access as MetaAccess, fieldName);
 			return [fieldAccess.isReadable, fieldAccess.isUpdatable, fieldAccess.isCreatable].some(p => p === true);
 		};
 

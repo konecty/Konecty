@@ -79,6 +79,14 @@ const MetaObjectSchema = z.discriminatedUnion('type', [
 		fields: z.array(FieldSchema),
 	}),
 	z.object({
+		type: z.literal('group'),
+		_id: z.string(),
+		name: z.string(),
+		label: LabelSchema,
+		plurals: LabelSchema,
+		icon: z.string().optional(),
+	}),
+	z.object({
 		type: z.literal('list'),
 		_id: z.string(),
 		document: z.string(),
