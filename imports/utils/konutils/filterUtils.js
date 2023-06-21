@@ -16,6 +16,8 @@ import uniqBy from 'lodash/uniqBy';
 import { utils } from '/imports/utils/konutils/utils';
 import { logger } from '/imports/utils/logger';
 
+import fromPairs from 'lodash/fromPairs';
+
 import { Meta } from '/imports/model/MetaObject';
 /*
 rest/data/OK Activity/find
@@ -467,18 +469,17 @@ export const filterUtils = {
 
 	/**
 	 * Deduplicate projection keys so as to not trigger Mongo Path Collision error, implemented after version 4.4
-	 * 
+	 *
 	 * @example clearProjectionPathCollision({ group: 1, 'group._id': 1, _user: 1 })
 	 * // returns { group: 1, _user: 1 }
-	 * 
-	 * @param {Object<string, number>} projection 
-	 * @returns {Object<string, number>} projection 
+	 *
+	 * @param {Object<string, number>} projection
+	 * @returns {Object<string, number>} projection
 	 */
 	clearProjectionPathCollision(projection) {
 		const fields = Object.entries(projection);
 		const cleaned = uniqBy(fields, field => field[0].split('.')[0]);
 
-		return _.fromPairs(cleaned);
-
-	}
+		return fromPairs(cleaned);
+	},
 };
