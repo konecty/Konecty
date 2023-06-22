@@ -1,4 +1,5 @@
 import set from 'lodash/set';
+import merge from 'lodash/merge';
 import get from 'lodash/get';
 import concat from 'lodash/concat';
 import sortBy from 'lodash/sortBy';
@@ -57,6 +58,8 @@ export async function mainMenu(user: User) {
 			itemPath.push(document, item.type, item.name);
 		}
 
+
+
 		const itemResult = MenuItemSchema.safeParse({
 			name: item.name,
 			type: item.type,
@@ -74,7 +77,7 @@ export async function mainMenu(user: User) {
 				'Error parsing menu item',
 			);
 		} else {
-			set(acc, itemPath, itemResult.data as MenuItem);
+			merge(acc, set({}, itemPath, itemResult.data as MenuItem));
 		}
 		return acc;
 	}, {});
