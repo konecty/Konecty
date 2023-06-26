@@ -1,7 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { findIndex, get, size } from 'lodash';
 
-import { sessionUtils } from '/imports/utils/sessionUtils';
+import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 
 import { Meta, Models } from '/imports/model/MetaObject';
 
@@ -76,7 +76,7 @@ Meteor.registerMethod('file:upload', function (req) {
 
 	// Execute update
 	const result = Meteor.call('data:update', {
-		authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+		authTokenId: getAuthTokenIdFromReq(req),
 		document: req.params.document,
 		data: body,
 	});
@@ -164,7 +164,7 @@ Meteor.registerMethod('file:remove', function (req) {
 
 	// Execute update
 	const result = Meteor.call('data:update', {
-		authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+		authTokenId: getAuthTokenIdFromReq(req),
 		document: req.params.document,
 		data: body,
 	});

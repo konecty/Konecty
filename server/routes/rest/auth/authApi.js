@@ -3,7 +3,7 @@ import { isString, get, has } from 'lodash';
 
 import { app } from '/server/lib/routes/app.js';
 import { MetaObject } from '/imports/model/MetaObject';
-import { sessionUtils } from '/imports/utils/sessionUtils';
+import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 
 app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 	let domain;
@@ -84,7 +84,7 @@ app.post('/rest/auth/login', function (req, res) {
 });
 
 /* Logout currently session */
-app.get('/rest/auth/logout', (req, res) => res.send(Meteor.call('auth:logout', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/logout', (req, res) => res.send(Meteor.call('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) })));
 
 /* Reset password */
 app.post('/rest/auth/reset', function (req, res) {
@@ -120,7 +120,7 @@ app.post('/rest/auth/setgeolocation', function (req, res) {
 
 	res.send(
 		Meteor.call('auth:setGeolocation', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			longitude,
 			latitude,
 			userAgent,
@@ -130,13 +130,13 @@ app.post('/rest/auth/setgeolocation', function (req, res) {
 });
 
 /* Get information from current session*/
-app.get('/rest/auth/info', (req, res) => res.send(Meteor.call('auth:info', { authTokenId: sessionUtils.getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/info', (req, res) => res.send(Meteor.call('auth:info', { authTokenId: getAuthTokenIdFromReq(req) })));
 
 /* Set User password */
 app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
 	res.send(
 		Meteor.call('auth:setPassword', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			userId: req.params.userId,
 			password: req.params.password,
 		}),
@@ -147,7 +147,7 @@ app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
 app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) =>
 	res.send(
 		Meteor.call('auth:setRandomPasswordAndSendByEmail', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			userIds: req.body,
 			host: req.get('Host'),
 		}),

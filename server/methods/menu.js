@@ -7,7 +7,7 @@ import size from 'lodash/size';
 import map from 'lodash/map';
 import identity from 'lodash/identity';
 
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { getAccessFor } from '/imports/utils/accessUtils';
 import { MetaObject } from '/imports/model/MetaObject';
 
 /* Get system menu
@@ -21,7 +21,7 @@ Meteor.registerMethod('menu', 'withUser', function () {
 
 	const getAccess = documentName => {
 		if (!accessCache[documentName]) {
-			accessCache[documentName] = accessUtils.getAccessFor(documentName, this.user);
+			accessCache[documentName] = getAccessFor(documentName, this.user);
 		}
 		return accessCache[documentName];
 	};
@@ -109,7 +109,7 @@ Meteor.registerMethod('documents', 'withUser', function () {
 	const { user } = this;
 
 	const documents = Array.from(MetaObject.find({ type: 'document' }, { sort: { menuSorter: 1 } })).reduce((acc, { _id, name, menuSorter, label, plurals }) => {
-		const access = accessUtils.getAccessFor(name, user);
+		const access = getAccessFor(name, user);
 
 		if (access) {
 			return [...acc, { _id, name, menuSorter, label, plurals }];

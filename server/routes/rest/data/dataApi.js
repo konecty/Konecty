@@ -6,7 +6,7 @@ import { Workbook } from 'excel4node';
 
 import { app } from '/server/lib/routes/app';
 import { middlewares } from '/server/lib/routes/middlewares';
-import { sessionUtils } from '/imports/utils/sessionUtils';
+import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { utils } from '/imports/utils/konutils/utils';
 import { MetaObject, Namespace, Meta } from '/imports/model/MetaObject';
 import { logger } from '/imports/utils/logger';
@@ -14,7 +14,7 @@ import { logger } from '/imports/utils/logger';
 app.post('/rest/data/lead/save', (req, res) =>
 	res.send(
 		Meteor.call('data:lead:save', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			lead: req.body.lead,
 			save: req.body.save,
 		}),
@@ -30,7 +30,7 @@ app.get('/rest/data/:document/find', function (req, res) {
 
 	return res.send(
 		Meteor.call('data:find:all', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			displayName: req.params.query.displayName,
 			displayType: req.params.query.displayType,
@@ -53,7 +53,7 @@ app.post('/rest/data/:document/find', function (req, res) {
 
 	return res.send(
 		Meteor.call('data:find:all', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			displayName: req.params.query.displayName,
 			displayType: req.params.query.displayType,
@@ -72,7 +72,7 @@ app.post('/rest/data/:document/find', function (req, res) {
 app.get('/rest/data/:document/queue/next/:queueId', (req, res) =>
 	res.send(
 		Meteor.call('data:queue:next', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			queueId: req.params.queueId,
 		}),
@@ -83,7 +83,7 @@ app.get('/rest/data/:document/queue/next/:queueId', (req, res) =>
 app.get('/rest/data/:document/:dataId', (req, res) =>
 	res.send(
 		Meteor.call('data:find:byId', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			fields: req.params.query.fields,
 			dataId: req.params.dataId,
@@ -101,7 +101,7 @@ app.get('/rest/data/:document/lookup/:field', function (req, res) {
 
 	return res.send(
 		Meteor.call('data:find:byLookup', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			field: req.params.field,
 			search: req.params.query.search,
@@ -118,7 +118,7 @@ app.get('/rest/data/:document/lookup/:field', function (req, res) {
 app.post('/rest/data/:document', (req, res) =>
 	res.send(
 		Meteor.call('data:create', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
 		}),
@@ -130,7 +130,7 @@ app.post('/rest/data/:document', (req, res) =>
 app.put('/rest/data/:document', (req, res) =>
 	res.send(
 		Meteor.call('data:update', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
 		}),
@@ -142,7 +142,7 @@ app.put('/rest/data/:document', (req, res) =>
 app.del('/rest/data/:document', (req, res) =>
 	res.send(
 		Meteor.call('data:delete', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
 		}),
@@ -154,7 +154,7 @@ app.del('/rest/data/:document', (req, res) =>
 app.post('/rest/data/:document/relations/:fieldName', (req, res) =>
 	res.send(
 		Meteor.call('data:relation:create', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			fieldName: req.params.fieldName,
 			data: req.body,
@@ -165,7 +165,7 @@ app.post('/rest/data/:document/relations/:fieldName', (req, res) =>
 app.post('/rest/data/:document/relations/:fieldName/preview', (req, res) =>
 	res.send(
 		Meteor.call('data:relation:create', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			fieldName: req.params.fieldName,
 			data: req.body,
@@ -179,7 +179,7 @@ app.post('/rest/data/:document/relations/:fieldName/preview', (req, res) =>
 app.get('/rest/data/:document/:dataId/history', (req, res) =>
 	res.send(
 		Meteor.call('history:find', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			dataId: req.params.dataId,
 			fields: req.params.query.fields,
@@ -363,7 +363,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res) =>
 
 		// Get results from db
 		const result = Meteor.call('data:find:all', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			displayName: req.params.query.displayName,
 			displayType: req.params.query.displayType,

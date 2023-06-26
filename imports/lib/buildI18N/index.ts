@@ -1,83 +1,76 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { MetaObject } from '../../types/metadata';
+import get from 'lodash/get';
+import set from 'lodash/set';
 
-import { MetaObjectCollection } from '../../model/MetaObject';
+import { MetaObject } from '/imports/types/metadata';
+import { MetaObjectCollection } from '/imports/model/MetaObject';
+import { User } from '/imports/model/User';
+import { getAccessFor, getFieldPermissions } from '/imports/utils/accessUtils';
+import { MetaAccess } from '/imports/model/MetaAccess';
 
-const buildI18N = async (): Promise<Record<string, any>> => {
+export const buildI18N = async (user: User): Promise<Record<string, unknown>> => {
 	const metas: MetaObject[] = await MetaObjectCollection.find<MetaObject>(
 		{},
 		{
 			projection: {
-			_id: true,
-			type: true,
-			name: true,
-			document: true,
-			label: true,
-			plurals: true,
-			fields: true,
-			columns: true,
-			rows: true,
-			values: true,
-		}},
+				_id: true,
+				type: true,
+				name: true,
+				document: true,
+				label: true,
+				plurals: true,
+				fields: true,
+				columns: true,
+				rows: true,
+				values: true,
+			},
+		},
 	).toArray();
-
-	const setKey = (acc: Record<string, any>, lang: string, path: string | string[], label: string) => {
-		const isoLang = fixISO(lang);
-		if (acc[isoLang] == null) {
-			acc[isoLang] = {};
-		}
-		if (Array.isArray(path)) {
-			const deepSet = (obj: Record<string, any>, [key, ...keys]: string[], valor: string): any => {
-				if (keys.length == null || keys.length === 0) {
-					obj[key] = valor;
-					return obj;
-				}
-
-				if (obj[key] == null || typeof obj[key] !== 'object') {
-					obj[key] = {};
-				}
-
-				return deepSet(obj[key], keys, valor);
-			};
-
-			deepSet(acc[fixISO(isoLang)], path, label);
-		} else {
-			acc[fixISO(isoLang)][path] = label;
-		}
-	};
 
 	const fixISO = (lang: string) => (lang ?? 'en').replace('_', '-');
 
-	return metas.reduce((acc: Record<string, any>, meta: MetaObject) => {
-		const keyPath = meta.type === 'document' || meta.type === 'composite' ? [meta.name] : [meta.document, meta.type, meta.name];
+	return metas.reduce((acc: Record<string, unknown>, meta: MetaObject) => {
+		const keyPath = ['group', 'document', 'composite'].includes(meta.type) ? [meta.name] : ([get(meta, 'document'), meta.type, meta.name] as string[]);
+		const document = ['document', 'composite'].includes(meta.type) ? meta.name : get(meta, 'document');
+
+		if (meta.type !== 'group' && document == null) {
+			return acc;
+		}
+
+		const access = getAccessFor(document as string, user);
+
+		if (meta.type !== 'group' && access === false) {
+			return acc;
+		}
 
 		if (meta.label != null) {
-			Object.entries(meta.label).forEach(([lang, label]) => setKey(acc, lang, keyPath.concat('label'), label));
+			Object.entries(meta.label).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'label'], label));
 		}
 		if (meta.type !== 'composite' && meta.plurals != null) {
-			Object.entries(meta.plurals).forEach(([lang, label]) => setKey(acc, lang, keyPath.concat('plural'), label));
+			Object.entries(meta.plurals).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'plural'], label));
 		}
 
+		const hasAccess = (fieldName: string) => {
+			if (meta.type === 'group') {
+				return true;
+			}
+			const fieldAccess = getFieldPermissions(access as MetaAccess, fieldName);
+			return [fieldAccess.isReadable, fieldAccess.isUpdatable, fieldAccess.isCreatable].some(p => p === true);
+		};
+
 		['fields', 'columns', 'rows', 'values'].forEach(metaProp => {
-			// @ts-ignore
-			if (meta[metaProp] != null) {
-				// @ts-ignore
-				if (Array.isArray(meta[metaProp])) {
-					// @ts-ignore
-					meta[metaProp].forEach(field => {
-						if (field.label != null) {
-							// @ts-ignore
-							Object.entries(field.label).forEach(([lang, label]) => setKey(acc, lang, keyPath.concat(metaProp, field.name, 'label'), label));
+			const entry = get(meta, metaProp);
+			if (entry != null) {
+				if (Array.isArray(entry)) {
+					entry.forEach(field => {
+						if (field.label != null && hasAccess(field.name)) {
+							Object.entries(field.label).forEach(([lang, label]) => set(acc, [fixISO(lang), ...keyPath, metaProp, field.name], label as string));
 						}
 					});
 				} else {
-					// @ts-ignore
-					Object.entries(meta[metaProp]).forEach(([field, fieldLabel]) => {
-						// @ts-ignore
-						if (fieldLabel.label != null) {
-							// @ts-ignore
-							Object.entries(fieldLabel.label).forEach(([lang, label]) => setKey(acc, lang, keyPath.concat(metaProp, field, 'label'), label));
+					Object.entries(entry).forEach(([field, fieldLabel]) => {
+						const label = get(fieldLabel, 'label');
+						if (label != null && hasAccess(field)) {
+							Object.entries(label).forEach(([lang, value]) => set(acc, [fixISO(lang), ...keyPath, metaProp, field], value as string));
 						}
 					});
 				}
@@ -87,5 +80,3 @@ const buildI18N = async (): Promise<Record<string, any>> => {
 		return acc;
 	}, {});
 };
-
-export default buildI18N;

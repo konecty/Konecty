@@ -1,13 +1,13 @@
 import { Meteor } from 'meteor/meteor';
 
 import { app } from '/server/lib/routes/app';
-import { sessionUtils } from '/imports/utils/sessionUtils';
+import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 
 // Converted to method
 app.get('/rest/comment/:document/:dataId', (req, res) =>
 	res.send(
 		Meteor.call('comments:find', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			dataId: req.params.dataId,
 		}),
@@ -18,7 +18,7 @@ app.get('/rest/comment/:document/:dataId', (req, res) =>
 app.post('/rest/comment/:document/:dataId', (req, res) =>
 	res.send(
 		Meteor.call('comments:create', {
-			authTokenId: sessionUtils.getAuthTokenIdFromReq(req),
+			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			text: req.body.text,
 			dataId: req.params.dataId,

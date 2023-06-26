@@ -26,8 +26,8 @@ import words from 'lodash/words';
 
 import { post } from 'request';
 
+import { getAccessFor, getFieldPermissions, getFieldConditions, removeUnauthorizedDataForRead } from '/imports/utils/accessUtils';
 import { DisplayMeta, Meta, Models, Namespace, References } from '/imports/model/MetaObject';
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
 import { filterUtils } from '/imports/utils/konutils/filterUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { sortUtils } from '/imports/utils/konutils/sortUtils';
@@ -126,7 +126,7 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	// Validate if user have permission to view each field
 	const emptyFields = Object.keys(fields).length === 0;
 	for (var fieldName in metaObject.fields) {
-		accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+		accessField = getFieldPermissions(this.access, fieldName);
 		if (accessField.isReadable !== true) {
 			if (emptyFields === true) {
 				fields[fieldName] = 0;
@@ -173,9 +173,9 @@ Meteor.registerMethod('data:find:all', 'withUser', 'withAccessForDocument', func
 	const accessConditions = [];
 
 	for (fieldName in metaObject.fields) {
-		accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+		accessField = getFieldPermissions(this.access, fieldName);
 		if (accessField.isReadable === true) {
-			const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
+			const accessFieldConditions = getFieldConditions(this.access, fieldName);
 			if (accessFieldConditions.READ) {
 				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
@@ -343,7 +343,7 @@ Meteor.registerMethod('data:find:distinct', 'withUser', 'withAccessForDocument',
 
 	// Validate if user have permission to view field
 
-	const accessField = accessUtils.getFieldPermissions(this.access, request.field);
+	const accessField = getFieldPermissions(this.access, request.field);
 	if (accessField.isReadable !== true) {
 		return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to read field`);
 	}
@@ -428,7 +428,7 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	// Validate if user have permission to view each field
 	const emptyFields = Object.keys(fields).length === 0;
 	for (var fieldName in metaObject.fields) {
-		accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+		accessField = getFieldPermissions(this.access, fieldName);
 		if (accessField.isReadable !== true) {
 			if (emptyFields === true) {
 				fields[fieldName] = 0;
@@ -443,9 +443,9 @@ Meteor.registerMethod('data:find:byId', 'withUser', 'withAccessForDocument', fun
 	const accessConditions = [];
 
 	for (fieldName in metaObject.fields) {
-		accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+		accessField = getFieldPermissions(this.access, fieldName);
 		if (accessField.isReadable === true) {
-			const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
+			const accessFieldConditions = getFieldConditions(this.access, fieldName);
 			if (accessFieldConditions.READ) {
 				condition = filterUtils.parseFilterCondition(accessFieldConditions.READ, metaObject, this, true);
 				if (condition instanceof Error) {
@@ -651,7 +651,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 	}
 
 	// Find access for lookup list data
-	const access = accessUtils.getAccessFor(field.document, this.user);
+	const access = getAccessFor(field.document, this.user);
 
 	// Define init filter
 	const filter = {
@@ -687,7 +687,7 @@ Meteor.registerMethod('data:find:byLookup', 'withUser', 'withAccessForDocument',
 
 	// Validate if user have permission to view each field
 	for (let fieldName in fields) {
-		const accessField = accessUtils.getFieldPermissions(access, fieldName.split('.')[0]);
+		const accessField = getFieldPermissions(access, fieldName.split('.')[0]);
 		if (accessField.isReadable !== true) {
 			delete fields[fieldName];
 		}
@@ -814,7 +814,7 @@ Meteor.registerMethod(
 
 		// Validate if user have permission to create each field that he are trying
 		for (let fieldName in request.data) {
-			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+			const accessField = getFieldPermissions(this.access, fieldName);
 			if (accessField.isCreatable !== true) {
 				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to create field ${fieldName}`);
 			}
@@ -1087,7 +1087,7 @@ Meteor.registerMethod(
 
 			// Set update reords to response object
 			if (isObject(insertedRecord)) {
-				insertedRecord = accessUtils.removeUnauthorizedDataForRead(this.access, insertedRecord);
+				insertedRecord = removeUnauthorizedDataForRead(this.access, insertedRecord);
 				response.data = [utils.mapDateValue(insertedRecord)];
 			}
 		}
@@ -1140,13 +1140,13 @@ Meteor.registerMethod(
 
 		// Validate if user have permission to update each field that he are trying
 		for (var fieldName in request.data.data) {
-			const accessField = accessUtils.getFieldPermissions(this.access, fieldName);
+			const accessField = getFieldPermissions(this.access, fieldName);
 			if (accessField.isUpdatable !== true) {
 				return new Meteor.Error('internal-error', `[${request.document}] You don't have permission to update field ${fieldName}`);
 			}
 
 			// If there are condition in access for this field then add to array
-			const accessFieldConditions = accessUtils.getFieldConditions(this.access, fieldName);
+			const accessFieldConditions = getFieldConditions(this.access, fieldName);
 			if (accessFieldConditions.UPDATE) {
 				fieldFilterConditions.push(accessFieldConditions.UPDATE);
 			}
@@ -1308,7 +1308,8 @@ Meteor.registerMethod(
 								response.errors.push(
 									new Meteor.Error(
 										'internal-error',
-										`O Campo ${fieldName} do dado com id ${id} que está tentando salvar está desatualizado. A Modificação foi feita por [${outOfDateRecordsByDataId[id].createdBy.name
+										`O Campo ${fieldName} do dado com id ${id} que está tentando salvar está desatualizado. A Modificação foi feita por [${
+											outOfDateRecordsByDataId[id].createdBy.name
 										}] at [${outOfDateRecordsByDataId[id].createdAt.toISOString()}]`,
 									),
 								);
@@ -1543,7 +1544,7 @@ Meteor.registerMethod(
 			// Set update reords to response object
 			response.data = [];
 			for (let updatedRecord of updatedRecords) {
-				response.data.push(utils.mapDateValue(accessUtils.removeUnauthorizedDataForRead(this.access, updatedRecord)));
+				response.data.push(utils.mapDateValue(removeUnauthorizedDataForRead(this.access, updatedRecord)));
 			}
 		}
 
@@ -2034,7 +2035,7 @@ Meteor.registerMethod('data:relation:create', 'withUser', 'withAccessForDocument
 
 				// If result is an error return
 				if (result instanceof Error) {
-					logger.error(result, `Relations - Lookup Error: ${result.message}}`)
+					logger.error(result, `Relations - Lookup Error: ${result.message}}`);
 					return result;
 				}
 

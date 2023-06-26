@@ -7,7 +7,7 @@ import get from 'lodash/get'
 import toLower from 'lodash/toLower'
 import size from 'lodash/size'
 
-import { accessUtils } from '/imports/utils/konutils/accessUtils';
+import { getAccessFor } from '/imports/utils/accessUtils';
 import { Meta, Models } from '/imports/model/MetaObject';
 
 import { logger } from '/imports/utils/logger';
@@ -76,7 +76,7 @@ Meteor.registerMiddleware('withAccessForDocument', function (request) {
 	}
 
 	// Find access
-	const access = accessUtils.getAccessFor(documentName, this.user);
+	const access = getAccessFor(documentName, this.user);
 
 	// If return is false no access was found then return 401 (Unauthorized)
 	if (access === false) {
