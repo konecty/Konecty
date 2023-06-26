@@ -1,19 +1,22 @@
 import { Meteor } from 'meteor/meteor';
 
 import { createHash } from 'crypto';
-import isArray from 'lodash/isArray';
-import isString from 'lodash/isString';
-import isObject from 'lodash/isObject';
 import get from 'lodash/get';
 import has from 'lodash/has';
-import map from 'lodash/map';
-import size from 'lodash/size';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
 import keys from 'lodash/keys';
+import map from 'lodash/map';
 import reduce from 'lodash/reduce';
+import size from 'lodash/size';
 import startsWith from 'lodash/startsWith';
+import uniqBy from 'lodash/uniqBy';
 
 import { utils } from '/imports/utils/konutils/utils';
 import { logger } from '/imports/utils/logger';
+
+import fromPairs from 'lodash/fromPairs';
 
 import { Meta } from '/imports/model/MetaObject';
 /*
@@ -462,5 +465,21 @@ export const filterUtils = {
 		}
 
 		return filter;
+	},
+
+	/**
+	 * Deduplicate projection keys so as to not trigger Mongo Path Collision error, implemented after version 4.4
+	 *
+	 * @example clearProjectionPathCollision({ group: 1, 'group._id': 1, _user: 1 })
+	 * // returns { group: 1, _user: 1 }
+	 *
+	 * @param {Object<string, number>} projection
+	 * @returns {Object<string, number>} projection
+	 */
+	clearProjectionPathCollision(projection) {
+		const fields = Object.entries(projection);
+		const cleaned = uniqBy(fields, field => field[0].split('.')[0]);
+
+		return fromPairs(cleaned);
 	},
 };
