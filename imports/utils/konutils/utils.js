@@ -462,7 +462,7 @@ export const utils = {
 
 				result = recursive(field, value);
 
-				var sort = items => items.sort((a) => isArray(a));
+				var sort = items => items.sort(a => isArray(a));
 
 				var resultRecursive = function (items) {
 					if (isArray(items)) {

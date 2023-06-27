@@ -6,7 +6,6 @@ import { check } from 'meteor/check';
 
 import useragent from 'useragent';
 
-
 import { isString, isObject, get, has } from 'lodash';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
@@ -15,7 +14,6 @@ import { getAccessFor } from '/imports/utils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { MetaObject, Models } from '/imports/model/MetaObject';
 import { logger } from '/imports/utils/logger';
-
 
 // eslint-disable-next-line no-undef
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));

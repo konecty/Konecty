@@ -378,7 +378,7 @@ app.get('/rest/data/:document/list/:listName/:type', (req, res) =>
 
 		// If result is an erro send error
 		if (result instanceof Error) {
-			logger.error(result, `Export - Error ${result.message}`)
+			logger.error(result, `Export - Error ${result.message}`);
 			return res.send(result);
 		}
 

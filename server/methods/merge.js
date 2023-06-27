@@ -10,7 +10,6 @@ import uniq from 'lodash/uniq';
 import has from 'lodash/has';
 import get from 'lodash/get';
 
-
 import { Models, References } from '/imports/model/MetaObject';
 
 /* Simualte merge

@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 export const buildReferences = Meta => {
 	const References = {};
 
-	logger.debug(`[konsistent] Building references for ${Object.keys(Meta).length} documents`)
+	logger.debug(`[konsistent] Building references for ${Object.keys(Meta).length} documents`);
 
 	for (let metaName in Meta) {
 		const meta = Meta[metaName];

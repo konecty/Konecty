@@ -810,7 +810,6 @@ Konsistent.History.updateLookupReference = function (metaName, fieldName, field,
 				var inheritedMetaField = meta.fields[inheritedField.fieldName];
 
 				if (inheritedField.inherit === 'hierarchy_always') {
-
 					if (get(inheritedMetaField, 'type') !== 'lookup' || inheritedMetaField.isList !== true) {
 						logger.error(`Not lookup or not isList field ${inheritedField.fieldName} in ${metaName}`);
 						continue;

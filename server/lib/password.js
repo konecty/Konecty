@@ -43,4 +43,3 @@ export class Password {
 		return `$shiro1$SHA-256$${iterations}$${salt}$${password}`;
 	}
 }
-
