@@ -4,111 +4,195 @@ import get from 'lodash/get';
 import concat from 'lodash/concat';
 import sortBy from 'lodash/sortBy';
 
-import { MetaObjectCollection } from '/imports/model/MetaObject';
+import { Collections, MetaObjectCollection } from '/imports/model/MetaObject';
 import { User } from '/imports/model/User';
 import { getAccessFor } from '/imports/utils/accessUtils';
 import { MenuItem, MenuGroup, MenuItemSchema } from '/imports/model/Menu';
 import { logger } from '/imports/utils/logger';
+import { MetaObjectType } from '/imports/types/metadata';
 
 export async function mainMenu(user: User) {
-	const menuItens = await MetaObjectCollection.find({ type: { $in: ['document', 'group', 'list', 'pivot'] }, menuSorter: { $nin: [-1, -2, -3] } }).toArray();
+	const menuItens = await MetaObjectCollection.find<MetaObjectType>({ type: { $in: ['document', 'group', 'list', 'pivot'] }, menuSorter: { $nin: [-1, -2, -3] } }).toArray();
 
-	const mainMenu = menuItens.reduce((acc, item) => {
-		const document = item.type === 'document' ? item.name : item.document;
-
-		const accessAllowed = (type: string, name: string) => {
-			if (type === 'group') {
-				return true;
-			}
-			return getAccessFor(name, user) !== false;
-		};
-
-		if (accessAllowed(item.type, document) === false) {
-			return acc;
+	const accessAllowed = (type: string, name: string) => {
+		if (type === 'group') {
+			return true;
 		}
-		const itemPath = [];
-		const findGroup = (name: string) => menuItens.find(d => ['group', 'document'].includes(d.type) && d.name === name);
+		return getAccessFor(name, user) !== false;
+	};
 
-		if (item.group != null) {
-			const group = findGroup(item.group);
-			if (group == null || accessAllowed(group.type, item.group) === false) {
-				return acc;
-			}
-			itemPath.push(item.group);
+	const findGroup = (name: string) => menuItens.find(d => ['group', 'document'].includes(d.type) && d.name === name);
+
+	const getDocumentName = ({ type, name, document }: { type: string; name?: string; document?: string }) => {
+		if (type === 'document') {
+			return name;
 		}
-		if (['group', 'document'].includes(item.type)) {
-			itemPath.push(item.name);
-		} else {
-			if (accessAllowed(item.type, document) === false) {
-				return acc;
+		if (type === 'list' || type === 'pivot') {
+			return document;
+		}
+		return null;
+	};
+
+	const getItemPath = ({ type, name, group: itemGroup, document: itemDocument }: { type: string; name: string; group?: string; document?: string }) => {
+		const document = getDocumentName({ type, name, document: itemDocument });
+
+		if (document == null) {
+			return null;
+		}
+
+		const itemPath: Array<string> = [];
+		if (type === 'document' || type === 'list' || type === 'pivot') {
+			if (itemGroup != null) {
+				const group = findGroup(itemGroup);
+				if (group == null || accessAllowed(group.type, itemGroup) === false) {
+					return null;
+				}
+				itemPath.push(itemGroup);
+			}
+		}
+		if (['group', 'document'].includes(type)) {
+			itemPath.push(name);
+		} else if (type === 'list' || type === 'pivot') {
+			if (accessAllowed(type, document) === false) {
+				return null;
 			}
 			const documentGroup = findGroup(document);
 			if (documentGroup == null) {
-				return acc;
+				return null;
 			}
-			if (item.group == null) {
-				if (documentGroup?.group != null) {
+			if (itemGroup == null) {
+				if (documentGroup.type === 'document' && documentGroup?.group != null) {
 					if (accessAllowed(documentGroup.type, documentGroup.group) === false) {
-						return acc;
+						return null;
 					}
 					itemPath.push(documentGroup.group);
 				}
 			}
 
-			itemPath.push(document, item.type, item.name);
+			itemPath.push(document, type, name);
+		}
+		return itemPath;
+	};
+
+	const mainMenu = menuItens.reduce((acc, item, index) => {
+		const document = getDocumentName(item);
+
+		if (document == null) {
+			return acc;
 		}
 
+		if (accessAllowed(item.type, document) === false) {
+			return acc;
+		}
+		const itemPath = getItemPath(item);
 
+		if (itemPath == null) {
+			return acc;
+		}
 
-		const itemResult = MenuItemSchema.safeParse({
-			name: item.name,
-			type: item.type,
-			document,
-			menuSorter: item.menuSorter,
-			icon: item.icon,
-		});
+		if (item.type === 'document' || item.type === 'group' || item.type === 'list' || item.type === 'pivot') {
+			const itemResult = MenuItemSchema.safeParse({
+				_id: item._id,
+				name: item.name,
+				type: item.type,
+				document,
+				menuSorter: item.menuSorter ?? 999 + index,
+				icon: item.icon,
+			});
 
-		if (itemResult.success === false) {
-			logger.error(
-				{
-					item,
-					error: itemResult.error,
-				},
-				'Error parsing menu item',
-			);
-		} else {
-			merge(acc, set({}, itemPath, itemResult.data as MenuItem));
+			if (itemResult.success === false) {
+				logger.error(
+					{
+						item,
+						error: itemResult.error,
+					},
+					'Error parsing menu item',
+				);
+			} else {
+				merge(acc, set({}, itemPath, itemResult.data as MenuItem));
+			}
 		}
 		return acc;
 	}, {});
 
+	const preferenceItems = await Collections['Preference']
+		.find<{
+			_id: string;
+			code: string;
+			type: string;
+			name: string;
+			document: string;
+			target: string;
+			view?: string;
+			value: string;
+		}>({ '_user._id': user._id, type: { $in: ['list', 'pivot'] }, target: 'Display' })
+		.toArray();
+
+	preferenceItems.forEach((item, index) => {
+		const document = getDocumentName({ type: item.type, name: item.name, document: item.document });
+
+		if (document == null) {
+			return;
+		}
+
+		if (accessAllowed('document', document) === false) {
+			return;
+		}
+
+		const [, , originalItemName] = item.code.split(':');
+
+		const originalItem = menuItens.find(i => get(i, 'document') === document && i.type === item.type && i.name === originalItemName);
+
+		if (originalItem == null) {
+			return;
+		}
+
+		const preferenceItem = Object.assign({}, originalItem, JSON.parse(item.value));
+		set(preferenceItem, 'menuSorter', index + 9999);
+
+		const itemPath = getItemPath({ type: preferenceItem.type, name: preferenceItem.name, group: preferenceItem.group, document });
+
+		if (itemPath == null) {
+			return;
+		}
+
+		merge(
+			mainMenu,
+			set({}, itemPath, MenuItemSchema.parse({ ...preferenceItem, _id: item._id, name: originalItemName, isPreference: true, preferenceName: preferenceItem.name })),
+		);
+	});
+
 	function parseMenuGroups(obj: Record<string, unknown>): MenuGroup | null {
 		const result = {};
 		Object.entries(obj).forEach(([key, value]) => {
-			if (['name', 'type', 'document', 'menuSorter', 'icon'].includes(key)) {
-				set(result, key, get(obj, key));
-			} else if (key === 'list') {
-				const lists = Object.values(value as Record<string, MenuItem>).map(list => {
-					return list;
-				});
-				if (lists.length > 0) {
-					set(result, 'lists', sortBy(lists, ['menuSorter', 'name']));
-				}
-			} else if (key === 'pivot') {
-				const pivots = Object.values(value as Record<string, MenuItem>).map(pivot => {
-					return pivot;
-				});
-				if (pivots.length > 0) {
-					set(result, 'pivots', sortBy(pivots, ['menuSorter', 'name']));
-				}
-			} else {
-				const children = parseMenuGroups(value as Record<string, unknown>);
-				if (children != null) {
-					if (get(result, 'children') == null) {
-						set(result, 'children', []);
+			try {
+				if (['_id', 'name', 'type', 'document', 'menuSorter', 'icon', 'isPreference', 'preferenceName'].includes(key)) {
+					set(result, key, get(obj, key));
+				} else if (key === 'list') {
+					const lists = Object.values(value as Record<string, MenuItem>).map(list => {
+						return list;
+					});
+					if (lists.length > 0) {
+						set(result, 'lists', sortBy(lists, ['menuSorter', 'name']));
 					}
-					set(result, 'children', concat(get(result, 'children'), children));
+				} else if (key === 'pivot') {
+					const pivots = Object.values(value as Record<string, MenuItem>).map(pivot => {
+						return pivot;
+					});
+					if (pivots.length > 0) {
+						set(result, 'pivots', sortBy(pivots, ['menuSorter', 'name']));
+					}
+				} else {
+					const children = parseMenuGroups(value as Record<string, unknown>);
+					if (children != null) {
+						if (get(result, 'children') == null) {
+							set(result, 'children', []);
+						}
+						set(result, 'children', concat(get(result, 'children'), children));
+					}
 				}
+			} catch (error) {
+				logger.error({ error, key, value }, 'Error parsing menu group');
 			}
 		});
 

@@ -53,7 +53,7 @@ const RelationSchema = z.object({
 });
 
 // Definição do tipo "Integration"
-const MetaObjectSchema = z.discriminatedUnion('type', [
+export const MetaObjectSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('document'),
 		_id: z.string(),
@@ -82,6 +82,8 @@ const MetaObjectSchema = z.discriminatedUnion('type', [
 		type: z.literal('group'),
 		_id: z.string(),
 		name: z.string(),
+		group: z.string().optional(),
+		menuSorter: z.number().optional(),
 		label: LabelSchema,
 		plurals: LabelSchema,
 		icon: z.string().optional(),
@@ -89,10 +91,13 @@ const MetaObjectSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('list'),
 		_id: z.string(),
+		group: z.string().optional(),
 		document: z.string(),
+		menuSorter: z.number().optional(),
 		name: z.string(),
 		label: LabelSchema,
 		plurals: LabelSchema,
+		icon: z.string().optional(),
 		refreshRate: z.object({
 			options: z.array(z.number()),
 			default: z.number(),
@@ -119,6 +124,34 @@ const MetaObjectSchema = z.discriminatedUnion('type', [
 			}),
 		),
 	}),
+	z.object({
+		type: z.literal('view'),
+		_id: z.string(),
+		document: z.string(),
+		name: z.string(),
+		label: LabelSchema,
+		plurals: LabelSchema,
+		icon: z.string().optional(),
+		visuals: z.array(z.any()).optional(), // TODO: Definir o tipo correto
+	}),
+	z.object({
+		type: z.literal('pivot'),
+		_id: z.string(),
+		group: z.string().optional(),
+		menuSorter: z.number().optional(),
+		document: z.string(),
+		name: z.string(),
+		label: LabelSchema,
+		plurals: LabelSchema,
+		icon: z.string().optional(),
+		rows: z.array(z.any()).optional(), // TODO: Definir o tipo correto
+	}),
+	z.object({
+		type: z.literal('access'),
+		_id: z.string(),
+		document: z.string(),
+		name: z.string(),
+	}),
 ]);
 
-export type MetaObject = z.infer<typeof MetaObjectSchema>;
+export type MetaObjectType = z.infer<typeof MetaObjectSchema>;

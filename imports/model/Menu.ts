@@ -1,11 +1,14 @@
 import { z } from 'zod';
 
 export const MenuItemSchema = z.object({
+	_id: z.string(),
 	name: z.string(),
 	type: z.string(),
 	document: z.string().optional(),
 	menuSorter: z.number().optional(),
 	icon: z.string().optional(),
+	isPreference: z.boolean().optional(),
+	preferenceName: z.string().optional(),
 });
 
 export type MenuItem = z.infer<typeof MenuItemSchema>;

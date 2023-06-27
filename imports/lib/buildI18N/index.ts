@@ -1,14 +1,14 @@
 import get from 'lodash/get';
 import set from 'lodash/set';
 
-import { MetaObject } from '/imports/types/metadata';
+import { MetaObjectType } from '/imports/types/metadata';
 import { MetaObjectCollection } from '/imports/model/MetaObject';
 import { User } from '/imports/model/User';
 import { getAccessFor, getFieldPermissions } from '/imports/utils/accessUtils';
 import { MetaAccess } from '/imports/model/MetaAccess';
 
 export const buildI18N = async (user: User): Promise<Record<string, unknown>> => {
-	const metas: MetaObject[] = await MetaObjectCollection.find<MetaObject>(
+	const metas: MetaObjectType[] = await MetaObjectCollection.find<MetaObjectType>(
 		{},
 		{
 			projection: {
@@ -28,7 +28,7 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 
 	const fixISO = (lang: string) => (lang ?? 'en').replace('_', '-');
 
-	return metas.reduce((acc: Record<string, unknown>, meta: MetaObject) => {
+	return metas.reduce((acc: Record<string, unknown>, meta: MetaObjectType) => {
 		const keyPath = ['group', 'document', 'composite'].includes(meta.type) ? [meta.name] : ([get(meta, 'document'), meta.type, meta.name] as string[]);
 		const document = ['document', 'composite'].includes(meta.type) ? meta.name : get(meta, 'document');
 
@@ -42,11 +42,14 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 			return acc;
 		}
 
-		if (meta.label != null) {
-			Object.entries(meta.label).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'label'], label));
+		const label = get(meta, 'label');
+		const plurals = get(meta, 'plurals');
+
+		if (label != null) {
+			Object.entries(label).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'label'], label));
 		}
-		if (meta.type !== 'composite' && meta.plurals != null) {
-			Object.entries(meta.plurals).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'plural'], label));
+		if (meta.type !== 'composite' && plurals != null) {
+			Object.entries(plurals).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'plural'], label));
 		}
 
 		const hasAccess = (fieldName: string) => {
