@@ -46,10 +46,10 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 		const plurals = get(meta, 'plurals');
 
 		if (label != null) {
-			Object.entries(label).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'label'], label));
+			Object.entries(label).forEach(([lang, label]) => set(acc, [fixISO(lang), ...keyPath, 'label'], label));
 		}
 		if (meta.type !== 'composite' && plurals != null) {
-			Object.entries(plurals).forEach(([lang, label]) => set(acc, [lang, ...keyPath, 'plural'], label));
+			Object.entries(plurals).forEach(([lang, label]) => set(acc, [fixISO(lang), ...keyPath, 'plural'], label));
 		}
 
 		const hasAccess = (fieldName: string) => {
