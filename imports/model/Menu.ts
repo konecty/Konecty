@@ -5,6 +5,16 @@ export const MenuItemSchema = z.object({
 	name: z.string(),
 	type: z.string(),
 	document: z.string().optional(),
+	columns: z
+		.array(
+			z.object({
+				name: z.string(),
+				linkField: z.string(),
+				visible: z.boolean().optional(),
+				minWidth: z.number().optional(),
+			}),
+		)
+		.optional(),
 	menuSorter: z.number().optional(),
 	icon: z.string().optional(),
 	isPreference: z.boolean().optional(),

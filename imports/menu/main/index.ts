@@ -74,6 +74,23 @@ export async function mainMenu(user: User) {
 		return itemPath;
 	};
 
+	const getformatedColumns = (
+		columns: Record<
+			string,
+			{
+				name: string;
+				linkedField: string;
+				visible: boolean;
+				minWidth?: number | undefined;
+				sort?: number | undefined;
+			}
+		>,
+	) => {
+		const columnsArray = Object.entries(columns).map(([, value]) => value);
+
+		return sortBy(columnsArray, ['sort', 'name']);
+	};
+
 	const mainMenu = menuItens.reduce((acc, item, index) => {
 		const document = getDocumentName(item);
 
@@ -90,7 +107,29 @@ export async function mainMenu(user: User) {
 			return acc;
 		}
 
-		if (item.type === 'document' || item.type === 'group' || item.type === 'list' || item.type === 'pivot') {
+		if (item.type === 'list') {
+			const itemResult = MenuItemSchema.safeParse({
+				_id: item._id,
+				name: item.name,
+				type: item.type,
+				document,
+				columns: getformatedColumns(item.columns),
+				menuSorter: item.menuSorter ?? 999 + index,
+				icon: item.icon,
+			});
+
+			if (itemResult.success === false) {
+				logger.error(
+					{
+						item,
+						error: itemResult.error,
+					},
+					'Error parsing menu item',
+				);
+			} else {
+				merge(acc, set({}, itemPath, itemResult.data as MenuItem));
+			}
+		} else if (item.type === 'document' || item.type === 'group' || item.type === 'pivot') {
 			const itemResult = MenuItemSchema.safeParse({
 				_id: item._id,
 				name: item.name,
@@ -158,7 +197,18 @@ export async function mainMenu(user: User) {
 
 		merge(
 			mainMenu,
-			set({}, itemPath, MenuItemSchema.parse({ ...preferenceItem, _id: item._id, name: originalItemName, isPreference: true, preferenceName: preferenceItem.name })),
+			set(
+				{},
+				itemPath,
+				MenuItemSchema.parse({
+					...preferenceItem,
+					columns: getformatedColumns(preferenceItem.columns),
+					_id: item._id,
+					name: originalItemName,
+					isPreference: true,
+					preferenceName: preferenceItem.name,
+				}),
+			),
 		);
 	});
 
