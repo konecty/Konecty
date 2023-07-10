@@ -74,23 +74,6 @@ export async function mainMenu(user: User) {
 		return itemPath;
 	};
 
-	const getformatedColumns = (
-		columns: Record<
-			string,
-			{
-				name: string;
-				linkedField: string;
-				visible: boolean;
-				minWidth?: number | undefined;
-				sort?: number | undefined;
-			}
-		>,
-	) => {
-		const columnsArray = Object.entries(columns).map(([, value]) => value);
-
-		return sortBy(columnsArray, ['sort', 'name']);
-	};
-
 	const mainMenu = menuItens.reduce((acc, item, index) => {
 		const document = getDocumentName(item);
 
@@ -113,7 +96,6 @@ export async function mainMenu(user: User) {
 				name: item.name,
 				type: item.type,
 				document,
-				columns: getformatedColumns(item.columns),
 				menuSorter: item.menuSorter ?? 999 + index,
 				icon: item.icon,
 			});
@@ -202,7 +184,6 @@ export async function mainMenu(user: User) {
 				itemPath,
 				MenuItemSchema.parse({
 					...preferenceItem,
-					columns: getformatedColumns(preferenceItem.columns),
 					_id: item._id,
 					name: originalItemName,
 					isPreference: true,
