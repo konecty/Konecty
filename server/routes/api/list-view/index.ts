@@ -50,7 +50,7 @@ WebApp.connectHandlers.use('/api/list-view', async (req, res) => {
 			res.end('Unauthorized');
 			return;
 		}
-		logger.error(error, `Error getting list view for test`);
+		logger.error(error, `Error getting list view for ${document}/${id}}`);
 		res.writeHead(500);
 		res.end('Internal server error');
 	}

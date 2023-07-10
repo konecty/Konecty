@@ -30,7 +30,7 @@ export async function listView(document: string, id: string) {
 				list,
 				error: listViewResult.error,
 			},
-			'Error parsing menu item',
+			`Error parsing list view ${document}/${id}`,
 		);
 		return null;
 	}
