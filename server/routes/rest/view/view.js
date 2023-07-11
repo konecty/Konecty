@@ -1,4 +1,3 @@
-import { Meteor } from 'meteor/meteor';
 import { isDate } from 'lodash';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
@@ -7,7 +6,6 @@ import getServer from '/imports/utils/getServer';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { app } from '/server/lib/routes/app';
 import { logout } from '/imports/auth/logout';
-import { get } from 'jquery';
 import { getUser } from '/imports/auth/getUser';
 import { logger } from '/imports/utils/logger';
 
