@@ -3,22 +3,18 @@ import { SSR } from 'meteor/meteorhacks:ssr';
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 import { check } from 'meteor/check';
-
 import useragent from 'useragent';
 
-import { isString, isObject, get, has } from 'lodash';
+import { isObject, get, has, isString } from 'lodash';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
 
 import { getAccessFor } from '/imports/utils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
 import { MetaObject, Models } from '/imports/model/MetaObject';
-import { logger } from '/imports/utils/logger';
 
-// eslint-disable-next-line no-undef
-SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
-
-const injectRequestInformation = function (userAgent, session) {
+export const injectRequestInformation = function (userAgent, session) {
+    
 	const r = useragent.parse(userAgent);
 
 	session.browser = r.family;
@@ -30,125 +26,11 @@ const injectRequestInformation = function (userAgent, session) {
 		var resolution = JSON.parse(resolution);
 		session.resolution = resolution;
 	}
-
 	return session;
 };
 
-/* Login using email and password
-	@param user
-	@param password
-	@param ns
-	@param geolocation
-	@param resolution
-	@param ip
-	@param userAgent
-*/
-Meteor.registerMethod('auth:login', function (request) {
-	try {
-		let { user, password, geolocation, userAgent, ip, password_SHA256 } = request;
-
-		// Define a session with arguments based on java version
-		const accessLog = {
-			_createdAt: new Date(),
-			_updatedAt: new Date(),
-			ip,
-			login: user,
-		};
-
-		const namespace = MetaObject.findOne({ _id: 'Namespace' });
-
-		// If there is a geolocation store it with session
-		if (isString(geolocation)) {
-			geolocation = JSON.parse(geolocation);
-			accessLog.geolocation = [geolocation.lng, geolocation.lat];
-		} else if (namespace.trackUserGeolocation === true) {
-			accessLog.reason = 'Geolocation required';
-			injectRequestInformation(userAgent, accessLog);
-			Models.AccessFailedLog.insert(accessLog);
-
-			return new Meteor.Error('internal-error', 'O Konecty exige que você habilite a geolocalização do seu navegador.');
-		}
-
-		// Only users with a password can login
-		const userRecord = Meteor.users.findOne({ 'services.password.bcrypt': { $exists: true }, $or: [{ username: user }, { 'emails.address': user }] });
-
-		if (!userRecord) {
-			accessLog.reason = `User not found [${user}]`;
-			injectRequestInformation(userAgent, accessLog);
-			Models.AccessFailedLog.insert(accessLog);
-
-			return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
-		}
-
-		accessLog._user = [
-			{
-				_id: userRecord._id,
-				name: userRecord.name,
-				group: userRecord.group,
-			},
-		];
-
-		let p = password_SHA256 || password;
-		p = { algorithm: 'sha-256', digest: p };
-
-		const logged = Accounts._checkPassword(userRecord, p);
-
-		if (logged.error) {
-			accessLog.reason = logged.error.reason;
-			injectRequestInformation(userAgent, accessLog);
-			Models.AccessFailedLog.insert(accessLog);
-
-			return new Meteor.Error('internal-error', 'Usuário ou senha inválidos.');
-		}
-
-		if (userRecord.active !== true) {
-			accessLog.reason = `User inactive [${user}]`;
-			injectRequestInformation(userAgent, accessLog);
-			Models.AccessFailedLog.insert(accessLog);
-			return new Meteor.Error('internal-error', 'Usuário inativo.');
-		}
-
-		const stampedToken = Accounts._generateStampedLoginToken();
-		const hashStampedToken = Accounts._hashStampedToken(stampedToken);
-
-		const updateObj = {
-			$set: {
-				lastLogin: new Date(),
-			},
-			$push: {
-				'services.resume.loginTokens': hashStampedToken,
-			},
-		};
-
-		Meteor.users.update({ _id: userRecord._id }, updateObj);
-
-		injectRequestInformation(userAgent, accessLog);
-		if (Models.AccessLog) {
-			Models.AccessLog.insert(accessLog);
-		}
-
-		return {
-			success: true,
-			logged: true,
-			authId: hashStampedToken.hashedToken,
-			user: {
-				_id: userRecord._id,
-				access: userRecord.access,
-				admin: userRecord.admin,
-				email: get(userRecord, 'emails.0.address'),
-				group: userRecord.group,
-				locale: userRecord.locale,
-				login: userRecord.username,
-				name: userRecord.name,
-				namespace: userRecord.namespace,
-				role: userRecord.role,
-			},
-		};
-	} catch (error) {
-		logger.error(error, `Something went wrong. ${error.message}`);
-		return new Meteor.Error('internal-error', `Something went wrong. ${error.message}`);
-	}
-});
+// eslint-disable-next-line no-undef
+SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
 /* Logout currently session
 	@param authTokenId

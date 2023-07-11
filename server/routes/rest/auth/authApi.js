@@ -4,6 +4,7 @@ import { isString, get, has } from 'lodash';
 import { app } from '/server/lib/routes/app.js';
 import { MetaObject } from '/imports/model/MetaObject';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
+import { login } from '/imports/auth/login';
 
 app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 	let domain;
@@ -28,7 +29,7 @@ app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 });
 
 /* Login using email and password */
-app.post('/rest/auth/login', function (req, res) {
+app.post('/rest/auth/login', async function (req, res) {
 	// Map body parameters
 	let domain;
 	const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
@@ -54,7 +55,7 @@ app.post('/rest/auth/login', function (req, res) {
 		ip = ip.replace(/\s/g, '').split(',')[0];
 	}
 
-	const loginResult = Meteor.call('auth:login', {
+	const loginResult = await login({
 		ns,
 		ip,
 		user,
