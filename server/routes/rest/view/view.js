@@ -6,6 +6,10 @@ import getServer from '/imports/utils/getServer';
 
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { app } from '/server/lib/routes/app';
+import { logout } from '/imports/auth/logout';
+import { get } from 'jquery';
+import { getUser } from '/imports/auth/getUser';
+import { logger } from '/imports/utils/logger';
 
 const getEnv = () => {
 	if (process.env.KONECTY_MODE === 'development') {
@@ -58,37 +62,35 @@ app.get('/login.js', function (req, res, next) {
 	return res.end(login);
 });
 
-app.get('/', function (req, res, next) {
-	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR' || req.query.mocha != null) {
-		return next();
+app.get('/', async function (req, res) {
+	const authTokenId = getAuthTokenIdFromReq(req);
+
+	try {
+		const user = await getUser(authTokenId);
+		const time = 21600000; // 6h
+
+		if (!user.lastLogin || !isDate(user.lastLogin) || Date.now() - user.lastLogin.getTime() > time) {
+			await logout(getAuthTokenIdFromReq(req));
+			return res.redirect('/login');
+		}
+
+		const config = {
+			env: getEnv(),
+			host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
+			locale: user.locale,
+			lbl_loading: 'Carregando o sistema...',
+			btn_close: 'Fechar',
+			timeInMilis: +new Date(),
+			uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
+			blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
+			previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
+		};
+
+		res.render('index.html', config);
+	} catch (error) {
+		if (/^[get-user]/.test(error.message)) {
+			return res.redirect('/login');
+		}
+		logger.error(error, 'Error on GET /');
 	}
-	const user = Meteor.call('auth:getUser', {
-		authTokenId: getAuthTokenIdFromReq(req),
-		dontSetLastLogin: true,
-	});
-
-	if (user === 401) {
-		return res.redirect('/login');
-	}
-
-	const time = 21600000; // 6h
-
-	if (!user.lastLogin || !isDate(user.lastLogin) || Date.now() - user.lastLogin.getTime() > time) {
-		Meteor.call('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) });
-		return res.redirect('/login');
-	}
-
-	const config = {
-		env: getEnv(),
-		host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
-		locale: user.locale,
-		lbl_loading: 'Carregando o sistema...',
-		btn_close: 'Fechar',
-		timeInMilis: +new Date(),
-		uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
-		blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
-		previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
-	};
-
-	res.render('index.html', config);
 });

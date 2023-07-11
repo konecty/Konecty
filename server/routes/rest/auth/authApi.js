@@ -1,10 +1,13 @@
 import { Meteor } from 'meteor/meteor';
+import { StatusCodes } from 'http-status-codes';
+
 import { isString, get, has } from 'lodash';
 
 import { app } from '/server/lib/routes/app.js';
 import { MetaObject } from '/imports/model/MetaObject';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { login } from '/imports/auth/login';
+import { logout } from '/imports/auth/logout';
 
 app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
 	let domain;
@@ -85,7 +88,21 @@ app.post('/rest/auth/login', async function (req, res) {
 });
 
 /* Logout currently session */
-app.get('/rest/auth/logout', (req, res) => res.send(Meteor.call('auth:logout', { authTokenId: getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/logout', async (req, res) => {
+	try {
+		const authTokenId = getAuthTokenIdFromReq(req);
+		const result = await logout(authTokenId);
+
+		if ((result.success = true)) {
+			res.set('set-cookie', `_authTokenId=; Version=1; Path=/; Max-Age=0`);
+			res.send(StatusCodes.OK, result);
+		} else {
+			res.send(StatusCodes.UNAUTHORIZED, result);
+		}
+	} catch (error) {
+		res.send(StatusCodes.INTERNAL_SERVER_ERROR, { success: false, errors: [{ message: error.message }] });
+	}
+});
 
 /* Reset password */
 app.post('/rest/auth/reset', function (req, res) {

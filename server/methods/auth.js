@@ -32,21 +32,6 @@ export const injectRequestInformation = function (userAgent, session) {
 // eslint-disable-next-line no-undef
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
-/* Logout currently session
-	@param authTokenId
-*/
-Meteor.registerMethod('auth:logout', 'withUser', function () {
-	const updateObj = {
-		$pull: {
-			'services.resume.loginTokens': { hashedToken: this.hashedToken },
-		},
-	};
-
-	Meteor.users.update({ _id: this.user._id }, updateObj);
-
-	return { success: true };
-});
-
 /* Get information from current session
 	@param authTokenId
 */

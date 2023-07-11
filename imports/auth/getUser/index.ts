@@ -11,22 +11,23 @@ export const getUserFromRequest = async (request: IncomingMessage): Promise<User
 	return getUser(authTokenId);
 };
 
+
+export const getHashedToken = (authTokenId: string) => {
+	if (authTokenId.length === 43) {
+		return crypto.createHash('sha256').update(authTokenId).digest('base64');
+	}
+	if (authTokenId.length === 24) {
+		return authTokenId.toLowerCase();
+	}
+	return authTokenId;
+};
+
 export const getUser = async (authTokenId: string | null | undefined): Promise<User> => {
 	if (authTokenId == null) {
 		throw new Error('[get-user] No authTokenId found');
 	}
 
-	const getHashedToken = () => {
-		if (authTokenId.length === 43) {
-			return crypto.createHash('sha256').update(authTokenId).digest('base64');
-		}
-		if (authTokenId.length === 24) {
-			return authTokenId.toLowerCase();
-		}
-		return authTokenId;
-	};
-
-	const hashedToken = getHashedToken();
+	const hashedToken = getHashedToken(authTokenId);
 
 	const user = await Collections['User'].findOne<User>({ 'services.resume.loginTokens.hashedToken': hashedToken });
 
@@ -38,6 +39,7 @@ export const getUser = async (authTokenId: string | null | undefined): Promise<U
 	if (user.active !== true) {
 		throw new Error('[get-user] User inactive');
 	}
+
 
 	return user;
 };
