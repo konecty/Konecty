@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DocumentFormVisualsSchema } from '../model/DocumentForm';
 
 export const LabelSchema = z.record(z.string());
 
@@ -132,7 +133,7 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 		label: LabelSchema,
 		plurals: LabelSchema,
 		icon: z.string().optional(),
-		visuals: z.array(z.any()).optional(), // TODO: Definir o tipo correto
+		visuals: z.array(DocumentFormVisualsSchema).optional(),
 	}),
 	z.object({
 		type: z.literal('pivot'),
