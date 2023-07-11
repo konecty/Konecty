@@ -9,28 +9,6 @@ import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { login } from '/imports/auth/login';
 import { logout } from '/imports/auth/logout';
 
-app.get('/rest/auth/loginByUrl/:ns/:sessionId', function (req, res) {
-	let domain;
-	if (Meteor.absoluteUrl().indexOf('localhost') !== -1) {
-		domain = '';
-	} else {
-		domain = 'domain=.konecty.com;';
-	}
-
-	req.params.sessionId = decodeURIComponent(req.params.sessionId.replace(/\s/g, '+'));
-
-	const namespace = MetaObject.findOne({ _id: 'Namespace' });
-
-	// Verify if Namespace have a session expiration metadata config and set
-	const cookieMaxAge = get(namespace, 'sessionExpirationInSeconds', 2592000);
-
-	// Set cookie with session id
-	res.set('set-cookie', `_authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
-
-	// Redirect to system
-	return res.redirect('/');
-});
-
 /* Login using email and password */
 app.post('/rest/auth/login', async function (req, res) {
 	// Map body parameters
