@@ -8,6 +8,7 @@ import { MetaObject } from '/imports/model/MetaObject';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { login } from '/imports/auth/login';
 import { logout } from '/imports/auth/logout';
+import { saveGeoLocation } from '/imports/auth/geolocation';
 
 /* Login using email and password */
 app.post('/rest/auth/login', async function (req, res) {
@@ -103,26 +104,25 @@ app.post('/rest/auth/reset', function (req, res) {
 });
 
 /* Set geolocation for current session */
-app.post('/rest/auth/setgeolocation', function (req, res) {
-	// Map body parameters
-	const { longitude, latitude } = req.body;
+app.post('/rest/auth/setgeolocation', async function (req, res) {
+	try {
+		const { longitude, latitude } = req.body;
 
-	const userAgent = req.headers['user-agent'];
+		const userAgent = req.headers['user-agent'];
 
-	let ip = req.get('x-forwarded-for');
-	if (isString(ip)) {
-		ip = ip.replace(/\s/g, '').split(',')[0];
+		let ip = req.get('x-forwarded-for');
+		if (isString(ip)) {
+			ip = ip.replace(/\s/g, '').split(',')[0];
+		}
+
+		const authTokenId = getAuthTokenIdFromReq(req);
+
+		const result = await saveGeoLocation({ authTokenId, longitude, latitude, userAgent, ip });
+
+		res.send(result);
+	} catch (error) {
+		res.send(StatusCodes.INTERNAL_SERVER_ERROR, { success: false, errors: [{ message: error.message }] });
 	}
-
-	res.send(
-		Meteor.call('auth:setGeolocation', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			longitude,
-			latitude,
-			userAgent,
-			ip,
-		}),
-	);
 });
 
 /* Get information from current session*/
