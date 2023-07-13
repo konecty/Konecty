@@ -32,45 +32,6 @@ export const injectRequestInformation = function (userAgent, session) {
 // eslint-disable-next-line no-undef
 SSR.compileTemplate('resetPassword', Assets.getText('templates/email/resetPassword.html'));
 
-/* Get information from current session
-	@param authTokenId
-*/
-Meteor.registerMethod('auth:info', 'withUser', function () {
-	// Get namespace information
-	const namespace = MetaObject.findOne({ _id: 'Namespace' });
-
-	// TODO Remove
-	namespace._id = namespace.ns;
-	delete namespace.ns;
-	delete namespace.parents;
-	delete namespace.type;
-
-	// If no namespace was found return error
-	if (!namespace) {
-		return new Meteor.Error('internal-error', 'Namespace not found');
-	}
-
-	// Mount namespace with Java format
-	const response = {
-		authId: null, // TODO Remove
-		logged: true,
-		user: {
-			_id: this.user._id,
-			access: this.user.access,
-			admin: this.user.admin,
-			email: get(this.user, 'emails.0.address'),
-			group: this.user.group,
-			locale: this.user.locale,
-			login: this.user.username,
-			name: this.user.name,
-			namespace,
-			role: this.user.role,
-		},
-	};
-
-	return response;
-});
-
 /* Verify if user is logged
 	@param authTokenId
 */

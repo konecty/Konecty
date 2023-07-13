@@ -9,6 +9,7 @@ import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { login } from '/imports/auth/login';
 import { logout } from '/imports/auth/logout';
 import { saveGeoLocation } from '/imports/auth/geolocation';
+import { userInfo } from '/imports/auth/info';
 
 /* Login using email and password */
 app.post('/rest/auth/login', async function (req, res) {
@@ -126,7 +127,11 @@ app.post('/rest/auth/setgeolocation', async function (req, res) {
 });
 
 /* Get information from current session*/
-app.get('/rest/auth/info', (req, res) => res.send(Meteor.call('auth:info', { authTokenId: getAuthTokenIdFromReq(req) })));
+app.get('/rest/auth/info', async (req, res) => {
+	const authTokenId = getAuthTokenIdFromReq(req);
+	const result = await userInfo(authTokenId);
+	res.send(result);
+});
 
 /* Set User password */
 app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
