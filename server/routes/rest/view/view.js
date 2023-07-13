@@ -86,7 +86,7 @@ app.get('/', async function (req, res) {
 
 		res.render('index.html', config);
 	} catch (error) {
-		if (/^[get-user]/.test(error.message)) {
+		if (/^\[get-user\]/.test(error.message)) {
 			return res.redirect('/login');
 		}
 		logger.error(error, 'Error on GET /');
