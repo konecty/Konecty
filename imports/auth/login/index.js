@@ -9,12 +9,9 @@ import get from 'lodash/get';
 import { Namespace, Collections } from '/imports/model/MetaObject';
 import { randomSecret } from '/imports/utils/random';
 
-const BCRYPT_SALT_ROUNDS = 10;
-
-const DEFAULT_LOGIN_EXPIRATION = 1000 * 60 * 60 * 24; // a day
+import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '/imports/auth/consts';
 
 export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }) {
-
 	const ua = new UAParser(userAgent ?? 'API Call').getResult();
 
 	const accessLog = {
@@ -48,7 +45,11 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		accessLog.reason = `Active User not found [${user}]`;
 		await Collections.AccessFailedLog.insertOne(accessLog);
 
-		throw new Error('Wrong user or password');
+		return {
+			success: false,
+			logged: false,
+			errors: [{ message: 'Wrong user or password' }],
+		};
 	}
 
 	accessLog._user = [
@@ -68,7 +69,11 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	if (logged === false) {
 		accessLog.reason = `Active User not found [${user}]`;
 		await Collections.AccessFailedLog.insertOne(accessLog);
-		throw new Error('Wrong user or password');
+		return {
+			success: false,
+			logged: false,
+			errors: [{ message: 'Wrong user or password' }],
+		};
 	}
 
 	if (parseInt(hashRounds, 10) < BCRYPT_SALT_ROUNDS) {

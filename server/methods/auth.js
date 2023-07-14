@@ -111,36 +111,6 @@ Meteor.registerMethod('auth:resetPassword', function (request) {
 	return { success: true };
 });
 
-/* Set User password
-	@param userId
-	@param password
-*/
-Meteor.registerMethod('auth:setPassword', 'withUser', function (request) {
-	// Map body parameters
-	const { userId, password } = request;
-
-	const access = getAccessFor('User', this.user);
-
-	// If return is false no access was found then return 401 (Unauthorized)
-	if (!isObject(access)) {
-		return new Meteor.Error('internal-error', 'Permissão negada.');
-	}
-
-	const userRecord = Meteor.users.findOne({ $or: [{ _id: userId }, { username: userId }, { 'emails.address': userId }] });
-
-	if (!userRecord) {
-		return new Meteor.Error('internal-error', 'Usuário não encontrado.');
-	}
-
-	if (this.user.admin !== true && this.user._id !== userRecord._id && access.changePassword !== true) {
-		return new Meteor.Error('internal-error', 'Permissão negada.');
-	}
-
-	Accounts.setPassword(userRecord._id, password);
-
-	return { success: true };
-});
-
 /* Set a random password for User and send by email
 	@param userIds
 */

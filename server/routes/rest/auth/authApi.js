@@ -10,6 +10,7 @@ import { login } from '/imports/auth/login';
 import { logout } from '/imports/auth/logout';
 import { saveGeoLocation } from '/imports/auth/geolocation';
 import { userInfo } from '/imports/auth/info';
+import { setPassword } from '/imports/auth/password';
 
 /* Login using email and password */
 app.post('/rest/auth/login', async function (req, res) {
@@ -134,15 +135,11 @@ app.get('/rest/auth/info', async (req, res) => {
 });
 
 /* Set User password */
-app.get('/rest/auth/setPassword/:userId/:password', (req, res) =>
-	res.send(
-		Meteor.call('auth:setPassword', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			userId: req.params.userId,
-			password: req.params.password,
-		}),
-	),
-);
+app.get('/rest/auth/setPassword/:userId/:password', async (req, res) => {
+	const authTokenId = getAuthTokenIdFromReq(req);
+	const result = await setPassword({ authTokenId, userId: req.params.userId, password: req.params.password });
+	res.send(result);
+});
 
 /* Set a random password for User and send by email */
 app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) =>
