@@ -29,7 +29,6 @@ export async function userInfo(authTokenId) {
 
 		return response;
 	} catch (error) {
-        console.log(error);
 		if (/^\[get-user\]/.test(error.message)) {
 			return {
 				logged: false,
