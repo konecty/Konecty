@@ -4,18 +4,41 @@ import { StatusCodes } from 'http-status-codes';
 import { isString, get, has } from 'lodash';
 
 import { app } from '/server/lib/routes/app.js';
-import { MetaObject } from '/imports/model/MetaObject';
+import { MetaObject, Namespace } from '/imports/model/MetaObject';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { login } from '/imports/auth/login';
 import { logout } from '/imports/auth/logout';
 import { saveGeoLocation } from '/imports/auth/geolocation';
 import { userInfo } from '/imports/auth/info';
-import { setPassword } from '/imports/auth/password';
+import { setPassword, resetPassword } from '/imports/auth/password';
+
+function getDomain(host) {
+	if (host == null || /^localhost/.test(host)) {
+		return '';
+	} else {
+		const server = host.split('.').slice(1).join('.');
+		return `domain=${server}`;
+	}
+}
+
+app.get('/rest/auth/loginByUrl/:ns/:sessionId', async function (req, res) {
+	const domain = getDomain(req.headers['host']);
+
+	req.params.sessionId = decodeURIComponent(req.params.sessionId.replace(/\s/g, '+'));
+
+	// Verify if Namespace have a session expiration metadata config and set
+	const cookieMaxAge = get(Namespace, 'sessionExpirationInSeconds', 2592000);
+
+	// Set cookie with session id
+	res.set('set-cookie', `_authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
+
+	// Redirect to system
+	return res.redirect('/');
+});
 
 /* Login using email and password */
 app.post('/rest/auth/login', async function (req, res) {
 	// Map body parameters
-	let domain;
 	const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
 
 	const namespace = MetaObject.findOne({ _id: 'Namespace' });
@@ -25,14 +48,7 @@ app.post('/rest/auth/login', async function (req, res) {
 
 	const userAgent = req.headers['user-agent'];
 
-	const host = req.headers['host'];
-
-	if (host == null || /^localhost/.test(host)) {
-		domain = '';
-	} else {
-		const server = host.split('.').slice(1).join('.');
-		domain = `domain=${server}`;
-	}
+	const domain = getDomain(req.headers['host']);
 
 	let ip = req.get('x-forwarded-for');
 	if (isString(ip)) {
@@ -86,7 +102,7 @@ app.get('/rest/auth/logout', async (req, res) => {
 });
 
 /* Reset password */
-app.post('/rest/auth/reset', function (req, res) {
+app.post('/rest/auth/reset', async function (req, res) {
 	// Map body parameters
 	const { user, ns } = req.body;
 
@@ -95,14 +111,9 @@ app.post('/rest/auth/reset', function (req, res) {
 		ip = ip.replace(/\s/g, '').split(',')[0];
 	}
 
-	res.send(
-		Meteor.call('auth:resetPassword', {
-			user,
-			ns,
-			ip,
-			host: req.get('Host'),
-		}),
-	);
+	const result = await resetPassword({ user, ns, ip, host: req.get('Host') });
+
+	res.send(result);
 });
 
 /* Set geolocation for current session */
@@ -142,12 +153,13 @@ app.get('/rest/auth/setPassword/:userId/:password', async (req, res) => {
 });
 
 /* Set a random password for User and send by email */
-app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) =>
-	res.send(
+app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) => {
+	console.dir({ setRandomPasswordAndSendByEmail: req.body });
+	return res.send(
 		Meteor.call('auth:setRandomPasswordAndSendByEmail', {
 			authTokenId: getAuthTokenIdFromReq(req),
 			userIds: req.body,
 			host: req.get('Host'),
 		}),
-	),
-);
+	);
+});

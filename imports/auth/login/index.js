@@ -1,15 +1,10 @@
-import crypto from 'crypto';
-
 import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
-
 import { UAParser } from 'ua-parser-js';
-
 import get from 'lodash/get';
 
 import { Namespace, Collections } from '/imports/model/MetaObject';
-import { randomSecret } from '/imports/utils/random';
-
 import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '/imports/auth/consts';
+import { generateStampedLoginToken } from '/imports/auth/login/token';
 
 export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }) {
 	const ua = new UAParser(userAgent ?? 'API Call').getResult();
@@ -81,15 +76,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		await Collections.User.updateOne({ _id: userRecord._id }, { $set: { 'services.password.bcrypt': newHash } });
 	}
 
-	const stampedToken = {
-		token: randomSecret(),
-		when: new Date(),
-	};
-
-	const hashStampedToken = {
-		when: stampedToken.when,
-		hashedToken: crypto.createHash('sha256').update(stampedToken.token).digest('base64'),
-	};
+	const hashStampedToken = generateStampedLoginToken();
 
 	await Collections.User.updateOne(
 		{ _id: userRecord._id },

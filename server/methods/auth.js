@@ -55,62 +55,6 @@ Meteor.registerMethod('auth:getUser', 'withUser', function () {
 	};
 });
 
-/* Reset password
-	@param user
-	@param ns
-	@param ip
-	@param host
-*/
-Meteor.registerMethod('auth:resetPassword', function (request) {
-	// Map body parameters
-	const { user, ns, host } = request;
-
-	const userRecord = Meteor.users.findOne({ $and: [{ active: true }, { $or: [{ username: user }, { 'emails.address': user }] }] });
-
-	if (!userRecord) {
-		return new Meteor.Error('internal-error', 'Usuário não encontrado.');
-	}
-
-	const stampedToken = Accounts._generateStampedLoginToken();
-	const hashStampedToken = Accounts._hashStampedToken(stampedToken);
-
-	const updateObj = {
-		$set: {
-			lastLogin: new Date(),
-		},
-		$push: {
-			'services.resume.loginTokens': hashStampedToken,
-		},
-	};
-
-	Meteor.users.update({ _id: userRecord._id }, updateObj);
-
-	let expireAt = new Date();
-	expireAt = new Date(expireAt.setMinutes(expireAt.getMinutes() + 360));
-
-	const token = encodeURIComponent(hashStampedToken.hashedToken);
-
-	const emailData = {
-		from: 'Konecty Alerts <alerts@konecty.com>',
-		to: get(userRecord, 'emails.0.address'),
-		subject: '[Konecty] Password Reset',
-		template: 'resetPassword.html',
-		type: 'Email',
-		status: 'Send',
-		discard: true,
-		data: {
-			name: userRecord.name,
-			expireAt,
-			url: `http://${host}/rest/auth/loginByUrl/${ns}/${token}`,
-		},
-	};
-
-	Models['Message'].insert(emailData);
-
-	// Respond to reset
-	return { success: true };
-});
-
 /* Set a random password for User and send by email
 	@param userIds
 */
