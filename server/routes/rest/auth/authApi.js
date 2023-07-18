@@ -1,7 +1,8 @@
-import { Meteor } from 'meteor/meteor';
 import { StatusCodes } from 'http-status-codes';
 
-import { isString, get, has } from 'lodash';
+import isString from 'lodash/isString';
+import get from 'lodash/get';
+import has from 'lodash/has';
 
 import { app } from '/server/lib/routes/app.js';
 import { MetaObject, Namespace } from '/imports/model/MetaObject';
@@ -11,6 +12,7 @@ import { logout } from '/imports/auth/logout';
 import { saveGeoLocation } from '/imports/auth/geolocation';
 import { userInfo } from '/imports/auth/info';
 import { setPassword, resetPassword } from '/imports/auth/password';
+import { setRandomPasswordAndSendByEmail } from '/imports/auth/password/email';
 
 function getDomain(host) {
 	if (host == null || /^localhost/.test(host)) {
@@ -153,13 +155,11 @@ app.get('/rest/auth/setPassword/:userId/:password', async (req, res) => {
 });
 
 /* Set a random password for User and send by email */
-app.post('/rest/auth/setRandomPasswordAndSendByEmail', (req, res) => {
-	console.dir({ setRandomPasswordAndSendByEmail: req.body });
-	return res.send(
-		Meteor.call('auth:setRandomPasswordAndSendByEmail', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			userIds: req.body,
-			host: req.get('Host'),
-		}),
-	);
+app.post('/rest/auth/setRandomPasswordAndSendByEmail', async (req, res) => {
+	const result = await setRandomPasswordAndSendByEmail({
+		authTokenId: getAuthTokenIdFromReq(req),
+		userIds: req.body,
+		host: req.get('Host'),
+	});
+	res.send(result);
 });

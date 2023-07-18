@@ -1,17 +1,15 @@
 import { Meteor } from 'meteor/meteor';
 import { SSR } from 'meteor/meteorhacks:ssr';
 import { Accounts } from 'meteor/accounts-base';
-import { Random } from 'meteor/random';
-import { check } from 'meteor/check';
 import useragent from 'useragent';
 
-import { isObject, get, has, isString } from 'lodash';
+import get from 'lodash/get';
+import isString from 'lodash/isString';
 import toLower from 'lodash/toLower';
 import size from 'lodash/size';
 
-import { getAccessFor } from '/imports/utils/accessUtils';
 import { metaUtils } from '/imports/utils/konutils/metaUtils';
-import { MetaObject, Models } from '/imports/model/MetaObject';
+import { Models } from '/imports/model/MetaObject';
 
 export const injectRequestInformation = function (userAgent, session) {
     
@@ -55,97 +53,7 @@ Meteor.registerMethod('auth:getUser', 'withUser', function () {
 	};
 });
 
-/* Set a random password for User and send by email
-	@param userIds
-*/
-Meteor.registerMethod('auth:setRandomPasswordAndSendByEmail', 'withUser', function (request) {
-	// Map body parameters
-	const { userIds, host } = request;
 
-	check(userIds, [String]);
-
-	const access = getAccessFor('User', this.user);
-
-	// If return is false no access was found then return 401 (Unauthorized)
-	if (!isObject(access)) {
-		return new Meteor.Error('internal-error', 'Permissão negada.');
-	}
-
-	let userRecords = Meteor.users.find({
-		$or: [{ _id: { $in: userIds } }, { username: { $in: userIds } }, { 'emails.address': { $in: userIds } }],
-	});
-
-	userRecords = userRecords.fetch();
-
-	if (userRecords.length === 0) {
-		return new Meteor.Error('internal-error', 'Nenhum usuário encontrado.');
-	}
-
-	const { ns } = MetaObject.findOne({ _id: 'Namespace' });
-	const errors = [];
-
-	for (let userRecord of userRecords) {
-		if (!has(userRecord, 'emails.0.address')) {
-			errors.push(new Meteor.Error('internal-error', `Usuário [${userRecord.username}] sem email definido.`));
-			continue;
-		}
-
-		if (this.user.admin !== true && this.user._id !== userRecord._id && access.changePassword !== true) {
-			errors.push(new Meteor.Error('internal-error', `Permissão negada para alterar a senha do usuário [${userRecord.username}].`));
-			continue;
-		}
-
-		// Create access token and save it on user record
-		const stampedToken = Accounts._generateStampedLoginToken();
-		const hashStampedToken = Accounts._hashStampedToken(stampedToken);
-		const updateObj = {
-			$set: {
-				lastLogin: new Date(),
-			},
-			$push: {
-				'services.resume.loginTokens': hashStampedToken,
-			},
-		};
-
-		Meteor.users.update({ _id: userRecord._id }, updateObj);
-		const token = encodeURIComponent(hashStampedToken.hashedToken);
-
-		const loginUrl = `http://${host}/rest/auth/loginByUrl/${ns}/${token}`;
-		const password = Random.id(6).toLowerCase();
-		const data = {
-			username: userRecord.username,
-			password,
-			name: userRecord.name,
-			url: loginUrl,
-		};
-
-		Accounts.setPassword(userRecord._id, password);
-
-		const html = SSR.render('resetPassword', {
-			password,
-			data,
-		});
-
-		Models['Message'].insert({
-			from: 'Konecty <support@konecty.com>',
-			to: get(userRecord, 'emails.0.address'),
-			subject: '[Konecty] Sua nova senha',
-			body: html,
-			type: 'Email',
-			status: 'Send',
-			discard: true,
-		});
-	}
-
-	if (errors.length > 0) {
-		return {
-			success: false,
-			errors,
-		};
-	}
-
-	return { success: true };
-});
 
 /* Set geolocation for current session
 	@param longitude
