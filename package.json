@@ -38,6 +38,7 @@
 		"mmmagic": "^0.5.3",
 		"moment": "^2.29.4",
 		"moment-timezone": "^0.5.43",
+		"mongodb": "^5.7.0",
 		"mongodb-uri": "^0.9.7",
 		"nodemailer": "^6.9.3",
 		"nodemailer-smtp-transport": "^2.7.4",

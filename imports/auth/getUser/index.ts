@@ -5,12 +5,12 @@ import crypto from 'crypto';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 import { Collections } from '/imports/model/MetaObject';
 import { User } from '/imports/model/User';
+import { KonectyResult } from '/imports/types/result';
 
 export const getUserFromRequest = async (request: IncomingMessage): Promise<User> => {
 	const authTokenId = getAuthTokenIdFromReq(request);
 	return getUser(authTokenId);
 };
-
 
 export const getHashedToken = (authTokenId: string) => {
 	if (authTokenId.length === 43) {
@@ -40,6 +40,24 @@ export const getUser = async (authTokenId: string | null | undefined): Promise<U
 		throw new Error('[get-user] User inactive');
 	}
 
-
 	return user;
 };
+
+export async function getUserSafe(authTokenId: string | null | undefined): Promise<KonectyResult<User>> {
+	try {
+		const user = await getUser(authTokenId);
+		return {
+			success: true,
+			data: user,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			errors: [
+				{
+					message: (error as Error).message,
+				},
+			],
+		};
+	}
+}

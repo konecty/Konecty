@@ -6,7 +6,6 @@ import './dne';
 import './merge';
 import './auth';
 import './index';
-import './changeUser';
 import './undoHistory';
 import './history';
 import './comments';
