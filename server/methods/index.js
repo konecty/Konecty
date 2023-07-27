@@ -8,7 +8,6 @@ import './auth';
 import './index';
 import './undoHistory';
 import './history';
-import './comments';
 import './data';
 import './file';
 import './menu';
