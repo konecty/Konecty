@@ -1,27 +1,26 @@
-import { Meteor } from 'meteor/meteor';
-
 import { app } from '/server/lib/routes/app';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
+import { findComments, createComment } from '/imports/data/comments';
 
 // Converted to method
-app.get('/rest/comment/:document/:dataId', (req, res) =>
-	res.send(
-		Meteor.call('comments:find', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			dataId: req.params.dataId,
-		}),
-	),
-);
+app.get('/rest/comment/:document/:dataId', async (req, res) => {
+	const result = await findComments({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		dataId: req.params.dataId,
+	});
+
+	res.send(result);
+});
 
 // Converted to method
-app.post('/rest/comment/:document/:dataId', (req, res) =>
-	res.send(
-		Meteor.call('comments:create', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			text: req.body.text,
-			dataId: req.params.dataId,
-		}),
-	),
-);
+app.post('/rest/comment/:document/:dataId', async (req, res) => {
+	const result = await createComment({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		dataId: req.params.dataId,
+		text: req.body.text,
+	});
+
+	res.send(result);
+});
