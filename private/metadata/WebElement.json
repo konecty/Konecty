@@ -1,0 +1,884 @@
+[
+	{
+		"_id": "WebElement",
+		"fields": {
+			"campaign": {
+				"type": "lookup",
+				"name": "campaign",
+				"label": {
+					"en": "Campaign",
+					"pt_BR": "Campanha"
+				},
+				"isSortable": true,
+				"document": "Campaign",
+				"descriptionFields": ["code", "name", "type"],
+				"isInherited": true
+			},
+			"code": {
+				"isSortable": true,
+				"type": "autoNumber",
+				"name": "code",
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"isUnique": true,
+				"isInherited": true
+			},
+			"endAt": {
+				"type": "dateTime",
+				"name": "endAt",
+				"label": {
+					"en": "End",
+					"pt_BR": "Término"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"file": {
+				"type": "file",
+				"name": "file",
+				"label": {
+					"en": "File",
+					"pt_BR": "Arquivo"
+				},
+				"isSortable": true,
+				"isList": true,
+				"isListTypeOptionsEditable": true,
+				"wildcard": "(jpg|jpeg|png|pdf|svg)",
+				"isInherited": true
+			},
+			"html": {
+				"type": "richText",
+				"name": "html",
+				"label": {
+					"en": "HTML Content",
+					"pt_BR": "Conteúdo HTML"
+				},
+				"isList": true,
+				"isInherited": true
+			},
+			"markdown": {
+				"type": "text",
+				"name": "markdown",
+				"label": {
+					"en": "Markdown Content",
+					"pt_BR": "Conteúdo Markdown"
+				},
+				"isList": true,
+				"isInherited": true
+			},
+			"linkLabel": {
+				"name": "linkLabel",
+				"label": {
+					"en": "Link Label",
+					"pt_BR": "Texto do Link"
+				},
+				"isSortable": true,
+				"type": "text",
+				"isInherited": true
+			},
+			"link": {
+				"name": "link",
+				"label": {
+					"en": "Link",
+					"pt_BR": "Link"
+				},
+				"isSortable": true,
+				"type": "text",
+				"isInherited": true
+			},
+			"slug": {
+				"name": "slug",
+				"label": {
+					"en": "Slug",
+					"pt_BR": "Identificador"
+				},
+				"isSortable": true,
+				"type": "text",
+				"isInherited": true
+			},
+			"author": {
+				"name": "author",
+				"label": {
+					"en": "Author",
+					"pt_BR": "Autor"
+				},
+				"isSortable": true,
+				"type": "text"
+			},
+			"linkTarget": {
+				"maxSelected": 1,
+				"name": "linkTarget",
+				"options": {
+					"_parent": {
+						"en": "_parent",
+						"pt_BR": "_parent"
+					},
+					"_blank": {
+						"en": "_blank",
+						"pt_BR": "_blank"
+					},
+					"_self": {
+						"en": "_self",
+						"pt_BR": "_self"
+					},
+					"_top": {
+						"pt_BR": "_top",
+						"en": "_top"
+					}
+				},
+				"optionsSorter": "asc",
+				"renderAs": "with_scroll",
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Link Target",
+					"pt_BR": "Target do Link"
+				},
+				"isInherited": true
+			},
+			"name": {
+				"type": "text",
+				"name": "name",
+				"label": {
+					"en": "Name",
+					"pt_BR": "Nome"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"isInherited": true
+			},
+			"order": {
+				"type": "number",
+				"name": "order",
+				"label": {
+					"en": "Order",
+					"pt_BR": "Ordem"
+				},
+				"isSortable": true,
+				"decimalSize": 0,
+				"isInherited": true
+			},
+			"priority": {
+				"maxSelected": 1,
+				"minSelected": 0,
+				"name": "priority",
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Priority",
+					"pt_BR": "Prioridade"
+				},
+				"options": {
+					"Média": {
+						"en": "Medium",
+						"pt_BR": "Média"
+					},
+					"Baixa": {
+						"en": "Low",
+						"pt_BR": "Baixa"
+					},
+					"Alta": {
+						"en": "High",
+						"pt_BR": "Alta"
+					}
+				},
+				"renderAs": "without_scroll",
+				"isInherited": true
+			},
+			"startAt": {
+				"type": "dateTime",
+				"name": "startAt",
+				"label": {
+					"en": "Start",
+					"pt_BR": "Início"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"status": {
+				"name": "status",
+				"maxSelected": 1,
+				"minSelected": 1,
+				"options": {
+					"Ativo": {
+						"en": "Active",
+						"pt_BR": "Ativo"
+					},
+					"Inativo": {
+						"en": "Inactive",
+						"pt_BR": "Inativo"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"isInherited": true
+			},
+			"type": {
+				"isSortable": true,
+				"label": {
+					"en": "Type",
+					"pt_BR": "Tipo"
+				},
+				"options": {
+					"HTML": {
+						"en": "HTML",
+						"pt_BR": "HTML"
+					},
+					"Section": {
+						"en": "Section",
+						"pt_BR": "Seção"
+					},
+					"Konecty": {
+						"en": "Konecty",
+						"pt_BR": "Konecty"
+					},
+					"Banner": {
+						"en": "Banner",
+						"pt_BR": "Banner"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "type",
+				"optionsSorter": "asc",
+				"isInherited": true
+			},
+			"webElement": {
+				"name": "webElement",
+				"label": {
+					"en": "Web Element",
+					"pt_BR": "Elemento Web"
+				},
+				"isSortable": true,
+				"isList": true,
+				"isListTypeOptionsEditable": true,
+				"document": "WebElement",
+				"descriptionFields": ["name"],
+				"type": "lookup",
+				"isInherited": true
+			},
+			"parents": {
+				"type": "lookup",
+				"name": "parents",
+				"isList": true,
+				"label": {
+					"en": "Parents",
+					"pt_BR": "Pais"
+				},
+				"document": "WebElement",
+				"linkedFormName": "Default",
+				"descriptionFields": ["name"],
+				"isInherited": true
+			},
+			"parent": {
+				"type": "lookup",
+				"name": "parent",
+				"label": {
+					"en": "Parent",
+					"pt_BR": "Sub Elementos Web de"
+				},
+				"document": "WebElement",
+				"linkedFormName": "Default",
+				"descriptionFields": ["code", "name"],
+				"inheritedFields": [
+					{
+						"inherit": "hierarchy_always",
+						"fieldName": "parents"
+					}
+				],
+				"isInherited": true
+			},
+			"_createdAt": {
+				"type": "dateTime",
+				"name": "_createdAt",
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_createdBy": {
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"isInherited": true
+			},
+			"_user": {
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"isInherited": true
+			}
+		},
+		"icon": "globe",
+		"label": {
+			"en": "Web Element",
+			"pt_BR": "Elemento Web"
+		},
+		"menuSorter": 17,
+		"name": "WebElement",
+
+		"plurals": {
+			"en": "Web Elements",
+			"pt_BR": "Elementos Web"
+		},
+		"saveHistory": true,
+		"type": "document"
+	},
+	{
+		"_id": "WebElement:access:Default",
+		"document": "WebElement",
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": false,
+			"isUpdatable": false,
+			"isReadable": true
+		},
+		"fields": {},
+		"isCreatable": false,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": false,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+		"type": "access"
+	},
+	{
+		"_id": "WebElement:list:Default",
+		"columns": {
+			"code": {
+				"visible": true,
+				"minWidth": 50,
+				"name": "code",
+				"linkField": "code",
+				"sort": 0
+			},
+			"name": {
+				"name": "name",
+				"linkField": "name",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 1
+			},
+			"slug": {
+				"name": "slug",
+				"linkField": "slug",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 2
+			},
+			"type": {
+				"name": "type",
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 3
+			},
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 4
+			},
+			"priority": {
+				"linkField": "priority",
+				"visible": true,
+				"minWidth": 150,
+				"name": "priority",
+				"sort": 5
+			},
+			"linkLabel": {
+				"minWidth": 100,
+				"name": "linkLabel",
+				"linkField": "linkLabel",
+				"visible": true,
+				"sort": 6
+			},
+			"link": {
+				"minWidth": 100,
+				"name": "link",
+				"linkField": "link",
+				"visible": true,
+				"sort": 6
+			},
+			"linkTarget": {
+				"name": "linkTarget",
+				"linkField": "linkTarget",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 7
+			},
+			"startAt": {
+				"visible": true,
+				"minWidth": 100,
+				"name": "startAt",
+				"linkField": "startAt",
+				"sort": 8
+			},
+			"author": {
+				"name": "author",
+				"linkField": "author",
+				"visible": false,
+				"minWidth": 100,
+				"sort": 8
+			},
+			"endAt": {
+				"linkField": "endAt",
+				"visible": true,
+				"minWidth": 100,
+				"name": "endAt",
+				"sort": 9
+			},
+			"order": {
+				"name": "order",
+				"linkField": "order",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 10
+			},
+			"file": {
+				"minWidth": 50,
+				"name": "file",
+				"linkField": "file",
+				"sort": 11
+			},
+			"html": {
+				"name": "html",
+				"linkField": "html",
+				"minWidth": 100,
+				"sort": 12
+			},
+			"webElement": {
+				"name": "webElement",
+				"linkField": "webElement",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 13
+			},
+			"parent": {
+				"name": "parent",
+				"linkField": "parent",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 13
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"minWidth": 100,
+				"sort": 14
+			},
+			"_createdBy": {
+				"minWidth": 200,
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"sort": 15
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"minWidth": 100,
+				"sort": 16
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 200,
+				"sort": 17
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"minWidth": 200,
+				"sort": 18
+			}
+		},
+		"document": "WebElement",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"code:equals": {
+					"term": "code",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"sort": 0
+				},
+				"name:contains": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "name",
+					"operator": "contains",
+					"sort": 1
+				},
+				"slug:contains": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "slug",
+					"operator": "contains",
+					"sort": 1
+				},
+				"status:in": {
+					"term": "status",
+					"value": ["Ativo"],
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 2
+					},
+					"sort": 2
+				},
+				"type:in": {
+					"term": "type",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 1,
+						"hideOnDisable": true
+					},
+					"sort": 3
+				},
+				"priority:in": {
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 3,
+						"hideOnDisable": true
+					},
+					"term": "priority",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"sort": 4
+				},
+				"_user:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user._id",
+					"sort": 5
+				},
+				"_user:active:equals": {
+					"disabled": true,
+					"style": {
+						"columns": 2,
+						"hideOnDisable": true,
+						"renderAs": "radiobox"
+					},
+					"term": "_user.active",
+					"operator": "equals",
+					"editable": true,
+					"sort": 6
+				},
+				"_user:group:_id:equals": {
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 7
+				},
+				"_createdAt:between": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"sort": 8
+				},
+				"_updatedAt:between": {
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"sort": 9
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "Web Element",
+			"pt_BR": "Elemento Web"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Web Elements",
+			"pt_BR": "Elementos Web"
+		},
+		"refreshRate": {
+			"default": 0,
+			"options": [
+				0,
+				5,
+				10,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			]
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200,
+				500,
+				1000
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "type",
+				"direction": "asc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "WebElement:view:Default",
+		"document": "WebElement",
+		"label": {
+			"pt_BR": "{code}: {name}",
+			"en": "{code}: {name}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Web Element",
+			"pt_BR": "Novo Elemento Web"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign"
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informação"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "type"
+							},
+							{
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "status",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "name"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "slug"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "priority"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "order"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "startAt"
+							},
+							{
+								"fieldName": "endAt",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "linkLabel"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "link"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "author"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "linkTarget"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 135
+								},
+								"fieldName": "html"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320,
+									"multiLine": true
+								},
+								"fieldName": "markdown"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320
+								},
+								"fieldName": "file"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "campaign"
+							},
+							{
+								"fieldName": "webElement",
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							},
+							{
+								"fieldName": "parent",
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							},
+							{
+								"fieldName": "tags",
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "reverseLookup",
+				"style": {
+					"title": {
+						"pt_BR": "Elementos relacionados",
+						"en": "Related elements"
+					}
+				},
+				"field": "parent",
+				"document": "WebElement",
+				"list": "Default"
+			}
+		]
+	}
+]

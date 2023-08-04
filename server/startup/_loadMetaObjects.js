@@ -11,9 +11,8 @@ import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
 import isNumber from 'lodash/isNumber';
 
-import { registerFirstUser, registerFirstGroup } from './initialData';
-
 import { MetaObject, Meta, DisplayMeta, Access, References, Namespace, Models, MetaByCollection, Collections } from '/imports/model/MetaObject';
+import { checkInitialData } from '/imports/data/initialData';
 import { logger } from '/imports/utils/logger';
 
 const rebuildReferencesDelay = 1000;
@@ -69,14 +68,6 @@ const tryEnsureIndex = function (model, fields, options) {
 		}
 	}
 };
-
-const initialData = debounce(
-	Meteor.bindEnvironment(function () {
-		registerFirstUser();
-		registerFirstGroup();
-	}),
-	2000,
-);
 
 const registerMeta = function (meta) {
 	logger.debug(`Registering meta: ${meta.name}`);
@@ -311,11 +302,6 @@ const registerMeta = function (meta) {
 			Meteor.defer(processIndexes);
 		}
 	}
-
-	// wait required metas to create initial data
-	if (Models['User'] && Models['Group']) {
-		initialData();
-	}
 };
 
 const deregisterMeta = function (meta) {
@@ -475,7 +461,8 @@ const fsLoad = () => {
 		.on('unlink', path => removeHandler(path));
 };
 
-Meteor.startup(function () {
+Meteor.startup(async function () {
+	await checkInitialData();
 	if (process.env.METADATA_DIR != null) {
 		logger.info('Loading Meta from directory');
 		return fsLoad();

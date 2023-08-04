@@ -1,10 +1,11 @@
-import { Mongo } from 'meteor/mongo';
+import { Mongo, MongoInternals } from 'meteor/mongo';
 import { Collection } from 'mongodb';
 import { MetaAccess } from '/imports/model/MetaAccess';
 
 export const MetaObject = new Mongo.Collection('MetaObjects');
 
 export const MetaObjectCollection = MetaObject.rawCollection();
+export const KonectyDatabase = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
 
 export const Meta = {};
 export const DisplayMeta = {};

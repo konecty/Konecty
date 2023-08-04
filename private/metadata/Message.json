@@ -1,0 +1,1232 @@
+[
+	{
+		"_id": "Message",
+		"icon": "comments",
+		"label": {
+			"pt_BR": "Mensagem",
+			"en": "Message"
+		},
+		"plurals": {
+			"en": "Messages",
+			"pt_BR": "Mensagens"
+		},
+		"menuSorter": 8,
+		"name": "Message",
+
+		"type": "document",
+		"fields": {
+			"body": {
+				"name": "body",
+				"label": {
+					"en": "Body",
+					"pt_BR": "Mensagem"
+				},
+				"type": "richText",
+				"isInherited": true
+			},
+			"attachments": {
+				"label": {
+					"en": "Attachments",
+					"pt_BR": "Anexos"
+				},
+				"type": "json",
+				"name": "attachments",
+				"isInherited": true
+			},
+			"contact": {
+				"document": "Contact",
+				"descriptionFields": ["code", "name.full"],
+				"detailFields": ["email", "phone"],
+				"inheritedFields": [
+					{
+						"fieldName": "email",
+						"inherit": "once"
+					}
+				],
+				"type": "lookup",
+				"name": "contact",
+				"label": {
+					"en": "Contact",
+					"pt_BR": "Contato"
+				},
+				"isSortable": true,
+				"isList": true,
+				"isInherited": true
+			},
+			"email": {
+				"name": "email",
+				"label": {
+					"en": "Email",
+					"pt_BR": "Email"
+				},
+				"type": "email",
+				"isList": true,
+				"isInherited": true
+			},
+			"opportunity": {
+				"isSortable": true,
+				"document": "Opportunity",
+				"descriptionFields": ["code", "label"],
+				"type": "lookup",
+				"name": "opportunity",
+				"label": {
+					"en": "Opportunity",
+					"pt_BR": "Oportunidade"
+				},
+				"isInherited": true
+			},
+			"mainCampaign": {
+				"label": {
+					"en": "Main Campaign",
+					"pt_BR": "Campanha Principal"
+				},
+				"isSortable": true,
+				"document": "Campaign",
+				"descriptionFields": ["code", "name"],
+				"type": "lookup",
+				"name": "mainCampaign",
+				"isInherited": true
+			},
+			"campaign": {
+				"type": "lookup",
+				"name": "campaign",
+				"label": {
+					"en": "Campaign",
+					"pt_BR": "Campanha"
+				},
+				"isSortable": true,
+				"document": "Campaign",
+				"descriptionFields": ["code", "name", "type"],
+				"inheritedFields": [
+					{
+						"inherit": "always",
+						"fieldName": "mainCampaign"
+					}
+				],
+				"isInherited": true
+			},
+			"priority": {
+				"maxSelected": 1,
+				"minSelected": 0,
+				"name": "priority",
+				"optionsSorter": "sort",
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Priority",
+					"pt_BR": "Prioridade"
+				},
+				"options": {
+					"high": {
+						"pt_BR": "Alta",
+						"en": "High",
+						"sort": 1
+					},
+					"medium": {
+						"en": "Medium",
+						"pt_BR": "Média",
+						"sort": 2
+					},
+					"low": {
+						"en": "Low",
+						"pt_BR": "Baixa",
+						"sort": 3
+					}
+				},
+				"renderAs": "without_scroll",
+				"isInherited": true
+			},
+			"product": {
+				"type": "lookup",
+				"name": "product",
+				"label": {
+					"en": "Product",
+					"pt_BR": "Produto"
+				},
+				"isSortable": true,
+				"document": "Product",
+				"descriptionFields": ["code", "name"],
+				"isInherited": true
+			},
+			"referrerURL": {
+				"type": "url",
+				"name": "referrerURL",
+				"label": {
+					"en": "Referrer URL",
+					"pt_BR": "Referrer URL"
+				},
+				"isInherited": true
+			},
+			"status": {
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "status",
+				"isSortable": true,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"defaultValue": "Nova",
+				"options": {
+					"new": {
+						"en": "New",
+						"pt_BR": "Nova"
+					},
+					"draft": {
+						"en": "Draft",
+						"pt_BR": "Rascunho"
+					},
+					"sent": {
+						"en": "Sent",
+						"pt_BR": "Enviada"
+					},
+					"Send": {
+						"en": "Send",
+						"pt_BR": "Enviar"
+					},
+					"error": {
+						"en": "Error on Send",
+						"pt_BR": "Falha no Envio"
+					},
+					"received": {
+						"en": "Received",
+						"pt_BR": "Recebida"
+					},
+					"read": {
+						"en": "Read",
+						"pt_BR": "Lida"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"isInherited": true
+			},
+			"read": {
+				"type": "boolean",
+				"name": "read",
+				"label": {
+					"en": "Read",
+					"pt_BR": "Lida"
+				},
+				"isInherited": true
+			},
+			"subject": {
+				"type": "text",
+				"name": "subject",
+				"label": {
+					"en": "Subject",
+					"pt_BR": "Assunto"
+				},
+				"isInherited": true
+			},
+			"type": {
+				"label": {
+					"en": "Type",
+					"pt_BR": "Tipo"
+				},
+				"options": {
+					"Email": {
+						"pt_BR": "Email",
+						"en": "Email"
+					},
+					"whatsapp": {
+						"en": "Whatsapp",
+						"pt_BR": "Whatsapp"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"isSortable": true,
+				"minSelected": 1,
+				"name": "type",
+				"optionsSorter": "asc",
+				"maxSelected": 1,
+				"isInherited": true
+			},
+			"server": {
+				"label": {
+					"en": "Server",
+					"pt_BR": "Servidor"
+				},
+				"type": "text",
+				"name": "server",
+				"isInherited": true
+			},
+			"from": {
+				"label": {
+					"en": "From",
+					"pt_BR": "De"
+				},
+				"type": "text",
+				"name": "from",
+				"isInherited": true
+			},
+			"to": {
+				"label": {
+					"en": "To",
+					"pt_BR": "Para"
+				},
+				"type": "text",
+				"name": "to",
+				"isInherited": true
+			},
+			"replyTo": {
+				"label": {
+					"en": "Reply To",
+					"pt_BR": "Responder Para"
+				},
+				"type": "text",
+				"name": "replyTo",
+				"isInherited": true
+			},
+			"cc": {
+				"label": {
+					"en": "Cc",
+					"pt_BR": "Cc"
+				},
+				"type": "text",
+				"name": "cc",
+				"isInherited": true
+			},
+			"bcc": {
+				"label": {
+					"en": "Bcc",
+					"pt_BR": "Bcc"
+				},
+				"type": "text",
+				"name": "bcc",
+				"isInherited": true
+			},
+			"template": {
+				"label": {
+					"en": "Template",
+					"pt_BR": "Template"
+				},
+				"type": "text",
+				"name": "template",
+				"isInherited": true
+			},
+			"data": {
+				"label": {
+					"en": "Data",
+					"pt_BR": "Dados"
+				},
+				"type": "json",
+				"name": "data",
+				"isInherited": true
+			},
+			"sendAt": {
+				"type": "dateTime",
+				"name": "sendAt",
+				"label": {
+					"en": "Send At",
+					"pt_BR": "Enviar em"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_createdAt": {
+				"type": "dateTime",
+				"name": "_createdAt",
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_createdBy": {
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"pt_BR": "Atualizado por",
+					"en": "Updated by"
+				},
+				"isInherited": true
+			},
+			"_user": {
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"isInherited": true
+			},
+			"discard": {
+				"type": "boolean",
+				"name": "discard",
+				"label": {
+					"en": "Dicard",
+					"pt_BR": "Descartar"
+				},
+				"isInherited": true
+			},
+			"tags": {
+				"type": "lookup",
+				"label": {
+					"en": "Tags",
+					"pt_BR": "Tags"
+				},
+				"isSortable": true,
+				"isList": true,
+				"detailFields": ["name"],
+				"name": "tags",
+				"document": "Tag",
+				"descriptionFields": ["code", "type", "name"],
+				"minItems": 0
+			}
+		},
+		"sendAlerts": false
+	},
+	{
+		"_id": "Message:access:Default",
+		"document": "Message",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"fields": {},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+
+		"readFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "Message:access:Director",
+		"changeUser": true,
+		"document": "Message",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true
+		},
+		"fields": {},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Director",
+			"pt_BR": "Director"
+		},
+		"name": "Director",
+
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "_user.group._id",
+					"value": "$groups",
+					"operator": "in"
+				},
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			]
+		},
+		"replaceUser": true,
+		"type": "access",
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$groups",
+					"operator": "in"
+				}
+			]
+		}
+	},
+	{
+		"_id": "Message:access:Manager",
+		"changeUser": true,
+		"document": "Message",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"fields": {},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Manager",
+			"pt_BR": "Manager"
+		},
+		"name": "Manager",
+
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "_user.group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"replaceUser": true,
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "Message:list:Default",
+		"columns": {
+			"type": {
+				"name": "type",
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 0
+			},
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 1
+			},
+			"tags": {
+				"name": "tags",
+				"linkField": "tags",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 1
+			},
+			"contact": {
+				"linkField": "contact",
+				"visible": true,
+				"minWidth": 200,
+				"name": "contact",
+				"sort": 2
+			},
+			"subject": {
+				"linkField": "subject",
+				"visible": true,
+				"minWidth": 100,
+				"name": "subject",
+				"sort": 3
+			},
+			"sendAt": {
+				"name": "sendAt",
+				"linkField": "sendAt",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 4
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 4
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 5
+			},
+			"_createdBy": {
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"minWidth": 200,
+				"visible": true,
+				"sort": 6
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"minWidth": 100,
+				"visible": true,
+				"sort": 7
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 200,
+				"visible": true,
+				"sort": 8
+			},
+			"priority": {
+				"name": "priority",
+				"linkField": "priority",
+				"minWidth": 50,
+				"sort": 10
+			},
+			"opportunity": {
+				"minWidth": 200,
+				"name": "opportunity",
+				"linkField": "opportunity",
+				"sort": 11
+			},
+			"product": {
+				"linkField": "product",
+				"minWidth": 200,
+				"name": "product",
+				"sort": 12
+			},
+			"referrerURL": {
+				"name": "referrerURL",
+				"linkField": "referrerURL",
+				"minWidth": 100,
+				"sort": 13
+			},
+			"bcc": {
+				"linkField": "bcc",
+				"minWidth": 200,
+				"name": "bcc",
+				"sort": 16
+			},
+			"campaign": {
+				"linkField": "campaign",
+				"minWidth": 200,
+				"name": "campaign",
+				"sort": 17
+			},
+			"mainCampaign": {
+				"linkField": "mainCampaign",
+				"minWidth": 200,
+				"name": "mainCampaign",
+				"sort": 20
+			},
+			"cc": {
+				"linkField": "cc",
+				"minWidth": 200,
+				"name": "cc",
+				"sort": 18
+			},
+			"from": {
+				"linkField": "from",
+				"minWidth": 200,
+				"name": "from",
+				"sort": 20
+			},
+			"read": {
+				"linkField": "read",
+				"minWidth": 200,
+				"name": "read",
+				"sort": 21
+			},
+			"replyTo": {
+				"linkField": "replyTo",
+				"minWidth": 200,
+				"name": "replyTo",
+				"sort": 22
+			},
+			"server": {
+				"linkField": "server",
+				"minWidth": 200,
+				"name": "server",
+				"sort": 23
+			},
+			"template": {
+				"linkField": "template",
+				"minWidth": 200,
+				"name": "template",
+				"sort": 25
+			},
+			"to": {
+				"linkField": "to",
+				"minWidth": 200,
+				"name": "to",
+				"sort": 26
+			}
+		},
+		"document": "Message",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"subject:contains": {
+					"term": "subject",
+					"operator": "contains",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"sort": 0
+				},
+				"status:in": {
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 2
+					},
+					"term": "status",
+					"sort": 1,
+					"disabled": true
+				},
+				"type:in": {
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 1
+					},
+					"term": "type",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"sort": 2
+				},
+				"priority:in": {
+					"term": "priority",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 3
+					},
+					"sort": 3
+				},
+				"_createdAt:greater_or_equals": {
+					"editable": true,
+					"disabled": false,
+					"style": {
+						"renderAs": "datefield",
+						"customLabel": "Criado a partir de"
+					},
+					"term": "_createdAt",
+					"operator": "greater_or_equals",
+					"sort": 4
+				},
+				"contact:_id:equals": {
+					"term": "contact._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 5
+				},
+				"opportunity:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "opportunity._id",
+					"operator": "equals",
+					"sort": 6
+				},
+				"product:_id:equals": {
+					"term": "product._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 7
+				},
+				"_user:_id:equals": {
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 9
+				},
+				"_user:active:equals": {
+					"term": "_user.active",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 2,
+						"hideOnDisable": true
+					},
+					"sort": 10
+				},
+				"_user:group:_id:equals": {
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 11
+				},
+				"_createdAt:between": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"hideOnDisable": true,
+						"renderAs": "datetimefield"
+					},
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"sort": 12
+				},
+				"_updatedAt:between": {
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"value": {},
+					"sort": 13
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"pt_BR": "Mensagem",
+			"en": "Message"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Messages",
+			"pt_BR": "Mensagens"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200,
+				500,
+				1000
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "_createdAt",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "Message:pivot:Default",
+		"columns": {
+			"status": {
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 150,
+				"isInherited": true
+			}
+		},
+		"document": "Message",
+		"filter": {
+			"conditions": {
+				"status:in": {
+					"term": "status",
+					"value": ["sent"],
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 1
+					},
+					"sort": 0
+				},
+				"_user:_id:equals": {
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"sort": 1
+				},
+				"_user:group:_id:equals": {
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"customLabel": "Grupo",
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 2
+				},
+				"_createdAt:between": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"hideOnDisable": true,
+						"renderAs": "datetimefield"
+					},
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"sort": 3
+				},
+				"_updatedAt:between": {
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"value": {},
+					"sort": 4
+				}
+			},
+			"minFilledConditions": 0,
+			"match": "and"
+		},
+		"label": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"refreshRate": {
+			"default": 0,
+			"options": [0]
+		},
+		"rows": [
+			{
+				"name": "_user.group",
+				"linkField": "_user.group",
+				"visible": true,
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				}
+			},
+			{
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				}
+			}
+		],
+		"rowsPerPage": {
+			"options": [100, 1000, 10000, 100000],
+			"default": 1000
+		},
+		"sorters": [
+			{
+				"term": "status",
+				"direction": "asc"
+			}
+		],
+		"type": "pivot",
+		"values": [
+			{
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"aggregator": "count",
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 50
+			}
+		]
+	},
+	{
+		"_id": "Message:view:Default",
+		"document": "Message",
+		"label": {
+			"en": "{type}: {subject}",
+			"pt_BR": "{type}: {subject}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Message",
+			"pt_BR": "Nova Mensagem"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign"
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"fieldName": "type",
+								"style": {},
+								"defaultValue": "Email"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "priority",
+								"style": {
+									"renderAs": "with_scroll"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "status",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"defaultValue": "Send"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "tags",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"defaultValue": "Send"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "read",
+								"style": {
+									"linkedFormName": "Default",
+									"viewId": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "contact",
+								"style": {
+									"linkedFormName": "Default",
+									"viewId": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "sendAt",
+								"style": {}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "subject",
+								"style": {}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "body",
+								"style": {}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "opportunity",
+								"style": {
+									"linkedFormName": "Default",
+									"viewId": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "product",
+								"style": {
+									"linkedFormName": "Default",
+									"viewId": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "mainCampaign",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "campaign",
+								"style": {}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "referrerURL",
+								"style": {}
+							}
+						]
+					},
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "envelope"
+						},
+						"label": {
+							"en": "E-mail",
+							"pt_BR": "E-mail"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"fieldName": "from",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "to",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "replyTo",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "cc",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "bcc",
+								"style": {
+									"readOnlyVersion": true
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

@@ -1,0 +1,71 @@
+[
+	{
+		"_id": "Default:access:Default",
+		"document": "Default",
+		"export": {
+			"pdf": ["view", "pivot", "pivot"],
+			"html": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isUpdatable": true,
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+		"type": "access",
+		"updateFilter": {
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			],
+			"match": "or"
+		}
+	},
+	{
+		"_id": "Default:access:Full",
+		"changePassword": true,
+		"changeUser": true,
+		"replaceUser": true,
+		"addUser": true,
+		"removeUser": true,
+		"defineUser": true,
+		"defineUserWithQueue": true,
+		"removeInactiveUser": true,
+		"document": "Default",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"],
+			"csv": ["view", "list", "pivot"],
+			"xml": ["view", "list", "pivot"],
+			"xls": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"isCreatable": true,
+		"isDeletable": true,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Full",
+			"pt_BR": "Total"
+		},
+		"name": "Full",
+		"type": "access"
+	}
+]
