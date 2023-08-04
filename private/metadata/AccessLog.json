@@ -1,0 +1,566 @@
+[
+	{
+		"_id": "AccessLog",
+		"fields": {
+			"browser": {
+				"type": "text",
+				"name": "browser",
+				"label": {
+					"pt_BR": "Browser",
+					"en": "Browser"
+				}
+			},
+			"browserEngine": {
+				"type": "text",
+				"name": "browserEngine",
+				"label": {
+					"en": "Browser engine",
+					"pt_BR": "Motor do browser"
+				}
+			},
+			"browserEngineVersion": {
+				"type": "text",
+				"name": "browserEngineVersion",
+				"label": {
+					"en": "Browser engine version",
+					"pt_BR": "Versão da engine do browser"
+				}
+			},
+			"browserVersion": {
+				"type": "text",
+				"name": "browserVersion",
+				"label": {
+					"en": "Browser version",
+					"pt_BR": "Versão do browser"
+				}
+			},
+			"geolocation": {
+				"type": "geoloc",
+				"name": "geolocation",
+				"label": {
+					"en": "Geolocation",
+					"pt_BR": "Geolocalização"
+				},
+				"bits": 26
+			},
+			"height": {
+				"type": "number",
+				"name": "height",
+				"label": {
+					"en": "Screen height",
+					"pt_BR": "Altura da tela"
+				}
+			},
+			"ip": {
+				"type": "text",
+				"name": "ip",
+				"label": {
+					"en": "IP Address",
+					"pt_BR": "Endereço IP"
+				}
+			},
+			"isMobile": {
+				"type": "boolean",
+				"name": "isMobile",
+				"label": {
+					"en": "Mobile device",
+					"pt_BR": "Dispositivo móvel"
+				}
+			},
+			"os": {
+				"type": "text",
+				"name": "os",
+				"label": {
+					"pt_BR": "Sistema Operacional",
+					"en": "Operational System"
+				}
+			},
+			"platform": {
+				"type": "text",
+				"name": "platform",
+				"label": {
+					"en": "Platform",
+					"pt_BR": "Plataforma"
+				}
+			},
+			"width": {
+				"type": "number",
+				"name": "width",
+				"label": {
+					"en": "Screen width",
+					"pt_BR": "Largura da tela"
+				}
+			},
+			"_createdAt": {
+				"type": "dateTime",
+				"name": "_createdAt",
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true
+			},
+			"_createdBy": {
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup"
+			},
+			"_updatedAt": {
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"pt_BR": "Atualizado em",
+					"en": "Updated At"
+				}
+			},
+			"_updatedBy": {
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"]
+			},
+			"_user": {
+				"descriptionFields": ["name", "group.name"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User"
+			}
+		},
+		"icon": "time",
+		"label": {
+			"pt_BR": "Log de Acesso",
+			"en": "Access Log"
+		},
+		"menuSorter": -2,
+		"name": "AccessLog",
+
+		"plurals": {
+			"en": "Access Logs",
+			"pt_BR": "Logs de Acesso"
+		},
+		"type": "document"
+	},
+	{
+		"_id": "AccessLog:list:Default",
+		"columns": {
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 0
+			},
+			"os": {
+				"name": "os",
+				"linkField": "os",
+				"visible": true,
+				"sort": 1
+			},
+			"ip": {
+				"linkField": "ip",
+				"visible": true,
+				"name": "ip",
+				"sort": 2
+			},
+			"isMobile": {
+				"name": "isMobile",
+				"linkField": "isMobile",
+				"visible": true,
+				"sort": 3
+			},
+			"browser": {
+				"visible": true,
+				"name": "browser",
+				"linkField": "browser",
+				"sort": 4
+			},
+			"browserVersion": {
+				"linkField": "browserVersion",
+				"visible": true,
+				"name": "browserVersion",
+				"sort": 5
+			},
+			"browserEngine": {
+				"name": "browserEngine",
+				"linkField": "browserEngine",
+				"visible": true,
+				"sort": 6
+			},
+			"browserEngineVersion": {
+				"visible": true,
+				"name": "browserEngineVersion",
+				"linkField": "browserEngineVersion",
+				"sort": 7
+			},
+			"geolocation": {
+				"name": "geolocation",
+				"linkField": "geolocation",
+				"visible": true,
+				"sort": 8
+			},
+			"width": {
+				"name": "width",
+				"linkField": "width",
+				"visible": true,
+				"sort": 9
+			},
+			"height": {
+				"name": "height",
+				"linkField": "height",
+				"visible": true,
+				"sort": 10
+			},
+			"platform": {
+				"name": "platform",
+				"linkField": "platform",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 11
+			},
+			"_createdAt": {
+				"linkField": "_createdAt",
+				"visible": true,
+				"minWidth": 100,
+				"name": "_createdAt",
+				"sort": 12
+			},
+			"_createdBy": {
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"minWidth": 200,
+				"sort": 13
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 14
+			},
+			"_updatedBy": {
+				"linkField": "_updatedBy",
+				"minWidth": 200,
+				"name": "_updatedBy",
+				"sort": 15
+			}
+		},
+		"document": "AccessLog",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"_user:_id:equals": {
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"sort": 0
+				},
+				"_user:group:_id:equals": {
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"sort": 1
+				},
+				"_createdAt:between": {
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield"
+					},
+					"sort": 2
+				},
+				"ip:starts_with": {
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "ip",
+					"operator": "starts_with",
+					"editable": true,
+					"sort": 3
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "Access Log",
+			"pt_BR": "Log de Acesso"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Access Logs",
+			"pt_BR": "Logs de Acesso"
+		},
+		"refreshRate": {
+			"options": [0],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200,
+				500,
+				1000,
+				100000
+			],
+			"default": 100
+		},
+		"sorters": [
+			{
+				"term": "_createdAt",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "AccessLog:pivot:Default",
+		"columns": {
+			"browser": {
+				"linkField": "browser",
+				"visible": true,
+				"minWidth": 150,
+				"label": {
+					"en": "Browser",
+					"pt_BR": "Browser"
+				},
+				"name": "browser"
+			}
+		},
+		"document": "AccessLog",
+		"filter": {
+			"minFilledConditions": 0,
+			"match": "and",
+			"conditions": {
+				"_user:_id:equals": {
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 1
+				},
+				"_user:group:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"customLabel": "Grupo",
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user.group._id",
+					"operator": "equals",
+					"sort": 2
+				},
+				"_createdAt:between": {
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 3
+				},
+				"_updatedAt:between": {
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"hideOnDisable": true,
+						"renderAs": "datetimefield"
+					},
+					"sort": 4
+				}
+			}
+		},
+		"label": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"refreshRate": {
+			"options": [0],
+			"default": 0
+		},
+		"rows": [
+			{
+				"name": "_user.group",
+				"linkField": "_user.group",
+				"visible": true,
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				}
+			},
+			{
+				"label": {
+					"pt_BR": "Usuário",
+					"en": "User"
+				},
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true
+			}
+		],
+		"rowsPerPage": {
+			"options": [100, 1000, 10000, 100000],
+			"default": 1000
+		},
+		"sorters": [
+			{
+				"term": "_user.group",
+				"direction": "asc"
+			}
+		],
+		"type": "pivot",
+		"values": [
+			{
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"minWidth": 50,
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"aggregator": "count"
+			}
+		]
+	},
+	{
+		"_id": "AccessLog:view:Default",
+		"document": "AccessLog",
+		"label": {
+			"pt_BR": "{ip}",
+			"en": "{ip}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Access Log",
+			"pt_BR": "Novo Log de Acesso"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"title": {
+								"en": "Information",
+								"pt_BR": "Informações"
+							}
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"fieldName": "ip"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "isMobile"
+							},
+							{
+								"fieldName": "geolocation",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "width"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "height"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "platform"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "os"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "browser"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "browserVersion"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "browserEngine"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "browserEngineVersion"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

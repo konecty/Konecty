@@ -1,0 +1,16 @@
+{
+	"_id": "Namespace",
+	"active": true,
+	"locale": "pt_BR",
+	"logoURL": "https://cdn-my.konecty.com/rest/image/outer/200/0/konecty/SitePage/1/images/logo.png",
+	"name": "konecty",
+	"sendAlertEmail": false,
+	"siteURL": "https://konecty.com",
+	"trackUserGeolocation": false,
+	"watermark": false,
+	"type": "namespace",
+	"ns": "konecty",
+	"title": "Konecty Open Source Business Platform",
+    "emailServers": {},
+    "version": "1.0.0"
+}

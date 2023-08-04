@@ -1,0 +1,1805 @@
+[
+	{
+		"_id": "User",
+		"collection": "users",
+		"description": {
+			"en": "System users",
+			"pt_BR": "Usuários do sistema"
+		},
+		"fields": {
+			"active": {
+				"defaultValue": true,
+				"type": "boolean",
+				"name": "active",
+				"label": {
+					"en": "Active",
+					"pt_BR": "Ativo"
+				},
+				"isRequired": true,
+				"isSortable": true
+			},
+			"nickname": {
+				"label": {
+					"en": "Nickname",
+					"pt_BR": "Apelido"
+				},
+				"type": "text",
+				"name": "nickname"
+			},
+			"pictures": {
+				"type": "file",
+				"name": "pictures",
+				"label": {
+					"en": "Pictures",
+					"pt_BR": "Imagens"
+				},
+				"isList": true,
+				"wildcard": "(jpg|jpeg)"
+			},
+			"address": {
+				"typeOptions": {
+					"Casa": {
+						"en": "Home",
+						"pt_BR": "Casa"
+					},
+					"Trabalho": {
+						"en": "Work",
+						"pt_BR": "Trabalho"
+					}
+				},
+				"isList": true,
+				"isSortable": true,
+				"isTypeOptionsEditable": true,
+				"label": {
+					"pt_BR": "Endereço",
+					"en": "Address"
+				},
+				"name": "address",
+				"type": "address"
+			},
+			"birthdate": {
+				"label": {
+					"en": "Birthdate",
+					"pt_BR": "Data de Nascimento"
+				},
+				"isSortable": true,
+				"type": "date",
+				"name": "birthdate"
+			},
+			"code": {
+				"type": "autoNumber",
+				"name": "code",
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"isUnique": true,
+				"isSortable": true
+			},
+			"emails": {
+				"isList": true,
+				"isSortable": true,
+				"label": {
+					"en": "Email",
+					"pt_BR": "Email"
+				},
+				"name": "emails",
+				"type": "email"
+			},
+			"entry": {
+				"label": {
+					"en": "Entry",
+					"pt_BR": "Entrada"
+				},
+				"isSortable": true,
+				"type": "date",
+				"name": "entry"
+			},
+			"exit": {
+				"type": "date",
+				"name": "exit",
+				"label": {
+					"en": "Exit",
+					"pt_BR": "Saída"
+				},
+				"isSortable": true
+			},
+			"gender": {
+				"maxSelected": 1,
+				"minSelected": 0,
+				"name": "gender",
+				"optionsSorter": "asc",
+				"isSortable": true,
+				"label": {
+					"pt_BR": "Sexo",
+					"en": "Gender"
+				},
+				"options": {
+					"Masculino": {
+						"en": "Male",
+						"pt_BR": "Masculino"
+					},
+					"Feminino": {
+						"en": "Female",
+						"pt_BR": "Feminino"
+					},
+					"Desconhecido": {
+						"en": "Unknown",
+						"pt_BR": "Desconhecido"
+					},
+					"Não se Aplica": {
+						"en": "Not Applicable",
+						"pt_BR": "Não se Aplica"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist"
+			},
+			"group": {
+				"label": {
+					"en": "Group",
+					"pt_BR": "Grupo"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"document": "Group",
+				"descriptionFields": ["name"],
+				"type": "lookup",
+				"name": "group",
+				"inheritedFields": [
+					{
+						"fieldName": "extension",
+						"inherit": "until_edited"
+					}
+				]
+			},
+			"groups": {
+				"type": "lookup",
+				"name": "groups",
+				"label": {
+					"en": "Extra Access Groups",
+					"pt_BR": "Grupos de Acesso Extra"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "Group",
+				"descriptionFields": ["name"]
+			},
+			"admin": {
+				"type": "boolean",
+				"name": "admin",
+				"label": {
+					"en": "Administrator",
+					"pt_BR": "Administrador"
+				}
+			},
+			"jobTitle": {
+				"type": "text",
+				"name": "jobTitle",
+				"label": {
+					"en": "Job Title",
+					"pt_BR": "Cargo"
+				},
+				"isSortable": true,
+				"normalization": "title"
+			},
+			"lastLogin": {
+				"type": "dateTime",
+				"name": "lastLogin",
+				"label": {
+					"en": "Last Login",
+					"pt_BR": "Último Login"
+				},
+				"isSortable": true
+			},
+			"locale": {
+				"isSortable": true,
+				"label": {
+					"en": "Locale",
+					"pt_BR": "Opções Regionais"
+				},
+				"options": {
+					"pt_BR": {
+						"en": "pt_BR",
+						"pt_BR": "pt_BR"
+					},
+					"en": {
+						"en": "en",
+						"pt_BR": "en"
+					}
+				},
+				"renderAs": "with_scroll",
+				"type": "picklist",
+				"isRequired": true,
+				"maxSelected": 1,
+				"minSelected": 0,
+				"name": "locale",
+				"optionsSorter": "asc"
+			},
+			"username": {
+				"isRequired": true,
+				"isSortable": true,
+				"isUnique": true,
+				"label": {
+					"pt_BR": "Login",
+					"en": "Login"
+				},
+				"name": "username",
+				"normalization": "lower",
+				"type": "text"
+			},
+			"name": {
+				"label": {
+					"en": "Name",
+					"pt_BR": "Nome"
+				},
+				"isSortable": true,
+				"normalization": "title",
+				"type": "text",
+				"name": "name"
+			},
+			"password": {
+				"type": "password",
+				"name": "password",
+				"label": {
+					"en": "Password",
+					"pt_BR": "Senha"
+				},
+				"isRequired": false,
+				"isSortable": true
+			},
+			"access": {
+				"type": "json",
+				"name": "access",
+				"label": {
+					"en": "Access",
+					"pt_BR": "Acesso"
+				}
+			},
+			"phone": {
+				"name": "phone",
+				"isList": true,
+				"isSortable": true,
+				"isTypeOptionsEditable": true,
+				"label": {
+					"en": "Phone",
+					"pt_BR": "Telefone"
+				},
+				"type": "phone",
+				"typeOptions": {
+					"Casa": {
+						"en": "Home",
+						"pt_BR": "Casa"
+					},
+					"Celular": {
+						"pt_BR": "Celular",
+						"en": "Mobile"
+					},
+					"Trabalho": {
+						"en": "Work",
+						"pt_BR": "Trabalho"
+					},
+					"Fax": {
+						"en": "Fax",
+						"pt_BR": "Fax"
+					}
+				},
+				"minItems": 0,
+				"maxItems": 10
+			},
+			"role": {
+				"descriptionFields": ["name"],
+				"inheritedFields": [
+					{
+						"fieldName": "admin",
+						"inherit": "always"
+					},
+					{
+						"inherit": "always",
+						"fieldName": "access"
+					}
+				],
+				"type": "lookup",
+				"name": "role",
+				"label": {
+					"en": "Role",
+					"pt_BR": "Papel"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"document": "Role"
+			},
+			"sessionExpireAfterMinutes": {
+				"isSortable": true,
+				"type": "number",
+				"name": "sessionExpireAfterMinutes",
+				"label": {
+					"pt_BR": "Sessão Expirará em ",
+					"en": "Session Expire After Minutes"
+				}
+			},
+			"_createdAt": {
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_createdAt"
+			},
+			"_createdBy": {
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"]
+			},
+			"_updatedAt": {
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"pt_BR": "Atualizado em",
+					"en": "Updated At"
+				},
+				"isSortable": true
+			},
+			"_updatedBy": {
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy"
+			},
+			"_user": {
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User"
+			},
+			"targetQueue": {
+				"type": "lookup",
+				"name": "targetQueue",
+				"label": {
+					"en": "Target Queue",
+					"pt_BR": "Roleta"
+				},
+				"isSortable": true,
+				"document": "Queue",
+				"descriptionFields": ["name"]
+			},
+			"documents": {
+				"type": "file",
+				"name": "documents",
+				"label": {
+					"en": "Documents",
+					"pt_BR": "Documentação"
+				},
+				"isList": true
+			},
+			"director": {
+				"label": {
+					"en": "Director",
+					"pt_BR": "Diretor"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["nickname"],
+				"detailFields": ["emails", "phone"],
+				"inheritedFields": [
+					{
+						"fieldName": "targetQueue",
+						"inherit": "always"
+					}
+				],
+				"access": "Director",
+				"type": "lookup",
+				"name": "director"
+			},
+			"document": {
+				"type": "text",
+				"name": "document",
+				"label": {
+					"en": "Document",
+					"pt_BR": "Documento"
+				}
+			},
+			"citizenNumber": {
+				"type": "text",
+				"name": "citizenNumber",
+				"label": {
+					"en": "SSN",
+					"pt_BR": "CPF"
+				}
+			},
+			"expire": {
+				"type": "date",
+				"name": "expire",
+				"label": {
+					"en": "Expire",
+					"pt_BR": "Validade"
+				}
+			},
+			"extension": {
+				"type": "number",
+				"name": "extension",
+				"label": {
+					"en": "Extension",
+					"pt_BR": "Ramal"
+				},
+				"isSortable": true
+			},
+			"fullName": {
+				"type": "text",
+				"name": "fullName",
+				"label": {
+					"en": "Full Name",
+					"pt_BR": "Nome Completo"
+				},
+				"isSortable": true,
+				"normalization": "title"
+			},
+			"deactivationDate": {
+				"name": "deactivationDate",
+				"label": {
+					"en": "Deactivation Date",
+					"pt_BR": "Data de Desativação"
+				},
+				"type": "date"
+			},
+			"acceptanceTerms": {
+				"type": "file",
+				"name": "acceptanceTerms",
+				"label": {
+					"en": "Acceptance terms",
+					"pt_BR": "Termos de aceite"
+				},
+				"isList": true
+			}
+		},
+		"help": {
+			"en": "Use this module to manage the system users, organize them into groups, assigne roles and grant access",
+			"pt_BR": "Use este módulo para administrar os usuários do sistema, organiza-los em grupos, atribuir papéis e conceder acesso"
+		},
+		"icon": "user",
+		"label": {
+			"en": "User",
+			"pt_BR": "Usuário"
+		},
+		"menuSorter": 10,
+		"name": "User",
+		"plurals": {
+			"en": "Users",
+			"pt_BR": "Usuários"
+		},
+		"saveHistory": true,
+		"type": "document"
+	},
+	{
+		"_id": "User:access:Default",
+		"document": "User",
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": false,
+			"isUpdatable": false,
+			"isReadable": false
+		},
+		"fields": {
+			"acceptanceTerms": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"operator": "equals",
+						"value": "$user"
+					}
+				}
+			},
+			"_createdAt": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_createdBy": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_updatedAt": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_updatedBy": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_user": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"active": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"code": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"emails": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"extension": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"group": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"lastLogin": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"name": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"password": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true
+				}
+			},
+			"phone": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "canViewPhone",
+						"value": true,
+						"operator": "equals"
+					}
+				}
+			},
+			"canViewPhone": {
+				"name": "canViewPhone",
+				"label": {
+					"en": "Can View Phone",
+					"pt_BR": "Pode Visualizar Telefone"
+				},
+				"type": "boolean"
+			},
+			"pictures": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true
+				}
+			},
+			"role": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"jobTitle": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"director": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"username": {
+				"READ": {
+					"allow": true
+				}
+			}
+		},
+		"isCreatable": false,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+		"readFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"value": true,
+					"operator": "equals",
+					"term": "active"
+				}
+			]
+		},
+		"type": "access",
+		"updateFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"term": "_id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			]
+		}
+	},
+	{
+		"_id": "User:access:Manager",
+		"changeUser": true,
+		"document": "User",
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": false,
+			"isUpdatable": false,
+			"isReadable": false
+		},
+		"fields": {
+			"acceptanceTerms": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"operator": "equals",
+						"value": "$user"
+					}
+				}
+			},
+			"_createdAt": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_createdBy": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_updatedAt": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_updatedBy": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"document": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"_user": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"active": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"code": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"citizenNumber": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"emails": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"entry": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"operator": "equals",
+						"term": "group._id",
+						"value": "$group"
+					}
+				}
+			},
+			"exit": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"expire": {
+				"READ": {
+					"condition": {
+						"operator": "equals",
+						"term": "group._id",
+						"value": "$group"
+					},
+					"allow": true
+				}
+			},
+			"extension": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"group": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"lastLogin": {
+				"READ": {
+					"allow": true
+				}
+			},
+			"name": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				},
+				"READ": {
+					"allow": true
+				}
+			},
+			"password": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"phone": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "canViewPhone",
+						"value": true,
+						"operator": "equals"
+					}
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"role": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"jobTitle": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"director": {
+				"READ": {
+					"allow": false
+				}
+			},
+			"pictures": {
+				"READ": {
+					"allow": true
+				},
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"username": {
+				"READ": {
+					"allow": true
+				}
+			}
+		},
+		"isCreatable": false,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Manager",
+			"pt_BR": "Gerente"
+		},
+		"name": "Manager",
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "active",
+					"value": true,
+					"operator": "equals"
+				},
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"replaceUser": true,
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"type": "access",
+		"updateFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		}
+	},
+	{
+		"_id": "User:access:Director",
+		"document": "User",
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"fields": {},
+		"isCreatable": false,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": false,
+		"label": {
+			"en": "Director",
+			"pt_BR": "Diretor"
+		},
+		"name": "Director",
+		"type": "access"
+	},
+	{
+		"_id": "User:list:Default",
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 0
+			},
+			"name": {
+				"name": "name",
+				"linkField": "name",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 1
+			},
+			"emails": {
+				"linkField": "emails",
+				"minWidth": 20,
+				"name": "emails",
+				"style": {
+					"tooltipOnly": true
+				},
+				"visible": true,
+				"sort": 2
+			},
+			"phone": {
+				"name": "phone",
+				"linkField": "phone",
+				"visible": true,
+				"style": {
+					"tooltipOnly": true
+				},
+				"minWidth": 20,
+				"sort": 3
+			},
+			"username": {
+				"linkField": "username",
+				"minWidth": 20,
+				"name": "username",
+				"style": {
+					"tooltipOnly": true
+				},
+				"visible": true,
+				"sort": 4
+			},
+			"locale": {
+				"name": "locale",
+				"linkField": "locale",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 5
+			},
+			"group": {
+				"minWidth": 50,
+				"name": "group",
+				"linkField": "group",
+				"visible": true,
+				"sort": 7
+			},
+			"groups": {
+				"name": "groups",
+				"linkField": "groups",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 8
+			},
+			"role": {
+				"minWidth": 50,
+				"name": "role",
+				"linkField": "role",
+				"visible": true,
+				"sort": 9
+			},
+			"jobTitle": {
+				"minWidth": 100,
+				"name": "jobTitle",
+				"linkField": "jobTitle",
+				"visible": true,
+				"sort": 2
+			},
+			"active": {
+				"linkField": "active",
+				"visible": true,
+				"minWidth": 40,
+				"name": "active",
+				"sort": 11
+			},
+			"admin": {
+				"name": "admin",
+				"linkField": "admin",
+				"visible": true,
+				"minWidth": 40,
+				"sort": 12
+			},
+			"access": {
+				"minWidth": 50,
+				"name": "access",
+				"linkField": "access",
+				"sort": 13
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"minWidth": 50,
+				"sort": 14
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"minWidth": 50,
+				"sort": 15
+			},
+			"_createdBy": {
+				"linkField": "_createdBy",
+				"minWidth": 50,
+				"name": "_createdBy",
+				"sort": 16
+			},
+			"_updatedAt": {
+				"minWidth": 50,
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"sort": 17
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 50,
+				"sort": 18
+			},
+			"sessionExpireAfterMinutes": {
+				"linkField": "sessionExpireAfterMinutes",
+				"minWidth": 70,
+				"name": "sessionExpireAfterMinutes",
+				"sort": 19
+			},
+			"lastLogin": {
+				"minWidth": 100,
+				"name": "lastLogin",
+				"linkField": "lastLogin",
+				"sort": 20
+			},
+			"pictures": {
+				"minWidth": 40,
+				"name": "pictures",
+				"linkField": "pictures",
+				"visible": true,
+				"sort": 1
+			},
+			"extension": {
+				"name": "extension",
+				"linkField": "extension",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 3
+			},
+			"entry": {
+				"visible": true,
+				"minWidth": 80,
+				"name": "entry",
+				"linkField": "entry",
+				"sort": 4
+			},
+			"exit": {
+				"minWidth": 80,
+				"name": "exit",
+				"linkField": "exit",
+				"visible": true,
+				"sort": 5
+			},
+			"citizenNumber": {
+				"name": "citizenNumber",
+				"linkField": "citizenNumber",
+				"minWidth": 100,
+				"sort": 9
+			},
+			"address": {
+				"name": "address",
+				"linkField": "address",
+				"minWidth": 200,
+				"sort": 11
+			},
+			"document": {
+				"name": "document",
+				"linkField": "document",
+				"minWidth": 100,
+				"sort": 14
+			},
+			"expire": {
+				"name": "expire",
+				"linkField": "expire",
+				"style": {
+					"colorBasedOnTime": "0:black:white"
+				},
+				"minWidth": 120,
+				"sort": 16
+			},
+			"nickname": {
+				"name": "nickname",
+				"linkField": "nickname",
+				"minWidth": 100,
+				"sort": 21
+			},
+			"birthdate": {
+				"linkField": "birthdate",
+				"minWidth": 120,
+				"name": "birthdate",
+				"sort": 25
+			},
+			"gender": {
+				"minWidth": 150,
+				"name": "gender",
+				"linkField": "gender",
+				"sort": 26
+			},
+			"password": {
+				"name": "password",
+				"linkField": "password",
+				"minWidth": 50,
+				"sort": 31
+			},
+			"fullName": {
+				"minWidth": 100,
+				"name": "fullName",
+				"linkField": "fullName",
+				"sort": 38
+			},
+			"director": {
+				"name": "director",
+				"linkField": "director",
+				"minWidth": 100,
+				"sort": 44
+			},
+			"documents": {
+				"name": "documents",
+				"linkField": "documents",
+				"minWidth": 100,
+				"sort": 46
+			}
+		},
+		"document": "User",
+		"filter": {
+			"conditions": {
+				"code:equals": {
+					"term": "code",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"sort": 0
+				},
+				"name:contains": {
+					"term": "name",
+					"operator": "contains",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"sort": 1
+				},
+				"username:contains": {
+					"disabled": true,
+					"editable": true,
+					"operator": "contains",
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "username",
+					"sort": 2
+				},
+				"emails:contains": {
+					"disabled": true,
+					"editable": true,
+					"operator": "contains",
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "emails",
+					"sort": 3
+				},
+				"phone:phoneNumber:equals": {
+					"term": "phone.phoneNumber",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "phonenumber"
+					},
+					"sort": 4
+				},
+				"group:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "group._id",
+					"sort": 5
+				},
+				"role:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "role._id",
+					"operator": "equals",
+					"sort": 6
+				},
+				"_user:_id:equals": {
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"sort": 7
+				},
+				"_user:active:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 2,
+						"hideOnDisable": true
+					},
+					"term": "_user.active",
+					"sort": 8
+				},
+				"active:equals": {
+					"term": "active",
+					"value": true,
+					"operator": "equals",
+					"editable": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 1
+					},
+					"sort": 9
+				},
+				"director:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "director._id",
+					"sort": 10
+				},
+				"expire:between": {
+					"term": "expire",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"sort": 13
+				},
+				"birthdate:between": {
+					"term": "birthdate",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"sort": 14
+				},
+				"_createdAt:between": {
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 17
+				},
+				"_updatedAt:between": {
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 18
+				}
+			},
+			"match": "and",
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "User",
+			"pt_BR": "Usuário"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+		"plurals": {
+			"en": "Users",
+			"pt_BR": "Usuários"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				15,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				25,
+				50,
+				15,
+				20,
+				25,
+				50,
+				100,
+				250,
+				500,
+				1000
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "name",
+				"direction": "asc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "User:pivot:Default",
+		"columns": {
+			"active": {
+				"name": "active",
+				"linkField": "active",
+				"visible": true,
+				"minWidth": 150,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				}
+			}
+		},
+		"document": "User",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"group:_id:equals": {
+					"term": "group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"sort": 0
+				},
+				"role:_id:equals": {
+					"term": "role._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"sort": 1
+				},
+				"_user:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "_user._id",
+					"operator": "equals",
+					"sort": 2
+				},
+				"active:equals": {
+					"term": "active",
+					"value": true,
+					"operator": "equals",
+					"editable": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 1
+					},
+					"sort": 3
+				},
+				"expire:between": {
+					"term": "expire",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"sort": 7
+				},
+				"birthdate:between": {
+					"term": "birthdate",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"sort": 14
+				},
+				"_createdAt:between": {
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 15
+				},
+				"_updatedAt:between": {
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 16
+				},
+				"director:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "director._id",
+					"sort": 4
+				},
+				"entry:between": {
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"term": "entry",
+					"value": {},
+					"sort": 12
+				},
+				"exit:between": {
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"term": "exit",
+					"sort": 13
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+		"plurals": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"refreshRate": {
+			"options": [0],
+			"default": 0
+		},
+		"rows": [
+			{
+				"minWidth": 200,
+				"label": {
+					"pt_BR": "Diretor",
+					"en": "Director"
+				},
+				"name": "director",
+				"linkField": "director",
+				"visible": true
+			},
+			{
+				"name": "group",
+				"linkField": "group",
+				"visible": true,
+				"minWidth": 200
+			},
+			{
+				"name": "name",
+				"linkField": "name",
+				"visible": true,
+				"minWidth": 200
+			}
+		],
+		"rowsPerPage": {
+			"options": [100, 1000, 10000, 100000],
+			"default": 1000
+		},
+		"sorters": [
+			{
+				"term": "active",
+				"direction": "asc"
+			}
+		],
+		"type": "pivot",
+		"values": [
+			{
+				"aggregator": "count",
+				"label": {
+					"en": "Count",
+					"pt_BR": "Quantidade"
+				},
+				"linkField": "username",
+				"minWidth": 50,
+				"name": "username",
+				"visible": true
+			}
+		]
+	},
+	{
+		"_id": "User:view:Default",
+		"document": "User",
+		"label": {
+			"en": "{code}: {name}",
+			"pt_BR": "{code}: {name}"
+		},
+		"name": "Default",
+		"plurals": {
+			"en": "New User",
+			"pt_BR": "Novo Usuário"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"style": {},
+				"visuals": [
+					{
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informação"
+						},
+						"visuals": [
+							{
+								"fieldName": "active",
+								"defaultValue": true,
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"readOnlyVersion": true
+								},
+								"fieldName": "lastLogin"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320
+								},
+								"fieldName": "pictures"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "group"
+							},
+							{
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "groups",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "director"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "fullName"
+							},
+							{
+								"fieldName": "name",
+								"type": "visualSymlink"
+							},
+							{
+								"fieldName": "nickname",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "username"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "locale",
+								"defaultValue": "pt_BR"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "jobTitle"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "role"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "targetQueue",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "documentType"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "document"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "expire"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "gender",
+								"style": {
+									"renderAs": "without_scroll",
+									"columns": 4
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "birthdate"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "citizenNumber"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "address",
+								"defaultValue": [
+									{
+										"type": "Casa",
+										"data": {
+											"state": "RS",
+											"city": "Porto Alegre",
+											"country": "BRA"
+										}
+									}
+								]
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "phone",
+								"defaultValue": [
+									{
+										"data": {
+											"countryCode": "55"
+										}
+									}
+								]
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "extension"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "emails"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "documents",
+								"style": {
+									"height": 320
+								}
+							},
+							{
+								"fieldName": "entry",
+								"type": "visualSymlink"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "exit"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "deactivationDate"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "canViewPhone"
+							}
+						],
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign"
+						}
+					}
+				],
+				"type": "visualGroup"
+			}
+		]
+	}
+]
