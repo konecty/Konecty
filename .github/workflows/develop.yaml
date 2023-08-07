@@ -2,15 +2,14 @@ on:
     release:
         types:
             - created
-
 jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - name: get pre-release with tag
+            - name: get latest release with tag
               id: latestrelease
               run: |
-                  echo "::set-output name=releasetag::$(curl -s https://api.github.com/repos/konecty/Konecty/releases | jq -r 'map(select(.prerelease)) | .[0].tag_name'"
+                  echo "::set-output name=releasetag::$(curl -s https://api.github.com/repos/konecty/Konecty/releases | jq -r 'map(select(.prerelease)) | first | .tag_name'"
             - name: confirm release tag
               run: |
                   echo ${{ steps.latestrelease.outputs.releasetag }}
