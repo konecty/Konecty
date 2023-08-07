@@ -1,0 +1,1398 @@
+[
+	{
+		"_id": "Product",
+		"fields": {
+			"code": {
+				"name": "code",
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"isUnique": true,
+				"isSortable": true,
+				"type": "autoNumber"
+			},
+			"status": {
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "status",
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"optionsSorter": "asc",
+				"options": {
+					"draft": {
+						"en": "Draft",
+						"pt_BR": "Rascunho"
+					},
+					"active": {
+						"pt_BR": "Ativo",
+						"en": "Active"
+					},
+					"inactive": {
+						"en": "Inactive",
+						"pt_BR": "Inativo"
+					}
+				},
+				"renderAs": "without_scroll"
+			},
+			"sku": {
+				"name": "sku",
+				"label": {
+					"en": "SKU",
+					"pt_BR": "SKU"
+				},
+				"isSortable": true,
+				"type": "text"
+			},
+			"name": {
+				"isSortable": true,
+				"normalization": "title",
+				"type": "text",
+				"name": "name",
+				"label": {
+					"pt_BR": "Nome",
+					"en": "Name"
+				}
+			},
+			"description": {
+				"type": "text",
+				"name": "description",
+				"label": {
+					"en": "Description",
+					"pt_BR": "Descrição"
+				}
+			},
+			"sale": {
+				"isSortable": true,
+				"minValue": 0,
+				"type": "money",
+				"name": "sale",
+				"label": {
+					"en": "Sale",
+					"pt_BR": "Valor de Venda"
+				}
+			},
+			"discount": {
+				"decimalSize": 2,
+				"minValue": 0,
+				"sortable": true,
+				"type": "money",
+				"name": "discount",
+				"label": {
+					"en": "Discount",
+					"pt_BR": "Desconto"
+				}
+			},
+			"banner": {
+				"wildcard": "(jpg|jpeg|png)",
+				"maxSize": 10240,
+				"type": "file",
+				"name": "banner",
+				"label": {
+					"en": "Banners",
+					"pt_BR": "Banners"
+				},
+				"isList": true,
+				"minItems": 0,
+				"maxItems": 3
+			},
+			"pictures": {
+				"label": {
+					"en": "Pictures",
+					"pt_BR": "Imagens"
+				},
+				"isList": true,
+				"wildcard": "(jpg|jpeg)",
+				"maxSize": 10240,
+				"type": "file",
+				"name": "pictures"
+			},
+			"videos": {
+				"label": {
+					"en": "Videos",
+					"pt_BR": "Videos"
+				},
+				"isList": true,
+				"type": "url",
+				"name": "videos",
+				"minItems": 0
+			},
+			"tags": {
+				"type": "lookup",
+				"label": {
+					"en": "Tags",
+					"pt_BR": "Tags"
+				},
+				"isSortable": true,
+				"isList": true,
+				"detailFields": ["name"],
+				"name": "tags",
+				"document": "Tag",
+				"descriptionFields": ["code", "type", "name"],
+				"minItems": 0
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"type": "dateTime"
+			},
+			"_createdBy": {
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true
+			},
+			"_updatedAt": {
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isSortable": true
+			},
+			"_updatedBy": {
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"]
+			},
+			"_user": {
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "director.nickname", "active"],
+				"detailFields": ["phone", "emails"]
+			},
+			"highlight": {
+				"label": {
+					"en": "Highlight",
+					"pt_BR": "Destaque"
+				},
+				"type": "boolean",
+				"name": "highlight"
+			},
+			"link": {
+				"type": "url",
+				"name": "link",
+				"label": {
+					"en": "Site",
+					"pt_BR": "Site"
+				},
+				"isList": true,
+				"minItems": 0
+			},
+			"notes": {
+				"label": {
+					"en": "Notes",
+					"pt_BR": "Observações Internas"
+				},
+				"type": "richText",
+				"name": "notes"
+			},
+			"supplier": {
+				"type": "lookup",
+				"label": {
+					"en": "Owner",
+					"pt_BR": "Fornecedor"
+				},
+				"isSortable": true,
+				"isList": true,
+				"detailFields": ["email", "phone"],
+				"name": "supplier",
+				"document": "Contact",
+				"descriptionFields": ["code", "name.full"],
+				"minItems": 0
+			},
+			"tax": {
+				"isSortable": true,
+				"type": "money",
+				"name": "tax",
+				"label": {
+					"en": "Tax Amount",
+					"pt_BR": "Valor de Impostos"
+				},
+				"decimalSize": 2,
+				"minValue": 0
+			}
+		},
+		"help": {
+			"pt_BR": "Produtos"
+		},
+		"icon": "building",
+		"label": {
+			"en": "Product",
+			"pt_BR": "Produto"
+		},
+		"menuSorter": 6,
+		"name": "Product",
+
+		"plurals": {
+			"en": "Products",
+			"pt_BR": "Produtos"
+		},
+		"saveHistory": true,
+		"type": "document"
+	},
+	{
+		"_id": "Product:access:User",
+		"document": "Product",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "pivot"]
+		},
+		"fieldDefaults": {
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true
+		},
+		"fields": {
+			"description": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"pictures": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"banner": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"highlight": {
+				"READ": {
+					"allow": false
+				},
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"supplier": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"sale": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"tax": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"notes": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"status": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false,
+					"condition": {
+						"term": "status",
+						"value": "Ativo",
+						"operator": "not_equals"
+					}
+				}
+			}
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Broker",
+			"pt_BR": "Corretor"
+		},
+		"name": "Broker",
+
+		"type": "access",
+		"updateFilter": {
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			],
+			"match": "or"
+		}
+	},
+	{
+		"_id": "Product:access:Default",
+		"document": "Product",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "pivot"]
+		},
+		"fieldDefaults": {
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true
+		},
+		"fields": {
+			"banner": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"videos": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"link": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"highlight": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"supplier": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "_user._id",
+						"value": "$user",
+						"operator": "equals"
+					}
+				}
+			},
+			"status": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false,
+					"condition": {
+						"term": "status",
+						"value": "Ativo",
+						"operator": "not_equals"
+					}
+				}
+			}
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+
+		"type": "access",
+		"updateFilter": {
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			],
+			"match": "or"
+		}
+	},
+	{
+		"_id": "Product:access:Director",
+		"changeUser": true,
+		"replaceUser": true,
+		"addUser": true,
+		"removeUser": true,
+		"defineUser": true,
+		"removeInactiveUser": true,
+		"document": "Product",
+		"export": {
+			"html": ["view", "pivot"],
+			"pdf": ["view", "pivot"]
+		},
+		"fieldDefaults": {
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true,
+			"isDeletable": true
+		},
+		"fields": {
+			"description": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"discount": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"highlight": {
+				"READ": {
+					"allow": false
+				},
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"pictures": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"banner": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"videos": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"sale": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"tax": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"status": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false,
+					"condition": {
+						"term": "status",
+						"value": "Ativo",
+						"operator": "not_equals"
+					}
+				}
+			},
+			"notes": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			}
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Director",
+			"pt_BR": "Diretor"
+		},
+		"name": "Director",
+
+		"type": "access",
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$groups",
+					"operator": "in"
+				}
+			]
+		}
+	},
+	{
+		"_id": "Product:access:Manager",
+		"changeUser": true,
+		"document": "Product",
+		"export": {
+			"pdf": ["view", "pivot"],
+			"html": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"fields": {
+			"description": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"discount": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$group",
+						"operator": "equals"
+					}
+				},
+				"CREATE": {
+					"allow": false
+				}
+			},
+			"banner": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"supplier": {
+				"READ": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$group",
+						"operator": "equals"
+					}
+				}
+			},
+			"_user": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$group",
+						"operator": "equals"
+					}
+				}
+			},
+			"pictures": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"videos": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"link": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"sale": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"tax": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			},
+			"status": {
+				"UPDATE": {
+					"allow": false
+				},
+				"CREATE": {
+					"allow": false,
+					"condition": {
+						"term": "status",
+						"value": "Ativo",
+						"operator": "not_equals"
+					}
+				}
+			},
+			"notes": {
+				"UPDATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				},
+				"CREATE": {
+					"allow": true,
+					"condition": {
+						"term": "_user.group._id",
+						"value": "$allgroups",
+						"operator": "in"
+					}
+				}
+			}
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Manager",
+			"pt_BR": "Gerente"
+		},
+		"name": "Manager",
+
+		"replaceUser": true,
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "Product:list:Default",
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 60,
+				"sort": 0
+			},
+			"sku": {
+				"name": "sku",
+				"linkField": "sku",
+				"minWidth": 100,
+				"sort": 1
+			},
+			"active": {
+				"name": "active",
+				"linkField": "active",
+				"minWidth": 40,
+				"sort": 2
+			},
+			"status": {
+				"visible": true,
+				"minWidth": 100,
+				"name": "status",
+				"linkField": "status",
+				"sort": 14
+			},
+			"type": {
+				"name": "type",
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 6
+			},
+			"name": {
+				"minWidth": 100,
+				"name": "name",
+				"linkField": "name",
+				"visible": false,
+				"sort": 99
+			},
+			"description": {
+				"name": "description",
+				"linkField": "description",
+				"minWidth": 100,
+				"sort": 6
+			},
+			"pictures": {
+				"name": "pictures",
+				"linkField": "pictures",
+				"minWidth": 50,
+				"sort": 1,
+				"visible": true
+			},
+			"_createdAt": {
+				"minWidth": 100,
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"sort": 10
+			},
+			"_createdBy": {
+				"linkField": "_createdBy",
+				"minWidth": 200,
+				"name": "_createdBy",
+				"sort": 11
+			},
+			"quotesBroker": {
+				"name": "quotesBroker",
+				"linkField": "quotesBroker",
+				"minWidth": 100,
+				"sort": 4
+			},
+			"_updatedAt": {
+				"minWidth": 100,
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"sort": 12
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 200,
+				"sort": 13
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"minWidth": 200,
+				"sort": 14
+			},
+			"sale": {
+				"name": "sale",
+				"linkField": "sale",
+				"minWidth": 120,
+				"sort": 7,
+				"visible": true
+			},
+			"discount": {
+				"linkField": "discount",
+				"visible": true,
+				"minWidth": 120,
+				"name": "discount",
+				"sort": 7
+			},
+			"supplier": {
+				"name": "supplier",
+				"linkField": "supplier",
+				"minWidth": 200,
+				"sort": 39
+			},
+			"banner": {
+				"name": "banner",
+				"linkField": "banner",
+				"minWidth": 50,
+				"sort": 40
+			},
+			"link": {
+				"name": "link",
+				"linkField": "link",
+				"minWidth": 100,
+				"sort": 62
+			},
+			"notes": {
+				"name": "notes",
+				"linkField": "notes",
+				"minWidth": 100,
+				"sort": 63
+			},
+			"tax": {
+				"minWidth": 120,
+				"name": "tax",
+				"linkField": "tax",
+				"sort": 78
+			},
+			"videos": {
+				"name": "videos",
+				"linkField": "videos",
+				"minWidth": 100,
+				"sort": 82
+			},
+			"highlight": {
+				"name": "highlight",
+				"linkField": "highlight",
+				"minWidth": 50,
+				"sort": 94
+			}
+		},
+		"document": "Product",
+		"label": {
+			"en": "Product",
+			"pt_BR": "Produto"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Products",
+			"pt_BR": "Produtos"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				15,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"direction": "desc",
+				"term": "score"
+			}
+		],
+		"type": "list",
+		"view": "Default",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"code:equals": {
+					"term": "code",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"sort": 0
+				},
+				"status:in": {
+					"term": "status",
+					"value": ["Ativo"],
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"columns": 1,
+						"renderAs": "checkbox"
+					},
+					"sort": 1
+				},
+				"tags:_id:equals": {
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "tags._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"sort": 5
+				},
+				"sale:value:between": {
+					"disabled": true,
+					"style": {
+						"customLabel": "Valor",
+						"renderAs": "slider",
+						"minValue": 0,
+						"steps": 50000,
+						"maxValue": 3000000.06,
+						"unlimitedMaxValue": true,
+						"infinity": true
+					},
+					"term": "sale.value",
+					"value": {
+						"greater_or_equals": "0.00",
+						"less_or_equals": "3050000.00"
+					},
+					"operator": "between",
+					"editable": true,
+					"sort": 6
+				},
+				"supplier:_id:equals": {
+					"term": "supplier._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 21
+				},
+				"pictures:exists": {
+					"operator": "exists",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 1,
+						"hideOnDisable": true
+					},
+					"term": "pictures",
+					"value": true,
+					"sort": 31
+				},
+				"_user:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user._id",
+					"sort": 100
+				},
+				"_user:active:equals": {
+					"disabled": true,
+					"style": {
+						"renderAs": "radiobox",
+						"columns": 2,
+						"hideOnDisable": true
+					},
+					"term": "_user.active",
+					"operator": "equals",
+					"editable": true,
+					"sort": 101
+				},
+				"_user:group:_id:equals": {
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"sort": 102
+				},
+				"_user:director:_id:equals": {
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user.director._id",
+					"operator": "equals",
+					"editable": true,
+					"sort": 103
+				},
+				"_createdAt:between": {
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_createdAt",
+					"value": {},
+					"sort": 104
+				},
+				"_updatedAt:between": {
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"sort": 105
+				}
+			}
+		}
+	},
+	{
+		"_id": "Product:view:Default",
+		"document": "Product",
+		"label": {
+			"en": "{code}",
+			"pt_BR": "{code}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Product",
+			"pt_BR": "Novo Produto"
+		},
+		"type": "view",
+
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {},
+				"label": {
+					"en": "Formulário",
+					"pt_BR": "Formulário"
+				},
+				"visuals": [
+					{
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"readOnlyVersion": true
+								},
+								"fieldName": "code"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "sku"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "status",
+								"defaultValue": "draft"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "tags",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "name"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "sale"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "discount"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "tax"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "highlight"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "supplier",
+								"style": {
+									"linkedFormName": "Default"
+								}
+							},
+
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 150
+								},
+								"fieldName": "description"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 150
+								},
+								"fieldName": "notes"
+							}
+						],
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"collapsed": true
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						}
+					},
+
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "camera",
+							"collapsed": true,
+							"title": {
+								"en": "Imagens",
+								"pt_BR": "Imagens"
+							}
+						},
+						"label": {
+							"en": "Imagens",
+							"pt_BR": "Imagens"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320
+								},
+								"fieldName": "banner"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320
+								},
+								"fieldName": "pictures"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 320
+								},
+								"fieldName": "videos"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "link"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "reverseLookup",
+				"style": {
+					"title": {
+						"en": "Activities",
+						"pt_BR": "Atividade"
+					}
+				},
+				"field": "product",
+				"document": "Activity",
+				"list": "ForLookup"
+			}
+		]
+	}
+]

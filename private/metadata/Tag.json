@@ -1,0 +1,358 @@
+[
+	{
+		"_id": "Tag",
+		"fields": {
+			"code": {
+				"isUnique": true,
+				"isSortable": true,
+				"type": "autoNumber",
+				"name": "code",
+				"label": {
+					"pt_BR": "Código",
+					"en": "Code"
+				},
+				"isInherited": true
+			},
+			"type": {
+				"name": "type",
+				"label": {
+					"en": "Type",
+					"pt_BR": "Tipo"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"renderAs": "without_scroll",
+				"minSelected": 1,
+				"maxSelected": 1,
+				"optionsSorter": "asc",
+				"type": "picklist",
+				"isInherited": true,
+				"options": {
+					"brand": {
+						"en": "Brand",
+						"pt_BR": "Marca",
+						"sort": 1
+					},
+					"category": {
+						"en": "Category",
+						"pt_BR": "Categoria",
+						"sort": 2
+					},
+                    "channel": {
+                        "en": "Channel",
+                        "pt_BR": "Canal",
+                        "sort": 3
+                    },
+                    "medium": {
+                        "en": "Medium",
+                        "pt_BR": "Mídia",
+                        "sort": 4
+                    },
+                    "other": {
+                        "en": "Other",
+                        "pt_BR": "Outro",
+                        "sort": 5
+                    }
+				}
+			},
+			"name": {
+				"type": "text",
+				"label": {
+					"pt_BR": "Nome",
+					"en": "Name"
+				},
+				"name": "name",
+				"isSortable": true,
+				"isRequired": true
+			},
+			"order": {
+				"type": "number",
+				"name": "order",
+				"label": {
+					"pt_BR": "Ordem",
+					"en": "Order"
+				},
+				"isSortable": true
+			},
+			"_createdAt": {
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_createdAt",
+				"isInherited": true
+			},
+			"_createdBy": {
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"isInherited": true
+			},
+			"_user": {
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"isInherited": true
+			}
+		},
+		"icon": "tag",
+		"label": {
+			"en": "Tag",
+			"pt_BR": "Tag"
+		},
+		"menuSorter": 2,
+		"name": "Tag",
+		"plurals": {
+			"pt_BR": "Tags",
+			"en": "Tags"
+		},
+		"saveHistory": true,
+		"type": "document",
+		"group": "Product"
+	},
+	{
+		"_id": "Tag:list:Default",
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 60,
+				"sort": 0
+			},
+			"type": {
+				"name": "type",
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 60,
+				"sort": 0
+			},
+			"name": {
+				"linkField": "name",
+				"visible": true,
+				"minWidth": 100,
+				"name": "name",
+				"sort": 1
+			},
+			"order": {
+				"name": "order",
+				"linkField": "order",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 3
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"minWidth": 160,
+				"sort": 4,
+				"visible": true
+			},
+			"_createdBy": {
+				"minWidth": 160,
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"sort": 5,
+				"visible": true
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"sort": 6,
+				"visible": true
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 160,
+				"sort": 7,
+				"visible": true
+			}
+		},
+		"document": "Tag",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"code:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"term": "code",
+					"sort": 0
+				},
+				"name:contains": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "name",
+					"operator": "contains",
+					"sort": 1
+				},
+				"type:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 1,
+						"hideOnDisable": false
+					},
+					"term": "type",
+					"sort": 2
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"pt_BR": "Tag",
+			"en": "Tag"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+		"plurals": {
+			"en": "Tags",
+			"pt_BR": "Tags"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				15,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "code",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "Tag:view:Default",
+		"document": "Tag",
+		"label": {
+			"en": "{code}: {name}",
+			"pt_BR": "{code}: {name}"
+		},
+		"name": "Default",
+		"plurals": {
+			"en": "New Tag",
+			"pt_BR": "Nova Tag"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {},
+				"label": {
+					"en": "Formulário",
+					"pt_BR": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"title": {
+								"pt_BR": "Informações",
+								"en": "Information"
+							}
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"readOnlyVersion": true
+								},
+								"fieldName": "code"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "type"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "name"
+							},
+							{
+								"defaultValue": 0,
+								"fieldName": "order",
+								"type": "visualSymlink"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

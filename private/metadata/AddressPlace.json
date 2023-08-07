@@ -1,0 +1,395 @@
+[
+	{
+		"_id": "AddressPlace",
+		"fields": {
+			"city": {
+				"type": "text",
+				"name": "city",
+				"label": {
+					"en": "City",
+					"pt_BR": "Cidade"
+				},
+				"isSortable": true
+			},
+			"cityAbbr": {
+				"type": "text",
+				"name": "cityAbbr",
+				"label": {
+					"en": "City Abbr",
+					"pt_BR": "Abreviação Cidade"
+				},
+				"isSortable": true
+			},
+			"complement": {
+				"name": "complement",
+				"label": {
+					"en": "Complement",
+					"pt_BR": "Complemento"
+				},
+				"isSortable": true,
+				"type": "text"
+			},
+			"end": {
+				"isSortable": true,
+				"type": "number",
+				"name": "end",
+				"label": {
+					"pt_BR": "end",
+					"en": "end"
+				}
+			},
+			"endNeighbourhood": {
+				"type": "text",
+				"name": "endNeighbourhood",
+				"label": {
+					"en": "endNeighbourhood",
+					"pt_BR": "Final Bairro"
+				},
+				"isSortable": true
+			},
+			"init": {
+				"type": "number",
+				"name": "init",
+				"label": {
+					"en": "init",
+					"pt_BR": "init"
+				},
+				"isSortable": true
+			},
+			"place": {
+				"type": "text",
+				"name": "place",
+				"label": {
+					"en": "Place",
+					"pt_BR": "Logradouro"
+				},
+				"isSortable": true
+			},
+			"placeAbbr": {
+				"isSortable": true,
+				"type": "text",
+				"name": "placeAbbr",
+				"label": {
+					"pt_BR": "Abreviação Nome Logradouro",
+					"en": "placeAbbr"
+				}
+			},
+			"placeType": {
+				"label": {
+					"en": "Place Type",
+					"pt_BR": "Tipo Logradouro"
+				},
+				"isSortable": true,
+				"type": "text",
+				"name": "placeType"
+			},
+			"startNeighbourhood": {
+				"type": "text",
+				"name": "startNeighbourhood",
+				"label": {
+					"en": "Start Neighbourhood",
+					"pt_BR": "Bairro Inicial"
+				},
+				"isSortable": true
+			},
+			"state": {
+				"isSortable": true,
+				"size": 2,
+				"type": "text",
+				"name": "state",
+				"label": {
+					"en": "State",
+					"pt_BR": "Estado"
+				}
+			},
+			"postalCode": {
+				"isSortable": true,
+				"type": "text",
+				"name": "postalCode",
+				"label": {
+					"en": "postalCode",
+					"pt_BR": "CEP"
+				}
+			},
+			"_createdAt": {
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_createdAt",
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				}
+			},
+			"_createdBy": {
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"pt_BR": "Criado por",
+					"en": "Created by"
+				}
+			},
+			"_updatedAt": {
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isSortable": true
+			},
+			"_updatedBy": {
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy"
+			},
+			"status": {
+				"optionsSorter": "asc",
+				"type": "picklist",
+				"name": "status",
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"renderAs": "without_scroll",
+				"minSelected": 0,
+				"maxSelected": 1
+			},
+			"_user": {
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "active"]
+			}
+		},
+		"icon": "map-marker",
+		"label": {
+			"en": "Address Place",
+			"pt_BR": "Logradouro"
+		},
+		"menuSorter": 25,
+		"name": "AddressPlace",
+
+		"plurals": {
+			"en": "Address Places",
+			"pt_BR": "Logradouros"
+		},
+		"saveHistory": true,
+		"type": "document"
+	},
+	{
+		"_id": "AddressPlace:list:Default",
+		"columns": {
+			"city": {
+				"visible": true,
+				"minWidth": 100,
+				"name": "city",
+				"linkField": "city",
+				"sort": 0
+			},
+			"cityAbbr": {
+				"linkField": "cityAbbr",
+				"visible": true,
+				"minWidth": 100,
+				"name": "cityAbbr",
+				"sort": 1
+			},
+			"complement": {
+				"visible": true,
+				"minWidth": 100,
+				"name": "complement",
+				"linkField": "complement",
+				"sort": 2
+			},
+			"end": {
+				"linkField": "end",
+				"visible": true,
+				"minWidth": 70,
+				"name": "end",
+				"sort": 3
+			},
+			"endNeighbourhood": {
+				"name": "endNeighbourhood",
+				"linkField": "endNeighbourhood",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 4
+			},
+			"init": {
+				"name": "init",
+				"linkField": "init",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 5
+			},
+			"place": {
+				"name": "place",
+				"linkField": "place",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 6
+			},
+			"placeAbbr": {
+				"minWidth": 100,
+				"name": "placeAbbr",
+				"linkField": "placeAbbr",
+				"visible": true,
+				"sort": 7
+			},
+			"placeType": {
+				"minWidth": 100,
+				"name": "placeType",
+				"linkField": "placeType",
+				"visible": true,
+				"sort": 8
+			},
+			"startNeighbourhood": {
+				"minWidth": 100,
+				"name": "startNeighbourhood",
+				"linkField": "startNeighbourhood",
+				"visible": true,
+				"sort": 9
+			},
+			"state": {
+				"name": "state",
+				"linkField": "state",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 10
+			},
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 11
+			},
+			"postalCode": {
+				"name": "postalCode",
+				"linkField": "postalCode",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 12
+			}
+		},
+		"document": "AddressPlace",
+		"label": {
+			"pt_BR": "Logradouro",
+			"en": "Address Place"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Address Places",
+			"pt_BR": "Logradouros"
+		},
+		"refreshRate": {
+			"options": [0],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [100, 200, 500, 1000],
+			"default": 100
+		},
+		"sorters": [
+			{
+				"term": "place",
+				"direction": "asc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "AddressPlace:view:Default",
+		"document": "AddressPlace",
+		"label": {
+			"en": "{placeType} {place} {city}",
+			"pt_BR": "{placeType} {place} {city}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Address Place",
+			"pt_BR": "Novo Logradouro"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualSymlink",
+						"fieldName": "cityAbbr"
+					},
+					{
+						"fieldName": "placeAbbr",
+						"type": "visualSymlink"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "startNeighbourhood"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "postalCode"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "city"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "complement"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "state"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "endNeighbourhood"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "place"
+					},
+					{
+						"fieldName": "placeType",
+						"type": "visualSymlink"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "end"
+					},
+					{
+						"type": "visualSymlink",
+						"fieldName": "init"
+					},
+					{
+						"fieldName": "status",
+						"type": "visualSymlink"
+					}
+				]
+			}
+		]
+	}
+]

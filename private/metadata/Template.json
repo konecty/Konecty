@@ -1,0 +1,439 @@
+[
+	{
+		"_id": "Template",
+		"icon": "laptop",
+		"ignoreUpdatedAt": true,
+		"label": {
+			"en": "Mail Template",
+			"pt_BR": "Modelo de email"
+		},
+		"menuSorter": 30,
+		"group": "Campaign",
+		"name": "Template",
+
+		"plurals": {
+			"en": "Mail Templates",
+			"pt_BR": "Modelos de email"
+		},
+		"type": "document",
+		"fields": {
+			"code": {
+				"type": "autoNumber",
+				"name": "code",
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"isUnique": true,
+				"isSortable": true,
+				"isInherited": true
+			},
+			"name": {
+				"isSortable": true,
+				"type": "text",
+				"name": "name",
+				"label": {
+					"pt_BR": "Nome",
+					"en": "Name"
+				},
+				"isInherited": true
+			},
+			"type": {
+				"type": "picklist",
+				"name": "type",
+				"isSortable": true,
+				"label": {
+					"en": "Type",
+					"pt_BR": "Tipo"
+				},
+				"options": {
+					"email": {
+						"en": "email",
+						"pt_BR": "email",
+						"sort": 1
+					}
+				},
+				"renderAs": "with_scroll",
+				"maxSelected": 1,
+				"minSelected": 1,
+				"defaultValue": "email",
+				"isInherited": true,
+				"optionsSorter": "sort"
+			},
+			"helpers": {
+				"label": {
+					"en": "Helpers",
+					"pt_BR": "Ajudantes"
+				},
+				"type": "json",
+				"name": "helpers",
+				"isInherited": true
+			},
+			"webServices": {
+				"type": "json",
+				"name": "webServices",
+				"label": {
+					"en": "Web Services",
+					"pt_BR": "Serviços Web"
+				},
+				"isInherited": true
+			},
+			"style": {
+				"name": "style",
+				"label": {
+					"en": "Style",
+					"pt_BR": "Estilo"
+				},
+				"type": "text",
+				"isInherited": true
+			},
+			"document": {
+				"label": {
+					"en": "Module",
+					"pt_BR": "Módulo"
+				},
+				"isSortable": true,
+				"type": "text",
+				"name": "document",
+				"isInherited": true
+			},
+			"view": {
+				"type": "text",
+				"name": "view",
+				"label": {
+					"en": "View",
+					"pt_BR": "Vizualização"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"value": {
+				"type": "text",
+				"name": "value",
+				"label": {
+					"en": "Body",
+					"pt_BR": "Corpo"
+				},
+				"isInherited": true
+			},
+			"subject": {
+				"type": "text",
+				"name": "subject",
+				"label": {
+					"en": "Subject",
+					"pt_BR": "Assunto"
+				},
+				"isInherited": true
+			},
+			"_createdAt": {
+				"type": "dateTime",
+				"name": "_createdAt",
+				"label": {
+					"pt_BR": "Criado em",
+					"en": "Created At"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_createdBy": {
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_createdBy",
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy",
+				"isInherited": true
+			},
+			"status": {
+				"type": "picklist",
+				"name": "status",
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"renderAs": "without_scroll",
+				"minSelected": 0,
+				"maxSelected": 1,
+				"optionsSorter": "asc",
+				"isInherited": true
+			},
+			"_user": {
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"isInherited": true
+			},
+			"attachment": {
+				"type": "file",
+				"name": "attachment",
+				"label": {
+					"en": "Attachment",
+					"pt_BR": "Anexo"
+				},
+				"isList": true,
+				"wildcard": "(pdf|jpg|jpeg|png)",
+				"isInherited": true
+			}
+		}
+	},
+	{
+		"_id": "Template:access:Default",
+		"document": "Template",
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"isCreatable": false,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": false,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+
+		"type": "access"
+	},
+	{
+		"_id": "Template:access:Full",
+		"document": "Template",
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"isCreatable": true,
+		"isDeletable": true,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Full",
+			"pt_BR": "Todos"
+		},
+		"name": "Full",
+
+		"type": "access"
+	},
+	{
+		"_id": "Template:list:Default",
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 50,
+				"sort": 0
+			},
+			"name": {
+				"minWidth": 100,
+				"name": "name",
+				"linkField": "name",
+				"visible": true,
+				"sort": 1
+			},
+			"subject": {
+				"minWidth": 200,
+				"name": "subject",
+				"linkField": "subject",
+				"visible": true,
+				"sort": 2
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"minWidth": 100,
+				"sort": 9
+			},
+			"_createdBy": {
+				"linkField": "_createdBy",
+				"minWidth": 200,
+				"name": "_createdBy",
+				"sort": 10
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"minWidth": 100,
+				"sort": 11
+			},
+			"_updatedBy": {
+				"minWidth": 200,
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"sort": 12
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"minWidth": 200,
+				"sort": 13
+			}
+		},
+		"document": "Template",
+		"label": {
+			"pt_BR": "Modelo de email",
+			"en": "Mail Template"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Mail Templates",
+			"pt_BR": "Modelos de email"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"default": 25,
+			"options": [
+				25,
+				50,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200,
+				500,
+				1000
+			]
+		},
+		"sorters": [
+			{
+				"term": "_createdAt",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "Template:view:Default",
+		"document": "Template",
+		"label": {
+			"en": "{name}",
+			"pt_BR": "{name}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "Template",
+			"pt_BR": "Modelo"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"title": {
+								"en": "Information",
+								"pt_BR": "Informações"
+							}
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"fieldName": "code",
+								"style": {
+									"readOnlyVersion": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "type"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "name"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "subject"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "style",
+								"style": {
+									"height": 180,
+									"multiLine": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "value",
+								"style": {
+									"height": 180,
+									"multiLine": true
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "attachment"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]
