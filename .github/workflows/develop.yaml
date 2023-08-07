@@ -6,7 +6,17 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - name: get latest release with tag
+              id: latestrelease
+              run: |
+                  echo "::set-output name=releasetag::$(curl -s https://api.github.com/repos/konecty/Konecty/releases | jq -r 'map(select(.prerelease)) | first | .tag_name')"
+            - name: confirm release tag
+              run: |
+                  echo ${{ steps.latestrelease.outputs.releasetag }}
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                  ref: ${{ steps.latestrelease.outputs.releasetag }}
             - name: Install Meteor
               run: |
                   curl https://install.meteor.com/ | sh
