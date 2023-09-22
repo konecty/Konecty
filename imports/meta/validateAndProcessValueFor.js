@@ -26,7 +26,7 @@ import { logger } from '/imports/utils/logger';
 
 import { removeInheritedFields } from '/imports/meta/removeInheritedFields';
 import { getNextCode } from '/imports/meta/getNextCode';
-import { processDateObjects } from '/imports/utils/processDateObjects';
+import { stringToDate } from '/imports/data/dateParser';
 import { copyDescriptionAndInheritedFields } from '/imports/meta/copyDescriptionAndInheritedFields';
 
 const CaseFunctions = {
@@ -477,7 +477,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					}
 				}
 
-				if ([].concat(value).some(v => !field.options.includes(v))) {
+				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
 					return {
 						success: false,
 						errors: [
@@ -959,7 +959,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return filterResult;
 				}
 
-				value = processDateObjects(value);
+				value = stringToDate(value);
 
 				return {
 					success: true,

@@ -7,7 +7,7 @@ import { Meta, Collections } from '/imports/model/MetaObject';
 import { getAccessFor } from '/imports/utils/accessUtils';
 import { getUserSafe } from '/imports/auth/getUser';
 import { validateAndProcessValueFor } from '/imports/meta/validateAndProcessValueFor';
-import { processDateObjects } from '/imports/utils/processDateObjects';
+import { stringToDate } from '/imports/data/dateParser';
 import { getNextUserFromQueue } from '/imports/meta/getNextUserFromQueue';
 
 function validateRequest({ document, ids, users, access }) {
@@ -130,7 +130,7 @@ export async function addUser({ authTokenId, document, ids, users }) {
 			const update = {
 				$push: {
 					_user: {
-						$each: [processDateObjects(newUser)],
+						$each: [stringToDate(newUser)],
 						$position: 0,
 					},
 				},
@@ -342,7 +342,7 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 
 	const update = {
 		$set: {
-			_user: validatedUsers.map(user => processDateObjects(user)),
+			_user: validatedUsers.map(user => stringToDate(user)),
 			_updatedAt: now,
 			_updatedBy: {
 				_id: user._id,
@@ -468,7 +468,7 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 	const update = {
 		$push: {
 			_user: {
-				$each: resultOfValidation.data.map(user => processDateObjects(user)),
+				$each: resultOfValidation.data.map(user => stringToDate(user)),
 				$position: 0,
 			},
 		},
@@ -816,7 +816,7 @@ export async function setQueue({ authTokenId, document, ids, queue }) {
 			const update = {
 				$set: {
 					queue: validateResult.data,
-					_user: newUserResult.data.map(user => processDateObjects(user)),
+					_user: newUserResult.data.map(user => stringToDate(user)),
 					_updatedAt: now,
 					_updatedBy: {
 						_id: user._id,

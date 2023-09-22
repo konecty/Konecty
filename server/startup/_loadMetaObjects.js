@@ -96,10 +96,10 @@ const registerMeta = function (meta) {
 	}
 
 	if (!Models[meta.name]) {
-		Models[`${meta.name}.Comment`] = new Meteor.Collection(`${meta.collection}.Comment`);
-		Models[`${meta.name}.History`] = new Meteor.Collection(`${meta.collection}.History`);
-		Models[`${meta.name}.Trash`] = new Meteor.Collection(`${meta.collection}.Trash`);
-		Models[`${meta.name}.AutoNumber`] = new Meteor.Collection(`${meta.collection}.AutoNumber`);
+		Models[`${meta.name}.Comment`] = new Meteor.Collection(`${meta.collection ?? meta.name}.Comment`);
+		Models[`${meta.name}.History`] = new Meteor.Collection(`${meta.collection ?? meta.name}.History`);
+		Models[`${meta.name}.Trash`] = new Meteor.Collection(`${meta.collection ?? meta.name}.Trash`);
+		Models[`${meta.name}.AutoNumber`] = new Meteor.Collection(`${meta.collection ?? meta.name}.AutoNumber`);
 
 		Collections[`${meta.name}.Comment`] = Models[`${meta.name}.Comment`].rawCollection();
 		Collections[`${meta.name}.History`] = Models[`${meta.name}.History`].rawCollection();

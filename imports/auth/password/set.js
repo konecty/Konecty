@@ -5,7 +5,7 @@ import { getAccessFor } from '/imports/utils/accessUtils';
 import { getUser } from '/imports/auth/getUser';
 import { Collections } from '/imports/model/MetaObject';
 
-import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH, BCRYPT_SALT_ROUNDS } from '/imports/auth/consts';
+import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH, BCRYPT_SALT_ROUNDS } from '/imports/consts';
 
 export async function setPassword({ authTokenId, userId, password }) {
 	try {

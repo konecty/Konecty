@@ -3,7 +3,7 @@ import { UAParser } from 'ua-parser-js';
 import get from 'lodash/get';
 
 import { Namespace, Collections } from '/imports/model/MetaObject';
-import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '/imports/auth/consts';
+import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '/imports/consts';
 import { generateStampedLoginToken } from '/imports/auth/login/token';
 
 export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }) {

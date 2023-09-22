@@ -7,8 +7,6 @@ import './merge';
 import './auth';
 import './index';
 import './undoHistory';
-import './history';
-import './data';
 import './file';
 import './menu';
 import './process';

@@ -1,191 +1,182 @@
-import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
-import { isString, isObject, isDate, isArray } from 'lodash';
+
+import isString from 'lodash/isString';
+import isObject from 'lodash/isObject';
+import isDate from 'lodash/isDate';
+import isArray from 'lodash/isArray';
+import first from 'lodash/first';
+
 import { flatten } from 'flat';
 import { Workbook } from 'excel4node';
 
 import { app } from '/server/lib/routes/app';
-import { middlewares } from '/server/lib/routes/middlewares';
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
-import { utils } from '/imports/utils/konutils/utils';
-import { MetaObject, Namespace, Meta } from '/imports/model/MetaObject';
-import { logger } from '/imports/utils/logger';
+import { Meta, MetaObjectCollection } from '/imports/model/MetaObject';
 
-app.post('/rest/data/lead/save', (req, res) =>
-	res.send(
-		Meteor.call('data:lead:save', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			lead: req.body.lead,
-			save: req.body.save,
-		}),
-	),
-);
+import { find, saveLead, getNextUserFromQueue, findById, findByLookup, create, update, deleteData, relationCreate, historyFind } from '/imports/data/data';
 
-/* @Find_Records */
-// Converted to method
-app.get('/rest/data/:document/find', function (req, res) {
-	if (isString(req.params.query.filter)) {
+import { getAccessFor } from '/imports/utils/accessUtils';
+import { getUserSafe } from '/imports/auth/getUser';
+import { errorReturn } from '/imports/utils/return';
+
+app.post('/rest/data/lead/save', async function (req, res) {
+	const authTokenId = getAuthTokenIdFromReq(req);
+	const lead = req.body.lead;
+	const save = req.body.save;
+	const result = await saveLead({
+		authTokenId,
+		lead,
+		save,
+	});
+	res.send(result);
+});
+
+app.get('/rest/data/:document/find', async function (req, res) {
+	if (req.params.query.filter != null && isString(req.params.query.filter)) {
 		req.params.query.filter = JSON.parse(req.params.query.filter);
 	}
 
-	return res.send(
-		Meteor.call('data:find:all', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			displayName: req.params.query.displayName,
-			displayType: req.params.query.displayType,
-			fields: req.params.query.fields,
-			filter: req.params.query.filter,
-			sort: req.params.query.sort,
-			limit: req.params.query.limit,
-			start: req.params.query.start,
-			withDetailFields: req.params.query.withDetailFields,
-			getTotal: true,
-		}),
-	);
+	const result = await find({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		displayName: req.params.query.displayName,
+		displayType: req.params.query.displayType,
+		fields: req.params.query.fields,
+		filter: req.params.query.filter,
+		sort: req.params.query.sort,
+		limit: req.params.query.limit,
+		start: req.params.query.start,
+		withDetailFields: req.params.query.withDetailFields,
+		getTotal: true,
+	});
+	res.send(result);
 });
 
-// Converted to method
-app.post('/rest/data/:document/find', function (req, res) {
+app.post('/rest/data/:document/find', async function (req, res) {
 	if (isObject(req.body)) {
 		req.params.query.filter = req.body;
 	}
 
-	return res.send(
-		Meteor.call('data:find:all', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			displayName: req.params.query.displayName,
-			displayType: req.params.query.displayType,
-			fields: req.params.query.fields,
-			filter: req.params.query.filter,
-			sort: req.params.query.sort,
-			limit: req.params.query.limit,
-			start: req.params.query.start,
-			withDetailFields: req.params.query.withDetailFields,
-			getTotal: true,
-		}),
-	);
+	const result = await find({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		displayName: req.params.query.displayName,
+		displayType: req.params.query.displayType,
+		fields: req.params.query.fields,
+		filter: req.params.query.filter,
+		sort: req.params.query.sort,
+		limit: req.params.query.limit,
+		start: req.params.query.start,
+		withDetailFields: req.params.query.withDetailFields,
+		getTotal: true,
+	});
+	res.send(result);
 });
 
-// Converted to method
-app.get('/rest/data/:document/queue/next/:queueId', (req, res) =>
-	res.send(
-		Meteor.call('data:queue:next', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			queueId: req.params.queueId,
-		}),
-	),
-);
+app.get('/rest/data/:document/queue/next/:queueId', async function (req, res) {
+	const result = await getNextUserFromQueue({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		queueId: req.params.queueId,
+	});
 
-// Converted to method
-app.get('/rest/data/:document/:dataId', (req, res) =>
-	res.send(
-		Meteor.call('data:find:byId', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			fields: req.params.query.fields,
-			dataId: req.params.dataId,
-			withDetailFields: req.params.query.withDetailFields,
-		}),
-	),
-);
-
-// Converted to method
-app.get('/rest/data/:document/lookup/:field', function (req, res) {
-	let filter = undefined;
-	if (isString(req.params.query.filter)) {
-		filter = JSON.parse(req.params.query.filter);
-	}
-
-	return res.send(
-		Meteor.call('data:find:byLookup', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			field: req.params.field,
-			search: req.params.query.search,
-			filter,
-			start: req.params.query.start,
-			limit: req.params.query.limit,
-			useChangeUserFilter: req.params.query.useChangeUserFilter === 'true',
-		}),
-	);
+	res.send(result);
 });
 
-/* @Create_Records */
-// Converted to method
-app.post('/rest/data/:document', (req, res) =>
-	res.send(
-		Meteor.call('data:create', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			data: req.body,
-		}),
-	),
-);
+app.get('/rest/data/:document/:dataId', async function (req, res) {
+	const result = await findById({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		fields: req.params.query.fields,
+		dataId: req.params.dataId,
+		withDetailFields: req.params.query.withDetailFields,
+	});
 
-/* @Update_Records */
-// Converted to method
-app.put('/rest/data/:document', (req, res) =>
-	res.send(
-		Meteor.call('data:update', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			data: req.body,
-		}),
-	),
-);
+	res.send(result);
+});
 
-/* @Delete_Records */
-// Converted to method
-app.del('/rest/data/:document', (req, res) =>
-	res.send(
-		Meteor.call('data:delete', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			data: req.body,
-		}),
-	),
-);
+app.get('/rest/data/:document/lookup/:field', async function (req, res) {
+	const extraFilter = isString(req.params.query.filter) ? JSON.parse(req.params.query.filter) : undefined;
 
-/* @Create_Relations */
-// Converted to method
-app.post('/rest/data/:document/relations/:fieldName', (req, res) =>
-	res.send(
-		Meteor.call('data:relation:create', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			fieldName: req.params.fieldName,
-			data: req.body,
-		}),
-	),
-);
+	const result = await findByLookup({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		field: req.params.field,
+		search: req.params.query.search,
+		extraFilter,
+		start: req.params.query.start,
+		limit: req.params.query.limit,
+		useChangeUserFilter: req.params.query.useChangeUserFilter === 'true',
+	});
 
-app.post('/rest/data/:document/relations/:fieldName/preview', (req, res) =>
-	res.send(
-		Meteor.call('data:relation:create', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			fieldName: req.params.fieldName,
-			data: req.body,
-			preview: true,
-		}),
-	),
-);
+	res.send(result);
+});
 
-/* @History */
-// Converted to method
-app.get('/rest/data/:document/:dataId/history', (req, res) =>
-	res.send(
-		Meteor.call('history:find', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			dataId: req.params.dataId,
-			fields: req.params.query.fields,
-		}),
-	),
-);
+app.post('/rest/data/:document', async function (req, res) {
+	const result = await create({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		data: req.body,
+	});
+
+	res.send(result);
+});
+
+app.put('/rest/data/:document', async function (req, res) {
+	const result = await update({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		data: req.body,
+	});
+
+	res.send(result);
+});
+
+app.del('/rest/data/:document', async function (req, res) {
+	const result = await deleteData({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		data: req.body,
+	});
+
+	res.send(result);
+});
+
+app.post('/rest/data/:document/relations/:fieldName', async function (req, res) {
+	const result = await relationCreate({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		fieldName: req.params.fieldName,
+		data: req.body,
+	});
+
+	res.send(result);
+});
+
+app.post('/rest/data/:document/relations/:fieldName/preview', async function (req, res) {
+	const result = await relationCreate({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		fieldName: req.params.fieldName,
+		data: req.body,
+		preview: true,
+	});
+
+	res.send(result);
+});
+
+app.get('/rest/data/:document/:dataId/history', async function (req, res) {
+	const result = await historyFind({
+		authTokenId: getAuthTokenIdFromReq(req),
+		document: req.params.document,
+		dataId: req.params.dataId,
+		fields: req.params.query.fields,
+	});
+
+	res.send(result);
+});
+
+// PAREI AQUI
 
 /* @Export_CSV */
 const csvExport = function (headers, data, name, res) {
@@ -296,114 +287,116 @@ const xlsExport = function (headers, data, name, res) {
 };
 
 /* @Export */
-app.get('/rest/data/:document/list/:listName/:type', (req, res) =>
-	middlewares.sessionUserAndGetAccessFor('document')(req, res, function () {
-		// Validate param type
-		let fields;
-		if (!['csv', 'xls'].includes(req.params.type)) {
-			return res.send(new Meteor.Error('internal-error', '[#{req.params.document}] Value for type must be one of [csv, xls]'));
+app.get('/rest/data/:document/list/:listName/:type', async function (req, res) {
+	const authTokenId = getAuthTokenIdFromReq(req);
+	const { success, data: user, errors } = await getUserSafe(authTokenId);
+	if (success === false) {
+		return errorReturn(errors);
+	}
+
+	const { document, listName, type } = req.params;
+
+	const access = getAccessFor(document, user);
+	if (access === false || access.isReadable !== true) {
+		return errorReturn(`[${document}] You don't have permission to read records`);
+	}
+
+	if (['csv', 'xls'].includes(type) === false) {
+		return errorReturn(`[${document}] Value for type must be one of [csv, xls]`);
+	}
+
+	const listMeta = await MetaObjectCollection.findOne({
+		type: 'list',
+		document,
+		name: listName,
+	});
+
+	if (listMeta == null) {
+		return errorReturn(`[${document}] Can't find meta for list ${listName} of document ${document}`);
+	}
+
+	const metaObject = Meta[document];
+
+	if (metaObject == null) {
+		return errorReturn(`[${document}] Can't find meta`);
+	}
+
+	const userLocale = user.locale ?? 'en';
+
+	const getLabel = () => {
+		if (listMeta.plurals != null) {
+			return listMeta.plurals[userLocale] ?? listMeta.plurals.en ?? first(Object.values(listMeta.plurals));
 		}
-
-		if (req.params.type === 'xls' && req.params.query.limit > (Namespace.exportXlsLimit || 1000)) {
-			req.params.query.limit = Namespace.exportXlsLimit || 1000;
+		if (listMeta.label != null) {
+			return listMeta.label[userLocale] ?? listMeta.label.en ?? first(Object.values(listMeta.label));
 		}
-
-		// Try to find meta of list
-		const listMeta = MetaObject.findOne({
-			type: 'list',
-			document: req.params.document,
-			name: req.params.listName,
-		});
-
-		// If no meta found then send an error
-		if (!listMeta) {
-			return res.send(new Meteor.Error('internal-error', `[${req.params.document}] Can't find meta for list ${req.params.listName} of document ${req.params.document}`));
+		if (metaObject.plurals != null) {
+			return metaObject.plurals[userLocale] ?? metaObject.plurals.en ?? first(Object.values(metaObject.plurals));
 		}
-
-		// Try to get metadata
-		const meta = Meta[req.params.document];
-
-		// If no meta found then send an error
-		if (!meta) {
-			return res.send(new Meteor.Error('internal-error', `[${req.params.document}] Can't find meta`));
+		if (metaObject.label != null) {
+			return metaObject.label[userLocale] ?? metaObject.label.en ?? first(Object.values(metaObject.label));
 		}
+		return document;
+	};
 
-		let name = utils.getPlurals(listMeta, req.user) || utils.getLabel(listMeta, req.user);
-		if (!name) {
-			name = utils.getPlurals(meta, req.user) || utils.getLabel(meta, req.user);
+	const name = getLabel();
+
+	if (isString(req.params.query.filter) === false && isObject(listMeta.filter)) {
+		req.params.query.filter = JSON.stringify(listMeta.filter);
+	}
+
+	if (isString(req.params.query.sort) === false && isArray(listMeta.sorters)) {
+		req.params.query.sort = JSON.stringify(listMeta.sorters);
+	}
+
+	const getFields = () => {
+		if (isString(req.params.query.fields)) {
+			return req.params.query.fields;
 		}
-		if (!name) {
-			name = req.params.document;
+		if (isObject(listMeta.columns)) {
+			return Object.values(listMeta.columns)
+				.filter(column => column.visible === true)
+				.map(column => column.linkField)
+				.join(',');
 		}
+		return undefined;
+	};
 
-		// If no filter was passed use filter from meta
-		if (!isString(req.params.query.filter) && isObject(listMeta.filter)) {
-			req.params.query.filter = JSON.stringify(listMeta.filter);
-		}
+	const fields = getFields();
 
-		// If no sort was passed use sort from meta
-		if (!isString(req.params.query.sort) && isArray(listMeta.sorters)) {
-			req.params.query.sort = JSON.stringify(listMeta.sorters);
-		}
+	const filter = isString(req.params.query.filter) ? JSON.parse(req.params.query.filter) : undefined;
 
-		// If no fields was passed use fields from meta
-		if (!isString(req.params.query.fields) && isObject(listMeta.columns)) {
-			fields = [];
-			for (let column in listMeta.columns) {
-				if (column.visible === true) {
-					fields.push(column.linkField);
-				}
-			}
-			req.params.query.fields = fields.join(',');
-		}
+	const result = await find({
+		contextUser: user,
+		document,
+		displayName: req.params.query.displayName,
+		displayType: req.params.query.displayType,
+		fields,
+		filter,
+		sort: req.params.query.sort,
+		limit: req.params.query.limit,
+		start: req.params.query.start,
+		withDetailFields: 'true',
+		getTotal: true,
+	});
 
-		if (isString(req.params.query.filter)) {
-			req.params.query.filter = JSON.parse(req.params.query.filter);
-		}
+	if (result.success === false) {
+		return res.send(result);
+	}
 
-		// Get results from db
-		const result = Meteor.call('data:find:all', {
-			authTokenId: getAuthTokenIdFromReq(req),
-			document: req.params.document,
-			displayName: req.params.query.displayName,
-			displayType: req.params.query.displayType,
-			fields: req.params.query.fields,
-			filter: req.params.query.filter,
-			sort: req.params.query.sort,
-			limit: req.params.query.limit,
-			start: req.params.query.start,
-			withDetailFields: 'true',
-			getTotal: true,
-		});
-
-		// If result is an erro send error
-		if (result instanceof Error) {
-			logger.error(result, `Export - Error ${result.message}`);
-			return res.send(result);
-		}
-
-		if (!result.success) {
-			return res.send(result.errors[0].message);
-		}
-
-		// Defined array to put all flat data and object to put all keys
-		const flatData = [];
-		const keys = {};
-
-		// Iterate over data to flat all data and get keys
-		for (let item of result.data) {
+	const { flatData, keys } = result.data.reduce(
+		(acc, item) => {
 			const flatItem = flatten(item);
-			flatData.push(flatItem);
-			for (let key in flatItem) {
-				keys[key] = 1;
-			}
-		}
+			acc.flatData.push(flatItem);
+			Object.keys(flatItem).forEach(key => (acc.keys[key] = 1));
+			return acc;
+		},
+		{ flatData: [], keys: {} },
+	);
 
-		// Call function to specific type
-		if (req.params.type === 'xls') {
-			xlsExport(Object.keys(keys), flatData, name, res);
-		} else {
-			csvExport(Object.keys(keys), flatData, name, res);
-		}
-	}),
-);
+	if (type === 'xls') {
+		return xlsExport(Object.keys(keys), flatData, name, res);
+	} else {
+		return csvExport(Object.keys(keys), flatData, name, res);
+	}
+});

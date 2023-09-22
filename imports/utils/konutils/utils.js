@@ -1,9 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo, MongoInternals } from 'meteor/mongo';
-import { createContext, runInContext } from 'vm';
-import momentzone from 'moment-timezone';
 import moment from 'moment';
-import request from 'request';
 
 import isArray from 'lodash/isArray';
 import isDate from 'lodash/isDate';
@@ -280,136 +277,9 @@ export const utils = {
 		});
 	},
 
-	// Runs script in a sandboxed environment and returns resulting object
-	runScriptBeforeValidation(script, data, req, extraData) {
-		try {
-			let user;
-			if (req.user) {
-				user = JSON.parse(JSON.stringify(req.user));
-			}
-			const contextData = {
-				data,
-				emails: [],
-				user,
-				console,
-				extraData,
-			};
 
-			const sandbox = createContext(contextData);
-			script = `result = (function(data, emails, user, console) { ${script} })(data, emails, user, console);`;
-			runInContext(script, sandbox);
 
-			// Check if scriptBeforeValidation added any e-mails to be sent
-			// Accepted values:
-			//	emails.push({ from: '', to: '', server: '', subject: '', html: '' });
-			//	emails.push({ from: '', to: '', server: '', subject: '', template: '_id', data: {  } });
-			//	emails.push({ from: '', to: '', server: '', template: '_id', data: {  } });
-			if (sandbox.emails && isArray(sandbox.emails) && sandbox.emails.length > 0 && has(Models, 'Message')) {
-				sandbox.emails = JSON.parse(JSON.stringify(sandbox.emails));
-				for (let email of sandbox.emails) {
-					if (email.relations != null) {
-						email.data = metaUtils.populateLookupsData(req.meta._id, data, email.relations);
-					}
-					if (email.toPath != null) {
-						email.to = utils.getObjectPathAgg(email.data, email.toPath);
-					}
 
-					// HACK for dealing with modified date fields and inserting emails
-					for (let key in email.data) {
-						const value = email.data[key];
-						if (isString(get(value, '$date'))) {
-							email.data[key] = new Date(value['$date']);
-						}
-					}
-
-					email.type = 'Email';
-					email.status = 'Send';
-
-					Models['Message'].insert(email);
-				}
-			}
-
-			if (sandbox.result && isObject(sandbox.result)) {
-				return sandbox.result;
-			} else {
-				return {};
-			}
-		} catch (e) {
-			logger.error(e, `Error running script before validation ${e.message}`);
-			return {};
-		}
-	},
-
-	// Runs script in a sandboxed environment and returns resulting object
-	runValidationScript(script, data, req, extraData) {
-		try {
-			let user;
-			if (req.user) {
-				user = JSON.parse(JSON.stringify(req.user));
-			}
-			const contextData = {
-				data,
-				user,
-				console,
-				extraData,
-			};
-
-			const sandbox = createContext(contextData);
-			script = `result = (function(data, user, console) { ${script} })(data, user, console);`;
-			runInContext(script, sandbox);
-
-			if (sandbox.result && isObject(sandbox.result)) {
-				return sandbox.result;
-			} else {
-				return {};
-			}
-		} catch (e) {
-			logger.error(e, `Error running validation script ${e.message}`);
-			return {};
-		}
-	},
-
-	runScriptAfterSave(script, data, context, extraData) {
-		try {
-			// exposed Meteor.call for sandboxed script
-			let user;
-			const konectyCall = function (method) {
-				if (method.match(/^auth:/)) {
-					throw new Meteor.Error('invalid-method', 'Trying to call an invalid method');
-				}
-
-				return Meteor.call.apply(context, arguments);
-			};
-
-			if (context.user) {
-				user = JSON.parse(JSON.stringify(context.user));
-			}
-			const contextData = {
-				data,
-				user,
-				console,
-				konectyCall,
-				Models,
-				extraData,
-				moment,
-				momentzone,
-				request,
-			};
-
-			const sandbox = createContext(contextData);
-			script = `result = (function(data, user, console, Models, konectyCall, extraData) { ${script} })(data, user, console, Models, konectyCall, extraData);`;
-			runInContext(script, sandbox);
-
-			if (sandbox.result && isObject(sandbox.result)) {
-				return sandbox.result;
-			} else {
-				return {};
-			}
-		} catch (e) {
-			logger.error(e, `runScriptAfterSave error: ${e.message}`);
-			return {};
-		}
-	},
 
 	formatValue(value, field, ignoreIsList) {
 		if (!value) {

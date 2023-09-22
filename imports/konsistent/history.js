@@ -21,7 +21,7 @@ import keys from 'lodash/keys';
 import { parse } from 'mongodb-uri';
 
 import { Meta, Models, References, MetaByCollection } from '/imports/model/MetaObject';
-import { filterUtils } from '/imports/utils/konutils/filterUtils';
+import { filterUtils } from '../data/filterUtils';
 import { lookupUtils } from '/imports/utils/konutils/lookupUtils.js';
 import { utils } from '/imports/utils/konutils/utils';
 

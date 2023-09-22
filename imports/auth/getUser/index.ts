@@ -43,8 +43,14 @@ export const getUser = async (authTokenId: string | null | undefined): Promise<U
 	return user;
 };
 
-export async function getUserSafe(authTokenId: string | null | undefined): Promise<KonectyResult<User>> {
+export async function getUserSafe(authTokenId: string | null | undefined, contextUser?: User): Promise<KonectyResult<User>> {
 	try {
+		if (contextUser != null) {
+			return {
+				success: true,
+				data: contextUser,
+			};
+		}
 		const user = await getUser(authTokenId);
 		return {
 			success: true,

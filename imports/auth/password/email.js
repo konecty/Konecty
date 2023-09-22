@@ -9,7 +9,7 @@ import { Collections, Namespace } from '/imports/model/MetaObject';
 import { getAccessFor } from '/imports/utils/accessUtils';
 import { generateStampedLoginToken } from '/imports/auth/login/token';
 import { randomId, randomPassword } from '/imports/utils/random';
-import { GENERATED_PASSOWRD_LENGTH } from '/imports/auth/consts';
+import { GENERATED_PASSOWRD_LENGTH } from '/imports/consts';
 import { setPassword } from '/imports/auth/password';
 import { templatePath } from '/imports/utils/templatesPath';
 import { logger } from '/imports/utils/logger';
