@@ -2,7 +2,6 @@ import './hooks';
 import './middlewares/auth';
 import './middlewares/validation';
 import './middlewares/collectionLogin';
-import './dne';
 import './merge';
 import './auth';
 import './index';
