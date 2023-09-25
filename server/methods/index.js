@@ -6,6 +6,5 @@ import './merge';
 import './auth';
 import './index';
 import './undoHistory';
-import './file';
 import './menu';
 import './process';

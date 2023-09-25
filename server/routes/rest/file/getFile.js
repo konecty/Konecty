@@ -1,17 +1,17 @@
-import Busboy from 'busboy';
+import busboy from 'busboy';
 import { logger } from '/imports/utils/logger';
 
 const processMultipart = req =>
 	new Promise((resolve, reject) => {
 		let partsCount = 0;
-		const busboy = new Busboy({ headers: req.headers });
-		busboy.on('file', function (_, part, filename, encoding) {
-			partsCount = partsCount + 1;
+		const bb = busboy({ headers: req.headers });
+		bb.on('file', function (_, file, info) {
+			const { filename, encoding } = info;
 
 			const bufs = [];
-			part.on('data', data => bufs.push(data));
+			file.on('data', (data) => bufs.push(data));
 
-			part.on('end', () => {
+			file.on('end', () => {
 				let buffer = Buffer.concat(bufs);
 
 				if (encoding !== '7bit') {
@@ -21,18 +21,18 @@ const processMultipart = req =>
 			});
 		});
 
-		busboy.on('error', err => {
+		bb.on('error', err => {
 			logger.error(err, `Error processing multipart request: ${err.message}`);
 			reject(err);
 		});
 
-		busboy.on('end', function () {
+		bb.on('end', function () {
 			if (partsCount === 0) {
 				reject({ message: 'Bad request' });
 			}
 		});
 
-		req.pipe(busboy);
+		req.pipe(bb);
 	});
 
 const processUrlencoded = req =>

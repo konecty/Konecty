@@ -29,6 +29,7 @@ import { getNextCode } from '/imports/meta/getNextCode';
 import { stringToDate } from '/imports/data/dateParser';
 import { copyDescriptionAndInheritedFields } from '/imports/meta/copyDescriptionAndInheritedFields';
 
+
 const CaseFunctions = {
 	camelCase,
 	capitalCase,
@@ -668,7 +669,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return personObjectResult;
 				}
 
-				const keys = ['prefix', 'first', 'middle', 'last', 'sufix'];
+				const keys = ['prefix', 'first', 'middle', 'last', 'sufix', 'full'];
 
 				value = removeUnauthorizedKeys(value, keys);
 
@@ -1071,10 +1072,11 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				if (fileObjectResult.success === false) {
 					return fileObjectResult;
 				}
-				const unauthorizedKeys = ['_id', 'name', 'size', 'created', 'etag', 'headers', 'kind', 'last_modified', 'description', 'label', 'wildcard'];
+				
+				const unauthorizedKeys = ['key', 'name', 'size', 'created', 'etag', 'headers', 'kind', 'last_modified', 'description', 'label', 'wildcard'];
 				return {
 					success: true,
-					data: omit(value, unauthorizedKeys),
+					data: removeUnauthorizedKeys(value, unauthorizedKeys),
 				};
 
 			default:

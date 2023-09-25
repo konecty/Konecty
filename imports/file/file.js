@@ -1,44 +1,63 @@
-import { Meteor } from 'meteor/meteor';
-import { findIndex, get, size } from 'lodash';
+import findIndex from 'lodash/findIndex';
+import set from 'lodash/set';
+import get from 'lodash/get';
+import size from 'lodash/size';
+import first from 'lodash/first';
 
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
 
-import { Meta, Models } from '/imports/model/MetaObject';
+import { Collections, Meta } from '/imports/model/MetaObject';
+import { update } from '../data/data';
 
-Meteor.registerMethod('file:upload', function (req) {
+export async function fileUpload(req) {
 	// Get meta of document
 	const meta = Meta[req.params.document];
 
-	if (!meta) {
-		return new Meteor.Error('internal-error', `Meta [${req.params.document}] does not exists`);
+	if (meta == null) {
+		return {
+			success: false,
+			error: `Meta [${req.params.document}] does not exists`,
+		};
 	}
 
 	// Try to get passed field
 	const field = meta.fields[req.params.fieldName];
-	if (!field) {
-		return new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`);
+	if (field == null) {
+		return {
+			success: false,
+			error: `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`,
+		};
 	}
 
 	// Verify if field is of type file
 	if (field.type !== 'file') {
-		return new Meteor.Error('internal-error', `Field [${req.params.fieldName}] must be of type file`);
+		return {
+			success: false,
+			error: `Field [${req.params.fieldName}] must be of type file`,
+		};
 	}
 
 	if (req.params.recordCode == null) {
-		return new Meteor.Error('internal-error', `Record not found`);
+		return {
+			success: false,
+			error: `Record code is required`,
+		};
 	}
 
 	// Get model of document
-	const model = Models[req.params.document];
+	const collection = Collections[req.params.document];
 
 	// Find record by code or id
-	const record = model.findOne({
+	const record = await collection.findOne({
 		$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
 	});
 
 	// If no record found then return error
-	if (!record) {
-		return new Meteor.Error('internal-error', `Record with code or id [${req.params.recordCode}] was not found`);
+	if (record === null) {
+		return {
+			success: false,
+			error: `Record with code or id [${req.params.recordCode}] was not found`,
+		};
 	}
 
 	// Add file if is isList or change file if is single
@@ -75,16 +94,11 @@ Meteor.registerMethod('file:upload', function (req) {
 	const body = dataToUpdate;
 
 	// Execute update
-	const result = Meteor.call('data:update', {
+	const result = await update({
 		authTokenId: getAuthTokenIdFromReq(req),
 		document: req.params.document,
 		data: body,
 	});
-
-	// If resuls is an error, return
-	if (result instanceof Error) {
-		return result;
-	}
 
 	// If resuls is success: false or data don't have records, return
 	if (result.success === false || result.data.length !== 1) {
@@ -92,42 +106,57 @@ Meteor.registerMethod('file:upload', function (req) {
 	}
 
 	// Else send result
-	return result.data[0];
-});
+	return first(result.data);
+}
 
-Meteor.registerMethod('file:remove', function (req) {
+export async function fileRemove(req) {
 	// Get meta of document
 	const meta = Meta[req.params.document];
 
-	if (!meta) {
-		return new Meteor.Error('internal-error', `Meta [${req.params.document}] does not exists`);
+	if (meta == null) {
+		return {
+			success: false,
+			error: `Meta [${req.params.document}] does not exists`,
+		};
 	}
 
 	// Try to get passed field
 	const field = meta.fields[req.params.fieldName];
-	if (!field) {
-		return new Meteor.Error('internal-error', `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`);
+	if (field == null) {
+		return {
+			success: false,
+			error: `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`,
+		};
 	}
 
 	// Verify if field is of type file
 	if (field.type !== 'file') {
-		return new Meteor.Error('internal-error', `Field [${req.params.fieldName}] must be of type file`);
+		return {
+			success: false,
+			error: `Field [${req.params.fieldName}] must be of type file`,
+		};
 	}
 
 	// Get model of document
-	const model = Models[req.params.document];
+	const collection = Collections[req.params.document];
 
 	// Find record by code or id
-	const record = model.findOne({
+	const record = await collection.findOne({
 		$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
 	});
 
 	// If no record found then return error
-	if (!record) {
-		return new Meteor.Error('internal-error', `Record with code or id [${req.params.recordCode}] was not found`);
+	if (record == null) {
+		return {
+			success: false,
+			error: `Record with code or id [${req.params.recordCode}] was not found`,
+		};
 	}
 
 	// Add file if is isList or change file if is single
+
+	set(req, 'params.fileName', decodeURIComponent(req.params.fileName));
+
 	if (field.isList === true) {
 		if (!record[field.name]) {
 			record[field.name] = [];
@@ -135,7 +164,10 @@ Meteor.registerMethod('file:remove', function (req) {
 		const index = findIndex(record[field.name], i => i.name === req.params.fileName);
 
 		if (index === -1) {
-			return new Meteor.Error('internal-error', `File with name [${req.params.fileName}] was not found`);
+			return {
+				success: false,
+				error: `File with name [${req.params.fileName}] was not found`,
+			};
 		}
 
 		record[field.name].splice(index, 1);
@@ -163,16 +195,11 @@ Meteor.registerMethod('file:remove', function (req) {
 	const body = dataToUpdate;
 
 	// Execute update
-	const result = Meteor.call('data:update', {
+	const result = await update({
 		authTokenId: getAuthTokenIdFromReq(req),
 		document: req.params.document,
 		data: body,
 	});
-
-	// If resuls is an error, return
-	if (result instanceof Error) {
-		return result;
-	}
 
 	// If resuls is success: false or data don't have records, return
 	if (result.success === false || size(get(result, 'data')) !== 1) {
@@ -180,5 +207,5 @@ Meteor.registerMethod('file:remove', function (req) {
 	}
 
 	// Else send result
-	return result.data[0];
-});
+	return first(result.data);
+}

@@ -1178,6 +1178,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 */
 
 export async function update({ authTokenId, document, data, contextUser }) {
+
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
@@ -1450,7 +1451,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 				if (result.success === false) {
 					return result;
 				}
-				if (result.data != null) {
+				if (result.data !== undefined) {
 					set(bodyData, fieldName, result.data);
 				}
 			}
