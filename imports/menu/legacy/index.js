@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import BluebirdPromise from 'bluebird';
 
 import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
@@ -8,29 +8,38 @@ import map from 'lodash/map';
 import identity from 'lodash/identity';
 
 import { getAccessFor } from '/imports/utils/accessUtils';
-import { MetaObject } from '/imports/model/MetaObject';
+import { MetaObjectCollection } from '/imports/model/MetaObject';
+import { getUserSafe } from '/imports/auth/getUser';
+import { errorReturn } from '/imports/utils/return';
 
 /* Get system menu
 	@param authTokenId
 */
 
-Meteor.registerMethod('menu', 'withUser', function () {
+export async function menuFull({ authTokenId }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId);
+	if (success === false) {
+		return errorReturn(errors);
+	}
+
 	const list = {};
 
 	const accessCache = {};
 
 	const getAccess = documentName => {
 		if (!accessCache[documentName]) {
-			accessCache[documentName] = getAccessFor(documentName, this.user);
+			accessCache[documentName] = getAccessFor(documentName, user);
 		}
 		return accessCache[documentName];
 	};
 
-	const namespace = MetaObject.findOne({ _id: 'Namespace' });
+	const namespace = await MetaObjectCollection.findOne({ _id: 'Namespace' });
 
 	const accesses = [];
 
-	MetaObject.find({ type: { $nin: ['namespace', 'access'] } }, { sort: { _id: 1 } }).forEach(function (metaObject) {
+	const metaObjectsToValidate = await MetaObjectCollection.find({ type: { $nin: ['namespace', 'access'] } }, { sort: { _id: 1 } }).toArray();
+
+	await BluebirdPromise.each(metaObjectsToValidate, async function (metaObject) {
 		let value;
 		metaObject.namespace = namespace.ns;
 
@@ -94,7 +103,9 @@ Meteor.registerMethod('menu', 'withUser', function () {
 		list[metaObject._id] = metaObject;
 	});
 
-	MetaObject.find({ _id: { $in: accesses } }).forEach(function (metaObject) {
+	const metadatas = await MetaObjectCollection.find({ _id: { $in: accesses } }).toArray();
+
+	await BluebirdPromise.each(metadatas, async function (metaObject) {
 		metaObject.namespace = namespace.ns;
 
 		metaObject._id = metaObject.namespace + ':' + metaObject._id;
@@ -103,12 +114,17 @@ Meteor.registerMethod('menu', 'withUser', function () {
 	});
 
 	return list;
-});
+}
 
-Meteor.registerMethod('documents', 'withUser', function () {
-	const { user } = this;
+export async function metaDocuments({ authTokenId }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId);
+	if (success === false) {
+		return errorReturn(errors);
+	}
 
-	const documents = Array.from(MetaObject.find({ type: 'document' }, { sort: { menuSorter: 1 } })).reduce((acc, { _id, name, menuSorter, label, plurals }) => {
+	const metaDocuments = await MetaObjectCollection.find({ type: 'document' }, { sort: { menuSorter: 1 } }).toArray();
+
+	const result = metaDocuments.reduce((acc, { _id, name, menuSorter, label, plurals }) => {
 		const access = getAccessFor(name, user);
 
 		if (access) {
@@ -117,14 +133,25 @@ Meteor.registerMethod('documents', 'withUser', function () {
 		return acc;
 	}, []);
 
-	return documents;
-});
+	return result;
+}
 
-Meteor.registerMethod('document', 'withUser', function ({ document: documentId }) {
-	const [document] = Array.from(MetaObject.find({ _id: documentId, type: 'document' }, { limit: 1 }));
+export async function metaDocument({ document, authTokenId }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId);
+	if (success === false) {
+		return errorReturn(errors);
+	}
 
-	if (document) {
-		const { _id, name, label, plurals, fields } = document;
+	const metaDocument = await MetaObjectCollection.findOne({ _id: document, type: 'document' });
+
+	if (metaDocument == null) {
+		return null;
+	}
+
+	const access = getAccessFor(document, user);
+
+	if (metaDocument != null && access != false) {
+		const { _id, name, label, plurals, fields } = metaDocument;
 		return {
 			_id,
 			name,
@@ -133,5 +160,6 @@ Meteor.registerMethod('document', 'withUser', function ({ document: documentId }
 			fields: map(fields, identity),
 		};
 	}
+
 	return null;
-});
+}
