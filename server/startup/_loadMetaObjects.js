@@ -374,8 +374,8 @@ const dbLoad = () => {
 		},
 	});
 
-	// const namespace = MetaObject.findOne({ type: 'namespace' });
-	// Object.assign(Namespace, namespace);
+	const namespace = MetaObject.findOne({ type: 'namespace' });
+	Object.assign(Namespace, namespace);
 };
 
 const fsLoad = () => {

@@ -1,4 +1,3 @@
-import { Meteor } from 'meteor/meteor';
 import moment from 'moment';
 
 import isEmpty from 'lodash/isEmpty';
@@ -7,9 +6,14 @@ import extend from 'lodash/extend';
 import pick from 'lodash/pick';
 
 import { app } from '/server/lib/routes/app';
-import { Namespace, Meta, Models } from '/imports/model/MetaObject';
+import { Namespace, Meta, Collections } from '/imports/model/MetaObject';
+import { processSubmit } from '/imports/data/process';
+import { getNextUserFromQueue } from '/imports/meta/getNextUserFromQueue';
+import { getUserSafe } from '/imports/auth/getUser';
+import { logger } from '/imports/utils/logger';
 
-app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
+app.post('/rest/rocketchat/livechat', async function (req, res) {
+	
 	if (
 		!req.headers['x-rocketchat-livechat-token'] ||
 		!Namespace.RocketChat ||
@@ -20,20 +24,20 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 		return res.end();
 	}
 
-	var hookData = req.body;
-	var result;
-	var ddd = Namespace.ddd;
+	let hookData = req.body;
+	let result;
+	let ddd = Namespace.ddd;
 	switch (hookData.type) {
 		case 'LivechatSession':
 		case 'LivechatEdit':
-			var contactProcess = {
+			let contactProcess = {
 				name: 'contact',
 				data: {
 					name: hookData.visitor.name || hookData.visitor.username,
 				},
 			};
 
-			var messageExtraFields = {};
+			let messageExtraFields = {};
 
 			if (hookData.visitor) {
 				if (hookData.visitor.name && hookData.visitor.name.match(/guest/i)) {
@@ -141,7 +145,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				contactProcess.data.campaign = Namespace.RocketChat.livechat.campaign;
 			}
 
-			var opportunityData = {
+			const opportunityData = {
 				name: 'opportunity',
 				data: {},
 				map: {
@@ -171,13 +175,14 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
 			}
 
-			var messages = '';
+			let messages = '';
+			let messageData;
 			if (hookData.messages) {
 				hookData.messages.forEach(function (msg) {
 					messages += '<strong>' + msg.username + '</strong> (' + moment(msg.ts).format('DD/MM/YYYY HH:mm:ss') + '): ' + msg.msg + '<br><br>\n\n';
 				});
 
-				var messageData = {
+				messageData = {
 					name: 'message',
 					data: {
 						status: 'Nova',
@@ -234,7 +239,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				});
 			}
 
-			var activity = {
+			const activity = {
 				name: 'activity',
 				data: {
 					status: 'Concluída',
@@ -267,16 +272,19 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				}
 			}
 
-			var request = {
+			const contextUserResult = await getUserSafe(Namespace.RocketChat.accessToken);
+
+			const request = {
 				authTokenId: Namespace.RocketChat.accessToken,
 				data: [contactProcess, opportunityData, messageData, activity],
+				contextUser: contextUserResult.data,
 			};
 
-			result = Meteor.call('process:submit', request);
+			result = await processSubmit(request);
 			break;
 
 		case 'LivechatOfflineMessage':
-			var contactProcess = {
+			const contactOfflineProcess = {
 				name: 'contact',
 				data: {
 					name: hookData.visitor.name,
@@ -284,18 +292,18 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 			};
 
 			if (!isEmpty(hookData.visitor.email)) {
-				contactProcess.data.email = hookData.visitor.email;
+				contactOfflineProcess.data.email = hookData.visitor.email;
 			}
 
 			if (Namespace.RocketChat.livechat.queue) {
-				contactProcess.data.queue = Namespace.RocketChat.livechat.queue;
+				contactOfflineProcess.data.queue = Namespace.RocketChat.livechat.queue;
 			}
 
-			if (!contactProcess.data.campaign && Namespace.RocketChat.livechat.campaign) {
-				contactProcess.data.campaign = Namespace.RocketChat.livechat.campaign;
+			if (!contactOfflineProcess.data.campaign && Namespace.RocketChat.livechat.campaign) {
+				contactOfflineProcess.data.campaign = Namespace.RocketChat.livechat.campaign;
 			}
 
-			var opportunityData = {
+			const opportunityOfflineData = {
 				name: 'opportunity',
 				data: {},
 				map: {
@@ -304,10 +312,10 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 			};
 
 			if (Namespace.RocketChat.livechat.queue) {
-				opportunityData.data.queue = Namespace.RocketChat.livechat.queue;
+				opportunityOfflineData.data.queue = Namespace.RocketChat.livechat.queue;
 			}
 
-			var messageData = {
+			const messageOfflineData = {
 				name: 'message',
 				data: {
 					status: 'Nova',
@@ -322,13 +330,13 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 				},
 			};
 
-			var request = {
+			const submitRequest = {
 				authTokenId: Namespace.RocketChat.accessToken,
-				data: [contactProcess, opportunityData, messageData],
+				data: [contactOfflineProcess, opportunityOfflineData, messageOfflineData],
 			};
 
 			if (Namespace.RocketChat.livechat.saveCampaignTarget && Namespace.RocketChat.livechat.campaign) {
-				var campaignTargetData = {
+				const campaignTargetData = {
 					name: 'campaignTarget',
 					document: 'CampaignTarget',
 					data: {
@@ -341,10 +349,10 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 					},
 				};
 
-				request.data.push(campaignTargetData);
+				submitRequest.data.push(campaignTargetData);
 			}
 
-			result = Meteor.call('process:submit', request);
+			result = await processSubmit(submitRequest);
 			break;
 
 		default:
@@ -352,10 +360,10 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 			return res.end();
 	}
 
-	var response = { success: result.success };
+	const response = { success: result.success };
 
 	if (result.success) {
-		var processData = {};
+		const processData = {};
 
 		// get _id from all saved documents
 		Object.keys(result.processData).forEach(function (key) {
@@ -370,7 +378,7 @@ app.post('/rest/rocketchat/livechat', function (req, res /*, next*/) {
 	return res.send(response);
 });
 
-app.get('/rest/rocketchat/livechat/queue', function (req, res /*, next*/) {
+app.get('/rest/rocketchat/livechat/queue', async function (req, res) {
 	if (
 		!req.headers['x-rocketchat-secret-token'] ||
 		!Namespace.RocketChat ||
@@ -382,13 +390,13 @@ app.get('/rest/rocketchat/livechat/queue', function (req, res /*, next*/) {
 	}
 
 	let departmentId = req.params.query.departmentId;
-	var queue;
+	let queue;
 	if (departmentId) {
-		var queueQuery = {
+		const queueQuery = {
 			$or: [{ _id: departmentId }, { name: departmentId }],
 		};
 
-		queue = Models.Queue.findOne(queueQuery, { fields: { _id: 1, active: 1 } });
+		queue = await Collections['Queue'].findOne(queueQuery, { fields: { _id: 1, active: 1 } });
 		if (queue) {
 			departmentId = queue._id;
 		} else {
@@ -409,14 +417,17 @@ app.get('/rest/rocketchat/livechat/queue', function (req, res /*, next*/) {
 		return res.send('{ "success": false, "error": "Queue not found" }');
 	}
 
-	const nextAgent = Meteor.call('data:queue:next', {
-		authTokenId: Namespace.RocketChat.accessToken,
-		document: 'Queue',
-		queueId: departmentId,
-	});
+	const contextUser = await getUserSafe(Namespace.RocketChat.accessToken);
 
-	if (nextAgent.success && nextAgent.user && nextAgent.user.user && nextAgent.user.user._id) {
-		const user = Meteor.users.findOne(nextAgent.user.user._id, { fields: { username: 1 } });
+	if (contextUser.success === false) {
+		logger.error(contextUser, 'Error getting user from token');
+		return res.send();
+	}
+
+	const nextAgent = await getNextUserFromQueue(departmentId, contextUser.data);
+
+	if (nextAgent.success === true && nextAgent?.data?.user?._id) {
+		const user = await Collections['User'].findOne({ _id: nextAgent.data.user._id }, { projection: { username: 1 } });
 		return res.send(user);
 	}
 

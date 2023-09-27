@@ -784,7 +784,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		cleanedData._user = { _id: user._id };
 
 		if (metaObject.name !== 'QueueUser' && isString(data?.queue?._id)) {
-			const userQueueResult = getNextUserFromQueue(data.queue._id, user);
+			const userQueueResult = await getNextUserFromQueue({ document, queueId: data.queue._id, contextUser: user });
 			if (userQueueResult.success == false) {
 				return userQueueResult;
 			}
@@ -1178,7 +1178,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 */
 
 export async function update({ authTokenId, document, data, contextUser }) {
-
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
@@ -2419,7 +2418,6 @@ export async function saveLead({ authTokenId, lead, save, contextUser }) {
 
 		extend(result, createResult);
 	} else if (isEmpty(contactData) === false) {
-
 		const updateResult = await update({
 			contextUser: user,
 			document: 'Contact',

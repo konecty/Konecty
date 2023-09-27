@@ -31,6 +31,7 @@ import { create, find, update } from '/imports/data/data';
 import { randomId } from '/imports/utils/random';
 import { getNextUserFromQueue } from '/imports/meta/getNextUserFromQueue';
 import { metaDocument } from '/imports/menu/legacy';
+import { logger } from '../utils/logger';
 
 const processHandlers = {
 	'process:campaignTarget': processCampaignTarget,
@@ -75,8 +76,8 @@ const processHandlers = {
 				contact: 'contact'
 */
 
-export async function processSubmit({ authTokenId, data }) {
-	const { success, data: user, errors } = await getUserSafe(authTokenId);
+export async function processSubmit({ authTokenId, data, contextUser }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
 	}
@@ -97,7 +98,7 @@ export async function processSubmit({ authTokenId, data }) {
 		if (!piece.name) {
 			return;
 		}
-		if ((result.success = false)) {
+		if ((result.success === false)) {
 			return;
 		}
 
@@ -126,12 +127,14 @@ export async function processSubmit({ authTokenId, data }) {
 		} else {
 			result.success = false;
 			result.errors = [{ message: 'Invalid generic piece, no document specified.' }];
+			logger.error(result, 'Invalid generic piece, no document specified.');
 			return;
 		}
 
 		if (get(piecesReturn, `${piece.name}.success`) !== true) {
 			result.success = false;
 			result.errors = result.errors.concat(piecesReturn[piece.name].errors);
+			logger.error(result, `Error processing piece ${piece.name}.`);
 			return;
 		}
 
@@ -621,7 +624,7 @@ export async function processMessage({ data, contextUser }) {
 		createRequest.data._user = [].concat(data.user);
 	}
 
-	const saveResult = create(createRequest);
+	const saveResult = await create(createRequest);
 
 	if (saveResult.success !== true) {
 		response.success = false;
@@ -727,6 +730,7 @@ export async function processActivity({ data, contextUser }) {
 */
 
 export async function processContact({ data, options, contextUser }) {
+
 	let record, result;
 	// const context = this;
 	// meta = @meta
@@ -1006,6 +1010,8 @@ export async function processContact({ data, options, contextUser }) {
 		}
 	}
 
+	
+
 	if (userFilter) {
 		record = await find({
 			document: 'User',
@@ -1014,7 +1020,7 @@ export async function processContact({ data, options, contextUser }) {
 			limit: 1,
 			contextUser,
 		});
-
+		
 		if (size(get(record, 'data')) > 0) {
 			if (has(contact, '_user')) {
 				if (!_find(compact(contact._user), { _id: record.data[0]._id })) {
