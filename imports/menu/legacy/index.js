@@ -136,8 +136,8 @@ export async function metaDocuments({ authTokenId }) {
 	return result;
 }
 
-export async function metaDocument({ document, authTokenId }) {
-	const { success, data: user, errors } = await getUserSafe(authTokenId);
+export async function metaDocument({ document, authTokenId, contextUser }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
 	}

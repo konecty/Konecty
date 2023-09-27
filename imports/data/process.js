@@ -1,4 +1,5 @@
-import { Meteor } from 'meteor/meteor';
+import BluebirdPromise from 'bluebird';
+
 import moment from 'moment';
 
 import isArray from 'lodash/isArray';
@@ -11,17 +12,33 @@ import isEmpty from 'lodash/isEmpty';
 import _first from 'lodash/first';
 import words from 'lodash/words';
 import tail from 'lodash/tail';
-import find from 'lodash/find';
+import _find from 'lodash/find';
 import compact from 'lodash/compact';
 import clone from 'lodash/clone';
 import has from 'lodash/has';
 import get from 'lodash/get';
+import set from 'lodash/set';
+import unset from 'lodash/unset';
 import some from 'lodash/some';
 import size from 'lodash/size';
+import toLower from 'lodash/toLower';
+import trim from 'lodash/trim';
 
-import { metaUtils } from '/imports/utils/konutils/metaUtils';
-import { utils } from '/imports/utils/konutils/utils';
-import { Meta, Namespace, Models } from '/imports/model/MetaObject';
+import { Meta, Namespace, Collections } from '/imports/model/MetaObject';
+import { getUserSafe } from '/imports/auth/getUser';
+import { errorReturn } from '/imports/utils/return';
+import { create, find, update } from '/imports/data/data';
+import { randomId } from '/imports/utils/random';
+import { getNextUserFromQueue } from '/imports/meta/getNextUserFromQueue';
+import { metaDocument } from '/imports/menu/legacy';
+
+const processHandlers = {
+	'process:campaignTarget': processCampaignTarget,
+	'process:opportunity': processOpportunity,
+	'process:message': processMessage,
+	'process:activity': processActivity,
+	'process:contact': processContact,
+};
 
 /* Process submit
 	@param authTokenId
@@ -58,22 +75,30 @@ import { Meta, Namespace, Models } from '/imports/model/MetaObject';
 				contact: 'contact'
 */
 
-Meteor.registerMethod('process:submit', 'withUser', function (request) {
-	const response = {
+export async function processSubmit({ authTokenId, data }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId);
+	if (success === false) {
+		return errorReturn(errors);
+	}
+
+	const result = {
 		success: true,
 		processData: {},
 		errors: [],
 	};
 
-	if (!isArray(request.data)) {
-		return new Meteor.Error('internal-error', 'Invalid payload');
+	if (isArray(data === false)) {
+		return errorReturn('Invalid payload');
 	}
 
 	const piecesReturn = {};
 
-	request.data.some(function (piece) {
+	await BluebirdPromise.each(data, async function (piece) {
 		if (!piece.name) {
-			return false;
+			return;
+		}
+		if ((result.success = false)) {
+			return;
 		}
 
 		const params = piece.data;
@@ -83,46 +108,44 @@ Meteor.registerMethod('process:submit', 'withUser', function (request) {
 		if (piece.map) {
 			for (let field in piece.map) {
 				const lookup = piece.map[field];
-				const lookupValue = utils.getObjectPathAgg(response.processData, lookup);
+				const lookupValue = get(result.processData, lookup);
 				if (lookupValue) {
-					utils.setObjectByPath(params, field.split('.'), lookupValue);
+					set(params, field.split('.'), lookupValue);
 				}
 			}
 		}
 
-		if (response.processData['user'] && !params['user']) {
-			params['user'] = response.processData['user'];
+		if (result.processData['user'] && !params['user']) {
+			params['user'] = result.processData['user'];
 		}
 
-		if (Meteor.server.method_handlers[`process:${piece.name}`]) {
-			piecesReturn[piece.name] = Meteor.call(`process:${piece.name}`, params, options);
+		if (processHandlers[`process:${piece.name}`] != null) {
+			piecesReturn[piece.name] = await processHandlers[`process:${piece.name}`]({ data: params, contextUser: user, options });
 		} else if (piece.document) {
-			piecesReturn[piece.name] = Meteor.call('process:generic', piece.document, piece.name, params, options);
+			piecesReturn[piece.name] = await processGeneric({ document: piece.document, name: piece.name, data: params, contextUser: user, options });
 		} else {
-			response.success = false;
-			response.errors = [new Meteor.Error('process-invalid-piece', 'Invalid generic piece, no document specified.')];
-			return true;
+			result.success = false;
+			result.errors = [{ message: 'Invalid generic piece, no document specified.' }];
+			return;
 		}
 
 		if (get(piecesReturn, `${piece.name}.success`) !== true) {
-			response.success = false;
-			response.errors = response.errors.concat(piecesReturn[piece.name].errors);
-			return true;
+			result.success = false;
+			result.errors = result.errors.concat(piecesReturn[piece.name].errors);
+			return;
 		}
 
-		response.processData = extend(response.processData, piecesReturn[piece.name].processData);
-
-		return false;
+		result.processData = extend(result.processData, piecesReturn[piece.name].processData);
 	});
 
-	if (response.errors.length === 0) {
-		delete response.errors;
+	if (result.errors.length === 0) {
+		unset(result, 'errors');
 	}
 
-	return response;
-});
+	return result;
+}
 
-Meteor.registerMethod('process:generic', 'withUser', function (document, name, request) {
+export async function processGeneric({ document, name, data, contextUser }) {
 	const response = {
 		success: true,
 		processData: {},
@@ -131,22 +154,23 @@ Meteor.registerMethod('process:generic', 'withUser', function (document, name, r
 
 	const createRequest = {
 		document,
-		data: request,
+		data,
+		contextUser,
 	};
 
-	if (has(request, 'contact._id')) {
+	if (has(data, 'contact._id')) {
 		if (has(Meta, `${document}.fields.contact.isList`)) {
-			createRequest.data.contact = [{ _id: request.contact._id }];
+			createRequest.data.contact = [{ _id: data.contact._id }];
 		} else {
-			createRequest.data.contact = { _id: request.contact._id };
+			createRequest.data.contact = { _id: data.contact._id };
 		}
 	}
 
-	if (request.user) {
-		createRequest.data._user = [].concat(request.user);
+	if (data.user != null) {
+		createRequest.data._user = [].concat(data.user);
 	}
 
-	const saveResult = Meteor.call('data:create', createRequest);
+	const saveResult = await create(createRequest);
 
 	if (saveResult.success !== true) {
 		response.success = false;
@@ -157,9 +181,9 @@ Meteor.registerMethod('process:generic', 'withUser', function (document, name, r
 	response.processData[name] = saveResult.data[0];
 
 	return response;
-});
+}
 
-Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
+export async function processCampaignTarget({ data, contextUser }) {
 	const response = {
 		success: true,
 		processData: {},
@@ -167,14 +191,14 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
 	};
 
 	if (Namespace.skipCampaignTargetForActiveOpportunities === true) {
-		const record = Meteor.call('data:find:all', {
+		const record = await find({
 			document: 'Contact',
 			filter: {
 				conditions: [
 					{
 						term: '_id',
 						operator: 'equals',
-						value: request.contact._id,
+						value: data.contact._id,
 					},
 					{
 						term: 'activeOpportunities',
@@ -184,6 +208,7 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
 				],
 			},
 			limit: 1,
+			contextUser,
 		});
 
 		if (size(get(record, 'data')) > 0) {
@@ -191,23 +216,24 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
 		}
 	}
 
-	const campaign = findCampaign(request.campaign);
+	const campaign = await findCampaign(data.campaign, contextUser);
 	if (campaign) {
-		request.campaign = campaign;
+		data.campaign = campaign;
 	}
 
 	const createRequest = {
 		document: 'CampaignTarget',
-		data: request,
+		data,
+		contextUser,
 	};
 
-	createRequest.data.contact = { _id: request.contact._id };
+	createRequest.data.contact = { _id: data.contact._id };
 
-	if (request.user) {
-		createRequest.data._user = [].concat(request.user);
+	if (data.user) {
+		createRequest.data._user = [].concat(data.user);
 	}
 
-	const saveResult = Meteor.call('data:create', createRequest);
+	const saveResult = await create(createRequest);
 
 	if (saveResult.success !== true) {
 		response.success = false;
@@ -218,9 +244,9 @@ Meteor.registerMethod('process:campaignTarget', 'withUser', function (request) {
 	response.processData['campaignTarget'] = saveResult.data[0];
 
 	return response;
-});
+}
 
-Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
+export async function processOpportunity({ data, contextUser }) {
 	let createRequest, opportunity, opportunityId;
 	const response = {
 		success: true,
@@ -228,14 +254,14 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 		errors: [],
 	};
 
-	let record = Meteor.call('data:find:all', {
+	let record = await find({
 		document: 'Opportunity',
 		filter: {
 			conditions: [
 				{
 					term: 'contact._id',
 					operator: 'equals',
-					value: request.contact._id,
+					value: data.contact._id,
 				},
 				{
 					term: 'status',
@@ -245,7 +271,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 				{
 					term: '_user._id',
 					operator: 'equals',
-					value: get(request, 'user._id', ''),
+					value: get(data, 'user._id', ''),
 				},
 			],
 		},
@@ -256,6 +282,7 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 				direction: 'DESC',
 			},
 		],
+		contextUser,
 	});
 
 	// don't create an opportunity if contact already has
@@ -266,44 +293,47 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 
 		if (Namespace.alertUserOnExistingOpportunity) {
 			const date = new Date();
-			Models['User']
-				.find({ _id: { $in: map(opportunity._user, '_id') } })
-				.fetch()
-				.forEach(function (user) {
-					const emails = [];
-					each(user.emails, email => emails.push(pick(email, 'address')));
-					Models['Message'].insert({
-						type: 'Email',
-						status: 'Send',
-						email: emails,
-						priority: 'Alta',
-						subject: `Nova Mensagem da Oportunidade ${opportunity.code}`,
-						from: 'Konecty Alerts <alerts@konecty.com>',
-						body: `Nova mensagem do cliente ${opportunity.contact.name.full} (${opportunity.contact.code})`,
-						_createdAt: date,
-						_updatedAt: date,
-						discard: true,
-					});
+			const usersToNotify = await Collections['User'].find({ _id: { $in: map(opportunity._user, '_id') } }).toArray();
+
+			await BluebirdPromise.each(usersToNotify, async function (user) {
+				const emails = [];
+				each(user.emails, email => emails.push(pick(email, 'address')));
+				return Collections['Message'].insert({
+					_id: randomId(),
+					type: 'Email',
+					status: 'Send',
+					email: emails,
+					priority: 'Alta',
+					subject: `Nova Mensagem da Oportunidade ${opportunity.code}`,
+					from: 'Konecty Alerts <alerts@konecty.com>',
+					body: `Nova mensagem do cliente ${opportunity.contact.name.full} (${opportunity.contact.code})`,
+					_createdAt: date,
+					_updatedAt: date,
+					discard: true,
 				});
+			});
 		}
 	} else {
 		createRequest = {
 			document: 'Opportunity',
 			data: {},
+			contextUser,
 		};
 
 		// get info from product to save as interest on opportunity
-		if (request.product) {
+		if (data.product) {
 			let productFilter;
-			if (request.product._id) {
-				productFilter = request.product._id;
-			} else if (request.product.code) {
-				productFilter = { code: request.product.code };
-			} else if (request.product.ids) {
-				productFilter = { _id: { $in: request.product.ids } };
+			if (data.product._id) {
+				productFilter = data.product._id;
+			} else if (data.product.code) {
+				productFilter = { code: data.product.code };
+			} else if (data.product.ids) {
+				productFilter = { _id: { $in: data.product.ids } };
 			}
 
-			Models['Product'].find(productFilter).forEach(function (product) {
+			const products = await Collections['Product'].find(productFilter).toArray();
+
+			products.forEach(product => {
 				if (product['inCondominium']) {
 					// @TODO how to decide multiple?
 					createRequest.data['inCondominium'] = product['inCondominium'];
@@ -422,30 +452,30 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 			});
 		}
 
-		const campaign = findCampaign(request.campaign);
+		const campaign = await findCampaign(data.campaign, contextUser);
 		if (campaign) {
-			request.campaign = campaign;
+			data.campaign = campaign;
 		}
 
-		const source = findChannel(request.source);
+		const source = await findChannel(data.source, contextUser);
 		if (source) {
-			request.source = source;
+			data.source = source;
 		}
 
-		const channel = findChannel(request.channel);
+		const channel = await findChannel(data.channel, contextUser);
 		if (channel) {
-			request.channel = channel;
+			data.channel = channel;
 		}
 
-		createRequest.data = extend(createRequest.data, request);
+		createRequest.data = extend(createRequest.data, data);
 
-		createRequest.data.contact = { _id: request.contact._id };
+		createRequest.data.contact = { _id: data.contact._id };
 
-		if (request.user) {
-			createRequest.data._user = [].concat(request.user);
+		if (data.user) {
+			createRequest.data._user = [].concat(data.user);
 		}
 
-		const saveResult = Meteor.call('data:create', createRequest);
+		const saveResult = await create(createRequest);
 
 		if (saveResult.success !== true) {
 			response.success = false;
@@ -458,37 +488,38 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 		opportunityId = saveResult.data[0]._id;
 	}
 
-	if (request.product) {
+	if (data.product) {
 		let productsList;
-		if (request.product._id) {
-			productsList = [request.product._id];
-		} else if (request.product.code) {
-			record = Meteor.call('data:find:all', {
+		if (data.product._id) {
+			productsList = [data.product._id];
+		} else if (data.product.code) {
+			record = await find({
 				document: 'Product',
 				filter: {
 					conditions: [
 						{
 							term: 'code',
 							operator: 'equals',
-							value: request.product.code,
+							value: data.product.code,
 						},
 					],
 				},
 				limit: 1,
 				fields: '_id',
+				contextUser,
 			});
 
 			// don't create an opportunity if concat already has
 			if (size(get(record, 'data')) > 0) {
 				productsList = [record.data[0]._id];
 			}
-		} else if (request.product.ids) {
-			productsList = request.product.ids;
+		} else if (data.product.ids) {
+			productsList = data.product.ids;
 		}
 
 		if (productsList) {
-			productsList.forEach(function (productId) {
-				record = Meteor.call('data:find:all', {
+			await BluebirdPromise.each(productsList, async function (productId) {
+				record = await find({
 					document: 'ProductsPerOpportunities',
 					filter: {
 						conditions: [
@@ -500,12 +531,13 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 							{
 								term: 'contact._id',
 								operator: 'equals',
-								value: request.contact._id,
+								value: data.contact._id,
 							},
 						],
 					},
 					limit: 1,
 					fields: '_id',
+					contextUser,
 				});
 
 				// don't create an opportunity if concat already has
@@ -521,15 +553,16 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 								_id: opportunityId,
 							},
 						},
+						contextUser,
 					};
 
-					createRequest.data.contact = { _id: request.contact._id };
+					createRequest.data.contact = { _id: data.contact._id };
 
-					if (request.user) {
-						createRequest.data._user = [].concat(request.user);
+					if (data.user) {
+						createRequest.data._user = [].concat(data.user);
 					}
 
-					const saveProductResult = Meteor.call('data:create', createRequest);
+					const saveProductResult = await create(createRequest);
 
 					if (saveProductResult.success !== true) {
 						response.success = false;
@@ -552,42 +585,43 @@ Meteor.registerMethod('process:opportunity', 'withUser', function (request) {
 	}
 
 	return response;
-});
+}
 
-Meteor.registerMethod('process:message', 'withUser', function (request) {
+export async function processMessage({ data, contextUser }) {
 	const response = {
 		success: true,
 		processData: {},
 		errors: [],
 	};
 
-	const campaign = findCampaign(request.campaign);
+	const campaign = await findCampaign(data.campaign, contextUser);
 	if (campaign) {
-		request.campaign = campaign;
+		data.campaign = campaign;
 	}
 
-	const source = findChannel(request.source);
+	const source = await findChannel(data.source, contextUser);
 	if (source) {
-		request.source = source;
+		data.source = source;
 	}
 
-	const channel = findChannel(request.channel);
+	const channel = await findChannel(data.channel, contextUser);
 	if (channel) {
-		request.channel = channel;
+		data.channel = channel;
 	}
 
 	const createRequest = {
 		document: 'Message',
-		data: request,
+		data: data,
+		contextUser,
 	};
 
-	createRequest.data.contact = [{ _id: request.contact._id }];
+	createRequest.data.contact = [{ _id: data.contact._id }];
 
-	if (request.user) {
-		createRequest.data._user = [].concat(request.user);
+	if (data.user) {
+		createRequest.data._user = [].concat(data.user);
 	}
 
-	const saveResult = Meteor.call('data:create', createRequest);
+	const saveResult = create(createRequest);
 
 	if (saveResult.success !== true) {
 		response.success = false;
@@ -598,49 +632,51 @@ Meteor.registerMethod('process:message', 'withUser', function (request) {
 	response.processData['message'] = saveResult.data[0];
 
 	return response;
-});
+}
 
-Meteor.registerMethod('process:activity', 'withUser', function (request) {
+export async function processActivity({ data, contextUser }) {
 	const response = {
 		success: true,
 		processData: {},
 		errors: [],
 	};
 
-	if (has(request, 'campaign.code') && !has(request, 'campaign._id')) {
-		const record = Meteor.call('data:find:all', {
+	if (has(data, 'campaign.code') && !has(data, 'campaign._id')) {
+		const record = await find({
 			document: 'Campaign',
 			filter: {
 				conditions: [
 					{
 						term: 'code',
 						operator: 'equals',
-						value: parseInt(get(request, 'campaign.code')),
+						value: parseInt(get(data, 'campaign.code')),
 					},
 				],
 			},
 			fields: '_id',
+			contextUser,
 		});
 
 		if (has(record, 'data.0._id')) {
-			request.campaign._id = record.data[0]._id;
+			data.campaign._id = record.data[0]._id;
 		}
 	}
 
 	const createRequest = {
 		document: 'Activity',
-		data: request,
+		data: data,
+		contextUser,
 	};
 
-	if (has(request, 'contact._id')) {
-		createRequest.data.contact = [{ _id: request.contact._id }];
+	if (has(data, 'contact._id')) {
+		createRequest.data.contact = [{ _id: data.contact._id }];
 	}
 
-	if (request.user) {
-		createRequest.data._user = [].concat(request.user);
+	if (data.user) {
+		createRequest.data._user = [].concat(data.user);
 	}
 
-	const saveResult = Meteor.call('data:create', createRequest);
+	const saveResult = await create(createRequest);
 
 	if (saveResult.success !== true) {
 		response.success = false;
@@ -651,7 +687,7 @@ Meteor.registerMethod('process:activity', 'withUser', function (request) {
 	response.processData['activity'] = saveResult.data[0];
 
 	return response;
-});
+}
 
 /* Save contact
 	@param authTokenId
@@ -689,7 +725,8 @@ Meteor.registerMethod('process:activity', 'withUser', function (request) {
 		- Se não, pega o primeiro usuário ativo já responsável pelo cliente
 		- Se não possui um usuário ativo responsável pelo cliente, usa o usuário da conexão (provavelmente o usuário do site)
 */
-Meteor.registerMethod('process:contact', 'withUser', function (request, options) {
+
+export async function processContact({ data, options, contextUser }) {
 	let record, result;
 	// const context = this;
 	// meta = @meta
@@ -697,19 +734,19 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	// # Some validations of payload
 	// if not _.isObject request
 	// 	return new Meteor.Error 'internal-error', "[#{request.document}] Invalid payload"
-	const campaign = findCampaign(request.campaign);
+	const campaign = await findCampaign(data.campaign, contextUser);
 	if (campaign) {
-		request.campaign = campaign;
+		data.campaign = campaign;
 	}
 
-	const source = findChannel(request.source);
+	const source = await findChannel(data.source, contextUser);
 	if (source) {
-		request.source = source;
+		data.source = source;
 	}
 
-	const channel = findChannel(request.channel);
+	const channel = await findChannel(data.channel, contextUser);
 	if (channel) {
-		request.channel = channel;
+		data.channel = channel;
 	}
 
 	// Define response
@@ -720,24 +757,24 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	};
 
 	let codeSent = false;
-	if (request.code) {
-		codeSent = request.code;
+	if (data.code) {
+		codeSent = data.code;
 	}
 	let phoneSent = [];
 
-	if (request.phone && !isEmpty(request.phone)) {
-		phoneSent = phoneSent.concat(request.phone);
+	if (data.phone && !isEmpty(data.phone)) {
+		phoneSent = phoneSent.concat(data.phone);
 	}
 
 	let emailSent = [];
-	if (request.email && !isEmpty(request.email)) {
-		emailSent = emailSent.concat(`${request.email}`.trim().toLowerCase().value());
+	if (data.email && !isEmpty(data.email)) {
+		emailSent = emailSent.concat(toLower(trim(`${data.email}`)));
 	}
 
 	// validate if phone or email was passed
 	if (codeSent === false && emailSent.length === 0 && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [new Meteor.Error('process-contact-validation', 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.')];
+		response.errors = [{ meaage: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.' }];
 		delete response.processData;
 		return response;
 	}
@@ -747,7 +784,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	let contact = null;
 
 	if (codeSent !== false) {
-		record = Meteor.call('data:find:all', {
+		record = await find({
 			document: 'Contact',
 			filter: {
 				conditions: [
@@ -759,6 +796,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				],
 			},
 			limit: 1,
+			contextUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -769,7 +807,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	// try to find a contact with given email
 	if (codeSent === false && contact == null && emailSent.length > 0) {
 		// request.email.some (email) ->
-		record = Meteor.call('data:find:all', {
+		record = await find({
 			document: 'Contact',
 			filter: {
 				conditions: [
@@ -781,6 +819,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				],
 			},
 			limit: 1,
+			contextUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -789,10 +828,10 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	}
 
 	// If contact not found try to find with name and phone
-	if (codeSent === false && contact == null && request.name && phoneSent.length > 0) {
-		const regexName = _first(words(request.name));
+	if (codeSent === false && contact == null && data.name && phoneSent.length > 0) {
+		const regexName = _first(words(data.name));
 
-		record = Meteor.call('data:find:all', {
+		record = await find({
 			document: 'Contact',
 			filter: {
 				conditions: [
@@ -809,6 +848,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				],
 			},
 			limit: 1,
+			contextUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -818,7 +858,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 	// If contact not found try with phone number
 	if (codeSent === false && contact == null && phoneSent.length > 0) {
-		record = Meteor.call('data:find:all', {
+		record = await find({
 			document: 'Contact',
 			filter: {
 				conditions: [
@@ -830,6 +870,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				],
 			},
 			limit: 1,
+			contextUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -843,16 +884,16 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		contactData.code = codeSent;
 	}
 
-	if (request.name) {
+	if (data.name) {
 		let setName = true;
 		if (has(contact, 'name.full')) {
-			if (options.doNotOverwriteName || request.name.length < contact.name.full.length) {
+			if (options.doNotOverwriteName || data.name.length < contact.name.full.length) {
 				setName = false;
 			}
 		}
 
 		if (setName) {
-			const nameParts = words(request.name);
+			const nameParts = words(data.name);
 			contactData.name = {
 				first: _first(nameParts),
 				last: tail(nameParts).join(' '),
@@ -864,7 +905,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		if (size(get(contact, 'email')) > 0) {
 			let firstEmailNotFound = true;
 			emailSent.forEach(function (emailAddress) {
-				if (!find(compact(contact.email), { address: emailAddress })) {
+				if (!_find(compact(contact.email), { address: emailAddress })) {
 					if (firstEmailNotFound) {
 						contactData.email = contact.email;
 						firstEmailNotFound = false;
@@ -890,7 +931,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		if (size(get(contact, 'phone')) > 0) {
 			let firstPhoneNotFound = true;
 			phoneSent.forEach(function (leadPhone) {
-				if (!find(compact(contact.phone), { phoneNumber: leadPhone })) {
+				if (!_find(compact(contact.phone), { phoneNumber: leadPhone })) {
 					if (firstPhoneNotFound) {
 						contactData.phone = contact.phone;
 						firstPhoneNotFound = false;
@@ -915,50 +956,50 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	}
 
 	// if no _user sent, _user will be set from users in queue
-	if (request.queue) {
-		contactData.queue = request.queue;
+	if (data.queue) {
+		contactData.queue = data.queue;
 	}
-	if (request.campaign) {
-		contactData.campaign = request.campaign;
+	if (data.campaign) {
+		contactData.campaign = data.campaign;
 	}
-	if (request.source) {
-		contactData.source = request.source;
+	if (data.source) {
+		contactData.source = data.source;
 	}
-	if (request.channel) {
-		contactData.channel = request.channel;
+	if (data.channel) {
+		contactData.channel = data.channel;
 	}
-	if (request.medium) {
-		contactData.medium = request.medium;
+	if (data.medium) {
+		contactData.medium = data.medium;
 	}
-	if (request.referrerURL) {
-		contactData.referrerURL = request.referrerURL;
+	if (data.referrerURL) {
+		contactData.referrerURL = data.referrerURL;
 	}
 
 	// Add extra fields to contactData
-	if (request.extraFields) {
-		contactData = extend(contactData, request.extraFields);
+	if (data.extraFields) {
+		contactData = extend(contactData, data.extraFields);
 	}
 
 	// sets _user based on the data sent
 	let userFilter = null;
-	if (request.user) {
-		if (request.user.username) {
+	if (data.user) {
+		if (data.user.username) {
 			userFilter = {
 				conditions: [
 					{
 						term: 'username',
 						operator: 'equals',
-						value: request.user.username,
+						value: data.user.username,
 					},
 				],
 			};
-		} else if (request.user._id) {
+		} else if (data.user._id) {
 			userFilter = {
 				conditions: [
 					{
 						term: '_id',
 						operator: 'equals',
-						value: request.user._id,
+						value: data.user._id,
 					},
 				],
 			};
@@ -966,16 +1007,17 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 	}
 
 	if (userFilter) {
-		record = Meteor.call('data:find:all', {
+		record = await find({
 			document: 'User',
 			filter: userFilter,
 			fields: '_id',
 			limit: 1,
+			contextUser,
 		});
 
 		if (size(get(record, 'data')) > 0) {
 			if (has(contact, '_user')) {
-				if (!find(compact(contact._user), { _id: record.data[0]._id })) {
+				if (!_find(compact(contact._user), { _id: record.data[0]._id })) {
 					contactData._user = clone(contact._user);
 					if (!contactData._user) {
 						contactData._user = [];
@@ -996,7 +1038,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		let userQueue;
 		if (contact) {
 			if (!contactUser && contact.activeOpportunities && get(contact, 'activeOpportunities', 0) > 0) {
-				record = Meteor.call('data:find:all', {
+				record = await find({
 					document: 'Opportunity',
 					filter: {
 						conditions: [
@@ -1025,13 +1067,14 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 						},
 					],
 					fields: '_id, _user',
+					contextUser,
 				});
 
 				some(get(record, 'data.0._user'), userFromOpportunity => {
 					if (userFromOpportunity.active === true) {
 						contactUser = userFromOpportunity;
 						// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-						if (!find(compact(contact._user), { _id: userFromOpportunity._id })) {
+						if (!_find(compact(contact._user), { _id: userFromOpportunity._id })) {
 							contactData._user = clone(contact._user);
 							if (!contactData._user) {
 								contactData._user = [];
@@ -1046,7 +1089,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 			// get recent activities from contact to find an _user
 			if (!contactUser && !Namespace.ignoreUserInActivities) {
-				record = Meteor.call('data:find:all', {
+				record = find({
 					document: 'Activity',
 					filter: {
 						conditions: [
@@ -1075,6 +1118,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 						},
 					],
 					fields: '_id, _user',
+					contextUser,
 				});
 
 				some(get(record, 'data.0._user'), userFromActivity => {
@@ -1082,7 +1126,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 						contactUser = userFromActivity;
 
 						// @TODO talvez seja necessário testar se `record.data[0]._user` é realmente um array
-						if (!find(compact(contact._user), { _id: userFromActivity._id })) {
+						if (!_find(compact(contact._user), { _id: userFromActivity._id })) {
 							contactData._user = clone(contact._user);
 							if (!contactData._user) {
 								contactData._user = [];
@@ -1096,14 +1140,14 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 			}
 		}
 		// if queue is set, set _user getting next user from queue sent
-		if (!contactUser && has(request, 'queue._id')) {
-			userQueue = metaUtils.getNextUserFromQueue(request.queue._id, this.user);
+		if (!contactUser && has(data, 'queue._id')) {
+			userQueue = await getNextUserFromQueue(data.queue._id, contextUser);
 
 			contactUser = userQueue.user;
 
 			if (has(userQueue, 'user._id')) {
 				if (contact) {
-					if (!find(compact(contact._user), { _id: userQueue.user._id })) {
+					if (!_find(compact(contact._user), { _id: userQueue.user._id })) {
 						contactData._user = clone(contact._user);
 						if (!contactData._user) {
 							contactData._user = [];
@@ -1117,19 +1161,20 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		}
 
 		// if _user not set yet and campaign is set, try to find a queue set in campaign
-		if (!contactUser && has(request, 'campaign._id')) {
-			record = Meteor.call('data:find:all', {
+		if (!contactUser && has(data, 'campaign._id')) {
+			record = find({
 				document: 'Campaign',
 				filter: {
 					conditions: [
 						{
 							term: '_id',
 							operator: 'equals',
-							value: request.campaign._id,
+							value: data.campaign._id,
 						},
 					],
 				},
 				fields: '_id,targetQueue',
+				contextUser,
 			});
 
 			if (has(record, 'data.0.targetQueue')) {
@@ -1138,13 +1183,13 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 					contactData.queue = { _id: record.data[0].targetQueue._id };
 				}
 
-				userQueue = metaUtils.getNextUserFromQueue(record.data[0].targetQueue._id, this.user);
+				userQueue = await getNextUserFromQueue(record.data[0].targetQueue._id, contextUser);
 
 				contactUser = userQueue.user;
 
 				if (has(userQueue, 'user._id')) {
 					if (contact) {
-						if (!find(compact(contact._user), { _id: userQueue.user._id })) {
+						if (!_find(compact(contact._user), { _id: userQueue.user._id })) {
 							contactData._user = clone(contact._user);
 							if (!contactData._user) {
 								contactData._user = [];
@@ -1193,6 +1238,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		const createRequest = {
 			document: 'Contact',
 			data: contactData,
+			contextUser,
 		};
 
 		if (contactData.code) {
@@ -1201,7 +1247,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 		const {
 			fields: { status, type },
-		} = Meteor.call('document', { document: 'Contact' });
+		} = await metaDocument({ document: 'Contact', contextUser });
 
 		// Use defaultValue field from status and type metas
 		if (!contactData.status) {
@@ -1211,7 +1257,7 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 			if (type && type.defaultValue) createRequest.data.type = type.maxSelected > 1 || type.isList === true ? [].concat(type.defaultValue) : type.defaultValue;
 		}
 
-		result = Meteor.call('data:create', createRequest);
+		result = await create(createRequest);
 	} else if (!isEmpty(contactData)) {
 		const updateRequest = {
 			document: 'Contact',
@@ -1219,9 +1265,10 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 				ids: [{ _id: contact._id, _updatedAt: { $date: moment(contact._updatedAt).toISOString() } }],
 				data: contactData,
 			},
+			contextUser,
 		};
 
-		result = Meteor.call('data:update', updateRequest);
+		result = await update(updateRequest);
 	} else {
 		result = {
 			success: true,
@@ -1248,44 +1295,6 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 		response.processData['user'] = contactUser;
 	}
 
-	// # save other data sent
-	// if request.save?
-
-	// 	saveRelations = (relations, contactId, parentObj) ->
-	// 		relations.some (saveObj) ->
-	// 			createRequest =
-	// 				document: saveObj.document
-	// 				data: saveObj.data
-
-	// 			if Meta[saveObj.document]?.fields['contact']?.isList?
-	// 				createRequest.data.contact = [
-	// 					_id: contactId
-	// 				]
-	// 			else
-	// 				createRequest.data.contact = _id: contactId
-
-	// 			if parentObj?
-	// 				createRequest.data = _.extend createRequest.data, parentObj
-
-	// 			# @TODO verificar no metodo do documento se o lookup de contato é isList para botar o array ou nao
-	// 			createRequest.data._user = [ contactUser ]
-
-	// 			saveResult = Meteor.call 'data:create', createRequest
-
-	// 			# @TODO tratar os retornos
-	// 			if saveResult.success is true
-	// 				response.data = response.data.concat saveResult.data
-
-	// 				if saveObj.relations?
-	// 					relationMap = {}
-	// 					relationMap[saveObj.name] = { _id: saveResult.data[0]._id }
-
-	// 					saveRelations saveObj.relations, contactId, relationMap
-	// 			else
-	// 				response.errors = response.errors.concat saveResult.errors
-
-	// 	saveRelations([].concat(request.save), contactId) if request.save?
-
 	// Remove array of data if it's empty
 	if (isEmpty(response.processData)) {
 		delete response.processData;
@@ -1302,9 +1311,9 @@ Meteor.registerMethod('process:contact', 'withUser', function (request, options)
 
 	// Send response
 	return response;
-});
+}
 
-var findCampaign = function (search) {
+async function findCampaign(search, contextUser) {
 	let filter;
 	if (!search) {
 		return null;
@@ -1333,21 +1342,22 @@ var findCampaign = function (search) {
 		return null;
 	}
 
-	const record = Meteor.call('data:find:all', {
+	const record = await find({
 		document: 'Campaign',
 		filter: {
 			conditions: [filter],
 		},
 		fields: '_id',
+		contextUser,
 	});
 
 	if (has(record, 'data.0._id')) {
 		let ref1;
 		return (ref1 = { _id: record.data[0]._id }), ref1;
 	}
-};
+}
 
-var findChannel = function (search) {
+async function findChannel(search, contextUser) {
 	if (!search) {
 		return null;
 	}
@@ -1358,7 +1368,7 @@ var findChannel = function (search) {
 	}
 
 	if (has(search, 'identifier')) {
-		const record = Meteor.call('data:find:all', {
+		const record = await find({
 			document: 'Channel',
 			filter: {
 				conditions: [
@@ -1370,6 +1380,7 @@ var findChannel = function (search) {
 				],
 			},
 			fields: '_id',
+			contextUser,
 		});
 
 		if (has(record, 'data.0._id')) {
@@ -1377,4 +1388,4 @@ var findChannel = function (search) {
 			return (ref1 = { _id: record.data[0]._id }), ref1;
 		}
 	}
-};
+}

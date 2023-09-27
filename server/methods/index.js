@@ -6,4 +6,3 @@ import './merge';
 import './auth';
 import './index';
 import './undoHistory';
-import './process';

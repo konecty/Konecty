@@ -373,6 +373,9 @@ const dbLoad = () => {
 			delete DisplayMeta[meta._id];
 		},
 	});
+
+	// const namespace = MetaObject.findOne({ type: 'namespace' });
+	// Object.assign(Namespace, namespace);
 };
 
 const fsLoad = () => {
