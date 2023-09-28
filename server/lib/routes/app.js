@@ -6,8 +6,6 @@ import { EJSON } from 'meteor/ejson';
 
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'body-parser';
-import { compileFile } from 'swig';
-import { resolve, join } from 'path';
 import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
@@ -21,12 +19,6 @@ import { logger } from '/imports/utils/logger';
 const uriObject = parse(process.env.MONGO_URL);
 process.env.dbName = uriObject.database;
 logger.info(`[kondata] === ${process.env.dbName} ===`);
-
-const basePath = resolve('.').split('.meteor')[0];
-let tplPath = 'assets/app/templates';
-if (basePath.indexOf('bundle/programs/server') > 0) {
-	tplPath = '../../programs/server/assets/app/templates';
-}
 
 global.logAllRequests = /true|1|enable/i.test(process.env.LOG_REQUEST);
 
@@ -149,15 +141,6 @@ Picker.middleware(function (req, res, next) {
 		}
 
 		res.end(response);
-	};
-
-	res.render = function (templateName, data) {
-		const tmpl = compileFile(join(tplPath, templateName));
-
-		const renderedHtml = tmpl(data);
-
-		res.writeHead(200, { 'Content-Type': 'text/html' });
-		res.end(renderedHtml);
 	};
 
 	const resEnd = res.end;
