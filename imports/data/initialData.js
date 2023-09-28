@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { hash as bcryptHash } from 'bcrypt';
 
 import { randomId, randomPassword } from '/imports/utils/random';
-import { GENERATED_PASSOWRD_LENGTH, BCRYPT_SALT_ROUNDS } from '/imports/auth/consts';
+import { GENERATED_PASSOWRD_LENGTH, BCRYPT_SALT_ROUNDS } from '/imports/consts';
 
 import { KonectyDatabase, MetaObjectCollection } from '/imports/model/MetaObject';
 import { logger } from '../utils/logger';
