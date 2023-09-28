@@ -2,10 +2,8 @@ import { Meteor } from 'meteor/meteor';
 
 import '/server/startup/_loadMetaObjects.js';
 import '/server/startup/konsistent.js';
-import '/server/methods/index';
 import '/server/routes/api';
 import '/server/routes/rest';
-import '/server/publications/changeStream';
 import { logger } from '/imports/utils/logger';
 
 if (process.env.NODE_ENV !== 'development') {
