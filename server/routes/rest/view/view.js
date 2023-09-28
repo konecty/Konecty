@@ -1,6 +1,10 @@
+import Handlebars from 'handlebars';
+
+import path from 'path';
+import fsPromises from 'fs/promises';
+import fs from 'fs';
+
 import { isDate } from 'lodash';
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
 import getServer from '/imports/utils/getServer';
 
 import { getAuthTokenIdFromReq } from '/imports/utils/sessionUtils';
@@ -8,6 +12,7 @@ import { app } from '/server/lib/routes/app';
 import { logout } from '/imports/auth/logout';
 import { getUser } from '/imports/auth/getUser';
 import { logger } from '/imports/utils/logger';
+import { templatePath } from '/imports/utils/templatesPath';
 
 const getEnv = () => {
 	if (process.env.KONECTY_MODE === 'development') {
@@ -19,12 +24,14 @@ const getEnv = () => {
 	return '';
 };
 
-app.get('/login', function (req, res, next) {
-	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR') {
-		return next();
-	}
+app.get('/login', async function (req, res) {
+	const loginTemplate = path.join(templatePath(), 'login/login.hbs');
 
-	res.render('login.html', {
+	const loginTemplateContent = await fsPromises.readFile(loginTemplate, 'utf8');
+
+	const template = Handlebars.compile(loginTemplateContent);
+
+	const result = template({
 		env: getEnv(),
 		host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
 		namespace: process.env.KONMETA_NAMESPACE,
@@ -41,23 +48,19 @@ app.get('/login', function (req, res, next) {
 		lbl_browser_install: 'Para acessar o sistema você deve instalar um dos navegadores abaixo.',
 		uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
 	});
+
+	res.writeHead(200, { 'Content-Type': 'text/html' });
+
+	return res.send(result);
 });
 
-app.get('/login.js', function (req, res, next) {
-	if (process.env.INTERFACE === 'METEOR' || req.headers.interface === 'METEOR') {
-		return next();
-	}
+app.get('/login.js', function (req, res) {
+	const loginJsFilePath = path.join(templatePath(), 'login/login.js');
 
-	const basePath = resolve('.').split('.meteor')[0];
-	let tplPath = 'assets/app/';
-	if (basePath.indexOf('bundle/programs/server') > 0) {
-		tplPath = '../../programs/server/assets/app/';
-	}
-
-	const login = readFileSync(tplPath + 'login/login.js');
+	const fileStream = fs.createReadStream(loginJsFilePath);
 
 	res.writeHead(200, { 'Content-Type': 'application/javascript' });
-	return res.end(login);
+	fileStream.pipe(res);
 });
 
 app.get('/', async function (req, res) {
@@ -84,7 +87,17 @@ app.get('/', async function (req, res) {
 			previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
 		};
 
-		res.render('index.html', config);
+		const indexTemplatePath = path.join(templatePath(), 'index.hbs');
+
+		const indexTemplate = await fsPromises.readFile(indexTemplatePath, 'utf8');
+
+		const template = Handlebars.compile(indexTemplate);
+
+		const result = template(config);
+
+		res.writeHead(200, { 'Content-Type': 'text/html' });
+
+		return res.send(result);
 	} catch (error) {
 		if (/^\[get-user\]/.test(error.message)) {
 			return res.redirect('/login');
