@@ -16,7 +16,6 @@ sha@1.0.9
 meteorhacks:aggregate
 meteorhacks:collection-utils
 meteorhacks:ssr
-fafallback
 meteor-base@1.5.1
 mongo@1.16.6
 session@1.2.1
