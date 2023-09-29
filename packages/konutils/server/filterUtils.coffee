@@ -345,4 +345,4 @@ filterUtils.clearProjectionPathCollision = (projection) ->
 	cleaned = _.uniqBy fields, (field) ->
 		field[0].split('.')[0]
 	
-	return _.fromPairs cleaned
+	return _.omit _.fromPairs(cleaned), ''
