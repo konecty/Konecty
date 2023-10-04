@@ -1,3 +1,5 @@
+import { hash as bcryptHash } from 'bcrypt';
+
 import { createHash } from 'crypto';
 
 import isArray from 'lodash/isArray';
@@ -8,6 +10,7 @@ import isBoolean from 'lodash/isBoolean';
 import has from 'lodash/has';
 import size from 'lodash/size';
 import isFunction from 'lodash/isFunction';
+import isEqual from 'lodash/isEqual';
 import isDate from 'lodash/isDate';
 import omit from 'lodash/omit';
 
@@ -18,16 +21,21 @@ import { titleCase } from 'title-case';
 import { upperCase } from 'upper-case';
 import { lowerCase } from 'lower-case';
 
-import { utils } from '/imports/utils/konutils/utils';
 import { Collections, Meta } from '/imports/model/MetaObject';
-import { regexUtils } from '/server/lib/regex';
-import { Password } from '/server/lib/password';
 import { logger } from '/imports/utils/logger';
 
 import { removeInheritedFields } from '/imports/meta/removeInheritedFields';
 import { getNextCode } from '/imports/meta/getNextCode';
 import { stringToDate } from '/imports/data/dateParser';
 import { copyDescriptionAndInheritedFields } from '/imports/meta/copyDescriptionAndInheritedFields';
+
+import { BCRYPT_SALT_ROUNDS } from '/imports/consts';
+
+
+const regexUtils = {
+	email: /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/,
+	url: /^http(?:s)?:\/\/(www\.)?[a-z0-9]+(?:[\-\.]{1}[a-z0-9]+)*(?::[0-9]{1,5})?(\/.*)?$/,
+};
 
 
 const CaseFunctions = {
@@ -67,7 +75,6 @@ const VALID_OPERATORS = [
 const ALLOWED_CURRENCIES = ['BRL'];
 
 export async function validateAndProcessValueFor({ meta, fieldName, value, actionType, objectOriginalValues, objectNewValues, idsToUpdate }) {
-
 	if (meta == null) {
 		return {
 			success: false,
@@ -134,7 +141,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		}
 
 		if (field.isAllowDuplicates === false && isArray(value)) {
-			if (value.some((itemA, indexA) => value.some((itemB, indexB) => indexA !== indexB && utils.deepEqual(itemA, itemB)))) {
+			if (value.some((itemA, indexA) => value.some((itemB, indexB) => indexA !== indexB && isEqual(itemA, itemB)))) {
 				return {
 					success: false,
 					errors: [
@@ -849,11 +856,13 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return passwordStringResult;
 				}
 
-				value = Password.create().encrypt(value);
+				const hashedPassword = createHash('sha256').update(value).digest('hex');
+
+				const hashPassword = await bcryptHash(hashedPassword, BCRYPT_SALT_ROUNDS);
 
 				return {
 					success: true,
-					data: value,
+					data: hashPassword,
 				};
 
 			case 'encrypted':
@@ -928,7 +937,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return optionalResult;
 				}
 
-				const geoResult = mustBeArrayOrNull(value.geolocation, `${fieldName}.geolocation`)
+				const geoResult = mustBeArrayOrNull(value.geolocation, `${fieldName}.geolocation`);
 				if (geoResult.success === false) {
 					return geoResult;
 				}
@@ -1072,7 +1081,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				if (fileObjectResult.success === false) {
 					return fileObjectResult;
 				}
-				
+
 				const unauthorizedKeys = ['key', 'name', 'size', 'created', 'etag', 'headers', 'kind', 'last_modified', 'description', 'label', 'wildcard'];
 				return {
 					success: true,

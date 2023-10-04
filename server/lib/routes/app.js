@@ -10,7 +10,6 @@ import { parse } from 'mongodb-uri';
 import { isArray, isObject, each, isString, isNumber, get, isBuffer } from 'lodash';
 import cors from 'cors';
 
-import { utils } from '/imports/utils/konutils/utils';
 import { logger } from '/imports/utils/logger';
 
 // const RES_TIMEOUT = 1000 * 300;
@@ -155,7 +154,7 @@ Picker.middleware(function (req, res, next) {
 		// Log API Calls
 		const totalTime = process.hrtime(req.startTime);
 
-		let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${utils.rpad(req.method, 4).bold} ${req.url}  ${
+		let log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms =>  ${res.statusCode} ${req.method} ${req.url}  ${
 			req.headers.host != null ? `${req.headers.host}` : ''
 		} ${req.headers.referer != null ? `${req.headers.referer}` : ''}`;
 

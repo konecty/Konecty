@@ -737,7 +737,7 @@ export async function processContact({ data, options, contextUser }) {
 
 	// # Some validations of payload
 	// if not _.isObject request
-	// 	return new Meteor.Error 'internal-error', "[#{request.document}] Invalid payload"
+	// 	return { success: false, message:  "[#{request.document}] Invalid payload" }
 	const campaign = await findCampaign(data.campaign, contextUser);
 	if (campaign) {
 		data.campaign = campaign;

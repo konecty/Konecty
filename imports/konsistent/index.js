@@ -1,6 +1,7 @@
-import { MongoClient } from 'mongodb';
-
 import BluebirdPromise from 'bluebird';
+import { MongoClient } from 'mongodb';
+import { CronJob } from 'cron';
+import { DateTime } from 'luxon';
 
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
@@ -19,13 +20,12 @@ import omit from 'lodash/omit';
 
 import { Meta, Models, References, MetaByCollection, Collections } from '/imports/model/MetaObject';
 import { parseFilterObject } from '/imports/data/filterUtils';
-import { utils } from '/imports/utils/konutils/utils';
 import { copyDescriptionAndInheritedFields } from '/imports/meta/copyDescriptionAndInheritedFields';
 
 import { logger } from '/imports/utils/logger';
 import { db } from '/imports/database';
-import { CronJob } from 'cron';
-import { DateTime } from 'luxon';
+import {getFirstPartOfArrayOfPaths, getTermsOfFilter} from '/imports/konsistent/utils';
+import { formatValue, getLabel } from '/imports/konsistent/utils';
 
 const KONSISTENT_SCHEDULE = process.env.KONSISTENT_SCHEDULE || '*/1 * * * *';
 
@@ -487,7 +487,7 @@ async function updateRelationReferences(metaName, action, id, data) {
 					referencedKeys.push(relation.lookup);
 				}
 
-				referencedKeys = referencedKeys.concat(utils.getFirstPartOfArrayOfPaths(utils.getTermsOfFilter(relation.filter)));
+				referencedKeys = referencedKeys.concat(getFirstPartOfArrayOfPaths(getTermsOfFilter(relation.filter)));
 
 				for (let fieldName in relation.aggregators) {
 					const aggregator = relation.aggregators[fieldName];
@@ -1269,12 +1269,12 @@ async function processAlertsForOplogItem(metaName, action, _id, data, updatedBy,
 
 				if (field) {
 					dataArray.push({
-						field: utils.getLabel(field, user) || key,
-						value: utils.formatValue(value, field),
+						field: getLabel(field, user) || key,
+						value: formatValue(value, field),
 					});
 				} else {
 					dataArray.push({
-						field: utils.getLabel(field, user) || key,
+						field: getLabel(field, user) || key,
 						value,
 					});
 				}
@@ -1285,7 +1285,7 @@ async function processAlertsForOplogItem(metaName, action, _id, data, updatedBy,
 			return;
 		}
 
-		const documentName = utils.getLabel(meta, user) || meta.name;
+		const documentName = getLabel(meta, user) || meta.name;
 
 		const alertData = {
 			documentName,
