@@ -15,6 +15,19 @@ export const DocumentListSchema = z.object({
 			minWidth: z.number().optional(),
 		}),
 	),
+	filter: z
+		.array(
+			z.object({
+				operator: z.string(),
+				term: z.string(),
+				editable: z.boolean().optional(),
+				disabled: z.boolean().optional(),
+				sort: z.number().optional(),
+				value: z.any().optional(),
+				style: z.any().optional(),
+			}),
+		)
+		.optional(),
 	refreshRate: z.object({
 		options: z.array(z.number()),
 		default: z.number(),
