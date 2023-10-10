@@ -15,10 +15,7 @@ export async function listView(document: string, id: string) {
 
 	const listColumns = sortBy(columnsArray, ['sort', 'name']);
 
-	const filtersList = sortBy(
-		Object.entries(list.filter?.conditions).map(([, value]) => value),
-		['sort', 'term'],
-	);
+	const filtersList = sortBy(Object.values(list.filter?.conditions), ['sort', 'term']);
 
 	const listViewResult = DocumentListSchema.safeParse({
 		...list,
@@ -38,6 +35,36 @@ export async function listView(document: string, id: string) {
 			`Error parsing list view ${document}/${id}`,
 		);
 		return null;
+	}
+
+	if (listViewResult.data.boards) {
+		const metaDocument = (await MetaObjectCollection.findOne<MetaObjectType>({ type: 'document', name: document })) as any;
+
+		const newBoards = listViewResult.data.boards.flatMap(item => {
+			const groupByField = metaDocument?.fields[item.groupBy.field];
+
+			if (groupByField == null || groupByField.type !== 'picklist') {
+				return [];
+			}
+
+			const values = sortBy(
+				Object.entries(groupByField.options).map(([key, value]: [string, any]) => ({
+					value: key,
+					sort: value.sort,
+				})),
+				['sort', 'value'],
+			).map(item => item.value);
+
+			return {
+				...item,
+				groupBy: {
+					...item.groupBy,
+					values,
+				},
+			};
+		});
+
+		listViewResult.data.boards = newBoards;
 	}
 
 	return listViewResult.data;
