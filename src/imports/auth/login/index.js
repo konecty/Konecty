@@ -35,10 +35,12 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	}
 
 	const userRecord = await MetaObject.Collections.User.findOne({
-		'services.password.bcryptjs': { $exists: true },
+		'services.password.bcrypt': { $exists: true },
 		active: true,
 		$or: [{ username: user }, { 'emails.address': user }],
 	});
+
+	console.log('userRecord', userRecord);	
 
 	if (userRecord == null) {
 		accessLog.reason = `Active User not found [${user}]`;

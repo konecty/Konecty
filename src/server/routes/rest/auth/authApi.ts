@@ -1,4 +1,5 @@
 import { FastifyPluginCallback } from 'fastify';
+import formbody from '@fastify/formbody';
 import fp from 'fastify-plugin';
 
 import { StatusCodes } from 'http-status-codes';
@@ -27,6 +28,9 @@ function getDomain(host: string | undefined) {
 }
 
 export const authApi: FastifyPluginCallback = (fastify, _, done) => {
+
+	fastify.register(formbody);
+
 	fastify.get<{ Params: { ns: string; sessionId: string } }>('/rest/auth/loginByUrl/:ns/:sessionId', async function (req, reply) {
 		const domain = getDomain(req.headers['host']);
 

@@ -4,13 +4,14 @@
 	"description": "Konecty",
 	"main": "./src/server/main.ts",
 	"scripts": {
-		"start": "env-cmd nodemon --watch '.'  --exec 'ts-node ./src/server/main.ts' -e ts | pino-pretty --colorize",
+		"start": "env-cmd nodemon --watch src  --exec 'ts-node ./src/server/main.ts' | pino-pretty --colorize",
 		"lint": "eslint . --ext .ts --ext .js --fix",
 		"prettier": "prettier --write ."
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.23.1",
 		"@fastify/cookie": "^9.1.0",
+		"@fastify/formbody": "^7.4.0",
 		"async": "^3.2.4",
 		"aws-sdk": "^2.1470.0",
 		"axios": "^1.5.1",
