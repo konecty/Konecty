@@ -28,6 +28,7 @@ export const DocumentListSchema = z.object({
 			}),
 		)
 		.optional(),
+  defaultFormat: z.string().optional(),
 	boards: z
 		.array(
 			z.object({
