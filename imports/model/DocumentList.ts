@@ -28,6 +28,18 @@ export const DocumentListSchema = z.object({
 			}),
 		)
 		.optional(),
+  defaultFormat: z.string().optional(),
+	boards: z
+		.array(
+			z.object({
+				groupBy: z.object({
+					field: z.string(),
+					values: z.array(z.string()).optional(),
+				}),
+				cardFields: z.array(z.string()),
+			}),
+		)
+		.optional(),
 	refreshRate: z.object({
 		options: z.array(z.number()),
 		default: z.number(),
