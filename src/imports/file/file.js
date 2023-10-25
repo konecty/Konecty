@@ -1,30 +1,38 @@
 import findIndex from 'lodash/findIndex';
-import set from 'lodash/set';
 import get from 'lodash/get';
 import size from 'lodash/size';
 import first from 'lodash/first';
 
-import { getAuthTokenIdFromReq } from '../utils/sessionUtils';
 import { MetaObject } from '@imports/model/MetaObject';
 import { update } from '../data/data';
+import { logger } from '../utils/logger';
+import { getUserSafe } from '../auth/getUser';
 
-export async function fileUpload(req) {
+export async function fileUpload({ authTokenId = null, document, fieldName, recordCode, body, contextUser = null }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
+
+	if (success === false) {
+		return {
+			success: false,
+			errors,
+		};
+	}
 	// Get meta of document
-	const meta = MetaObject.Meta[req.params.document];
+	const meta = MetaObject.Meta[document];
 
 	if (meta == null) {
 		return {
 			success: false,
-			error: `MetaObject.Meta [${req.params.document}] does not exists`,
+			error: `MetaObject.Meta [${document}] does not exists`,
 		};
 	}
 
 	// Try to get passed field
-	const field = meta.fields[req.params.fieldName];
+	const field = meta.fields[fieldName];
 	if (field == null) {
 		return {
 			success: false,
-			error: `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`,
+			error: `Field [${fieldName}] does not exists on metadata [${document}]`,
 		};
 	}
 
@@ -32,11 +40,11 @@ export async function fileUpload(req) {
 	if (field.type !== 'file') {
 		return {
 			success: false,
-			error: `Field [${req.params.fieldName}] must be of type file`,
+			error: `Field [${fieldName}] must be of type file`,
 		};
 	}
 
-	if (req.params.recordCode == null) {
+	if (recordCode == null) {
 		return {
 			success: false,
 			error: `Record code is required`,
@@ -44,18 +52,18 @@ export async function fileUpload(req) {
 	}
 
 	// Get model of document
-	const collection = MetaObject.Collections[req.params.document];
+	const collection = MetaObject.Collections[document];
 
 	// Find record by code or id
 	const record = await collection.findOne({
-		$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
+		$or: [{ code: parseInt(recordCode) }, { _id: recordCode }],
 	});
 
 	// If no record found then return error
 	if (record === null) {
 		return {
 			success: false,
-			error: `Record with code or id [${req.params.recordCode}] was not found`,
+			error: `Record with code or id [${recordCode}] was not found`,
 		};
 	}
 
@@ -64,13 +72,13 @@ export async function fileUpload(req) {
 		if (!record[field.name]) {
 			record[field.name] = [];
 		}
-		const f = record[field.name].filter(item => item.etag === req.body.etag && item.key === req.body.key);
+		const f = record[field.name].filter(item => item.etag === body.etag && item.key === body.key);
 
 		if (f.length === 0) {
-			record[field.name].push(req.body);
+			record[field.name].push(body);
 		}
 	} else {
-		record[field.name] = req.body;
+		record[field.name] = body;
 	}
 
 	// Define data to update to send to updateRecords Api
@@ -89,14 +97,11 @@ export async function fileUpload(req) {
 	// Add field of file
 	dataToUpdate.data[field.name] = record[field.name];
 
-	// Define body with data to preocess update
-	const body = dataToUpdate;
-
 	// Execute update
 	const result = await update({
-		authTokenId: getAuthTokenIdFromReq(req),
-		document: req.params.document,
-		data: body,
+		contextUser: user,
+		document: document,
+		data: dataToUpdate,
 	});
 
 	// If resuls is success: false or data don't have records, return
@@ -108,23 +113,30 @@ export async function fileUpload(req) {
 	return first(result.data);
 }
 
-export async function fileRemove(req) {
-	// Get meta of document
-	const meta = MetaObject.Meta[req.params.document];
+export async function fileRemove({ authTokenId = null, document, recordCode, fieldName, fileName, contextUser = null }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 
+	if (success === false) {
+		return {
+			success: false,
+			errors,
+		};
+	}
+
+	const meta = MetaObject.Meta[document];
 	if (meta == null) {
 		return {
 			success: false,
-			error: `MetaObject.Meta [${req.params.document}] does not exists`,
+			error: `MetaObject.Meta [${document}] does not exists`,
 		};
 	}
 
 	// Try to get passed field
-	const field = meta.fields[req.params.fieldName];
+	const field = meta.fields[fieldName];
 	if (field == null) {
 		return {
 			success: false,
-			error: `Field [${req.params.fieldName}] does not exists on metadata [${req.params.document}]`,
+			error: `Field [${fieldName}] does not exists on metadata [${document}]`,
 		};
 	}
 
@@ -132,40 +144,51 @@ export async function fileRemove(req) {
 	if (field.type !== 'file') {
 		return {
 			success: false,
-			error: `Field [${req.params.fieldName}] must be of type file`,
+			error: `Field [${fieldName}] must be of type file`,
 		};
 	}
 
 	// Get model of document
-	const collection = MetaObject.Collections[req.params.document];
+	const collection = MetaObject.Collections[document];
 
 	// Find record by code or id
 	const record = await collection.findOne({
-		$or: [{ code: parseInt(req.params.recordCode) }, { _id: req.params.recordCode }],
+		$or: [{ code: parseInt(recordCode) }, { _id: recordCode }],
 	});
 
 	// If no record found then return error
 	if (record == null) {
 		return {
 			success: false,
-			error: `Record with code or id [${req.params.recordCode}] was not found`,
+			error: `Record with code or id [${recordCode}] was not found`,
 		};
 	}
 
 	// Add file if is isList or change file if is single
+	logger.trace(
+		{
+			params: {
+				document,
+				recordCode,
+				fieldName,
+				fileName,
+			},
+		},
+		'fileRemove params',
+	);
 
-	set(req, 'params.fileName', decodeURIComponent(req.params.fileName));
+	const key = `${document}/${recordCode}/${fieldName}/${fileName}`;
 
 	if (field.isList === true) {
 		if (!record[field.name]) {
 			record[field.name] = [];
 		}
-		const index = findIndex(record[field.name], i => i.name === req.params.fileName);
+		const index = findIndex(record[field.name], i => [fileName, decodeURIComponent(fileName)].includes(i.name) || i.key === key);
 
 		if (index === -1) {
 			return {
 				success: false,
-				error: `File with name [${req.params.fileName}] was not found`,
+				error: `File with name [${fileName}] was not found`,
 			};
 		}
 
@@ -195,9 +218,10 @@ export async function fileRemove(req) {
 
 	// Execute update
 	const result = await update({
-		authTokenId: getAuthTokenIdFromReq(req),
-		document: req.params.document,
+		authTokenId,
+		document: document,
 		data: body,
+		contextUser: user,
 	});
 
 	// If resuls is success: false or data don't have records, return

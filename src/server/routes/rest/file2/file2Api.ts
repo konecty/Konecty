@@ -34,17 +34,14 @@ const file2Api: FastifyPluginCallback = (fastify, _, done) => {
 			return errorReturn(`[${document}] You don't have permission to update field ${fieldName}`);
 		}
 
-		const { headers, body } = req;
+		const { body } = req;
 
 		const coreResponse = await fileUpload({
-			params: {
-				document,
-				fieldName,
-				recordCode,
-			},
-			cookies: req.cookies,
-			headers,
+			document,
+			fieldName,
+			recordCode,
 			body,
+			contextUser: user,
 		});
 		reply.send(coreResponse);
 	});
@@ -76,14 +73,11 @@ const file2Api: FastifyPluginCallback = (fastify, _, done) => {
 		}
 
 		const coreResponse = await fileRemove({
-			params: {
-				document,
-				fieldName,
-				recordCode,
-				fileName,
-			},
-			cookies: req.cookies,
-			headers: req.headers,
+			document,
+			fieldName,
+			recordCode,
+			fileName,
+			contextUser: user,
 		});
 
 		if (coreResponse.success === false) {
