@@ -245,7 +245,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 		const resultData = records.map(record =>
 			Object.keys(record).reduce((acc, key) => {
 				if (accessConditions[key] != null) {
-					if (accessConditions[key](record[key]) === true) {
+					if (accessConditions[key](record) === true) {
 						acc[key] = record[key];
 					}
 				} else {
