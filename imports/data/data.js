@@ -1470,7 +1470,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, data: bodyData, fullData: extend({}, record, data.data), user });
 			if (validationScriptResult.success === false) {
 				logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
-				return errorReturn(`[${document}] ${validationScriptResult.reason}`);
+				return errorReturn(validationScriptResult.reason);
 			}
 		}
 
