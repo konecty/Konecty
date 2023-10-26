@@ -28,7 +28,7 @@ export const DocumentListSchema = z.object({
 			}),
 		)
 		.optional(),
-  defaultFormat: z.string().optional(),
+	defaultFormat: z.string().optional(),
 	boards: z
 		.array(
 			z.object({
@@ -36,7 +36,17 @@ export const DocumentListSchema = z.object({
 					field: z.string(),
 					values: z.array(z.string()).optional(),
 				}),
-				cardFields: z.array(z.string()),
+				card: z.record(
+					z.object({
+						linkField: z.string(),
+						name: z.string(),
+						slot: z.string().optional(),
+						template: z.string().optional(),
+						colors: z.array(z.string()).optional(),
+						defaultValue: z.string().optional(),
+						sort: z.number().optional(),
+					}),
+				),
 			}),
 		)
 		.optional(),

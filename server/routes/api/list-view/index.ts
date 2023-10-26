@@ -36,8 +36,8 @@ WebApp.connectHandlers.use('/api/list-view', async (req, res) => {
 		const result = await listView(document, id);
 
 		if (result == null) {
-			res.writeHead(404);
-			res.end('Not found');
+			res.writeHead(400);
+			res.end('Invalid meta object');
 			return;
 		}
 
