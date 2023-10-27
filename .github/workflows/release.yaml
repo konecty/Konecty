@@ -20,22 +20,32 @@ jobs:
               uses: actions/checkout@v3
               with:
                   ref: ${{ steps.latestrelease.outputs.releasetag }}
-            - name: Install Meteor
-              run: |
-                  curl https://install.meteor.com/ | sh
-                  export METEOR_ALLOW_SUPERUSER=true
-                  meteor --version
-                  meteor node --version
-                  meteor npm --version
-            - name: Build
-              run: |
-                  meteor npm install
-                  meteor build --server-only /tmp/build
-            - name: Copy build to GitHub
-              uses: softprops/action-gh-release@v1
-              if: startsWith(github.ref, 'refs/tags/')
+            - name: Setup NodeJS
+              uses: actions/setup-node@v3
               with:
-                  files: /tmp/build/Konecty.tar.gz
+                  node-version: 18
+                  cache: 'yarn'
+                  cache-dependency-path: yarn.lock
+            - name: Restore Dependencies Cache
+              uses: actions/cache/restore@v3
+              id: cache-restore
+              with:
+                  path: |
+                      node_modules
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+            - name: Install Dependencies
+              run: yarn --frozen-lockfile --no-progress --non-interactive
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+            - name: Save Dependencies Cache
+              uses: actions/cache/save@v3
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+              id: cache-save
+              with:
+                  path: |
+                      node_modules
+                  key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+            - name: Build
+              run: yarn build
             - name: Setup Docker Buildx
               uses: docker/setup-buildx-action@v1
             - name: Get the tag name

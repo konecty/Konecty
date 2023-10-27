@@ -1,21 +1,27 @@
-FROM node:14
+FROM node:18-alpine
 
-ARG VERSION
 
-RUN set -x \
-	&& curl -SLf "https://github.com/Konecty/Konecty/releases/download/$VERSION/Konecty.tar.gz" -o Konecty.tar.gz \
-	&& mkdir /app \
-	&& tar -zxf Konecty.tar.gz -C /app \
-	&& rm Konecty.tar.gz \
-	&& cd /app/bundle/programs/server/ \
-	&& npm install \
-	&& npm run install 
+RUN mkdir -p /app
+COPY dist app
+COPY src/private app/private
+COPY package.json app
+COPY yarn.lock app
 
-WORKDIR /app/bundle
+WORKDIR /app
 
-ENV PORT=3000 \
-	ROOT_URL=http://localhost:3000
+RUN apk add --no-cache --update python3 make g++ libc6-compat && rm -rf /var/cache/apk/*
+RUN yarn install --production --silent --non-interactive --frozen-lockfile
+
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S konecty -u 1001
+
+USER konecty
+ENV PORT=3000
+ENV NODE_ENV production
+ENV NODE_ICU_DATA=/app/node_modules/full-icu
 
 EXPOSE 3000
 
-CMD ["node", "--max-http-header-size=65535", "main.js"]
+CMD ["node", "--max-http-header-size=65535", "server/main.js"]
+

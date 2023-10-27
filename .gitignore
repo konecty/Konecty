@@ -67,3 +67,4 @@ typo3temp
 .vscode
 package-lock.json
 .env.docker
+dist
