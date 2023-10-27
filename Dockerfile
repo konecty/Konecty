@@ -1,6 +1,5 @@
 FROM node:18-alpine
 
-
 RUN mkdir -p /app
 COPY ./dist app
 COPY ./src/private app/private
