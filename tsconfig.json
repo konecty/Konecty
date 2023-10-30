@@ -2,7 +2,6 @@
 	"ts-node": {
 		"require": ["tsconfig-paths/register"]
 	},
-	"extends": "@tsconfig/bun/tsconfig.json",
 	"compilerOptions": {
 		"esModuleInterop": true,
 		"allowJs": true,
@@ -21,7 +20,6 @@
 			"@server/*": ["./server/*"]
 		},
 		"outDir": "./build",
-		"types": ["bun-types"],
 		"lib": ["ESNext"],
 		"module": "CommonJS",
 		"target": "esnext",
