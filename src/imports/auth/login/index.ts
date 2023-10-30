@@ -5,11 +5,43 @@ import get from 'lodash/get';
 import { MetaObject } from '@imports/model/MetaObject';
 import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '../../consts';
 import { generateStampedLoginToken } from '@imports/auth/login/token';
+import { ObjectId } from 'mongodb';
 
-export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }) {
+interface LoginParams {
+	ip?: string | string[];
+	user: string;
+	password: string;
+	password_SHA256?: string;
+	geolocation?: { longitude: number; latitude: number } | string;
+	resolution?: { width: number; height: number } | string;
+	userAgent?: string;
+}
+
+interface accessLog {
+	_createdAt: Date;
+	_updatedAt: Date;
+	ip?: string | string[];
+	login: string;
+	browser?: string;
+	browserVersion?: string;
+	os?: string;
+	platform?: string;
+	geolocation?: [number, number];
+	resolution?: { width: number; height: number };
+	reason?: string;
+	_user?: [
+		{
+			_id: string;
+			name: string;
+			group: string;
+		},
+	];
+}
+
+export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }: LoginParams) {
 	const ua = new UAParser(userAgent ?? 'API Call').getResult();
 
-	const accessLog = {
+	const accessLog: accessLog = {
 		_createdAt: new Date(),
 		_updatedAt: new Date(),
 		ip,
@@ -21,13 +53,22 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	};
 
 	if (resolution != null) {
-		accessLog.resolution = JSON.parse(resolution);
+		if (typeof resolution === 'string') {
+			accessLog.resolution = JSON.parse(resolution);
+		} else {
+			accessLog.resolution = resolution;
+		}
 	}
 
 	// If there is a geolocation store it with session
 	if (geolocation != null) {
-		const { lng, lat } = JSON.parse(geolocation);
-		accessLog.geolocation = [lng, lat];
+		if (typeof geolocation === 'string') {
+			const { lng, lat } = JSON.parse(geolocation);
+			accessLog.geolocation = [lng, lat];
+		} else {
+			const { longitude, latitude } = geolocation;
+			accessLog.geolocation = [longitude, latitude];
+		}
 	} else if (MetaObject.Namespace.trackUserGeolocation === true) {
 		accessLog.reason = 'Geolocation required';
 		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog);
@@ -39,8 +80,6 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		active: true,
 		$or: [{ username: user }, { 'emails.address': user }],
 	});
-
-	console.log('userRecord', userRecord);	
 
 	if (userRecord == null) {
 		accessLog.reason = `Active User not found [${user}]`;
@@ -55,7 +94,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 
 	accessLog._user = [
 		{
-			_id: userRecord._id,
+			_id: userRecord._id?.toString() || `${userRecord._id}`,
 			name: userRecord.name,
 			group: userRecord.group,
 		},
@@ -122,7 +161,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	};
 }
 
-export const cleanupSessions = async (userId, all = false) => {
+export const cleanupSessions = async (userId: ObjectId, all = false) => {
 	const oldestValidDate = new Date(Date.now() - (MetaObject.Namespace.loginExpiration ?? DEFAULT_LOGIN_EXPIRATION));
 
 	if (all === true) {

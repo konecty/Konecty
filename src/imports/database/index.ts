@@ -7,7 +7,7 @@ const MONGODB_URL_REGEX = /^mongodb:\/\/(?:([^:]+):([^@]+)@)?([^/:]+)(?::(\d+))?
 
 const MONGO_URL = process.env.MONGO_URL ?? 'mongodb://localhost:27017';
 
-const [, username, password, host, port, database, urioptions] = MONGO_URL.match(MONGODB_URL_REGEX);
+const [, username, password, host, port, database, urioptions] = MONGO_URL.match(MONGODB_URL_REGEX) || [];
 
 const options = querystring.parse(urioptions ?? {});
 

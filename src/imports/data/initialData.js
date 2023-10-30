@@ -20,7 +20,7 @@ function metadataPath() {
 		return path.join(rootDir, '../../programs/server/assets/app/metadata');
 	}
 
-	return path.join(rootDir, 'private/metadata');
+	return path.join(rootDir, 'src/private/metadata');
 }
 export async function checkInitialData() {
 	const currentDateTime = DateTime.now().toJSDate();
@@ -49,7 +49,14 @@ export async function checkInitialData() {
 	const usersCount = await db.collection('users').countDocuments();
 	if (usersCount === 0) {
 		logger.info('[kondata] Create first user (admin)');
-		const password = randomPassword(GENERATED_PASSOWRD_LENGTH);
+
+		let password;
+
+		if (process.env.NODE_ENV === 'test') {
+			password = '123456';
+		} else {
+			password = randomPassword(GENERATED_PASSOWRD_LENGTH);
+		}
 		const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 		const hashPassword = await bcryptHash(hashedPassword, BCRYPT_SALT_ROUNDS);
 
