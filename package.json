@@ -11,6 +11,11 @@
 		"prettier": "prettier --write src",
 		"test": "jest --detectOpenHandles --runInBand"
 	},
+	"engines": {
+		"node": ">=18.0.0",
+		"npm": "please-use-yarn",
+		"yarn": ">=1.22.0"
+	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.431.0",
 		"@babel/runtime": "^7.23.1",
