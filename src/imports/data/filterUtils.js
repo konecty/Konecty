@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import fromPairs from 'lodash/fromPairs';
 import get from 'lodash/get';
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
@@ -10,11 +11,10 @@ import reduce from 'lodash/reduce';
 import size from 'lodash/size';
 import startsWith from 'lodash/startsWith';
 import uniqBy from 'lodash/uniqBy';
-import fromPairs from 'lodash/fromPairs';
 
-import { logger } from '../utils/logger';
 import { MetaObject } from '@imports/model/MetaObject';
-import { successReturn, errorReturn } from '../utils/return';
+import { logger } from '../utils/logger';
+import { errorReturn, successReturn } from '../utils/return';
 
 const validOperators = [
 	'equals',
@@ -443,6 +443,11 @@ export function clearProjectionPathCollision(projection) {
 }
 
 export function filterConditionToFn(condition, metaObject, req) {
+	if (req == null || req.user == null) {
+		logger.error('Logged user is required to parse condition');
+		return errorReturn('Logged user is required to parse condition');
+	}
+
 	if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || !has(condition, 'value')) {
 		logger.error('All conditions must contain term, operator and value');
 		return errorReturn('All conditions must contain term, operator and value');
@@ -527,35 +532,37 @@ export function filterConditionToFn(condition, metaObject, req) {
 
 	const conditionValue = getValue(conditionValueResult.data);
 
+	const getFieldValue = data => get(data, condition.term);
+
 	switch (operator) {
 		case 'equals':
-			return successReturn(data => data[condition.term] === conditionValue);
+			return successReturn(data => getFieldValue(data) === conditionValue);
 		case 'not_equals':
-			return successReturn(data => data[condition.term] !== conditionValue);
+			return successReturn(data => getFieldValue(data) !== conditionValue);
 		case 'contains':
-			return successReturn(data => data[condition.term].includes(conditionValue));
+			return successReturn(data => getFieldValue(data).includes(conditionValue));
 		case 'not_contains':
-			return successReturn(data => !data[condition.term].includes(conditionValue));
+			return successReturn(data => !getFieldValue(data).includes(conditionValue));
 		case 'starts_with':
-			return successReturn(data => data[condition.term].startsWith(conditionValue));
+			return successReturn(data => getFieldValue(data).startsWith(conditionValue));
 		case 'end_with':
-			return successReturn(data => data[condition.term].endsWith(conditionValue));
+			return successReturn(data => getFieldValue(data).endsWith(conditionValue));
 		case 'in':
-			return successReturn(data => conditionValue.includes(data[condition.term]));
+			return successReturn(data => conditionValue.includes(getFieldValue(data)));
 		case 'not_in':
-			return successReturn(data => !conditionValue.includes(data[condition.term]));
+			return successReturn(data => !conditionValue.includes(getFieldValue(data)));
 		case 'greater_than':
-			return successReturn(data => data[condition.term] > conditionValue);
+			return successReturn(data => getFieldValue(data) > conditionValue);
 		case 'greater_or_equals':
-			return successReturn(data => data[condition.term] >= conditionValue);
+			return successReturn(data => getFieldValue(data) >= conditionValue);
 		case 'less_than':
-			return successReturn(data => data[condition.term] < conditionValue);
+			return successReturn(data => getFieldValue(data) < conditionValue);
 		case 'less_or_equals':
-			return successReturn(data => data[condition.term] <= conditionValue);
+			return successReturn(data => getFieldValue(data) <= conditionValue);
 		case 'between':
-			return successReturn(data => data[condition.term] >= conditionValue.greater_or_equals && data[condition.term] <= conditionValue.less_or_equals);
+			return successReturn(data => getFieldValue(data) >= conditionValue.greater_or_equals && getFieldValue(data) <= conditionValue.less_or_equals);
 		case 'exists':
-			return successReturn(data => data[condition.term] != null);
+			return successReturn(data => getFieldValue(data) != null);
 		default:
 			logger.error(`Operator [${condition.operator}] not supported`);
 			return errorReturn(`Operator [${condition.operator}] not supported`);
