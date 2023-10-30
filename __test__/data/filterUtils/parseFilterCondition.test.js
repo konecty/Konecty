@@ -29,6 +29,7 @@ describe('FilterUtils > ParseFilterCondition', () => {
 		const result = parseFilterCondition(condition, metaObject, req);
 
 		expect(result.success).toBe(true);
+
 		expect(result.data).toEqual({ name: 'John' });
 	});
 

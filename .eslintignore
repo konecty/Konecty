@@ -1,5 +1,4 @@
 .yarn
-.meteor
 dist
 node_modules
 private/metadata/test
