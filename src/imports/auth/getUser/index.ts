@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-
 import { getAuthTokenIdFromReq } from '../../utils/sessionUtils';
 import { MetaObject } from '../../model/MetaObject';
 import { User } from '../../model/User';
