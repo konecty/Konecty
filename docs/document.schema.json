@@ -1,0 +1,369 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://konecty.com/document.schema.json",
+	"type": "object",
+	"required": ["_id", "type", "name", "label", "icon", "fields"],
+	"properties": {
+		"_id": { "type": "string" },
+		"type": { "enum": ["document", "composite"] },
+		"label": {
+			"type": "object",
+			"additionalProperties": { "type": "string" }
+		},
+		"menuSorter": {
+			"type": "integer",
+			"description": "Sorter used to order the documents in the menu, special values: -1: hide, -2: administration menu , -3: user menu."
+		},
+		"name": { "type": "string" },
+		"plurals": {
+			"type": "object",
+			"additionalProperties": { "type": "string" }
+		},
+		"saveHistory": { "type": "boolean" },
+		"help": {
+			"type": "object",
+			"additionalProperties": { "type": "string" }
+		},
+		"icon": { "type": "string" },
+		"fields": {
+			"type": "object",
+			"additionalProperties": {
+				"type": "object",
+				"required": ["name", "type"],
+				"properties": {
+					"name": { "type": "string" },
+					"type": {
+						"type": "string",
+						"enum": [
+							"text",
+							"url",
+							"email",
+							"number",
+							"autoNumber",
+							"date",
+							"dateTime",
+							"time",
+							"money",
+							"boolean",
+							"address",
+							"personName",
+							"phone",
+							"picklist",
+							"lookup",
+							"ObjectId",
+							"encrypted",
+							"filter",
+							"richText",
+							"file",
+							"percentage",
+							"json",
+							"geoloc",
+							"composite",
+							"password"
+						]
+					},
+					"label": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"description": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"help": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"comments": { "type": "string" },
+					"defaultValue": {},
+					"defaultValues": {
+						"type": "array",
+						"items": {}
+					},
+					"access": { "type": "string", "description": "Access name to constraint field permissions" },
+					"isSortable": { "type": "boolean" },
+					"isList": { "type": "boolean" },
+					"isUnique": { "type": "boolean" },
+					"isRequired": { "type": "boolean" },
+					"readOnlyVersion": { "type": "boolean" }
+				},
+				"allOf": [
+					{
+						"if": {
+							"properties": {
+								"isList": { "const": true }
+							}
+						},
+						"then": {
+							"properties": {
+								"minItems": { "type": "integer" },
+								"maxItems": { "type": "integer" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "picklist" }
+							}
+						},
+						"then": {
+							"properties": {
+								"minSelected": { "type": "integer" },
+								"maxSelected": { "type": "integer" },
+								"optionsSorter": { "type": "string" },
+								"options": {
+									"type": "object",
+									"additionalProperties": {
+										"type": "object",
+										"additionalProperties": { "type": ["string", "number"] }
+									}
+								},
+								"renderAs": { "type": "string" }
+							},
+							"required": ["options"]
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "text" }
+							}
+						},
+						"then": {
+							"properties": {
+								"size": { "type": "integer" },
+								"maxLength": { "type": "integer" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "enum": ["number", "money", "percentage"] }
+							}
+						},
+						"then": {
+							"properties": {
+								"decimalSize": { "type": "integer" },
+								"maxValue": { "type": "number" },
+								"minValue": { "type": "number" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "file" }
+							}
+						},
+						"then": {
+							"properties": {
+								"maxSize": { "type": "integer" },
+								"wildcard": { "type": "string" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "enum": ["file", "composite", "encrypted"] },
+								"isList": { "const": true }
+							}
+						},
+						"then": {
+							"properties": {
+								"isListTypeOptionsEditable": { "type": "boolean" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "composite" }
+							}
+						},
+						"then": {
+							"properties": {
+								"compositeType": { "enum": ["reference", "embedded"] },
+								"objectRefId": { "type": "string" }
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "enum": ["text", "richText"] }
+							}
+						},
+						"then": {
+							"properties": {
+								"normalization": {
+									"enum": ["camel", "capital", "constant", "dot", "header", "no", "param", "pascal", "path", "sentence", "snake", "title", "upper", "lower"]
+								}
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "enum": ["phone", "email", "address"] }
+							}
+						},
+						"then": {
+							"properties": {
+								"isTypeOptionsEditable": { "type": "boolean" },
+								"typeOptions": {
+									"type": "object",
+									"additionalProperties": {
+										"type": "object",
+										"additionalProperties": { "type": "string" }
+									}
+								}
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "detailFields" }
+							}
+						},
+						"then": {
+							"required": ["type", "document", "fields"],
+							"properties": {
+								"document": { "type": "string" },
+								"detailFields": { "type": "array", "items": { "type": "string" } },
+								"descriptionFields": { "type": "array", "items": { "type": "string" } },
+								"linkedFormName": { "type": "string" },
+								"conditionFields": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"required": ["field", "operator", "value"],
+										"properties": {
+											"field": { "type": "string" },
+											"operator": { "type": "string" },
+											"value": {}
+										}
+									}
+								},
+								"inheritedFields": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"required": ["fieldName", "inherit"],
+										"properties": {
+											"fieldName": { "type": "string" },
+											"inherit": { "type": "string" }
+										}
+									}
+								}
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "filter" }
+							}
+						},
+						"then": {
+							"required": ["type"],
+							"properties": {
+								"filterOnly": { "type": "boolean" },
+								"filterableFields": {
+									"type": "array",
+									"items": { "type": "string" }
+								},
+								"relations": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"required": ["document"],
+										"properties": {
+											"document": { "type": "string" },
+											"email": { "type": "boolean" },
+											"emailConf": {
+												"type": "object",
+												"required": ["contact", "server", "template"],
+												"properties": {
+													"contact": { "type": "string" },
+													"server": { "type": "string" },
+													"template": { "type": "string" },
+													"extraData": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "object",
+															"properties": {
+																"document": { "type": "string" },
+																"filter": {
+																	"type": "object",
+																	"properties": {
+																		"conditions": {
+																			"type": "array",
+																			"items": {
+																				"type": "object",
+																				"required": ["operator", "term", "value"],
+																				"properties": {
+																					"operator": { "type": "string" },
+																					"term": { "type": "string" },
+																					"value": {}
+																				}
+																			}
+																		},
+																		"match": { "enum": ["and", "or"] }
+																	}
+																}
+															}
+														}
+													}
+												}
+											},
+											"label": {
+												"type": "object",
+												"additionalProperties": { "type": "string" }
+											},
+											"lookup": { "type": "string" },
+											"reverseLookup": { "type": "string" },
+											"view": { "type": "string" }
+										}
+									}
+								}
+							}
+						}
+					},
+					{
+						"if": {
+							"properties": {
+								"type": { "const": "geoloc" }
+							}
+						},
+						"then": {
+							"properties": {
+								"bits": { "type": "integer" }
+							}
+						}
+					}
+				]
+			}
+		},
+
+		"indexes": {
+			"type": "object",
+			"additionalProperties": {
+				"type": "object",
+				"properties": {
+					"keys": {
+						"type": "object",
+						"additionalProperties": {
+							"type": ["integer", "boolean"]
+						}
+					},
+					"options": { "type": "object", "additionalProperties": {} }
+				},
+				"required": ["keys"]
+			}
+		}
+	}
+}
