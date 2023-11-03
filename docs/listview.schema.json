@@ -1,0 +1,140 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://konecty.com/listview.schema.json",
+	"type": "object",
+	"required": ["_id", "type", "name", "document", "label", "plurals", "columns", "filter"],
+	"properties": {
+		"_id": { "type": "string" },
+		"type": { "const": "list" },
+		"view": { "type": "string" },
+		"document": { "type": "string" },
+		"label": {
+			"type": "object",
+			"additionalProperties": { "type": "string" }
+		},
+		"plurals": {
+			"type": "object",
+			"additionalProperties": { "type": "string" }
+		},
+		"menuSorter": {
+			"type": "integer",
+			"description": "Sorter used to order the documents in the menu, special values: -1: hide, -2: administration menu , -3: user menu."
+		},
+		"loadDataAtOpen": { "type": "boolean" },
+		"refreshRate": {
+			"type": "object",
+			"properties": {
+				"options": { "type": "array", "items": { "type": "integer" } },
+				"default": { "type": "integer" }
+			}
+		},
+		"rowsPerPage": {
+			"type": "object",
+			"properties": {
+				"options": { "type": "array", "items": { "type": "integer" } },
+				"default": { "type": "integer" }
+			}
+		},
+		"columns": {
+			"type": "object",
+
+			"additionalProperties": {
+				"type": "object",
+				"required": ["name", "linkField"],
+				"properties": {
+					"name": { "type": "string" },
+					"linkField": { "type": "string" },
+					"description": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"minWidth": { "type": "integer" },
+					"minwidth": { "type": "integer" },
+					"sort": { "type": "integer" },
+					"style": {
+						"colorBasedOnTime": { "type": "string" }
+					},
+					"visible": { "type": "boolean" }
+				}
+			}
+		},
+		"sorters": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["direction", "term"],
+				"properties": {
+					"direction": { "type": "string" },
+					"term": { "type": "string" }
+				}
+			}
+		},
+		"filter": {
+			"type": "object",
+			"required": ["match", "conditions"],
+			"properties": {
+				"match": { "enum": ["and", "or"] },
+				"conditions": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"required": ["term", "operator"],
+						"properties": {
+							"term": { "type": "string" },
+							"operator": { "type": "string" },
+							"sort": { "type": "integer" },
+							"disabled": { "type": "boolean" },
+							"editable": { "type": "boolean" },
+							"style": {
+								"type": "object",
+								"properties": {
+									"colorBasedOnTime": { "type": "string" },
+									"columns": { "type": "integer" },
+									"customLabel": { "type": "string" },
+									"height": { "type": "integer" },
+									"hideOnDisable": { "type": "boolean" },
+									"infinity": { "type": "boolean" },
+									"minValue": { "type": "number" },
+									"maxValue": { "type": "number" },
+									"removable": { "type": "boolean" },
+									"renderAs": { "type": "string" },
+									"steps": { "type": "integer" },
+									"unlimitedMaxValue": { "type": "boolean" },
+									"withScroll": { "type": "boolean" }
+								}
+							},
+							"value": {}
+						}
+					}
+				}
+			}
+		},
+		"calendars": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["name", "descriminator"],
+				"properties": {
+					"name": { "type": "string" },
+					"startAt": { "type": "string" },
+					"help": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"visible": { "type": "boolean" },
+					"endAt": { "type": "string" },
+					"descriminator": { "type": "string" },
+					"title": { "type": "string" },
+					"label": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					},
+					"description": {
+						"type": "object",
+						"additionalProperties": { "type": "string" }
+					}
+				}
+			}
+		}
+	}
+}
