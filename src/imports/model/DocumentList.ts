@@ -15,6 +15,41 @@ export const DocumentListSchema = z.object({
 			minWidth: z.number().optional(),
 		}),
 	),
+	filter: z
+		.array(
+			z.object({
+				operator: z.string(),
+				term: z.string(),
+				editable: z.boolean().optional(),
+				disabled: z.boolean().optional(),
+				sort: z.number().optional(),
+				value: z.any().optional(),
+				style: z.any().optional(),
+			}),
+		)
+		.optional(),
+	defaultFormat: z.string().optional(),
+	boards: z
+		.array(
+			z.object({
+				groupBy: z.object({
+					field: z.string(),
+					values: z.array(z.string()).optional(),
+				}),
+				card: z.record(
+					z.object({
+						linkField: z.string(),
+						name: z.string(),
+						slot: z.string().optional(),
+						template: z.string().optional(),
+						colors: z.array(z.string()).optional(),
+						defaultValue: z.string().optional(),
+						sort: z.number().optional(),
+					}),
+				),
+			}),
+		)
+		.optional(),
 	refreshRate: z.object({
 		options: z.array(z.number()),
 		default: z.number(),

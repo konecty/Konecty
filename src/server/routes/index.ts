@@ -1,8 +1,9 @@
-import Fastify from 'fastify';
-import cookie from '@fastify/cookie';
 import type { FastifyCookieOptions } from '@fastify/cookie';
+import cookie from '@fastify/cookie';
+import Fastify from 'fastify';
 
 import { logger } from '@imports/utils/logger';
+import documentApi from './api/document';
 import formApi from './api/form';
 import listViewApi from './api/list-view';
 import mainMenuApi from './api/menu/main';
@@ -36,6 +37,7 @@ fastify.register(cookie, {
 	parseOptions: {} as FastifyCookieOptions,
 } as FastifyCookieOptions);
 
+fastify.register(documentApi);
 fastify.register(formApi);
 fastify.register(listViewApi);
 fastify.register(mainMenuApi);
