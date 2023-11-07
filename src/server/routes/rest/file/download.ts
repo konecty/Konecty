@@ -4,8 +4,8 @@ import fp from 'fastify-plugin';
 import { pathToRegexp } from 'path-to-regexp';
 import path from 'path';
 
-import { MetaObject } from '@/imports/model/MetaObject';
-import { logger } from '@/imports/utils/logger';
+import { MetaObject } from '@imports/model/MetaObject';
+import { logger } from '@imports/utils/logger';
 
 import { sendFile } from './sendFile';
 

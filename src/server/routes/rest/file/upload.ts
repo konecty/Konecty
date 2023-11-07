@@ -20,10 +20,10 @@ import { errorReturn } from '@imports/utils/return';
 import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
 import { fileUpload } from '@imports/file/file';
-import { MetaObject } from '@/imports/model/MetaObject';
+import { MetaObject } from '@imports/model/MetaObject';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
-import { FILE_UPLOAD_MAX_FILE_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_JPEG_MAX_SIZE, DEFAULT_THUMBNAIL_SIZE } from '@/imports/consts';
+import { FILE_UPLOAD_MAX_FILE_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_JPEG_MAX_SIZE, DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
 
 const computeHash = (buffer: string | BinaryLike) => createHash('md5').update(buffer).digest('hex');
 

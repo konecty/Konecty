@@ -10,10 +10,10 @@ import { readFile } from 'fs/promises';
 
 import path from 'path';
 
-import { MetaObject } from '@/imports/model/MetaObject';
-import { logger } from '@/imports/utils/logger';
+import { MetaObject } from '@imports/model/MetaObject';
+import { logger } from '@imports/utils/logger';
 
-import { DEFAULT_EXPIRATION, ALLOWED_CORS_FILE_TYPES } from '@/imports/consts';
+import { DEFAULT_EXPIRATION, ALLOWED_CORS_FILE_TYPES } from '@imports/consts';
 
 export async function sendFile(filePath: string, reply: FastifyReply) {
 	const ext = filePath.split('.').pop()?.toLowerCase() ?? '';

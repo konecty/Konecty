@@ -5,11 +5,11 @@ import { pathToRegexp } from 'path-to-regexp';
 
 import path from 'path';
 
-import { MetaObject } from '@/imports/model/MetaObject';
-import { logger } from '@/imports/utils/logger';
+import { MetaObject } from '@imports/model/MetaObject';
+import { logger } from '@imports/utils/logger';
 import { sendFile } from './sendFile';
 
-import { DEFAULT_THUMBNAIL_SIZE } from '@/imports/consts';
+import { DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
 
 const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const LEGACY_FULL_FILE_URL_PATTERN = ':namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';

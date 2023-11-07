@@ -14,7 +14,6 @@
 		"sourceMap": true,
 		"declaration": true,
 		"paths": {
-			"@/*": ["./*"],
 			"@imports/*": ["./imports/*"],
 			"@private/*": ["./private/*"],
 			"@server/*": ["./server/*"]
@@ -29,6 +28,6 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "__test__/**/*"],
 	"exclude": ["node_modules", "./build/", "scripts"]
 }

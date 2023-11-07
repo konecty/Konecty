@@ -4,9 +4,9 @@ import { z } from 'zod';
 
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
-import { MetaObject } from '@/imports/model/MetaObject';
-import { KonectyResult } from '@/imports/types/result';
-import { errorReturn, successReturn } from '@/imports/utils/return';
+import { MetaObject } from '@imports/model/MetaObject';
+import { KonectyResult } from '@imports/types/result';
+import { errorReturn, successReturn } from '@imports/utils/return';
 
 const WatermarkConfigSchema = z.union([
 	z.object({

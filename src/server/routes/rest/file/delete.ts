@@ -6,19 +6,19 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { unlink } from 'fs/promises';
 import path from 'path';
 
-import { MetaObject } from '@/imports/model/MetaObject';
+import { MetaObject } from '@imports/model/MetaObject';
 import { fileRemove } from '@imports/file/file';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { getUserSafe } from '@imports/auth/getUser';
 import { errorReturn } from '@imports/utils/return';
 import { getAccessFor } from '@imports/utils/accessUtils';
-import { logger } from '@/imports/utils/logger';
+import { logger } from '@imports/utils/logger';
 
 const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.delete<{ Params: { namespace: string; metaDocumentId: string; recordId: string; fieldName: string; fileName: string } }>(
 		'/rest/file/delete/:namespace/:accessId/:metaDocumentId/:recordId/:fieldName/:fileName',
 		async function (req, reply) {
-			const {  metaDocumentId: document, recordId, fieldName, fileName } = req.params;
+			const { metaDocumentId: document, recordId, fieldName, fileName } = req.params;
 
 			const namespace = MetaObject.Namespace.name;
 
@@ -86,8 +86,24 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 				}
 			} else {
 				const fullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, document, recordId, fieldName, decodeURIComponent(fileName));
-				const thumbnailFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, document, recordId, fieldName, 'thumbnail', decodeURIComponent(fileName));
-				const watermarkFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, document, recordId, fieldName, 'watermark', decodeURIComponent(fileName));
+				const thumbnailFullPath = path.join(
+					MetaObject.Namespace.storage?.directory ?? '/tmp',
+					namespace,
+					document,
+					recordId,
+					fieldName,
+					'thumbnail',
+					decodeURIComponent(fileName),
+				);
+				const watermarkFullPath = path.join(
+					MetaObject.Namespace.storage?.directory ?? '/tmp',
+					namespace,
+					document,
+					recordId,
+					fieldName,
+					'watermark',
+					decodeURIComponent(fileName),
+				);
 				try {
 					unlink(fullPath);
 				} catch (error) {
