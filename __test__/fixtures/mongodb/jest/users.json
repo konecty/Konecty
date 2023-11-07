@@ -38,7 +38,7 @@
 		"status": "offline",
 		"statusConnection": "offline",
 		"statusDefault": "online",
-		"username": "admin",
+		"username": "admin-test",
 		"temporaryBadge": false,
 		"targetQueue": {
 			"_id": "523f92c9e4b08303e538a047",

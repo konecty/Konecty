@@ -50,13 +50,8 @@ export async function checkInitialData() {
 	if (usersCount === 0) {
 		logger.info('[kondata] Create first user (admin)');
 
-		let password;
+		let password = randomPassword(GENERATED_PASSOWRD_LENGTH);
 
-		if (process.env.NODE_ENV === 'test') {
-			password = '123456';
-		} else {
-			password = randomPassword(GENERATED_PASSOWRD_LENGTH);
-		}
 		const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 		const hashPassword = await bcryptHash(hashedPassword, BCRYPT_SALT_ROUNDS);
 
