@@ -18,6 +18,7 @@ export const FieldSchema = z.object({
 	descriptionFields: z.array(z.string()).optional(),
 	type: z.string(),
 	name: z.string(),
+	isRequired: z.boolean().optional(),
 	label: LabelSchema.optional(),
 	document: z.string().optional(),
 	isUnique: z.boolean().optional(),
@@ -29,6 +30,7 @@ export const FieldSchema = z.object({
 	renderAs: z.string().optional(),
 	decimalSize: z.number().optional(),
 	minValue: z.number().optional(),
+	isList: z.boolean().optional(),
 });
 
 export type Field = z.infer<typeof FieldSchema>;
@@ -63,21 +65,51 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 		plurals: LabelSchema,
 		icon: z.string(),
 		colletion: z.string().optional(),
-		fields: z.array(FieldSchema),
+		fields: z.record(z.string(), FieldSchema),
 		menuSorter: z.number().optional(),
 		access: z.string(),
 		group: z.string().optional(),
 		validationScript: z.string(),
+		indexes: z
+			.record(
+				z.string(),
+				z.object({
+					keys: z.record(z.string(), z.number()),
+					options: z.object({
+						name: z.string().optional(),
+						unique: z.boolean().optional(),
+						dropDups: z.boolean().optional(),
+					}),
+				}),
+			)
+			.optional(),
+		indexText: z.record(z.string(), z.string()).optional(),
 		help: LabelSchema,
 		description: LabelSchema,
 		relations: z.array(RelationSchema),
+		collection: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal('composite'),
 		_id: z.string(),
 		name: z.string(),
 		label: LabelSchema,
-		fields: z.array(FieldSchema),
+		fields: z.record(z.string(), FieldSchema),
+		collection: z.string().optional(),
+		indexes: z
+			.record(
+				z.string(),
+				z.object({
+					keys: z.record(z.string(), z.number()),
+					options: z.object({
+						name: z.string().optional(),
+						unique: z.boolean().optional(),
+						dropDups: z.boolean().optional(),
+					}),
+				}),
+			)
+			.optional(),
+		indexText: z.record(z.string(), z.string()).optional(),
 	}),
 	z.object({
 		type: z.literal('group'),
@@ -88,6 +120,7 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 		label: LabelSchema,
 		plurals: LabelSchema,
 		icon: z.string().optional(),
+		collection: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal('list'),
@@ -124,6 +157,7 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 				sort: z.number().optional(),
 			}),
 		),
+		collection: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal('view'),
@@ -134,6 +168,7 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 		plurals: LabelSchema,
 		icon: z.string().optional(),
 		visuals: z.array(DocumentFormVisualsSchema).optional(),
+		collection: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal('pivot'),
@@ -146,12 +181,14 @@ export const MetaObjectSchema = z.discriminatedUnion('type', [
 		plurals: LabelSchema,
 		icon: z.string().optional(),
 		rows: z.array(z.any()).optional(), // TODO: Definir o tipo correto
+		collection: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal('access'),
 		_id: z.string(),
 		document: z.string(),
 		name: z.string(),
+		collection: z.string().optional(),
 	}),
 ]);
 

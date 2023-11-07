@@ -16,6 +16,8 @@ import { checkInitialData } from '../data/initialData';
 import { logger } from '../utils/logger';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
+import { Collection } from 'mongodb';
+import { MetaObjectType } from '@imports/types/metadata';
 
 const rebuildReferencesDelay = 1000;
 
@@ -49,7 +51,7 @@ const rebuildReferences = debounce(function () {
 	}
 }, rebuildReferencesDelay);
 
-async function tryEnsureIndex({ collection, fields, options }: any) {
+async function tryEnsureIndex({ collection, fields, options }: { collection: Collection; fields: { [key: string]: 1 }; options: { name: string } }) {
 	try {
 		await collection.createIndex(fields, options);
 	} catch (e) {
@@ -57,8 +59,13 @@ async function tryEnsureIndex({ collection, fields, options }: any) {
 	}
 }
 
-async function registerMeta(meta: any) {
+async function registerMeta(meta: MetaObjectType) {
+	if (meta.type !== 'composite' && meta.type !== 'document') {
+		return;
+	}
+
 	logger.debug(`Registering meta: ${meta.name}`);
+
 	if (!meta.collection) {
 		meta.collection = `data.${meta.name}`;
 	}
@@ -67,7 +74,7 @@ async function registerMeta(meta: any) {
 	MetaObject.MetaByCollection[meta.collection] = meta;
 
 	if (meta.type === 'document') {
-		meta.fields._merge = {
+		meta.fields['_merge'] = {
 			name: '_merge',
 			type: 'text',
 			isList: true,
@@ -91,26 +98,29 @@ async function registerMeta(meta: any) {
 
 			// Create indexes for history collections
 			const historyIndexes = ['dataId', 'createdAt'];
-			await BluebirdPromise.each(historyIndexes, async historyIndex =>
-				tryEnsureIndex({
+			await BluebirdPromise.each(historyIndexes, async historyIndex => {
+				await tryEnsureIndex({
 					collection: MetaObject.Collections[`${meta.name}.History`],
 					fields: { [historyIndex]: 1 },
 					options: { name: historyIndex },
-				}),
-			);
+				});
+			});
 
 			// Create indexes for comment collections
 			const commentIndexes = ['dataId', '_createdAt'];
-			await BluebirdPromise.each(commentIndexes, async commentIndex =>
-				tryEnsureIndex({
+			await BluebirdPromise.each(commentIndexes, async commentIndex => {
+				await tryEnsureIndex({
 					collection: MetaObject.Collections[`${meta.name}.Comment`],
 					fields: { [commentIndex]: 1 },
 					options: { name: commentIndex },
-				}),
-			);
+				});
+			});
 
-			await BluebirdPromise.each(meta.fields, async (fieldName: string) => {
+			const iterableMeta = Object.keys(meta.fields).map((key: string) => key);
+
+			await BluebirdPromise.each(iterableMeta, async (fieldName: string) => {
 				const field = meta.fields[fieldName];
+
 				if (!['richText', 'composite'].includes(field.type)) {
 					if (field.isSortable === true || field.isUnique === true || ['lookup', 'address', 'autoNumber'].includes(field.type)) {
 						let subFields = [''];
@@ -164,7 +174,7 @@ async function registerMeta(meta: any) {
 						}, {} as any);
 
 						logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
-						return tryEnsureIndex({
+						await tryEnsureIndex({
 							collection: MetaObject.Collections[meta.name],
 							fields,
 							options,
@@ -185,16 +195,26 @@ async function registerMeta(meta: any) {
 			);
 
 			// Create indexes defined in meta
-			if (isObject(meta.indexes) && !isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
+			if (meta.indexes != null && isObject(meta.indexes) && !isArray(meta.indexes) && Object.keys(meta.indexes).length > 0) {
 				await BluebirdPromise.each(Object.keys(meta.indexes), async indexName => {
-					const index = meta.indexes[indexName];
-					if (!index.keys) {
+					let index = meta.indexes?.[indexName];
+
+					if (index == null) {
+						index = {
+							keys: {},
+							options: {
+								name: indexName,
+							},
+						};
+					}
+
+					if (index.keys == null) {
 						index.keys = {};
 					}
-					if (!index.options) {
+					if (index.options == null) {
 						index.options = {};
 					}
-					if (!index.options.name) {
+					if (index.options.name == null) {
 						index.options.name = indexName;
 					}
 
@@ -208,14 +228,14 @@ async function registerMeta(meta: any) {
 						await tryEnsureIndex({
 							collection: MetaObject.Collections[meta.name],
 							fields: keys,
-							options: index.options,
+							options: { name: index.options.name },
 						});
 					}
 				});
 			}
 
 			// Create text index
-			if (isObject(meta.indexText) && !isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
+			if (meta.indexText != null && isObject(meta.indexText) && !isArray(meta.indexText) && Object.keys(meta.indexText).length > 0) {
 				const options: {
 					name: string;
 					default_language: string;
@@ -263,7 +283,7 @@ const deregisterMeta = function (meta: any) {
 };
 
 async function dbLoad() {
-	const data = await MetaObject.MetaObject.find({}).toArray();
+	const data = await MetaObject.MetaObject.find<MetaObjectType>({}).toArray();
 	data.forEach(async meta => {
 		switch (meta.type) {
 			case 'access':
@@ -271,7 +291,7 @@ async function dbLoad() {
 				break;
 			case 'document':
 			case 'composite':
-				registerMeta(meta);
+				await registerMeta(meta);
 				break;
 			case 'pivot':
 			case 'view':
@@ -306,7 +326,7 @@ async function dbLoad() {
 					break;
 				case 'document':
 				case 'composite':
-					registerMeta(change.fullDocument);
+					await registerMeta(change.fullDocument);
 					break;
 				case 'pivot':
 				case 'view':
@@ -322,7 +342,7 @@ async function dbLoad() {
 					break;
 				case 'document':
 				case 'composite':
-					registerMeta(fullDocument);
+					await registerMeta(fullDocument as unknown as MetaObjectType);
 					break;
 				case 'pivot':
 				case 'view':
@@ -338,22 +358,17 @@ async function dbLoad() {
 	Object.assign(MetaObject.Namespace, namespace);
 }
 
-const fsLoad = () => {
-	logger.info(`Loading MetaObject.Meta from directory ${process.env.METADATA_DIR} ...`);
+const fsLoad = (metadataDir: string) => {
+	logger.info(`Loading MetaObject.Meta from directory ${metadataDir} ...`);
 
-	if (process.env.METADATA_DIR == null) {
-		return;
-	}
-	const rootDir = process.env.METADATA_DIR;
-
-	const watcher = chokidar.watch(process.env.METADATA_DIR, {
+	const watcher = chokidar.watch(metadataDir, {
 		ignored: /(^|[/\\])\../, // ignore dotfiles
 		persistent: true,
 	});
 
 	const documentName = (path: string) =>
 		path
-			.replace(rootDir, '')
+			.replace(metadataDir, '')
 			.replace(/^\/|\/$/g, '')
 			.split('/')
 			.shift();
@@ -369,14 +384,14 @@ const fsLoad = () => {
 		if (type === 'document') {
 			return JSON.parse(fs.readFileSync(path, 'utf8'));
 		}
-		const documentFile = `${process.env.METADATA_DIR}/${documentName(path)}/document.json`;
+		const documentFile = `${metadataDir}/${documentName(path)}/document.json`;
 		if (fs.existsSync(documentFile)) {
 			return JSON.parse(fs.readFileSync(documentFile, 'utf8'));
 		}
 		return null;
 	};
 
-	const changeHandler = (path: string) => {
+	const changeHandler = async (path: string) => {
 		const type = fileType(path);
 
 		if (type != null && ['document', 'hook'].includes(type)) {
@@ -402,7 +417,7 @@ const fsLoad = () => {
 					}
 				});
 			}
-			registerMeta(meta);
+			await registerMeta(meta);
 			return rebuildReferences();
 		}
 
@@ -419,7 +434,7 @@ const fsLoad = () => {
 		}
 	};
 
-	const removeHandler = (path: string) => {
+	const removeHandler = async (path: string) => {
 		const type = fileType(path);
 		const name = documentName(path);
 		if (type != null && ['document'].includes(type)) {
@@ -428,7 +443,7 @@ const fsLoad = () => {
 		}
 
 		if (type === 'hook') {
-			return changeHandler(`${process.env.METADATA_DIR}/${name}/document.json`);
+			return await changeHandler(`${metadataDir}/${name}/document.json`);
 		}
 
 		if (type === 'access') {
@@ -452,8 +467,8 @@ export async function loadMetaObjects() {
 	await checkInitialData();
 	if (process.env.METADATA_DIR != null) {
 		logger.info('Loading MetaObject.Meta from directory');
-		return fsLoad();
+		fsLoad(process.env.METADATA_DIR);
 	}
 	logger.info('Loading MetaObject.Meta from database');
-	return dbLoad();
+	await dbLoad();
 }
