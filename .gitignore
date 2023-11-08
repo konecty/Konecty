@@ -68,3 +68,4 @@ typo3temp
 package-lock.json
 .env.docker
 dist
+coverage

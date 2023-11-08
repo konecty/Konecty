@@ -5,6 +5,13 @@ const jestConfig: JestConfigWithTsJest = {
 	preset: 'ts-jest/presets/js-with-babel',
 	clearMocks: true,
 	collectCoverage: false,
+	collectCoverageFrom: [
+		'src/**/*.{js,ts}',
+		'!<rootDir>/src/**/*.d.{js,jsx,ts,tsx}',
+		'!<rootDir>/src/**/*mock*.{js,jsx,ts,tsx}',
+		'!<rootDir>/**/stories.{js,jsx,ts,tsx}',
+		'!<rootDir>/node_modules/',
+	],
 	coverageDirectory: 'coverage',
 	coverageProvider: 'v8',
 	globalSetup: '<rootDir>/__test__/globalSetup.ts',
