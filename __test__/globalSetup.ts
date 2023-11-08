@@ -20,7 +20,7 @@ export default async function globalSetup() {
 	process.env.DISABLE_SENDMAIL = 'true';
 	process.env.DISABLE_KONSISTENT = 'true';
 	process.env.UI_URL = 'https://ui.konecty.com';
-	process.env.LOGGER_LEVEL = 'error';
+	process.env.LOG_LEVEL = 'error';
 	global.__MONGOINSTANCE = instance;
 
 	const uri = instance.getUri();

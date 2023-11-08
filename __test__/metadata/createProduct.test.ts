@@ -29,7 +29,7 @@ describe('Product', () => {
 			expect(data.errors?.[0].message).to.be.equal('[Product] Data must have at least one field');
 		});
 
-		it('Create Product', async () => {
+		it('Product must have status field', async () => {
 			// Arrange
 			const authId = login('admin-test');
 			const requiredFields = {
@@ -46,7 +46,28 @@ describe('Product', () => {
 				body: JSON.stringify(requiredFields),
 			}).then(res => res.json())) as KonectyResponse;
 
-			console.log(data);
+			// Assert
+			expect(data.success).to.be.equal(false);
+			expect(data.errors?.[0].message).to.be.equal('Value for field status must be an array with at least 1 item');
+		});
+
+		it('Create Product', async () => {
+			// Arrange
+			const authId = login('admin-test');
+			const requiredFields = {
+				name: 'Teste',
+				status: 'draft',
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'POST',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requiredFields),
+			}).then(res => res.json())) as KonectyResponse;
 
 			// Assert
 			expect(data.success).to.be.equal(true);

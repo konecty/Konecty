@@ -865,8 +865,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	}
 
 	const defaultValuesResult = await BluebirdPromise.mapSeries(Object.entries(metaObject.fields), async ([key, field]) => {
-		if (field.type !== 'autoNumber') {
-			if (cleanedData[key] == null && (field.defaultValue != null || (field.defaultValues != null && field.defaultValues.length > 0))) {
+		if (field.type !== 'autoNumber' && cleanedData[key] == null) {
+			if (field.defaultValue != null || (field.defaultValues != null && field.defaultValues.length > 0)) {
 				const getValue = () => {
 					if (field.defaultValue != null) {
 						return field.defaultValue;
@@ -905,7 +905,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 			}
 
-			if (cleanedData[key] == null && size(get(field, 'defaultValues')) > 0) {
+			if (size(get(field, 'defaultValues')) > 0) {
 				if (field.type === 'picklist') {
 					const value = get(field, 'defaultValues.0.pt_BR');
 					if (value == null) {
@@ -927,22 +927,22 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						return successReturn();
 					}
 				}
-				const valuesResult = await validateAndProcessValueFor({
-					meta: metaObject,
-					fieldName: key,
-					value: get(field, 'defaultValues'),
-					actionType: 'insert',
-					objectOriginalValues: data,
-					objectNewValues: cleanedData,
-				});
-				if (valuesResult.success === false) {
-					return valuesResult;
-				}
-				if (valuesResult.data != null) {
-					cleanedData[key] = valuesResult.data;
-				}
-				return successReturn();
 			}
+			const valuesResult = await validateAndProcessValueFor({
+				meta: metaObject,
+				fieldName: key,
+				value: get(field, 'defaultValues'),
+				actionType: 'insert',
+				objectOriginalValues: data,
+				objectNewValues: cleanedData,
+			});
+			if (valuesResult.success === false) {
+				return valuesResult;
+			}
+			if (valuesResult.data != null) {
+				cleanedData[key] = valuesResult.data;
+			}
+			return successReturn();
 		}
 		return successReturn();
 	});
