@@ -16,7 +16,6 @@ describe('Outros', () => {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				// body: `user=${user}&password=${password}&password_SHA256=${password_SHA256}&ns=foxter&resolution=%7B%22height%22%3A1050%2C%22width%22%3A1680%7D`,
 				body: JSON.stringify({
 					user,
 					password,

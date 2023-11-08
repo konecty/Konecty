@@ -20,7 +20,7 @@ export default async function globalSetup() {
 	process.env.DISABLE_SENDMAIL = 'true';
 	process.env.DISABLE_KONSISTENT = 'true';
 	process.env.UI_URL = 'https://ui.konecty.com';
-	process.env.LOG_LEVEL = 'error';
+	process.env.LOG_LEVEL = 'fatal';
 	global.__MONGOINSTANCE = instance;
 
 	const uri = instance.getUri();
@@ -32,12 +32,15 @@ export default async function globalSetup() {
 	await db.collection('users').insertMany(usersFixture as any[]);
 
 	console.info(`\n✅ Loaded ${usersFixture.length} users`);
+	try {
+		const app = (await import('@server/app')).default;
 
-	const app = (await import('@server/app')).default;
+		await app();
 
-	await app();
+		await new Promise(resolve => setTimeout(resolve, 3000));
 
-	await new Promise(resolve => setTimeout(resolve, 3000));
-
-	console.info(`\n✅ Started app`);
+		console.info(`\n✅ Started app`);
+	} catch (error) {
+		console.error(error);
+	}
 }
