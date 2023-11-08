@@ -864,10 +864,11 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	}
 
-	const defaultValuesResult = await BluebirdPromise.mapSeries(Object.entries(metaObject.fields), async ([key, field]) => {
+	// Pega os valores padrão dos campos que não foram informados
+	Object.entries(metaObject.fields).forEach(([key, field]) => {
 		if (field.type !== 'autoNumber' && cleanedData[key] == null) {
 			if (field.defaultValue != null || (field.defaultValues != null && field.defaultValues.length > 0)) {
-				const getValue = () => {
+				const getDefaultValue = () => {
 					if (field.defaultValue != null) {
 						return field.defaultValue;
 					}
@@ -887,69 +888,33 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					}
 				};
 
-				const defaultValue = getValue();
-				const defaultValueResult = await validateAndProcessValueFor({
-					meta: metaObject,
-					fieldName: key,
-					value: defaultValue,
-					actionType: 'insert',
-					objectOriginalValues: data,
-					objectNewValues: cleanedData,
-				});
-				if (defaultValueResult.success === false) {
-					return defaultValueResult;
-				}
-				if (defaultValueResult.data != null) {
-					cleanedData[key] = defaultValueResult.data;
-					return successReturn();
-				}
+				cleanedData[key] = getDefaultValue();
 			}
+		}
+	});
 
-			if (size(get(field, 'defaultValues')) > 0) {
-				if (field.type === 'picklist') {
-					const value = get(field, 'defaultValues.0.pt_BR');
-					if (value == null) {
-						const lang = first(Object.keys(field.defaultValues[0]));
-						const picklistValueResult = await validateAndProcessValueFor({
-							meta: metaObject,
-							fieldName: key,
-							value: get(field, `defaultValues[0].${lang}`),
-							actionType: 'insert',
-							objectOriginalValues: data,
-							objectNewValues: cleanedData,
-						});
-						if (picklistValueResult.success === false) {
-							return picklistValueResult;
-						}
-						if (picklistValueResult.data != null) {
-							cleanedData[key] = picklistValueResult.data;
-						}
-						return successReturn();
-					}
-				}
-			}
-			const valuesResult = await validateAndProcessValueFor({
-				meta: metaObject,
-				fieldName: key,
-				value: get(field, 'defaultValues'),
-				actionType: 'insert',
-				objectOriginalValues: data,
-				objectNewValues: cleanedData,
-			});
-			if (valuesResult.success === false) {
-				return valuesResult;
-			}
-			if (valuesResult.data != null) {
-				cleanedData[key] = valuesResult.data;
-			}
-			return successReturn();
+	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.entries(metaObject.fields), async ([key]) => {
+		const value = cleanedData[key];
+		const result = await validateAndProcessValueFor({
+			meta: metaObject,
+			fieldName: key,
+			value,
+			actionType: 'insert',
+			objectOriginalValues: data,
+			objectNewValues: cleanedData,
+		});
+		if (result.success === false) {
+			return result;
+		}
+		if (result.data != null) {
+			cleanedData[key] = result.data;
 		}
 		return successReturn();
 	});
 
-	if (defaultValuesResult.some(result => result.success === false)) {
+	if (validateAllFieldsResult.some(result => result.success === false)) {
 		return errorReturn(
-			defaultValuesResult
+			validateAllFieldsResult
 				.filter(result => result.success === false)
 				.map(result => result.errors)
 				.flat(),
@@ -1694,7 +1659,6 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 	}
 
 	const idsToDelete = recordsToDelete.map(record => record._id);
-
 	const references = MetaObject.References[document];
 
 	if (references?.from != null && isObject(references.from)) {
@@ -1947,7 +1911,6 @@ export async function relationCreate({ authTokenId, document, fieldName, data, p
 		}
 	});
 
-	// console.dir({emailData}, {depth: 10})
 	if (createResults.some(result => result.success === false)) {
 		return errorReturn(
 			createResults
