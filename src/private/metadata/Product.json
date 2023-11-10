@@ -2,6 +2,15 @@
 	{
 		"_id": "Product",
 		"fields": {
+			"activatedAt": {
+				"isSortable": true,
+				"label": {
+					"en": "Activation Date",
+					"pt_BR": "Data Ativação"
+				},
+				"name": "activatedAt",
+				"type": "dateTime"
+			},
 			"code": {
 				"name": "code",
 				"label": {
@@ -37,6 +46,7 @@
 						"pt_BR": "Inativo"
 					}
 				},
+				"defaultValue": "draft",
 				"renderAs": "without_scroll"
 			},
 			"sku": {
@@ -249,13 +259,13 @@
 		},
 		"menuSorter": 6,
 		"name": "Product",
-
 		"plurals": {
 			"en": "Products",
 			"pt_BR": "Produtos"
 		},
 		"saveHistory": true,
-		"type": "document"
+		"type": "document",
+		"scriptBeforeValidation": "var ret = {}; if(data.status === 'active' && extraData.original.status !== data.status && extraData.original.activatedAt == null){ret.activatedAt = new Date()} return ret;"
 	},
 	{
 		"_id": "Product:access:User",
@@ -366,7 +376,7 @@
 					"allow": false,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
@@ -381,7 +391,6 @@
 			"pt_BR": "Corretor"
 		},
 		"name": "Broker",
-
 		"type": "access",
 		"updateFilter": {
 			"conditions": [
@@ -467,7 +476,7 @@
 					"allow": false,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
