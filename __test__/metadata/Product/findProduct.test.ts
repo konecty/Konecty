@@ -6,6 +6,7 @@ import { db } from '@imports/database';
 async function createProductHelper(authId: string) {
 	const requiredFields = {
 		name: 'Teste',
+		status: 'draft',
 	};
 	const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
 		method: 'POST',
@@ -19,44 +20,37 @@ async function createProductHelper(authId: string) {
 	return data.data?.[0];
 }
 
-describe('Delete Product', () => {
+describe('Find Product', () => {
 	describe('Admin', () => {
+		const authId = login('admin-test');
 		beforeEach(async () => {
+			await createProductHelper(authId);
+		});
+
+		afterEach(async () => {
 			await db.collection('data.Product').deleteMany({});
 		});
 
-		it('Delete Product', async () => {
+		it('Find Product', async () => {
 			// Arrange
-			const authId = login('admin-test');
-
-			const product = await createProductHelper(authId);
-
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			const requestFields = {
-				ids: [
-					{
-						_id: product._id,
-						_updatedAt: {
-							$date: product._updatedAt,
-						},
-					},
-				],
-			};
+			// const requiredFields = {};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
-				method: 'DELETE',
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find`, {
+				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify(requestFields),
 			}).then(res => res.json())) as KonectyResponse;
-			console.log(data);
 
 			// Assert
 			expect(data.success).to.be.equal(true);
+			expect(data.data?.length).to.be.equal(1);
+			// compare data.data with the data created in beforeEach
+			expect(data.data?.[0].name).to.be.equal('Teste');
+			expect(data.data?.[0].status).to.be.equal('draft');
+			expect(data.data?.[0].code).to.be.equal(1);
 		});
 	});
 });
