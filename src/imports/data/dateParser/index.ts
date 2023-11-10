@@ -8,14 +8,20 @@ import isArray from 'lodash/isArray';
 import isString from 'lodash/isString';
 import map from 'lodash/map';
 
-export function dateToString(record) {
-	if (isObject(record) && isFunction(record.toHexString)) {
-		return record.toHexString();
-	} else if (isArray(record)) {
-		return map(record, dateToString);
-	} else if (isObject(record)) {
+type RecordObject = {
+	toHexString?: () => string;
+};
+
+export function dateToString(record: any): string | Array<any> | object {
+	if (isObject(record)) {
+		const typedRecord = record as RecordObject;
+
+		if (isFunction(typedRecord.toHexString)) {
+			return typedRecord.toHexString();
+		}
+
 		return reduce(
-			record,
+			typedRecord,
 			(acc, value, key) => {
 				if (isDate(value)) {
 					return {
@@ -42,12 +48,18 @@ export function dateToString(record) {
 			},
 			{},
 		);
+	} else if (isArray(record)) {
+		return map(record, dateToString);
 	} else {
 		return record;
 	}
 }
 
-export function stringToDate(record) {
+export function stringToDate(record: { [key: string]: any } | string) {
+	if (isString(record)) {
+		return record;
+	}
+
 	const result = Object.entries(record).reduce((acc, [key, value]) => {
 		if (value == null) {
 			return acc;

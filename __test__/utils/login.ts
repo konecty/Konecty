@@ -1,9 +1,11 @@
-type typeoffakeHashes = 'admin-test';
+type typeoffakeHashes = 'admin-test' | 'user-test';
 
 export const login = (user: typeoffakeHashes): string => {
 	const fakeHashes = {
-		'admin-test': 'v5+zj+CGtYlPHYLYMR3elJn5v/kAl3naUI+N7XwEgpM=',
+		'admin-test': 'hash/admin/test=',
+		'user-test': 'hash/user/test=',
+		'user-test-2': 'hash/user/2/test=',
 	};
 
-	return fakeHashes[user] || 'v5+zj+CGtYlPHYLYMR3elJn5v/kAl3naUI+N7XwEgpM=';
+	return fakeHashes[user] || 'hash/admin/test=';
 };
