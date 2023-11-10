@@ -1,9 +1,9 @@
 import isObject from 'lodash/isObject';
 
+import { Filter } from '@imports/model/Filter';
+import { MetaAccess } from '@imports/model/MetaAccess';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
-import { MetaAccess } from '@imports/model/MetaAccess';
-import { Filter } from '@imports/model/Filter';
 
 export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	const accessField = metaAccess.fields?.[fieldName];

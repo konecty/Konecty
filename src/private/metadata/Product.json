@@ -363,10 +363,10 @@
 					"allow": false
 				},
 				"CREATE": {
-					"allow": false,
+					"allow": true,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
@@ -377,10 +377,10 @@
 		"isReadable": true,
 		"isUpdatable": true,
 		"label": {
-			"en": "Broker",
-			"pt_BR": "Corretor"
+			"en": "User",
+			"pt_BR": "Usuário"
 		},
-		"name": "Broker",
+		"name": "User",
 
 		"type": "access",
 		"updateFilter": {
@@ -464,10 +464,10 @@
 					"allow": false
 				},
 				"CREATE": {
-					"allow": false,
+					"allow": true,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
@@ -628,10 +628,10 @@
 					"allow": false
 				},
 				"CREATE": {
-					"allow": false,
+					"allow": true,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
@@ -832,10 +832,10 @@
 					"allow": false
 				},
 				"CREATE": {
-					"allow": false,
+					"allow": true,
 					"condition": {
 						"term": "status",
-						"value": "Ativo",
+						"value": "active",
 						"operator": "not_equals"
 					}
 				}
@@ -1044,32 +1044,11 @@
 			"pt_BR": "Produtos"
 		},
 		"refreshRate": {
-			"options": [
-				0,
-				5,
-				10,
-				15,
-				30,
-				60,
-				300,
-				600,
-				900,
-				1800,
-				3600
-			],
+			"options": [0, 5, 10, 15, 30, 60, 300, 600, 900, 1800, 3600],
 			"default": 0
 		},
 		"rowsPerPage": {
-			"options": [
-				5,
-				10,
-				15,
-				20,
-				25,
-				50,
-				100,
-				200
-			],
+			"options": [5, 10, 15, 20, 25, 50, 100, 200],
 			"default": 25
 		},
 		"sorters": [

@@ -1,6 +1,6 @@
 export interface KonectyResponse {
 	success: boolean;
-	data?: Array<any>;
+	data?: Array<Record<string, unknown>>;
 	errors?: [
 		{
 			message: string;

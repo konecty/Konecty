@@ -1306,12 +1306,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 
 	const updateFilterResult = parseFilterObject(filter, metaObject, { user });
 
-	if (updateFilterResult.success === false) {
-		logger.error(updateFilterResult, `Update - Update Filter Error: ${updateFilterResult.message}`);
-		return updateFilterResult;
-	}
-
-	const query = Object.assign({ _id: { $in: [] } }, updateFilterResult.data);
+	const query = Object.assign({ _id: { $in: [] } }, updateFilterResult);
 
 	if (isArray(query._id.$in)) {
 		data.ids.forEach(id => {
