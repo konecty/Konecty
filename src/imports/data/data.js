@@ -745,7 +745,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	if (fieldPermissionResult.some(result => result.success === false)) {
 		return errorReturn(
 			fieldPermissionResult
-				.find(result => result.success === false)
+				.filter(result => result.success === false)
 				.map(result => result.errors)
 				.flat(),
 		);
@@ -1190,7 +1190,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		return errorReturn(`[${document}] Each id must contain an string field named _id an date field named _updatedAt`);
 	}
 
-	const fieldPermissionResult = Object.keys(data).map(fieldName => {
+	const fieldPermissionResult = Object.keys(data.data).map(fieldName => {
 		const accessField = getFieldPermissions(access, fieldName);
 		if (accessField.isUpdatable !== true) {
 			return errorReturn(`[${document}] You don't have permission to update field ${fieldName}`);
@@ -1201,7 +1201,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 	if (fieldPermissionResult.some(result => result.success === false)) {
 		return errorReturn(
 			fieldPermissionResult
-				.find(result => result.success === false)
+				.filter(result => result.success === false)
 				.map(result => result.errors)
 				.flat(),
 		);
