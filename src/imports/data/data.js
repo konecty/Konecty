@@ -5,8 +5,10 @@ import fetch from 'isomorphic-fetch';
 import { DateTime } from 'luxon';
 
 import compact from 'lodash/compact';
+import concat from 'lodash/concat';
 import extend from 'lodash/extend';
 import _find from 'lodash/find';
+import first from 'lodash/first';
 import get from 'lodash/get';
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
@@ -15,35 +17,33 @@ import _isNaN from 'lodash/isNaN';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 import map from 'lodash/map';
+import merge from 'lodash/merge';
+import omit from 'lodash/omit';
 import pick from 'lodash/pick';
+import set from 'lodash/set';
 import size from 'lodash/size';
 import tail from 'lodash/tail';
-import words from 'lodash/words';
-import set from 'lodash/set';
 import unset from 'lodash/unset';
-import merge from 'lodash/merge';
-import first from 'lodash/first';
-import concat from 'lodash/concat';
-import omit from 'lodash/omit';
+import words from 'lodash/words';
 
-import { getAccessFor, getFieldPermissions, getFieldConditions, removeUnauthorizedDataForRead } from '../utils/accessUtils';
 import { MetaObject } from '@imports/model/MetaObject';
-import { parseFilterObject, clearProjectionPathCollision, filterConditionToFn } from './filterUtils';
-import { parseSortArray } from './sortUtils';
+import { getAccessFor, getFieldConditions, getFieldPermissions, removeUnauthorizedDataForRead } from '../utils/accessUtils';
 import { logger } from '../utils/logger';
+import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } from './filterUtils';
+import { parseSortArray } from './sortUtils';
 
 import { getUserSafe } from '@imports/auth/getUser';
-import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
-import { dateToString, stringToDate } from '../data/dateParser';
-import { getNextUserFromQueue as getNext } from '../meta/getNextUserFromQueue';
-import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
-import { successReturn, errorReturn } from '../utils/return';
 import { DEFAULT_PAGE_SIZE } from '../consts';
-import { processCollectionLogin } from '../data/processCollectionLogin';
-import { runScriptBeforeValidation, processValidationScript, runScriptAfterSave } from '../data/scripts';
-import { randomId } from '../utils/random';
+import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
+import { processCollectionLogin } from '../data/processCollectionLogin';
+import { processValidationScript, runScriptAfterSave, runScriptBeforeValidation } from '../data/scripts';
+import { getNextUserFromQueue as getNext } from '../meta/getNextUserFromQueue';
+import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { renderTemplate } from '../template';
+import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
+import { randomId } from '../utils/random';
+import { errorReturn, successReturn } from '../utils/return';
 
 const WRITE_TIMEOUT = 3e4; // 30 seconds
 
@@ -136,20 +136,9 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 		// Validate if user have permission to view each field
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
-		const unreadableFields = Object.keys(metaObject.fields).reduce((acc, fieldName) => {
-			const accessField = getFieldPermissions(access, fieldName);
-			if (accessField.isReadable !== true) {
-				acc[fieldName] = 0;
-			}
-			return acc;
-		}, {});
-
-		Object.assign(fieldsObject, unreadableFields);
-
 		const queryOptions = {
 			limit: parseInt(limit, 10),
 			skip: parseInt(start ?? 0, 10),
-			projection: clearProjectionPathCollision(fieldsObject),
 		};
 
 		if (_isNaN(queryOptions.limit) || queryOptions.limit == null) {
@@ -213,9 +202,16 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 						condition: condition.data,
 					});
 				}
+			} else {
+				if (emptyFields === true) {
+					fieldsObject[fieldName] = 0;
+				} else {
+					delete fieldsObject[fieldName];
+				}
 			}
 			return successReturn();
 		});
+		queryOptions.projection = clearProjectionPathCollision(fieldsObject);
 
 		if (accessConditionsResult.some(result => result.success === false)) {
 			return accessConditionsResult.find(result => result.success === false);
@@ -226,6 +222,17 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 				return acc;
 			}
 			acc[result.data.fieldName] = result.data.condition;
+
+			// Add the fields with conditions to the query, so we can compare later
+			const fieldUsedInCondition = getFieldConditions(access, result.data.fieldName).READ?.term?.split('.')?.[0];
+			if (fieldUsedInCondition != null) {
+				if (emptyFields) {
+					delete queryOptions.projection[fieldUsedInCondition];
+				} else {
+					queryOptions.projection[fieldUsedInCondition] = 1;
+				}
+			}
+
 			return acc;
 		}, {});
 
@@ -246,6 +253,12 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 				} else {
 					acc[key] = record[key];
 				}
+
+				// Remove the fields only used for conditions comparison
+				if (fieldsObject[key] === 0 || (emptyFields && key in fieldsObject === false)) {
+					delete acc[key];
+				}
+
 				return acc;
 			}, {}),
 		);
@@ -334,19 +347,6 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 
 	// Validate if user have permission to view each field
 	const emptyFields = Object.keys(fieldsObject).length === 0;
-	const unreadableFields = Object.keys(metaObject.fields).reduce((acc, fieldName) => {
-		const accessField = getFieldPermissions(access, fieldName);
-		if (accessField.isReadable !== true) {
-			acc[fieldName] = 0;
-		}
-		return acc;
-	}, {});
-
-	Object.assign(fieldsObject, unreadableFields);
-
-	const queryOptions = {
-		projection: clearProjectionPathCollision(fieldsObject),
-	};
 
 	const accessConditionsResult = Object.keys(metaObject.fields).map(fieldName => {
 		const accessField = getFieldPermissions(access, fieldName);
@@ -371,9 +371,19 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 					condition: condition.data,
 				});
 			}
+		} else {
+			if (emptyFields === true) {
+				fieldsObject[fieldName] = 0;
+			} else {
+				delete fieldsObject[fieldName];
+			}
 		}
 		return successReturn();
 	});
+
+	const queryOptions = {
+		projection: clearProjectionPathCollision(fieldsObject),
+	};
 
 	if (accessConditionsResult.some(result => result.success === false)) {
 		return accessConditionsResult.find(result => result.success === false);
@@ -384,6 +394,17 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 			return acc;
 		}
 		acc[result.data.fieldName] = result.data.condition;
+
+		// Add the fields with conditions to the query, so we can compare later
+		const fieldUsedInCondition = getFieldConditions(access, result.data.fieldName).READ?.term?.split('.')?.[0];
+		if (fieldUsedInCondition != null) {
+			if (emptyFields) {
+				delete queryOptions.projection[fieldUsedInCondition];
+			} else {
+				queryOptions.projection[fieldUsedInCondition] = 1;
+			}
+		}
+
 		return acc;
 	}, {});
 
@@ -398,12 +419,18 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 	if (record != null) {
 		const resultData = Object.keys(record).reduce((acc, key) => {
 			if (accessConditions[key] != null) {
-				if (accessConditions[key](record[key]) === true) {
+				if (accessConditions[key](record) === true) {
 					acc[key] = record[key];
 				}
 			} else {
 				acc[key] = record[key];
 			}
+
+			// Remove the fields only used for conditions comparison
+			if (fieldsObject[key] === 0 || (emptyFields && key in fieldsObject === false)) {
+				delete acc[key];
+			}
+
 			return acc;
 		}, {});
 
@@ -745,7 +772,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	if (fieldPermissionResult.some(result => result.success === false)) {
 		return errorReturn(
 			fieldPermissionResult
-				.find(result => result.success === false)
+				.filter(result => result.success === false)
 				.map(result => result.errors)
 				.flat(),
 		);
@@ -1236,7 +1263,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 	if (fieldPermissionResult.some(result => result.success === false)) {
 		return errorReturn(
 			fieldPermissionResult
-				.find(result => result.success === false)
+				.filter(result => result.success === false)
 				.map(result => result.errors)
 				.flat(),
 		);
@@ -1352,8 +1379,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
-									record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
 								}`,
 							);
 						}
