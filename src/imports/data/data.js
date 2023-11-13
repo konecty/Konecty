@@ -253,11 +253,6 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 					acc[key] = record[key];
 				}
 
-				// Remove the fields only used for conditions comparison
-				if (fieldsObject[key] === 0 || (emptyFields && key in fieldsObject === false)) {
-					delete acc[key];
-				}
-
 				return acc;
 			}, {}),
 		);
