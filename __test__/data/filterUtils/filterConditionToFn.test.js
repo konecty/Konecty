@@ -1,4 +1,4 @@
-import { filterConditionToFn } from '../../../src/imports/data/filterUtils';
+import { filterConditionToFn } from '@imports/data/filterUtils';
 
 describe('filterConditionToFn', () => {
 	it('should return a function that correctly filters data based on the given condition', () => {

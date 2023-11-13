@@ -532,37 +532,109 @@ export function filterConditionToFn(condition, metaObject, req) {
 
 	const conditionValue = getValue(conditionValueResult.data);
 
-	const getFieldValue = data => get(data, condition.term);
+	/**
+	 * @param {object} data - The whole document to search
+	 * @returns {Array.<string | number | boolean>} - The field value as an array
+	 */
+	const getFieldValue = data => {
+		if (field.isList !== true || termParts.length === 1) {
+			return [].concat(get(data, condition.term));
+		}
+
+		const fieldValue = get(data, termParts[0]);
+		if (fieldValue == null) {
+			return [];
+		}
+
+		// Here the fieldValue is guaranteed an array
+		return fieldValue.map(value => {
+			if (value == null) {
+				return value;
+			}
+
+			return get(value, termParts[1]);
+		});
+	};
 
 	switch (operator) {
 		case 'equals':
-			return successReturn(data => getFieldValue(data) === conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value === conditionValue);
+			});
 		case 'not_equals':
-			return successReturn(data => getFieldValue(data) !== conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.every(value => value !== conditionValue);
+			});
 		case 'contains':
-			return successReturn(data => getFieldValue(data).includes(conditionValue));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => String(value).includes(conditionValue));
+			});
 		case 'not_contains':
-			return successReturn(data => !getFieldValue(data).includes(conditionValue));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.every(value => !String(value).includes(conditionValue));
+			});
 		case 'starts_with':
-			return successReturn(data => getFieldValue(data).startsWith(conditionValue));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => String(value).startsWith(conditionValue));
+			});
 		case 'end_with':
-			return successReturn(data => getFieldValue(data).endsWith(conditionValue));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => String(value).endsWith(conditionValue));
+			});
 		case 'in':
-			return successReturn(data => conditionValue.includes(getFieldValue(data)));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				if (!isArray(conditionValue)) {
+					return false;
+				}
+
+				return fieldValue.some(value => conditionValue.includes(value));
+			});
 		case 'not_in':
-			return successReturn(data => !conditionValue.includes(getFieldValue(data)));
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				if (!isArray(conditionValue)) {
+					return false;
+				}
+
+				return fieldValue.every(value => !conditionValue.includes(value));
+			});
 		case 'greater_than':
-			return successReturn(data => getFieldValue(data) > conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value > conditionValue);
+			});
 		case 'greater_or_equals':
-			return successReturn(data => getFieldValue(data) >= conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value >= conditionValue);
+			});
 		case 'less_than':
-			return successReturn(data => getFieldValue(data) < conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value < conditionValue);
+			});
 		case 'less_or_equals':
-			return successReturn(data => getFieldValue(data) <= conditionValue);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value <= conditionValue);
+			});
 		case 'between':
-			return successReturn(data => getFieldValue(data) >= conditionValue.greater_or_equals && getFieldValue(data) <= conditionValue.less_or_equals);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => conditionValue.greater_or_equals <= value && value <= conditionValue.less_or_equals);
+			});
 		case 'exists':
-			return successReturn(data => getFieldValue(data) != null);
+			return successReturn(data => {
+				const fieldValue = getFieldValue(data);
+				return fieldValue.some(value => value != null);
+			});
 		default:
 			logger.error(`Operator [${condition.operator}] not supported`);
 			return errorReturn(`Operator [${condition.operator}] not supported`);

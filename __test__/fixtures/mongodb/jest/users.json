@@ -214,5 +214,71 @@
 				]
 			}
 		}
+	},
+
+	{
+		"_id": "User_access_User",
+		"fullName": "User_access_User",
+		"name": "User_access_User",
+		"nickname": "User_access_User",
+		"username": "User_access_User",
+		"access": { "defaults": ["User"] },
+		"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "ADMIN" },
+		"role": { "_id": "50a28a36e4b00438f136ae47", "name": "Administrator" },
+
+		"admin": false,
+		"active": true,
+		"code": 2,
+		"locale": "pt_BR",
+		"statusConnection": "online",
+		"statusDefault": "online",
+		"roles": ["User"],
+		"utcOffset": -3,
+		"type": "user",
+		"services": {
+			"password": {
+				"bcrypt": "$2b$10$f8qQlsOktAa7xr2nnNAXeOwanxQ0zqOS4r81vQCkLPoCNnnJMvhxW"
+			},
+			"resume": {
+				"loginTokens": [
+					{
+						"hashedToken": "__user_is_broker__"
+					}
+				]
+			}
+		}
+	},
+
+	{
+		"_id": "User_access_Default",
+		"fullName": "User_access_Default",
+		"name": "User_access_Default",
+		"nickname": "User_access_Default",
+		"username": "User_access_Default",
+		"access": { "defaults": ["Default"] },
+		"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "ADMIN" },
+		"role": { "_id": "50a28a36e4b00438f136ae47", "name": "Administrator" },
+
+		"admin": false,
+		"active": true,
+		"code": 2,
+		"locale": "pt_BR",
+		"statusConnection": "online",
+		"statusDefault": "online",
+		"roles": ["User"],
+		"utcOffset": -3,
+		"type": "user",
+		"services": {
+			"password": {
+				"bcrypt": "$2b$10$f8qQlsOktAa7xr2nnNAXeOwanxQ0zqOS4r81vQCkLPoCNnnJMvhxW"
+			},
+			"resume": {
+				"loginTokens": [
+					{
+						"hashedToken": "__user_is_default__"
+					}
+				]
+			}
+		}
 	}
 ]

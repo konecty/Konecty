@@ -1,6 +1,7 @@
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
-import usersFixture from './fixtures/mongodb/jest/users.json';
+import fs from 'fs/promises';
+import path from 'node:path';
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -27,14 +28,10 @@ export default async function globalSetup() {
 
 	console.info(`\n✅ MongoDB is running at ${uri}`);
 
-	const db = (await import('@imports/database')).db;
-
-	await db.collection('users').insertMany(usersFixture as any[]);
-
-	console.info(`\n✅ Loaded ${usersFixture.length} users`);
 	try {
-		const app = (await import('@server/app')).default;
+		await loadFixtures();
 
+		const app = (await import('@server/app')).default;
 		await app();
 
 		await new Promise(resolve => setTimeout(resolve, 3000));
@@ -42,5 +39,22 @@ export default async function globalSetup() {
 		console.info(`\n✅ Started app`);
 	} catch (error) {
 		console.error(error);
+	}
+}
+
+async function loadFixtures() {
+	const fullPath = (localPath: string) => path.resolve(__dirname, localPath);
+
+	const files = await fs.readdir(fullPath('./fixtures/mongodb/jest'));
+	const db = (await import('@imports/database')).db;
+
+	for (const file of files) {
+		if (!file.endsWith('.json')) continue;
+
+		const collectionName = file.replace('.json', '');
+		const collection = db.collection(collectionName);
+		const data = await fs.readFile(fullPath(`./fixtures/mongodb/jest/${file}`), 'utf8');
+		await collection.insertMany(JSON.parse(data));
+		console.info(`\n✅ Loaded ${collectionName} fixtures`);
 	}
 }
