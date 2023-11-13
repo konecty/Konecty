@@ -36,9 +36,9 @@ describe('Delete Product', () => {
 			const requestFields = {
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],

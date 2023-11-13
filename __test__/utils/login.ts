@@ -2,10 +2,10 @@ type typeoffakeHashes = 'admin-test' | 'user-test';
 
 export const login = (user: typeoffakeHashes): string => {
 	const fakeHashes = {
-		'admin-test': 'hash/admin/test=',
-		'user-test': 'hash/user/test=',
-		'user-test-2': 'hash/user/2/test=',
+		'admin-test': '__user_is_admin__',
+		'user-test': '__user_is_broker__',
+		'user-test-2': '__user_is_default__',
 	};
 
-	return fakeHashes[user] || 'hash/admin/test=';
+	return fakeHashes[user] || '__user_is_admin__';
 };

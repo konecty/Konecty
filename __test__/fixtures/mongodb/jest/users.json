@@ -65,157 +65,12 @@
 			"resume": {
 				"loginTokens": [
 					{
-						"hashedToken": "hash/admin/test="
+						"hashedToken": "__user_is_admin__"
 					}
 				]
 			}
 		}
 	},
-	{
-		"_id": "1234",
-		"admin": false,
-		"_createdAt": { "$date": "2013-04-12T04:39:09.000Z" },
-		"_createdBy": {
-			"_id": "4ffcf81084aecfbaff50fd05",
-			"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-			"name": "Admin-test"
-		},
-		"_updatedAt": { "$date": "2022-04-29T12:31:13.359Z" },
-		"_updatedBy": {
-			"_id": "4ffcf81084aecfbaff50fd05",
-			"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-			"name": "Admin-test",
-			"ts": { "$date": "2022-05-04T16:31:35.995Z" }
-		},
-		"_user": [
-			{
-				"_id": "4ffcf81084aecfbaff50fd05",
-				"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-				"name": "Admin-test",
-				"active": true
-			}
-		],
-		"access": { "defaults": ["User", "Default"] },
-		"active": true,
-		"chatAllowed": true,
-		"code": 1234,
-		"fullName": "User-test",
-		"group": { "_id": "1234", "name": "USER" },
-		"lastLogin": { "$date": "2022-05-04T17:01:46.448Z" },
-		"locale": "pt_BR",
-		"name": "User-test",
-		"nickname": "user-test",
-		"phone": [{ "countryCode": 55, "phoneNumber": "5111111111" }],
-		"role": { "_id": "12345", "name": "User" },
-		"status": "offline",
-		"statusConnection": "offline",
-		"statusDefault": "online",
-		"username": "user-test",
-		"temporaryBadge": false,
-		"targetQueue": {
-			"_id": "523f92c9e4b08303e538a047",
-			"name": "Revendas Zona Sul Prime"
-		},
-		"contractStatus": "Assinado",
-		"extension": 3568,
-		"pictures": [],
-		"autonomous": "Assinada",
-		"roles": ["User"],
-		"utcOffset": -3,
-		"type": "user",
-		"operator": true,
-		"statusLivechat": "not-available",
-		"createdAt": { "$date": "2013-04-12T04:39:09.000Z" },
-		"settings": { "preferences": { "sidebarViewMode": "medium" } },
-		"requirePasswordChange": false,
-		"permitLeads": false,
-		"livechatStatusSystemModified": false,
-		"services": {
-			"password": {
-				"bcrypt": "$2b$10$f8qQlsOktAa7xr2nnNAXeOwanxQ0zqOS4r81vQCkLPoCNnnJMvhxW"
-			},
-			"resume": {
-				"loginTokens": [
-					{
-						"hashedToken": "hash/user/test="
-					}
-				]
-			}
-		}
-	},
-	{
-		"_id": "4321",
-		"admin": false,
-		"_createdAt": { "$date": "2013-04-12T04:39:09.000Z" },
-		"_createdBy": {
-			"_id": "4ffcf81084aecfbaff50fd05",
-			"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-			"name": "Admin-test"
-		},
-		"_updatedAt": { "$date": "2022-04-29T12:31:13.359Z" },
-		"_updatedBy": {
-			"_id": "4ffcf81084aecfbaff50fd05",
-			"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-			"name": "Admin-test",
-			"ts": { "$date": "2022-05-04T16:31:35.995Z" }
-		},
-		"_user": [
-			{
-				"_id": "4ffcf81084aecfbaff50fd05",
-				"group": { "_id": "521c2fe4e4b057cdcba8e454", "name": "SISTEMA" },
-				"name": "Admin-test",
-				"active": true
-			}
-		],
-		"access": { "defaults": ["User", "Default"] },
-		"active": true,
-		"chatAllowed": true,
-		"code": 4321,
-		"fullName": "User-test-2",
-		"group": { "_id": "1234", "name": "USER" },
-		"lastLogin": { "$date": "2022-05-04T17:01:46.448Z" },
-		"locale": "pt_BR",
-		"name": "User-test-2",
-		"nickname": "user-test-2",
-		"phone": [{ "countryCode": 55, "phoneNumber": "5111111111" }],
-		"role": { "_id": "12345", "name": "User" },
-		"status": "offline",
-		"statusConnection": "offline",
-		"statusDefault": "online",
-		"username": "user-test-2",
-		"temporaryBadge": false,
-		"targetQueue": {
-			"_id": "523f92c9e4b08303e538a047",
-			"name": "Revendas Zona Sul Prime"
-		},
-		"contractStatus": "Assinado",
-		"extension": 3568,
-		"pictures": [],
-		"autonomous": "Assinada",
-		"roles": ["User"],
-		"utcOffset": -3,
-		"type": "user",
-		"operator": true,
-		"statusLivechat": "not-available",
-		"createdAt": { "$date": "2013-04-12T04:39:09.000Z" },
-		"settings": { "preferences": { "sidebarViewMode": "medium" } },
-		"requirePasswordChange": false,
-		"permitLeads": false,
-		"livechatStatusSystemModified": false,
-		"services": {
-			"password": {
-				"bcrypt": "$2b$10$f8qQlsOktAa7xr2nnNAXeOwanxQ0zqOS4r81vQCkLPoCNnnJMvhxW"
-			},
-			"resume": {
-				"loginTokens": [
-					{
-						"hashedToken": "hash/user/2/test="
-					}
-				]
-			}
-		}
-	},
-
 	{
 		"_id": "User_access_User",
 		"fullName": "User_access_User",
@@ -248,7 +103,6 @@
 			}
 		}
 	},
-
 	{
 		"_id": "User_access_Default",
 		"fullName": "User_access_Default",

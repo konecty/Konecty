@@ -124,17 +124,17 @@ describe('Create Product', () => {
 
 			const productUser = [
 				{
-					_id: '1234',
-					group: { _id: '1234', name: 'USER' },
-					name: 'User-test',
+					_id: 'User_access_User',
+					group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
+					name: 'User_access_User',
 					active: true,
 				},
 			];
 
 			const createAndUpdateUser = {
-				_id: '1234',
-				name: 'User-test',
-				group: { _id: '1234', name: 'USER' },
+				_id: 'User_access_User',
+				name: 'User_access_User',
+				group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
 			};
 
 			// Act

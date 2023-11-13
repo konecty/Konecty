@@ -33,16 +33,6 @@ describe('Permissions', () => {
 				expect(konResponse.errors).to.be.not.empty;
 				expect(konResponse.errors?.[0]?.message).to.includes("You don't have permission to update records Product_from_user_Default");
 			});
-			// it('to create with invalid status', async () => {
-			// 	const payload = { name: 'Test', status: 'active' };
-			// 	const response = await KonectyApi.post('/data/Product', payload, UsersAuth.User);
-
-			// 	const konResponse = await response.json();
-
-			// 	expect(konResponse.success).to.be.false;
-			// 	expect(konResponse.errors).to.be.not.empty;
-			// 	expect(konResponse.errors?.[0]?.message).to.includes('status');
-			// });
 		});
 
 		describe('Should allow', () => {
@@ -143,17 +133,6 @@ describe('Permissions', () => {
 				expect(konResponse.data).to.not.be.empty;
 				expect(konResponse.data?.[0]?.[FIELD_WITHOUT_PERM]).to.be.equal(payload.data[FIELD_WITHOUT_PERM]);
 			});
-			// it('to create when allowed', async () => {
-			// 	const payload = { [FIELD_WITHOUT_PERM]: 'CREATE LESGAL', name: 'Test', status: 'draft' };
-			// 	const response = await KonectyApi.post('/data/Product', payload, UsersAuth.User);
-
-			// 	const konResponse = await response.json();
-
-			// 	expect(konResponse.success).to.be.true;
-			// 	expect(konResponse.errors).to.be.undefined;
-			// 	expect(konResponse.data).to.not.be.empty;
-			// 	expect(konResponse.data?.[0]?.[FIELD_WITHOUT_PERM]).to.be.equal(payload[FIELD_WITHOUT_PERM]);
-			// });
 		});
 	});
 });

@@ -36,9 +36,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -69,9 +69,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -104,9 +104,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -123,7 +123,7 @@ describe('Update Product', () => {
 			}).then(res => res.json())) as KonectyResponse;
 
 			// Assert
-			expect(product.activatedAt).to.not.exist;
+			expect(product?.activatedAt).to.not.exist;
 			expect(data.success).to.be.equal(true);
 			expect(data.data?.[0].activatedAt).to.exist;
 		});
@@ -145,9 +145,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -178,9 +178,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -213,9 +213,9 @@ describe('Update Product', () => {
 				},
 				ids: [
 					{
-						_id: product._id,
+						_id: product?._id,
 						_updatedAt: {
-							$date: product._updatedAt,
+							$date: product?._updatedAt,
 						},
 					},
 				],
@@ -232,7 +232,7 @@ describe('Update Product', () => {
 			}).then(res => res.json())) as KonectyResponse;
 
 			// Assert
-			expect(product.status).to.be.equal('draft');
+			expect(product?.status).to.be.equal('draft');
 			expect(data.success).to.be.equal(false);
 			expect(data.errors?.[0].message).to.be.equal("[Product] You don't have permission to update field status");
 		});
