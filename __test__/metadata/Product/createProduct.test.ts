@@ -192,6 +192,8 @@ describe('Create Product', () => {
 				},
 				body: JSON.stringify(requiredFields),
 			}).then(res => res.json())) as KonectyResponse;
+			console.log(data);
+
 			// Assert
 			expect(data.success).to.be.equal(false);
 			expect(data.errors?.[0].message).to.be.equal("[Product] You don't have permission to create field status");

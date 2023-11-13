@@ -765,6 +765,22 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		if (accessField.isCreatable !== true) {
 			return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
 		}
+
+		const accessFieldConditions = getFieldConditions(access, fieldName);
+		if (accessFieldConditions.CREATE != null) {
+			const getConditionFilterResult = filterConditionToFn(accessFieldConditions.CREATE, metaObject, { user });
+
+			if (getConditionFilterResult.success === false) {
+				return getConditionFilterResult;
+			}
+
+			const isAllowToCreateField = getConditionFilterResult.data(data);
+
+			if (isAllowToCreateField === false) {
+				return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+			}
+		}
+
 		return successReturn();
 	});
 
