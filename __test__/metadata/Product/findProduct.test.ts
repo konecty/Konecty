@@ -36,7 +36,7 @@ describe('Find Product', () => {
 			// const requiredFields = {};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find`, {
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find?fields=name,status,code`, {
 				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

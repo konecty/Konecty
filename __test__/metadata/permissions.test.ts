@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import * as KonectyApi from '../utils/api';
-
+import { db } from '@imports/database';
+import products from '../fixtures/mongodb/permissions/data.Product.json';
 const UsersAuth = {
 	Default: '__user_is_default__',
 	User: '__user_is_broker__',
@@ -8,6 +9,13 @@ const UsersAuth = {
 const DEFAULT_UPDATED_AT = { $date: '2023-01-01T00:00:00.000+0000' };
 
 describe('Permissions', () => {
+	beforeAll(async () => {
+		db.collection('data.Product').insertMany(products as any[]);
+	});
+
+	afterAll(async () => {
+		await db.collection('data.Product').deleteMany({});
+	});
 	describe('With conditions', () => {
 		const FIELD_WITH_CONDITIONS = { UPDATE: 'notes', READ: 'supplier' };
 

@@ -133,7 +133,6 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 			query.$text = { $search: filter.textSearch };
 		}
 
-		// Validate if user have permission to view each field
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
 		const queryOptions = {
@@ -1339,7 +1338,8 @@ export async function update({ authTokenId, document, data, contextUser }) {
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
+									record.createdBy.name
 								}`,
 							);
 						}
