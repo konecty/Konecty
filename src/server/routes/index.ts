@@ -22,13 +22,13 @@ import menuApi from './rest/menu/menu';
 import processApi from './rest/process/processApi';
 import rocketchatApi from './rest/rocketchat/livechat';
 import viewPaths from './rest/view/view';
-
+import cors, { FastifyCorsOptions } from '@fastify/cors';
 import healthApi from './rest/health';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
 
-export const fastify = Fastify({
+const fastify = Fastify({
 	logger,
 });
 
@@ -36,6 +36,8 @@ fastify.register(cookie, {
 	secret: process.env.COOKIES_SECRET ?? 'konecty-secret',
 	parseOptions: {} as FastifyCookieOptions,
 } as FastifyCookieOptions);
+
+fastify.register(cors, getCorsConfig());
 
 fastify.register(documentApi);
 fastify.register(formApi);
@@ -68,4 +70,27 @@ export async function serverStart() {
 		fastify.log.error(error);
 		process.exit(1);
 	}
+}
+
+function getCorsConfig() {
+	const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
+	const corsOptions: FastifyCorsOptions = {
+		origin: function (origin, callback) {
+			if (origin) {
+				if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+					callback(null, true);
+				} else {
+					logger.error(`${origin} Not allowed by CORS`);
+					callback(new Error(`Not allowed by CORS`), false);
+				}
+			} else {
+				callback(null, true);
+			}
+		},
+		allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+		credentials: true,
+		optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+	};
+
+	return corsOptions;
 }
