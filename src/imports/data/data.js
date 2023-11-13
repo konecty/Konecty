@@ -138,6 +138,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 		const queryOptions = {
 			limit: parseInt(limit, 10),
 			skip: parseInt(start ?? 0, 10),
+			allowDiskUse: true,
 		};
 
 		if (_isNaN(queryOptions.limit) || queryOptions.limit == null) {
@@ -173,9 +174,6 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 
 		if (queryOptions.limit > 1000) {
 			queryOptions.sort = { _id: 1 };
-			queryOptions.allowDiskUse = true;
-		} else if (queryOptions.skip > 100) {
-			queryOptions.allowDiskUse = true;
 		}
 
 		const accessConditionsResult = Object.keys(metaObject.fields).map(fieldName => {
@@ -210,6 +208,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 			}
 			return successReturn();
 		});
+
 		queryOptions.projection = clearProjectionPathCollision(fieldsObject);
 
 		if (accessConditionsResult.some(result => result.success === false)) {
