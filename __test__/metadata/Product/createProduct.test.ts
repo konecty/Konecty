@@ -192,7 +192,6 @@ describe('Create Product', () => {
 				},
 				body: JSON.stringify(requiredFields),
 			}).then(res => res.json())) as KonectyResponse;
-			console.log(data);
 
 			// Assert
 			expect(data.success).to.be.equal(false);

@@ -25,6 +25,9 @@ describe('Update Product', () => {
 		beforeEach(async () => {
 			await db.collection('data.Product').deleteMany({});
 		});
+		afterEach(async () => {
+			await db.collection('data.Product').deleteMany({});
+		});
 
 		it('Should not update Product because invalid field', async () => {
 			// Arrange
@@ -132,6 +135,9 @@ describe('Update Product', () => {
 	describe('User', () => {
 		const authId = login('user-test');
 		beforeEach(async () => {
+			await db.collection('data.Product').deleteMany({});
+		});
+		afterEach(async () => {
 			await db.collection('data.Product').deleteMany({});
 		});
 

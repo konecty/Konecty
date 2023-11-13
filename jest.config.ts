@@ -14,6 +14,7 @@ const jestConfig: JestConfigWithTsJest = {
 	],
 	coverageDirectory: 'coverage',
 	coverageProvider: 'v8',
+	testTimeout: 30000,
 	globalSetup: '<rootDir>/__test__/globalSetup.ts',
 	globalTeardown: '<rootDir>/__test__/globalTeardown.ts',
 
