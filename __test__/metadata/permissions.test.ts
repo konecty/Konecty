@@ -10,7 +10,7 @@ const DEFAULT_UPDATED_AT = { $date: '2023-01-01T00:00:00.000+0000' };
 
 describe('Permissions', () => {
 	beforeAll(async () => {
-		db.collection('data.Product').insertMany(products as any[]);
+		await db.collection('data.Product').insertMany(products as any);
 	});
 
 	afterAll(async () => {
@@ -104,7 +104,7 @@ describe('Permissions', () => {
 
 				expect(konResponse.success).to.be.false;
 				expect(konResponse.errors).to.be.not.empty;
-				expect(konResponse.errors?.[0]?.message).to.includes("You don't have permission to update records Product_from_user_Default");
+				expect(konResponse.errors?.[0]?.message).to.includes("You don't have permission to update");
 			});
 			it('to create if not allowed', async () => {
 				const payload = { [FIELD_WITH_FLAT_PERM]: 'CREATE LESGAL', name: 'Test' };

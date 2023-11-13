@@ -33,7 +33,6 @@ describe('Find Product', () => {
 
 		it('Find Product', async () => {
 			// Arrange
-			// const requiredFields = {};
 
 			// Act
 			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find?fields=name,status,code`, {
