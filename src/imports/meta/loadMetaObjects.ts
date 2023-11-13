@@ -39,12 +39,16 @@ const rebuildReferences = debounce(function () {
 				if (!MetaObject.References[field.document].from[metaName]) {
 					MetaObject.References[field.document].from[metaName] = {};
 				}
-				MetaObject.References[field.document].from[metaName][fieldName] = {
+				MetaObject.References[field.document].from[metaName] = {
 					type: field.type,
-					field: fieldName,
+					fields: {
+						...(MetaObject.References[field.document].from[metaName].fields || {}),
+						[field.name]: field,
+					},
 					isList: field.isList,
 					descriptionFields: field.descriptionFields,
 					detailFields: field.detailFields,
+					document: field.document,
 				};
 			}
 		}
