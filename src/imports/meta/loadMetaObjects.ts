@@ -1,23 +1,23 @@
 import BluebirdPromise from 'bluebird';
 
 import chokidar from 'chokidar';
-import glob from 'glob';
 import fs from 'fs';
+import glob from 'glob';
 
 import debounce from 'lodash/debounce';
-import isEmpty from 'lodash/isEmpty';
-import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
+import isEmpty from 'lodash/isEmpty';
 import isNumber from 'lodash/isNumber';
+import isObject from 'lodash/isObject';
 import unset from 'lodash/unset';
 
-import { MetaObject } from '@imports/model/MetaObject';
+import { DataDocument, MetaObject } from '@imports/model/MetaObject';
+import { MetaObjectType } from '@imports/types/metadata';
+import { Collection } from 'mongodb';
 import { checkInitialData } from '../data/initialData';
-import { logger } from '../utils/logger';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
-import { Collection } from 'mongodb';
-import { MetaObjectType } from '@imports/types/metadata';
+import { logger } from '../utils/logger';
 
 const rebuildReferencesDelay = 1000;
 
@@ -55,7 +55,7 @@ const rebuildReferences = debounce(function () {
 	}
 }, rebuildReferencesDelay);
 
-async function tryEnsureIndex({ collection, fields, options }: { collection: Collection; fields: { [key: string]: 1 }; options: { name: string } }) {
+async function tryEnsureIndex({ collection, fields, options }: { collection: Collection<DataDocument>; fields: { [key: string]: 1 }; options: { name: string } }) {
 	try {
 		await collection.createIndex(fields, options);
 	} catch (e) {

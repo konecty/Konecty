@@ -1,21 +1,25 @@
 import BluebirdPromise from 'bluebird';
+import { Filter, UpdateFilter } from 'mongodb';
 
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 
-import { MetaObject } from '@imports/model/MetaObject';
-import { parseFilterObject } from '../data/filterUtils';
+import { DataDocument, MetaObject } from '@imports/model/MetaObject';
+import { parseFilterObject } from '../../data/filterUtils';
 
-import { logger } from '../utils/logger';
+import type { MetaObjectType, Relation } from '../../types/metadata';
+import type { AggregatePipeline } from '../../types/mongo';
+import { logger } from '../../utils/logger';
 
-export default async function updateRelationReference(metaName, relation, lookupId, action, referenceDocumentName) {
+export default async function updateRelationReference(metaName: string, relation: Relation, lookupId: string, documentName: string) {
 	// Try to get metadata
-	let aggregator, e, query;
-	const meta = MetaObject.Meta[metaName];
+	let aggregator, e, query: Filter<object> | undefined;
+	const meta: MetaObjectType | undefined = MetaObject.Meta[metaName];
 
 	if (!meta) {
-		return logger.error(`Can't get meta of document ${metaName}`);
+		logger.error(`Can't get meta of document ${metaName}`);
+		return 0;
 	}
 
 	if (isObject(relation)) {
@@ -39,7 +43,8 @@ export default async function updateRelationReference(metaName, relation, lookup
 	const collection = MetaObject.Collections[relation.document];
 
 	// Init update object
-	const valuesToUpdate = {
+	// const valuesToUpdate: Partial<Record<"$set" | "$unset", Record<string, unknown>>> = {
+	const valuesToUpdate: UpdateFilter<DataDocument> = {
 		$set: {},
 		$unset: {},
 	};
@@ -52,10 +57,10 @@ export default async function updateRelationReference(metaName, relation, lookup
 			return;
 		}
 
-		const pipeline = [];
+		const pipeline: AggregatePipeline = [];
 
 		// Init query to aggregate data
-		const match = { $match: query };
+		const match: AggregatePipeline[number] = { $match: query };
 
 		pipeline.push(match);
 
@@ -63,9 +68,10 @@ export default async function updateRelationReference(metaName, relation, lookup
 		const group = {
 			$group: {
 				_id: null,
-				value: {},
+				value: {} as Record<string, any>,
+				currency: undefined as Record<string, any> | undefined,
 			},
-		};
+		} satisfies AggregatePipeline[number];
 
 		let type = '';
 
@@ -74,7 +80,8 @@ export default async function updateRelationReference(metaName, relation, lookup
 			group.$group.value.$sum = 1;
 		} else {
 			// Get type of aggrated field
-			const aggregatorField = MetaObject.Meta[relation.document].fields[aggregator.field.split('.')[0]];
+			const MetaObj: MetaObjectType = MetaObject.Meta[relation.document];
+			const aggregatorField = 'fields' in MetaObj ? MetaObj.fields[aggregator.field.split('.')[0]] : { type: 'text', isList: false };
 			({ type } = aggregatorField);
 
 			// If type is money ensure that field has .value
@@ -112,14 +119,13 @@ export default async function updateRelationReference(metaName, relation, lookup
 
 		pipeline.push(group);
 
-		// Wrap aggregate method into an async metero's method
-
 		// Try to execute agg and log error if fails
 		try {
 			let result = await collection.aggregate(pipeline, { cursor: { batchSize: 1 } }).toArray();
 
 			// If result was an array with one item cotaining a property value
 			if (isArray(result) && isObject(result[0]) && result[0].value) {
+				valuesToUpdate.$set = valuesToUpdate.$set ?? {};
 				// If aggregator is of type money create an object with value and currency
 				if (type === 'money') {
 					valuesToUpdate.$set[fieldName] = { currency: result[0].currency, value: result[0].value };
@@ -128,54 +134,55 @@ export default async function updateRelationReference(metaName, relation, lookup
 					valuesToUpdate.$set[fieldName] = result[0].value;
 				}
 			} else {
-				// Else unset value
+				valuesToUpdate.$unset = valuesToUpdate.$unset ?? {};
 				valuesToUpdate.$unset[fieldName] = 1;
 			}
 		} catch (error) {
-			e = error;
+			e = error as Error;
 			logger.error(e, `Error on aggregate relation ${relation.document} on document ${metaName}: ${e.message}`);
 		}
 	});
 
 	// Remove $set if empty
-	if (Object.keys(valuesToUpdate.$set).length === 0) {
+	if (valuesToUpdate.$set && Object.keys(valuesToUpdate.$set).length === 0) {
 		delete valuesToUpdate.$set;
 	}
 
 	// Remove $unset if empty
-	if (Object.keys(valuesToUpdate.$unset).length === 0) {
+	if (valuesToUpdate.$unset && Object.keys(valuesToUpdate.$unset).length === 0) {
 		delete valuesToUpdate.$unset;
 	}
 
 	// If no value was defined to set or unset then abort
 	if (Object.keys(valuesToUpdate).length === 0) {
-		return;
+		return 0;
 	}
 
 	// Try to get reference model
-	const referenceCollection = MetaObject.Collections[referenceDocumentName];
+	const referenceCollection = MetaObject.Collections[documentName];
 	if (referenceCollection == null) {
-		return logger.error(`Can't get model for document ${referenceDocumentName}`);
+		logger.error(`Can't get model for document ${documentName}`);
+		return 0;
 	}
 
 	// Define a query to udpate records with aggregated values
-	const updateQuery = { _id: lookupId };
+	const updateQuery: Filter<DataDocument> = { _id: lookupId };
 
 	// Try to execute update query
 	try {
-		const affected = await referenceCollection.update(updateQuery, valuesToUpdate);
+		const { modifiedCount: affected } = await referenceCollection.updateOne(updateQuery, valuesToUpdate);
 
 		// If there are affected records
 		if (affected > 0) {
 			// Log Status
-			logger.info(`∑ ${referenceDocumentName} < ${metaName} (${affected})`);
+			logger.info(`∑ ${documentName} < ${metaName} (${affected})`);
+
 			// And log all aggregatores for this status
-			// for (fieldName in relation.aggregators) {
-			Object.entries(relation.aggregators).forEach((fieldName, aggregator) => {
+			Object.entries(relation.aggregators).forEach(([fieldName, aggregator]) => {
 				if (aggregator.field) {
-					logger.info(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`);
+					logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`);
 				} else {
-					logger.info(`  ${referenceDocumentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`);
+					logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`);
 				}
 			});
 		}
@@ -184,4 +191,6 @@ export default async function updateRelationReference(metaName, relation, lookup
 	} catch (error1) {
 		logger.error(error1, 'Error on updateRelationReference');
 	}
+
+	return 0;
 }

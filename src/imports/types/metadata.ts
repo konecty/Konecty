@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { DocumentFormVisualsSchema } from '@imports/model/DocumentForm';
+import { z } from 'zod';
 
 export const LabelSchema = z.record(z.string());
 
@@ -41,6 +41,7 @@ const RelationSchema = z.object({
 	aggregators: z.record(
 		z.object({
 			aggregator: z.string(),
+			field: z.string(),
 		}),
 	),
 	filter: z.object({
@@ -54,6 +55,8 @@ const RelationSchema = z.object({
 		),
 	}),
 });
+
+export type Relation = z.infer<typeof RelationSchema>;
 
 // Definição do tipo "Integration"
 export const MetaObjectSchema = z.discriminatedUnion('type', [
