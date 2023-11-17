@@ -23,8 +23,11 @@ async function createProductHelper(authId: string) {
 describe('Find Product', () => {
 	describe('Admin', () => {
 		const authId = login('admin-test');
+		let product: { _id: string } = {
+			_id: '',
+		};
 		beforeEach(async () => {
-			await createProductHelper(authId);
+			product = (await createProductHelper(authId)) as { _id: string };
 		});
 
 		afterEach(async () => {
@@ -46,6 +49,27 @@ describe('Find Product', () => {
 			// Assert
 			expect(data.success).to.be.equal(true);
 			expect(data.data?.length).to.be.equal(1);
+			// compare data.data with the data created in beforeEach
+			expect(data.data?.[0].name).to.be.equal('Teste');
+			expect(data.data?.[0].status).to.be.equal('draft');
+			expect(data.data?.[0].code).to.be.equal(1);
+		});
+
+		it('Find Product', async () => {
+			// Arrange
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/${product._id}`, {
+				method: 'GET',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(true);
+			expect(data.total).to.be.equal(1);
 			// compare data.data with the data created in beforeEach
 			expect(data.data?.[0].name).to.be.equal('Teste');
 			expect(data.data?.[0].status).to.be.equal('draft');

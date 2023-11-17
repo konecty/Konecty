@@ -6,4 +6,5 @@ export interface KonectyResponse {
 			message: string;
 		},
 	];
+	total?: number;
 }

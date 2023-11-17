@@ -419,11 +419,6 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 				acc[key] = record[key];
 			}
 
-			// Remove the fields only used for conditions comparison
-			if (fieldsObject[key] === 0 || (emptyFields && key in fieldsObject === false)) {
-				delete acc[key];
-			}
-
 			return acc;
 		}, {});
 
@@ -438,7 +433,7 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 
 		return {
 			success: true,
-			data: dateToString([resultData]),
+			data: [dateToString(resultData)],
 			total: 1,
 		};
 	}
