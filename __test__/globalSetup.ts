@@ -39,6 +39,7 @@ export default async function globalSetup() {
 
 		console.info(`\n✅ Started app`);
 	} catch (error) {
+		console.error(`\n❌ Failed to start app, verify port 3000`);
 		console.error(error);
 	}
 }

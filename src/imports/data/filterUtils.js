@@ -248,15 +248,24 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 	const getValue = function (value) {
 		if (operator === 'between') {
 			const result = {};
-			if (isObject(value)) {
-				if (isObject(value.greater_or_equals) && isString(value.greater_or_equals.$date)) {
-					result.greater_or_equals = processValueByType(value.greater_or_equals);
+			if (isObject(value) && value != null) {
+				if (value.greater_or_equals != null) {
+					if (value.greater_or_equals.$date != null && isString(value.greater_or_equals.$date)) {
+						result.greater_or_equals = processValueByType(value.greater_or_equals);
+					} else {
+						result.greater_or_equals = value.greater_or_equals;
+					}
 				}
 
-				if (isObject(value.less_or_equals) && isString(value.less_or_equals.$date)) {
-					value.less_or_equals = processValueByType(value.less_or_equals);
+				if (value.less_or_equals != null) {
+					if (value.less_or_equals.$date != null && isString(value.less_or_equals.$date)) {
+						value.less_or_equals = processValueByType(value.less_or_equals);
+					} else {
+						result.less_or_equals = value.less_or_equals;
+					}
 				}
 			}
+			return result;
 		} else {
 			return processValueByType(value);
 		}
@@ -264,7 +273,6 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 
 	const conditionValue = getValue(conditionValueResult.data);
 	const queryCondition = {};
-
 	switch (operator) {
 		case 'equals':
 			queryCondition[condition.term] = conditionValue;
@@ -308,10 +316,10 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 			break;
 		case 'between':
 			queryCondition[condition.term] = {};
-			if (conditionValue.greater_or_equals != null) {
+			if (conditionValue != null && conditionValue.greater_or_equals != null) {
 				queryCondition[condition.term].$gte = conditionValue.greater_or_equals;
 			}
-			if (conditionValue.less_or_equals != null) {
+			if (conditionValue != null && conditionValue.less_or_equals != null) {
 				queryCondition[condition.term].$lte = conditionValue.less_or_equals;
 			}
 			break;
@@ -349,7 +357,7 @@ export function parseFilterObject(filter, metaObject, data) {
 	} else if (isObject(filter.conditions) && Object.keys(filter.conditions).length > 0) {
 		const objectConditions = Object.entries(filter.conditions)
 			.filter(([, { disabled = false }]) => disabled !== true)
-			.map(([key, condition]) => parseFilterCondition({ ...condition, term: key }, metaObject, data));
+			.map(([, condition]) => parseFilterCondition(condition, metaObject, data));
 
 		if (objectConditions.some(({ success }) => success === false)) {
 			return objectConditions.find(({ success }) => success === false);
@@ -512,19 +520,28 @@ export function filterConditionToFn(condition, metaObject, req) {
 	};
 
 	const operator = type === ('money.currency' && ['not_equals', 'exists'].includes(condition.operator) === false) ? 'equals' : condition.operator;
-
 	const getValue = function (value) {
 		if (operator === 'between') {
 			const result = {};
-			if (isObject(value)) {
-				if (isObject(value.greater_or_equals) && isString(value.greater_or_equals.$date)) {
-					result.greater_or_equals = processValueByType(value.greater_or_equals);
+			if (isObject(value) && value != null) {
+				if (value.greater_or_equals != null) {
+					if (value.greater_or_equals.$date != null && isString(value.greater_or_equals.$date)) {
+						result.greater_or_equals = processValueByType(value.greater_or_equals);
+					} else {
+						result.greater_or_equals = value.greater_or_equals;
+					}
 				}
 
-				if (isObject(value.less_or_equals) && isString(value.less_or_equals.$date)) {
-					value.less_or_equals = processValueByType(value.less_or_equals);
+				if (value.less_or_equals != null) {
+					if (value.less_or_equals.$date != null && isString(value.less_or_equals.$date)) {
+						value.less_or_equals = processValueByType(value.less_or_equals);
+					} else {
+						result.less_or_equals = value.less_or_equals;
+					}
 				}
 			}
+
+			return result;
 		} else {
 			return processValueByType(value);
 		}
