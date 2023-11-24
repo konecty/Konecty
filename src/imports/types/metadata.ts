@@ -31,6 +31,8 @@ export const FieldSchema = z.object({
 	decimalSize: z.number().optional(),
 	minValue: z.number().optional(),
 	isList: z.boolean().optional(),
+	detailFields: z.array(z.string()).optional(),
+	inheritedFields: z.array(z.object({ fieldName: z.string(), inherit: z.string() })).optional(),
 });
 
 export type Field = z.infer<typeof FieldSchema>;

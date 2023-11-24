@@ -7,19 +7,17 @@ import merge from 'lodash/merge';
 import pick from 'lodash/pick';
 import uniq from 'lodash/uniq';
 
-import { MetaObject } from '@imports/model/MetaObject';
-
-import { logger } from '../utils/logger';
+import { logger } from '@imports/utils/logger';
 
 export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName) {
     // Try to get related meta
-    const meta = MetaObject.Meta[metaName];
+    const meta = globalThis.Konsistent.Meta[metaName];
     if (!meta) {
         return logger.error(`MetaObject.Meta ${metaName} does not exists`);
     }
 
     // Try to get related model
-    const collection = MetaObject.Collections[metaName];
+    const collection = globalThis.Konsistent.Collections[metaName];
     if (collection == null) {
         return logger.error(`Model ${metaName} does not exists`);
     }
@@ -76,7 +74,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
                 // If field is lookup
                 if (get(inheritedMetaField, 'type') === 'lookup') {
                     // Get model to find record
-                    const lookupCollection = MetaObject.Collections[inheritedMetaField.document];
+                    const lookupCollection = globalThis.Konsistent.Collections[inheritedMetaField.document];
 
                     if (!lookupCollection) {
                         logger.error(`Document ${inheritedMetaField.document} not found`);

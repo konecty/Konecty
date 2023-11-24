@@ -1,21 +1,22 @@
 import BluebirdPromise from 'bluebird';
-import { Filter, UpdateFilter } from 'mongodb';
+import { Collection, Filter, UpdateFilter } from 'mongodb';
 
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 
-import { DataDocument, MetaObject } from '@imports/model/MetaObject';
-import { parseFilterObject } from '../../data/filterUtils';
+import { parseFilterObject } from '@imports/data/filterUtils';
 
-import type { MetaObjectType, Relation } from '../../types/metadata';
-import type { AggregatePipeline } from '../../types/mongo';
-import { logger } from '../../utils/logger';
+import { MetaObject } from '@imports/model/MetaObject';
+import { DataDocument } from '@imports/types/data';
+import { Relation } from '@imports/types/metadata';
+import type { AggregatePipeline } from '@imports/types/mongo';
+import { logger } from '@imports/utils/logger';
 
 export default async function updateRelationReference(metaName: string, relation: Relation, lookupId: string, documentName: string) {
 	// Try to get metadata
-	let aggregator, e, query: Filter<object> | undefined;
-	const meta: MetaObjectType | undefined = MetaObject.Meta[metaName];
+	let e, query: Filter<object> | undefined;
+	const meta = MetaObject.Meta[metaName];
 
 	if (!meta) {
 		logger.error(`Can't get meta of document ${metaName}`);
@@ -39,20 +40,25 @@ export default async function updateRelationReference(metaName: string, relation
 	query[`${relation.lookup}._id`] = lookupId;
 
 	// Get data colletion from native mongodb
-	// const relationMeta = MetaObject.Meta[relation.document];
-	const collection = MetaObject.Collections[relation.document];
+	const collection = MetaObject.Collections[relation.document] as Collection<DataDocument>;
 
 	// Init update object
-	// const valuesToUpdate: Partial<Record<"$set" | "$unset", Record<string, unknown>>> = {
 	const valuesToUpdate: UpdateFilter<DataDocument> = {
 		$set: {},
 		$unset: {},
 	};
 
+	if (relation.aggregators == null) {
+		logger.error(`Can't get aggregators of relation ${relation.document} on document ${metaName}`);
+		return 0;
+	}
+
 	// Iterate over all aggregators to create the update object
 	await BluebirdPromise.mapSeries(Object.keys(relation.aggregators), async fieldName => {
 		// Only allow aggregatores with some methods
-		aggregator = relation.aggregators[fieldName];
+		const aggregator = relation.aggregators?.[fieldName];
+		if (aggregator == null) return;
+
 		if (!['count', 'sum', 'min', 'max', 'avg', 'first', 'last', 'addToSet'].includes(aggregator.aggregator)) {
 			return;
 		}
@@ -80,8 +86,10 @@ export default async function updateRelationReference(metaName: string, relation
 			group.$group.value.$sum = 1;
 		} else {
 			// Get type of aggrated field
-			const MetaObj: MetaObjectType = MetaObject.Meta[relation.document];
-			const aggregatorField = 'fields' in MetaObj ? MetaObj.fields[aggregator.field.split('.')[0]] : { type: 'text', isList: false };
+			const MetaObj = MetaObject.Meta[relation.document];
+			if (MetaObj.type !== 'document') return;
+
+			const aggregatorField = MetaObj.fields[Number(aggregator.field.split('.')[0])];
 			({ type } = aggregatorField);
 
 			// If type is money ensure that field has .value
@@ -159,7 +167,7 @@ export default async function updateRelationReference(metaName: string, relation
 	}
 
 	// Try to get reference model
-	const referenceCollection = MetaObject.Collections[documentName];
+	const referenceCollection = MetaObject.Collections[documentName] as Collection<DataDocument>;
 	if (referenceCollection == null) {
 		logger.error(`Can't get model for document ${documentName}`);
 		return 0;

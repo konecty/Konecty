@@ -23,14 +23,16 @@ export async function setupKonsistent() {
 		logger.info(indexResult, `Created index processTS_expire on KonsistentChanges`);
 	}
 
-	processOplogItem().catch(e => {
-		logger.error(e, 'Error on processOplogItem');
-	});
+	if (MetaObject.Namespace.useExternalKonsistent !== true) return;
 
 	const metaCollections = Object.values(MetaObject.Meta).map(meta => `${db.databaseName}.${meta.collection}`);
 	const metaTrashCollections = metaCollections.map(name => name + '.Trash');
 
 	if (process.env.MONGO_OPLOG_URL != null) {
+		processOplogItem().catch(e => {
+			logger.error(e, 'Error on processOplogItem');
+		});
+
 		const lastProcessedOplog = await konsistentCollection.findOne({ _id: 'LastProcessedOplog' });
 
 		if (lastProcessedOplog?.ts != null) {

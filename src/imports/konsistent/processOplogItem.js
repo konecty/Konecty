@@ -1,7 +1,7 @@
-import createHistory from "./createHistory";
-import processAlertsForOplogItem from "./oplogAlerts";
-import processReverseLookups from "./processReverseLookups";
-import * as References from "./updateReferences";
+import createHistory from "lib/createHistory";
+import processAlertsForOplogItem from "lib/oplogAlerts";
+import processReverseLookups from "lib/processReverseLookups";
+import * as References from "lib/updateReferences";
 
 import { CronJob } from 'cron';
 import { DateTime } from 'luxon';

@@ -1,9 +1,9 @@
 import BluebirdPromise from 'bluebird';
 
-import { MetaObject } from '@imports/model/MetaObject';
-import { copyDescriptionAndInheritedFields } from '../meta/copyDescriptionAndInheritedFields';
+import { copyDescriptionAndInheritedFields } from '@imports/meta/copyDescriptionAndInheritedFields';
+import { logger } from '@imports/utils/logger';
 
-import { logger } from '../utils/logger';
+import { MetaObject } from '@imports/model/MetaObject';
 
 export default async function processReverseLookups(metaName, id, data, action) {
     let field;

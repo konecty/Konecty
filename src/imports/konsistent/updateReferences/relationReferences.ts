@@ -8,12 +8,17 @@ import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 import uniq from 'lodash/uniq';
 
+import { getFirstPartOfArrayOfPaths, getTermsOfFilter } from '@imports/konsistent/utils';
 import { MetaObject } from '@imports/model/MetaObject';
+import { DataDocument, HistoryDocument } from '@imports/types/data';
+import { Relation } from '@imports/types/metadata';
+import { logger } from '@imports/utils/logger';
+import { Collection, Filter, FindOptions } from 'mongodb';
+import updateRelationReference from './relationReference';
 
-import { getFirstPartOfArrayOfPaths, getTermsOfFilter } from '../konsistent/utils';
-import { logger } from '../utils/logger';
+type Action = 'update' | 'create' | 'delete';
 
-export default async function updateRelationReferences(metaName, action, id, data) {
+export default async function updateRelationReferences(metaName: string, action: Action, id: string, data: Record<string, any>) {
 	// Get references from meta
 	let relation, relations, relationsFromDocumentName;
 	const references = MetaObject.References[metaName];
@@ -24,14 +29,14 @@ export default async function updateRelationReferences(metaName, action, id, dat
 	}
 
 	// Get model
-	let collection = MetaObject.Collections[metaName];
+	let collection = MetaObject.Collections[metaName] as Collection<DataDocument>;
 
 	// If action is delete then get collection trash
 	if (action === 'delete') {
-		collection = MetaObject.Collections[`${metaName}.Trash`];
+		collection = MetaObject.Collections[`${metaName}.Trash`] as Collection<DataDocument>;
 	}
 
-	const referencesToUpdate = {};
+	const referencesToUpdate: Record<string, Relation[]> = {};
 
 	// If action is create or delete then update all records with data related in this record
 	if (action !== 'update') {
@@ -85,7 +90,7 @@ export default async function updateRelationReferences(metaName, action, id, dat
 	}
 
 	// Find record with all information, not only udpated data, to calc aggregations
-	const record = await collection.findOne({ _id: id });
+	const record: DataDocument | null = await collection.findOne({ _id: id });
 
 	// If no record was found log error and abort
 	if (!record) {
@@ -99,12 +104,12 @@ export default async function updateRelationReferences(metaName, action, id, dat
 			var value;
 			const relationLookupMeta = MetaObject.Meta[relation.document];
 			// Get lookup id from record
-			const lookupId = [];
+			const lookupId: string[] = [];
 			if (has(record, `${relation.lookup}._id`)) {
-				lookupId.push(get(record, `${relation.lookup}._id`));
-			} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(record[relation.lookup])) {
-				for (value of record[relation.lookup]) {
-					if (has(value, '_id')) {
+				lookupId.push(get(record, `${relation.lookup}._id`, '') as string);
+			} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && Array.isArray(record[relation.lookup])) {
+				for (value of record[relation.lookup] as Array<Record<string, string>>) {
+					if (value != null && value._id != null) {
 						lookupId.push(value._id);
 					}
 				}
@@ -113,20 +118,20 @@ export default async function updateRelationReferences(metaName, action, id, dat
 			// If action is update and the lookup field of relation was updated go to hitory to update old relation
 			if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
 				// Try to get history model
-				const historyCollection = MetaObject.Collections[`${metaName}.History`];
+				const historyCollection = MetaObject.Collections[`${metaName}.History`] as Collection<HistoryDocument>;
 
 				if (historyCollection == null) {
 					logger.error(`Can't get model for document ${metaName}.History`);
 				}
 
 				// Define query of history with data id
-				const historyQuery = { dataId: id.toString() };
+				const historyQuery: Filter<HistoryDocument> = { dataId: id.toString() };
 
 				// Add condition to get aonly data with changes on lookup field
 				historyQuery[`data.${relation.lookup}`] = { $exists: true };
 
 				// And sort DESC to get only last data
-				const historyOptions = { sort: { createdAt: -1 } };
+				const historyOptions: FindOptions<HistoryDocument> = { sort: { createdAt: -1 } };
 
 				// User findOne to get only one data
 				const historyRecord = await historyCollection.findOne(historyQuery, historyOptions);
@@ -134,24 +139,22 @@ export default async function updateRelationReferences(metaName, action, id, dat
 				// If there are record
 				if (historyRecord) {
 					// Then get lookupid to execute update on old relation
-					let historyLookupId = get(historyRecord, `data.${relation.lookup}._id`);
-					if (get(relationLookupMeta, `fields.${relation.lookup}.isList`, false) === true && isArray(historyRecord.data[relation.lookup])) {
+					let historyLookupId: string[] = [].concat(get(historyRecord, `data.${relation.lookup}._id`, []));
+					if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && isArray(historyRecord.data[relation.lookup])) {
 						historyLookupId = [];
-						for (value of historyRecord.data[relation.lookup]) {
-							historyLookupId.push(get(value, '_id'));
+						for (value of historyRecord.data[relation.lookup] as Array<Record<string, string>>) {
+							value._id != null && historyLookupId.push(value._id);
 						}
 					}
 
-					// Execute update on old relation
-					historyLookupId = [].concat(historyLookupId);
 					await BluebirdPromise.mapSeries(historyLookupId, async historyLookupIdItem => {
-						return updateRelationReference(metaName, relation, historyLookupIdItem, action, referenceDocumentName);
+						return updateRelationReference(metaName, relation, historyLookupIdItem, referenceDocumentName);
 					});
 				}
 			}
 
 			// Execute update of relations into new value
-			await BluebirdPromise.mapSeries(lookupId, lookupIdItem => updateRelationReference(metaName, relation, lookupIdItem, action, referenceDocumentName));
+			await BluebirdPromise.mapSeries(lookupId, lookupIdItem => updateRelationReference(metaName, relation, lookupIdItem, referenceDocumentName));
 		});
 	});
 }

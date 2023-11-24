@@ -1,3 +1,7 @@
+import { MetaObject } from "@imports/model/MetaObject";
+import { logger } from "@imports/utils/logger";
+import get from "lodash/get";
+
 export default async function createHistory(metaName, action, id, data, updatedBy, updatedAt, changeId) {
     // If data is empty or no update data is avaible then abort
     if (Object.keys(data).length === 0 || updatedAt == null || updatedBy == null) {

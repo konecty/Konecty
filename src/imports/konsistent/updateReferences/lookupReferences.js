@@ -6,14 +6,13 @@ import keys from 'lodash/keys';
 import size from 'lodash/size';
 import uniq from 'lodash/uniq';
 
-import { MetaObject } from '@imports/model/MetaObject';
-
-import { logger } from '../utils/logger';
+import updateLookupReference from '@imports/konsistent/updateReferences/lookupReference';
+import { logger } from '@imports/utils/logger';
 
 export default async function updateLookupReferences(metaName, id, data) {
     // Get references from meta
     let field, fieldName, fields;
-    const references = MetaObject.References[metaName];
+    const references = globalThis.Konsistent.References[metaName];
 
     // Verify if exists reverse relations
     if (!isObject(references) || size(keys(references.from)) === 0) {
@@ -21,7 +20,10 @@ export default async function updateLookupReferences(metaName, id, data) {
     }
 
     // Get model
-    const collection = MetaObject.Collections[metaName];
+    const collection = globalThis.Konsistent.Collections[metaName];
+    if (collection == null) {
+        throw new Error(`Collection ${metaName} not found`);
+    }
 
     // Define object to receive only references that have reference fields in changed data
     const referencesToUpdate = {};
