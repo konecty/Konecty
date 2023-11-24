@@ -2,11 +2,13 @@ import type { FastifyCookieOptions } from '@fastify/cookie';
 import cookie from '@fastify/cookie';
 import Fastify from 'fastify';
 
+import cors, { FastifyCorsOptions } from '@fastify/cors';
 import { logger } from '@imports/utils/logger';
 import documentApi from './api/document';
 import formApi from './api/form';
 import listViewApi from './api/list-view';
 import mainMenuApi from './api/menu/main';
+import metasByDocumentApi from './api/metas-by-document';
 import translatioApi from './api/translation';
 import authApi from './rest/auth/authApi';
 import changeUserApi from './rest/changeUser/changeUserApi';
@@ -18,12 +20,11 @@ import fileDownloadApi from './rest/file/download';
 import imageApi from './rest/file/image';
 import fileUploadApi from './rest/file/upload';
 import file2Api from './rest/file2/file2Api';
+import healthApi from './rest/health';
 import menuApi from './rest/menu/menu';
 import processApi from './rest/process/processApi';
 import rocketchatApi from './rest/rocketchat/livechat';
 import viewPaths from './rest/view/view';
-import cors, { FastifyCorsOptions } from '@fastify/cors';
-import healthApi from './rest/health';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -39,6 +40,7 @@ fastify.register(cookie, {
 
 fastify.register(cors, getCorsConfig());
 
+fastify.register(metasByDocumentApi);
 fastify.register(documentApi);
 fastify.register(formApi);
 fastify.register(listViewApi);
