@@ -1,23 +1,23 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 
-import isString from 'lodash/isString';
-import isObject from 'lodash/isObject';
-import isArray from 'lodash/isArray';
+import concat from 'lodash/concat';
 import first from 'lodash/first';
 import get from 'lodash/get';
-import concat from 'lodash/concat';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import isString from 'lodash/isString';
 import set from 'lodash/set';
 
 import { flatten } from 'flat';
 
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { MetaObject } from '@imports/model/MetaObject';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-import { find, saveLead, getNextUserFromQueue, findById, findByLookup, create, update, deleteData, relationCreate, historyFind } from '@imports/data/data';
+import { create, deleteData, find, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
 
-import { getAccessFor } from '@imports/utils/accessUtils';
 import { getUserSafe } from '@imports/auth/getUser';
+import { getAccessFor } from '@imports/utils/accessUtils';
 import { errorReturn } from '@imports/utils/return';
 
 import { csvExport } from '@imports/exports/csvExport';
@@ -257,10 +257,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			if (listMeta.label != null) {
 				return listMeta.label[userLocale] ?? listMeta.label.en ?? first(Object.values(listMeta.label));
 			}
-			if (metaObject.plurals != null) {
+			if ('plurals' in metaObject && metaObject.plurals != null) {
 				return metaObject.plurals[userLocale] ?? metaObject.plurals.en ?? first(Object.values(metaObject.plurals));
 			}
-			if (metaObject.label != null) {
+			if ('label' in metaObject && metaObject.label != null) {
 				return metaObject.label[userLocale] ?? metaObject.label.en ?? first(Object.values(metaObject.label));
 			}
 			return document;

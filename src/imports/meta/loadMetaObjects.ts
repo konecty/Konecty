@@ -12,7 +12,6 @@ import isObject from 'lodash/isObject';
 import unset from 'lodash/unset';
 
 import { MetaObject } from '@imports/model/MetaObject';
-import { DataDocument, HistoryDocument } from '@imports/types/data';
 import { MetaObjectType } from '@imports/types/metadata';
 import { checkInitialData } from '../data/initialData';
 import { db } from '../database';
@@ -61,11 +60,11 @@ async function registerMeta(meta: MetaObjectType) {
 	}
 
 	if (MetaObject.Collections[meta.name] == null) {
-		MetaObject.Collections[meta.name] = db.collection<DataDocument>(`${meta.collection ?? meta.name}`);
-		MetaObject.Collections[`${meta.name}.Comment`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.Comment`);
-		MetaObject.Collections[`${meta.name}.History`] = db.collection<HistoryDocument>(`${meta.collection ?? meta.name}.History`);
-		MetaObject.Collections[`${meta.name}.Trash`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.Trash`);
-		MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.AutoNumber`);
+		MetaObject.Collections[meta.name] = db.collection(`${meta.collection ?? meta.name}`);
+		MetaObject.Collections[`${meta.name}.Comment`] = db.collection(`${meta.collection ?? meta.name}.Comment`);
+		MetaObject.Collections[`${meta.name}.History`] = db.collection(`${meta.collection ?? meta.name}.History`);
+		MetaObject.Collections[`${meta.name}.Trash`] = db.collection(`${meta.collection ?? meta.name}.Trash`);
+		MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection(`${meta.collection ?? meta.name}.AutoNumber`);
 
 		const processIndexes = async function () {
 			// Drop all indexes of meta

@@ -13,7 +13,7 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { DataDocument, HistoryDocument } from '@imports/types/data';
 import { Relation } from '@imports/types/metadata';
 import { logger } from '@imports/utils/logger';
-import { Collection, Filter, FindOptions } from 'mongodb';
+import { Collection, FindOptions } from 'mongodb';
 import updateRelationReference from './relationReference';
 
 type Action = 'update' | 'create' | 'delete';
@@ -29,11 +29,11 @@ export default async function updateRelationReferences(metaName: string, action:
 	}
 
 	// Get model
-	let collection = MetaObject.Collections[metaName] as Collection<DataDocument>;
+	let collection = MetaObject.Collections[metaName];
 
 	// If action is delete then get collection trash
 	if (action === 'delete') {
-		collection = MetaObject.Collections[`${metaName}.Trash`] as Collection<DataDocument>;
+		collection = MetaObject.Collections[`${metaName}.Trash`];
 	}
 
 	const referencesToUpdate: Record<string, Relation[]> = {};
@@ -90,7 +90,7 @@ export default async function updateRelationReferences(metaName: string, action:
 	}
 
 	// Find record with all information, not only udpated data, to calc aggregations
-	const record: DataDocument | null = await collection.findOne({ _id: id });
+	const record = await (collection as unknown as Collection<DataDocument>).findOne({ _id: id });
 
 	// If no record was found log error and abort
 	if (!record) {
@@ -118,14 +118,14 @@ export default async function updateRelationReferences(metaName: string, action:
 			// If action is update and the lookup field of relation was updated go to hitory to update old relation
 			if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
 				// Try to get history model
-				const historyCollection = MetaObject.Collections[`${metaName}.History`] as Collection<HistoryDocument>;
+				const historyCollection = MetaObject.Collections[`${metaName}.History`];
 
 				if (historyCollection == null) {
 					logger.error(`Can't get model for document ${metaName}.History`);
 				}
 
 				// Define query of history with data id
-				const historyQuery: Filter<HistoryDocument> = { dataId: id.toString() };
+				const historyQuery: Record<string, unknown> = { dataId: id.toString() };
 
 				// Add condition to get aonly data with changes on lookup field
 				historyQuery[`data.${relation.lookup}`] = { $exists: true };
@@ -134,12 +134,12 @@ export default async function updateRelationReferences(metaName: string, action:
 				const historyOptions: FindOptions<HistoryDocument> = { sort: { createdAt: -1 } };
 
 				// User findOne to get only one data
-				const historyRecord = await historyCollection.findOne(historyQuery, historyOptions);
+				const historyRecord = await historyCollection.findOne<HistoryDocument>(historyQuery, historyOptions);
 
 				// If there are record
 				if (historyRecord) {
 					// Then get lookupid to execute update on old relation
-					let historyLookupId: string[] = [].concat(get(historyRecord, `data.${relation.lookup}._id`, []));
+					let historyLookupId: string[] = new Array().concat(get(historyRecord, `data.${relation.lookup}._id`, []));
 					if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && isArray(historyRecord.data[relation.lookup])) {
 						historyLookupId = [];
 						for (value of historyRecord.data[relation.lookup] as Array<Record<string, string>>) {

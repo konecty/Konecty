@@ -1,5 +1,5 @@
 import BluebirdPromise from 'bluebird';
-import { Collection, Filter, UpdateFilter } from 'mongodb';
+import { Filter, UpdateFilter } from 'mongodb';
 
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
@@ -40,7 +40,7 @@ export default async function updateRelationReference(metaName: string, relation
 	query[`${relation.lookup}._id`] = lookupId;
 
 	// Get data colletion from native mongodb
-	const collection = MetaObject.Collections[relation.document] as Collection<DataDocument>;
+	const collection = MetaObject.Collections[relation.document];
 
 	// Init update object
 	const valuesToUpdate: UpdateFilter<DataDocument> = {
@@ -167,14 +167,14 @@ export default async function updateRelationReference(metaName: string, relation
 	}
 
 	// Try to get reference model
-	const referenceCollection = MetaObject.Collections[documentName] as Collection<DataDocument>;
+	const referenceCollection = MetaObject.Collections[documentName];
 	if (referenceCollection == null) {
 		logger.error(`Can't get model for document ${documentName}`);
 		return 0;
 	}
 
 	// Define a query to udpate records with aggregated values
-	const updateQuery: Filter<DataDocument> = { _id: lookupId };
+	const updateQuery: Filter<{ _id: string }> = { _id: lookupId };
 
 	// Try to execute update query
 	try {
