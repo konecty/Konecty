@@ -1158,7 +1158,11 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 		if (resultRecord != null) {
 			if (MetaObject.Namespace.useExternalKonsistent !== true) {
-				await processIncomingChange(document, resultRecord, 'create', user);
+				try {
+					await processIncomingChange(document, resultRecord, 'create', user);
+				} catch (e) {
+					logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+				}
 			}
 			return successReturn([dateToString(resultRecord)]);
 		}
@@ -1568,8 +1572,12 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		}
 
 		if (MetaObject.Namespace.useExternalKonsistent !== true) {
-			for await (const record of updatedRecords) {
-				await processIncomingChange(document, record, 'update', user);
+			try {
+				for await (const record of updatedRecords) {
+					await processIncomingChange(document, record, 'update', user);
+				}
+			} catch (e) {
+				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 			}
 		}
 
