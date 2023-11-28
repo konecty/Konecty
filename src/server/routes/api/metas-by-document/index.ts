@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import { getUserFromRequest } from '@imports/auth/getUser';
 import { logger } from '@imports/utils/logger';
 import { getMetasByDocument } from '@imports/metas-by-document';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 const metasByDocumentApi: FastifyPluginCallback = async (fastify, _, done) => {
 	fastify.get<{ Params: { document: string } }>('/api/metas/:document', async (req, reply) => {
@@ -23,7 +24,7 @@ const metasByDocumentApi: FastifyPluginCallback = async (fastify, _, done) => {
 				return reply.status(401).send('Unauthorized');
 			}
 
-			const result = await getMetasByDocument(document);
+			const result = await getMetasByDocument({ document, authTokenId: getAuthTokenIdFromReq(req)! });
 
 			if (result == null) {
 				return reply.status(404).send('Invalid meta object');
