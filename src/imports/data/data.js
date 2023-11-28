@@ -33,6 +33,7 @@ import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } 
 import { parseSortArray } from './sortUtils';
 
 import { getUserSafe } from '@imports/auth/getUser';
+import processIncomingChange from '@imports/konsistent/processIncomingChange';
 import { DEFAULT_PAGE_SIZE } from '../consts';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -1151,6 +1152,13 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 
 		if (resultRecord != null) {
+			if (MetaObject.Namespace.useExternalKonsistent !== true) {
+				try {
+					await processIncomingChange(document, resultRecord, 'create', user);
+				} catch (e) {
+					logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+				}
+			}
 			return successReturn([dateToString(resultRecord)]);
 		}
 	}
@@ -1343,8 +1351,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
-									record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
 								}`,
 							);
 						}
@@ -1557,6 +1564,16 @@ export async function update({ authTokenId, document, data, contextUser }) {
 
 		if (metaObject.scriptAfterSave != null) {
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
+		}
+
+		if (MetaObject.Namespace.useExternalKonsistent !== true) {
+			try {
+				for await (const record of updatedRecords) {
+					await processIncomingChange(document, record, 'update', user);
+				}
+			} catch (e) {
+				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+			}
 		}
 
 		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record)).map(record => dateToString(record));

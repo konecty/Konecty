@@ -1,23 +1,24 @@
 import BluebirdPromise from 'bluebird';
 
 import chokidar from 'chokidar';
-import glob from 'glob';
 import fs from 'fs';
+import glob from 'glob';
 
 import debounce from 'lodash/debounce';
-import isEmpty from 'lodash/isEmpty';
-import isObject from 'lodash/isObject';
 import isArray from 'lodash/isArray';
+import isEmpty from 'lodash/isEmpty';
 import isNumber from 'lodash/isNumber';
+import isObject from 'lodash/isObject';
 import unset from 'lodash/unset';
 
 import { MetaObject } from '@imports/model/MetaObject';
+import { DataDocument, HistoryDocument } from '@imports/types/data';
+import { MetaObjectType } from '@imports/types/metadata';
 import { checkInitialData } from '../data/initialData';
-import { logger } from '../utils/logger';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
-import { Collection } from 'mongodb';
-import { MetaObjectType } from '@imports/types/metadata';
+import { logger } from '../utils/logger';
+import buildReferences from './buildReferences';
 
 const rebuildReferencesDelay = 1000;
 
@@ -26,36 +27,10 @@ const dropAllIndexes = false;
 const rebuildReferences = debounce(function () {
 	logger.info('[kondata] Rebuilding references');
 
-	MetaObject.References = {};
-
-	for (const metaName in MetaObject.Meta) {
-		const meta = MetaObject.Meta[metaName];
-		for (const fieldName in meta.fields) {
-			const field = meta.fields[fieldName];
-			if (field.type === 'lookup') {
-				if (!MetaObject.References[field.document]) {
-					MetaObject.References[field.document] = { from: {} };
-				}
-				if (!MetaObject.References[field.document].from[metaName]) {
-					MetaObject.References[field.document].from[metaName] = {};
-				}
-				MetaObject.References[field.document].from[metaName] = {
-					type: field.type,
-					fields: {
-						...(MetaObject.References[field.document].from[metaName].fields || {}),
-						[field.name]: field,
-					},
-					isList: field.isList,
-					descriptionFields: field.descriptionFields,
-					detailFields: field.detailFields,
-					document: field.document,
-				};
-			}
-		}
-	}
+	MetaObject.References = buildReferences(MetaObject.Meta);
 }, rebuildReferencesDelay);
 
-async function tryEnsureIndex({ collection, fields, options }: { collection: Collection; fields: { [key: string]: 1 }; options: { name: string } }) {
+async function tryEnsureIndex({ collection, fields, options }: { collection: (typeof MetaObject.Collections)[string]; fields: { [key: string]: 1 }; options: { name: string } }) {
 	try {
 		await collection.createIndex(fields, options);
 	} catch (e) {
@@ -86,11 +61,11 @@ async function registerMeta(meta: MetaObjectType) {
 	}
 
 	if (MetaObject.Collections[meta.name] == null) {
-		MetaObject.Collections[meta.name] = db.collection(`${meta.collection ?? meta.name}`);
-		MetaObject.Collections[`${meta.name}.Comment`] = db.collection(`${meta.collection ?? meta.name}.Comment`);
-		MetaObject.Collections[`${meta.name}.History`] = db.collection(`${meta.collection ?? meta.name}.History`);
-		MetaObject.Collections[`${meta.name}.Trash`] = db.collection(`${meta.collection ?? meta.name}.Trash`);
-		MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection(`${meta.collection ?? meta.name}.AutoNumber`);
+		MetaObject.Collections[meta.name] = db.collection<DataDocument>(`${meta.collection ?? meta.name}`);
+		MetaObject.Collections[`${meta.name}.Comment`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.Comment`);
+		MetaObject.Collections[`${meta.name}.History`] = db.collection<HistoryDocument>(`${meta.collection ?? meta.name}.History`);
+		MetaObject.Collections[`${meta.name}.Trash`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.Trash`);
+		MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection<DataDocument>(`${meta.collection ?? meta.name}.AutoNumber`);
 
 		const processIndexes = async function () {
 			// Drop all indexes of meta
