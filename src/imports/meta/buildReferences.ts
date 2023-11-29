@@ -23,12 +23,12 @@ type References = {
 export default function buildReferences(Meta: Record<string, MetaObjectType>) {
 	const References: References = {};
 
-	for (let metaName in Meta) {
+	for (const metaName in Meta) {
 		const meta = Meta[metaName];
 
 		if (meta.type !== 'document') continue;
 
-		for (let fieldName in meta.fields) {
+		for (const fieldName in meta.fields) {
 			const field = meta.fields[fieldName];
 			if (field.type === 'lookup' && field.document) {
 				References[field.document] = {
@@ -52,7 +52,7 @@ export default function buildReferences(Meta: Record<string, MetaObjectType>) {
 		}
 
 		if (Array.isArray(meta.relations)) {
-			for (let relation of meta.relations) {
+			for (const relation of meta.relations) {
 				References[relation.document] = {
 					...References[relation.document],
 					relationsFrom: {
