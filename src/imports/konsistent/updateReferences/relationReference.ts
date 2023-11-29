@@ -1,5 +1,5 @@
 import BluebirdPromise from 'bluebird';
-import { Filter, UpdateFilter } from 'mongodb';
+import { Collection, Filter, UpdateFilter } from 'mongodb';
 
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
@@ -9,7 +9,8 @@ import { parseFilterObject } from '@imports/data/filterUtils';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { DataDocument } from '@imports/types/data';
-import { Relation } from '@imports/types/metadata';
+
+import { Relation } from '@imports/model/Relation';
 import type { AggregatePipeline } from '@imports/types/mongo';
 import { logger } from '@imports/utils/logger';
 
@@ -167,7 +168,7 @@ export default async function updateRelationReference(metaName: string, relation
 	}
 
 	// Try to get reference model
-	const referenceCollection = MetaObject.Collections[documentName];
+	const referenceCollection = MetaObject.Collections[documentName] as unknown as Collection<DataDocument>;
 	if (referenceCollection == null) {
 		logger.error(`Can't get model for document ${documentName}`);
 		return 0;

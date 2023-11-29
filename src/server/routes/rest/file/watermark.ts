@@ -1,37 +1,15 @@
-import sharp, { Sharp } from 'sharp';
 import path from 'path';
-import { z } from 'zod';
+import sharp, { Sharp } from 'sharp';
 
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { KonectyResult } from '@imports/types/result';
+import { WatermarkConfigSchema } from '@imports/types/watermark';
 import { errorReturn, successReturn } from '@imports/utils/return';
 
-const WatermarkConfigSchema = z.union([
-	z.object({
-		type: z.literal('s3'),
-		bucket: z.string(),
-		key: z.string(),
-	}),
-	z.object({
-		type: z.literal('fs'),
-		path: z.string(),
-	}),
-	z.object({
-		type: z.literal('url'),
-		url: z.string(),
-	}),
-	z.object({
-		type: z.literal('text'),
-		text: z.string(),
-	}),
-]);
-
-export type WatermarkConfig = z.infer<typeof WatermarkConfigSchema>;
-
 async function getWatermark(): Promise<KonectyResult<Buffer>> {
-	const wmConfigResult = WatermarkConfigSchema.safeParse(MetaObject.Namespace.storage.wm);
+	const wmConfigResult = WatermarkConfigSchema.safeParse(MetaObject.Namespace.storage?.wm);
 
 	if (wmConfigResult.success === false) {
 		return errorReturn(`Error creating wathermark: ${wmConfigResult.error.message}`) as KonectyResult<Buffer>;
@@ -40,7 +18,7 @@ async function getWatermark(): Promise<KonectyResult<Buffer>> {
 	const wmConfig = wmConfigResult.data;
 
 	if (wmConfig.type === 's3') {
-		const s3 = new S3Client(MetaObject.Namespace.storage?.config ?? {});
+		const s3 = new S3Client(wmConfig.config ?? {});
 
 		const s3Result = await s3.send(
 			new GetObjectCommand({
@@ -53,7 +31,7 @@ async function getWatermark(): Promise<KonectyResult<Buffer>> {
 	}
 
 	if (wmConfig.type === 'fs') {
-		const filePath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', wmConfig.path);
+		const filePath = path.join(wmConfig.directory ?? '/tmp', wmConfig.path);
 		const fileContent = await sharp(filePath).toBuffer();
 		return successReturn(fileContent) as KonectyResult<Buffer>;
 	}

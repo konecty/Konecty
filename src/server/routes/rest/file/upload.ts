@@ -5,25 +5,25 @@ import BluebirdPromise from 'bluebird';
 
 import path from 'path';
 
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
-import { writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { mkdirp } from 'mkdirp';
-import { BinaryLike, createHash } from 'crypto';
-import sharp from 'sharp';
 import Multipart from '@fastify/multipart';
+import { BinaryLike, createHash } from 'crypto';
+import { unlink, writeFile } from 'fs/promises';
+import { mkdirp } from 'mkdirp';
+import { join } from 'path';
+import sharp from 'sharp';
 
-import { logger } from '@imports/utils/logger';
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
-import { errorReturn } from '@imports/utils/return';
 import { getUserSafe } from '@imports/auth/getUser';
-import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
+import { DEFAULT_JPEG_MAX_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_THUMBNAIL_SIZE, FILE_UPLOAD_MAX_FILE_SIZE } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
 import { MetaObject } from '@imports/model/MetaObject';
+import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
+import { logger } from '@imports/utils/logger';
+import { errorReturn } from '@imports/utils/return';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
-import { FILE_UPLOAD_MAX_FILE_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_JPEG_MAX_SIZE, DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
 
 const computeHash = (buffer: string | BinaryLike) => createHash('md5').update(buffer).digest('hex');
 
@@ -206,13 +206,14 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				name: fileName,
 			};
 
-			if (/^s3$/i.test(MetaObject.Namespace.storage?.type ?? 'fs')) {
+			if (MetaObject.Namespace.storage?.type === 's3') {
 				const s3 = new S3Client(MetaObject.Namespace.storage?.config ?? {});
+				const bucket = MetaObject.Namespace.storage?.bucket;
 
 				await BluebirdPromise.each(filesToSave, async ({ name, content }, index) => {
 					const s3Result = await s3.send(
 						new PutObjectCommand({
-							Bucket: MetaObject.Namespace.storage.bucket,
+							Bucket: bucket,
 							Key: `${namespace}/${directory}/${name}`,
 							ContentType: contentType,
 							Body: content,
@@ -224,7 +225,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 					logger.trace(
 						{
 							params: {
-								Bucket: MetaObject.Namespace.storage.bucket,
+								Bucket: bucket,
 								Key: `${namespace}/${directory}/${fileName}`,
 								ContentType: contentType,
 							},
@@ -240,9 +241,11 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				});
 			} else {
 				fileData.etag = computeHash(filesToSave[0].content);
+				const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
+
 				await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
-					await mkdirp(path.dirname(join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, directory, name)));
-					const filePath = join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, directory, name);
+					await mkdirp(path.dirname(join(storageDirectory, namespace, directory, name)));
+					const filePath = join(storageDirectory, namespace, directory, name);
 					await writeFile(filePath, content);
 				});
 			}
@@ -257,21 +260,23 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			if (coreResponse.success === false) {
 				logger.error(coreResponse, `Error uploading file: ${coreResponse.message}`);
-				if (/^s3$/i.test(MetaObject.Namespace.storage?.type ?? 'fs')) {
+				if (MetaObject.Namespace.storage?.type === 's3') {
 					const s3 = new S3Client(MetaObject.Namespace.storage?.config ?? {});
+					const bucket = MetaObject.Namespace.storage?.bucket;
 
 					await BluebirdPromise.each(filesToSave, async ({ name }) => {
 						await s3.send(
 							new DeleteObjectCommand({
-								Bucket: MetaObject.Namespace.storage.bucket,
+								Bucket: bucket,
 								Key: `${namespace}/${directory}/${name}`,
 								VersionId: fileData.version,
 							}),
 						);
 					});
 				} else {
+					const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
 					await BluebirdPromise.each(filesToSave, async ({ name }) => {
-						await unlink(join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, directory, name));
+						await unlink(join(storageDirectory, namespace, directory, name));
 					});
 				}
 				return reply.send(coreResponse);

@@ -1,18 +1,18 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 import { unlink } from 'fs/promises';
 import path from 'path';
 
-import { MetaObject } from '@imports/model/MetaObject';
-import { fileRemove } from '@imports/file/file';
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { getUserSafe } from '@imports/auth/getUser';
-import { errorReturn } from '@imports/utils/return';
+import { fileRemove } from '@imports/file/file';
+import { MetaObject } from '@imports/model/MetaObject';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { logger } from '@imports/utils/logger';
+import { errorReturn } from '@imports/utils/return';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.delete<{ Params: { namespace: string; metaDocumentId: string; recordId: string; fieldName: string; fileName: string } }>(
@@ -47,7 +47,7 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 				logger.trace(coreResponse.errors, 'Error deleting file');
 				return reply.send(coreResponse);
 			}
-			if (/^s3$/i.test(MetaObject.Namespace.storage?.type ?? 'fs')) {
+			if (MetaObject.Namespace.storage?.type === 's3') {
 				const s3 = new S3Client(MetaObject.Namespace.storage?.config ?? {});
 
 				try {

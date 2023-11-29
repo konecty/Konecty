@@ -55,7 +55,7 @@ async function imageApiFn(
 				wm: 'watermark',
 			};
 
-			const destination = path.join(...[namespace, document, recordId, fieldName, dirEnum[style], fileName].filter(Boolean));
+			const destination = path.join(...([namespace, document, recordId, fieldName, dirEnum[style], fileName].filter(Boolean) as string[]));
 			return sendFile(destination, reply);
 		}
 	}

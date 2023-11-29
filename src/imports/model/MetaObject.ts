@@ -4,14 +4,15 @@ import { MetaObjectType } from '@imports/types/metadata';
 import { Collection } from 'mongodb';
 import { db } from '../database';
 import type { Document } from './Document';
+import { Namespace } from './Namespace';
 
 interface Data {
-	MetaObject: Collection<Document>;
-	Meta: Record<string, MetaObjectType>;
+	MetaObject: Collection<MetaObjectType>;
+	Meta: Record<string, Document>;
 	DisplayMeta: Record<string, any>;
 	Access: Record<string, MetaAccess>;
 	References: ReturnType<typeof buildReferences>;
-	Namespace: Record<string, any> & { useExternalKonsistent?: boolean };
+	Namespace: Namespace;
 	MetaByCollection: Record<string, any>;
 	Collections: Record<string, Collection>;
 }
@@ -22,7 +23,7 @@ const MetaObject: Data = {
 	DisplayMeta: {},
 	Access: {},
 	References: {},
-	Namespace: {},
+	Namespace: { type: 'Namespace' },
 	MetaByCollection: {},
 	Collections: {},
 };

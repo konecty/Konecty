@@ -3,18 +3,18 @@ import fp from 'fastify-plugin';
 
 import moment from 'moment';
 
-import { ObjectId } from 'mongodb';
-import isEmpty from 'lodash/isEmpty';
-import isArray from 'lodash/isArray';
 import extend from 'lodash/extend';
-import pick from 'lodash/pick';
 import get from 'lodash/get';
+import isArray from 'lodash/isArray';
+import isEmpty from 'lodash/isEmpty';
+import pick from 'lodash/pick';
 import set from 'lodash/set';
+import { ObjectId } from 'mongodb';
 
-import { MetaObject } from '@imports/model/MetaObject';
+import { getUserSafe } from '@imports/auth/getUser';
 import { processSubmit } from '@imports/data/process';
 import { getNextUserFromQueue } from '@imports/meta/getNextUserFromQueue';
-import { getUserSafe } from '@imports/auth/getUser';
+import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
 const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
@@ -61,6 +61,9 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 			return reply.status(403).send('Forbidden');
 		}
 		if (get(MetaObject.Namespace, 'RocketChat.livechat.token', 'not-set') !== req.headers['x-rocketchat-livechat-token']) {
+			return reply.status(403).send('Forbidden');
+		}
+		if (MetaObject.Namespace.RocketChat == null || MetaObject.Namespace.RocketChat.livechat == null) {
 			return reply.status(403).send('Forbidden');
 		}
 
@@ -216,11 +219,11 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 				if (hookData.visitor.department) {
 					contactProcess.data.queue = { _id: hookData.visitor.department };
 				} else if (get(MetaObject.Namespace, 'RocketChat.livechat.queue') != null) {
-					contactProcess.data.queue = get(MetaObject.Namespace, 'RocketChat.livechat.queue');
+					contactProcess.data.queue = get<object, string>(MetaObject.Namespace, 'RocketChat.livechat.queue');
 				}
 
 				if (contactProcess.data.campaign == null && get(MetaObject.Namespace, 'RocketChat.livechat.campaign') != null) {
-					contactProcess.data.campaign = get(MetaObject.Namespace, 'RocketChat.livechat.campaign');
+					contactProcess.data.campaign = get<object, string>(MetaObject.Namespace, 'RocketChat.livechat.campaign');
 				}
 
 				const opportunityData: {
@@ -274,7 +277,7 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 				if (hookData.visitor.department) {
 					opportunityData.data.queue = { _id: hookData.visitor.department };
 				} else if (get(MetaObject.Namespace, 'RocketChat.livechat.queue') != null) {
-					opportunityData.data.queue = get(MetaObject.Namespace, 'RocketChat.livechat.queue');
+					opportunityData.data.queue = get<object, string>(MetaObject.Namespace, 'RocketChat.livechat.queue');
 				}
 
 				let messages = '';
@@ -460,7 +463,7 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 						};
 						campaign?: {
 							_id: string;
-							identifier: string;
+							identifier?: string;
 						};
 					};
 				} = {
@@ -523,7 +526,7 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 					},
 				};
 
-				const submitRequest = {
+				const submitRequest: { authTokenId: string; data: object[] } = {
 					authTokenId: MetaObject.Namespace.RocketChat.accessToken,
 					data: [contactOfflineProcess, opportunityOfflineData, messageOfflineData],
 				};
@@ -611,7 +614,7 @@ const rocketchatApi: FastifyPluginCallback = (fastify, _, done) => {
 		}
 
 		if (!departmentId && MetaObject.Namespace.RocketChat.livechat.queue) {
-			departmentId = MetaObject.Namespace.RocketChat.livechat.queue;
+			departmentId = MetaObject.Namespace.RocketChat.livechat.queue._id;
 		}
 
 		if (!departmentId) {

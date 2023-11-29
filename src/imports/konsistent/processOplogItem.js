@@ -1,7 +1,6 @@
-import createHistory from "lib/createHistory";
-import processAlertsForOplogItem from "lib/oplogAlerts";
-import processReverseLookups from "lib/processReverseLookups";
-import * as References from "lib/updateReferences";
+import createHistory from "./createHistory";
+import processReverseLookups from "./processReverseLookups";
+import * as References from "./updateReferences";
 
 import { CronJob } from 'cron';
 import { DateTime } from 'luxon';
@@ -84,8 +83,6 @@ export default async function processOplogItem() {
 
         const oplogTime = process.hrtime(startTime);
         logger.debug(`${oplogTime[0]}s ${oplogTime[1] / 1000000}ms => Save last oplog timestamp`);
-
-        await processAlertsForOplogItem(metaName, action, _id, data, updatedBy, updatedAt);
     } catch (e) {
         logger.error(e, 'Error on process oplog item');
         await konsistentChangesCollection.updateOne({ _id: change.value._id }, { $set: { processError: e }, $inc: { errorCount: 1 }, $unset: { processStartTS: 1 } });

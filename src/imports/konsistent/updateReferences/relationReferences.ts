@@ -10,8 +10,8 @@ import uniq from 'lodash/uniq';
 
 import { getFirstPartOfArrayOfPaths, getTermsOfFilter } from '@imports/konsistent/utils';
 import { MetaObject } from '@imports/model/MetaObject';
+import type { Relation } from '@imports/model/Relation';
 import { DataDocument, HistoryDocument } from '@imports/types/data';
-import { Relation } from '@imports/types/metadata';
 import { logger } from '@imports/utils/logger';
 import { Collection, FindOptions } from 'mongodb';
 import updateRelationReference from './relationReference';

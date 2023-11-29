@@ -1,23 +1,23 @@
 import { FastifyReply } from 'fastify';
 
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 import crypto from 'crypto';
 import mime from 'mime-types';
 
-import { request } from 'undici';
 import { readFile } from 'fs/promises';
+import { request } from 'undici';
 
 import path from 'path';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
-import { DEFAULT_EXPIRATION, ALLOWED_CORS_FILE_TYPES } from '@imports/consts';
+import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 
 export async function sendFile(filePath: string, reply: FastifyReply) {
 	const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-	if (/^s3$/i.test(MetaObject.Namespace.storage?.type ?? 'fs')) {
+	if (MetaObject.Namespace.storage?.type === 's3') {
 		logger.trace(`Proxying file ${MetaObject.Namespace.storage.publicUrl}/${filePath} from S3`);
 		if (MetaObject.Namespace.storage?.publicUrl != null) {
 			const { statusCode, headers, body } = await request(`${MetaObject.Namespace.storage.publicUrl}/${filePath}`);
@@ -100,6 +100,8 @@ export async function sendFile(filePath: string, reply: FastifyReply) {
 				if ((error as any).type === 'NoSuchKey') {
 					return reply.status(404).send('Not found');
 				}
+
+				return reply.status(500).send('Error retrieving file');
 			}
 		}
 	}

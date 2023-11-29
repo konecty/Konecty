@@ -11,6 +11,7 @@ import isNumber from 'lodash/isNumber';
 import isObject from 'lodash/isObject';
 import unset from 'lodash/unset';
 
+import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectType } from '@imports/types/metadata';
 import { checkInitialData } from '../data/initialData';
@@ -47,8 +48,8 @@ async function registerMeta(meta: MetaObjectType) {
 	if (!meta.collection) {
 		meta.collection = `data.${meta.name}`;
 	}
-	MetaObject.Meta[meta.name] = meta;
 
+	MetaObject.Meta[meta.name] = meta as Document;
 	MetaObject.MetaByCollection[meta.collection] = meta;
 
 	if (meta.type === 'document') {

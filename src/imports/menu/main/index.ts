@@ -1,18 +1,21 @@
-import set from 'lodash/set';
-import merge from 'lodash/merge';
-import get from 'lodash/get';
 import concat from 'lodash/concat';
+import get from 'lodash/get';
+import merge from 'lodash/merge';
+import set from 'lodash/set';
 import sortBy from 'lodash/sortBy';
 
+import { MenuGroup, MenuItem, MenuItemSchema } from '../../model/Menu';
 import { MetaObject } from '../../model/MetaObject';
 import { User } from '../../model/User';
-import { getAccessFor } from '../../utils/accessUtils';
-import { MenuItem, MenuGroup, MenuItemSchema } from '../../model/Menu';
-import { logger } from '../../utils/logger';
 import { MetaObjectType } from '../../types/metadata';
+import { getAccessFor } from '../../utils/accessUtils';
+import { logger } from '../../utils/logger';
+
+const MenuTypes = ['document', 'group', 'list', 'pivot'] as const;
+type MenuItemsMeta = Extract<MetaObjectType, { type: (typeof MenuTypes)[number] }>;
 
 export async function mainMenu(user: User) {
-	const menuItens = await MetaObject.MetaObject.find<MetaObjectType>({ type: { $in: ['document', 'group', 'list', 'pivot'] }, menuSorter: { $nin: [-1, -2, -3] } }).toArray();
+	const menuItens = await MetaObject.MetaObject.find<MenuItemsMeta>({ type: { $in: MenuTypes }, menuSorter: { $nin: [-1, -2, -3] } }).toArray();
 
 	const accessAllowed = (type: string, name: string) => {
 		if (type === 'group') {

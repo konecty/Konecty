@@ -26,7 +26,7 @@ const getMongoUrl = () => {
 
 const mongoUrl = getMongoUrl();
 
-export const client = new MongoClient(mongoUrl, options);
+export const client = new MongoClient(MONGO_URL, options);
 
 export const db = client.db(database);
 

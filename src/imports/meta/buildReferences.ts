@@ -1,4 +1,6 @@
-import { Field, MetaObjectType, Relation } from '@imports/types/metadata';
+import { Field } from '@imports/model/Field';
+import { Relation } from '@imports/model/Relation';
+import { MetaObjectType } from '@imports/types/metadata';
 
 type Reference = Pick<Field, 'type' | 'isList' | 'descriptionFields' | 'inheritedFields' | 'detailFields'> & { field: string };
 

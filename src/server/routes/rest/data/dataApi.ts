@@ -22,6 +22,7 @@ import { errorReturn } from '@imports/utils/return';
 
 import { csvExport } from '@imports/exports/csvExport';
 import { xlsExport } from '@imports/exports/xlsExport';
+import { List } from '@imports/model/List';
 
 export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.post<{ Body: { lead: unknown; save: unknown } }>('/rest/data/lead/save', async (req, reply) => {
@@ -232,11 +233,11 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			return errorReturn(`[${document}] Value for type must be one of [csv, xls]`);
 		}
 
-		const listMeta = await MetaObject.MetaObject.findOne({
+		const listMeta = (await MetaObject.MetaObject.findOne({
 			type: 'list',
 			document,
 			name: listName,
-		});
+		})) as List;
 
 		if (listMeta == null) {
 			return errorReturn(`[${document}] Can't find meta for list ${listName} of document ${document}`);
@@ -257,10 +258,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			if (listMeta.label != null) {
 				return listMeta.label[userLocale] ?? listMeta.label.en ?? first(Object.values(listMeta.label));
 			}
-			if ('plurals' in metaObject && metaObject.plurals != null) {
+			if (metaObject.plurals != null) {
 				return metaObject.plurals[userLocale] ?? metaObject.plurals.en ?? first(Object.values(metaObject.plurals));
 			}
-			if ('label' in metaObject && metaObject.label != null) {
+			if (metaObject.label != null) {
 				return metaObject.label[userLocale] ?? metaObject.label.en ?? first(Object.values(metaObject.label));
 			}
 			return document;

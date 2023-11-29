@@ -6,6 +6,7 @@ export const RelationSchema = z.object({
 	aggregators: z.record(
 		z.object({
 			aggregator: z.string(),
+			field: z.string(),
 		}),
 	),
 	filter: z
