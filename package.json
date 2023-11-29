@@ -9,7 +9,8 @@
 		"build": "babel src --out-dir dist --no-copy-ignored --extensions '.ts,.js'",
 		"lint": "eslint src/**/*.ts src/**/*.js --fix",
 		"prettier": "prettier --write src",
-		"test": "jest --detectOpenHandles --runInBand"
+		"test": "jest --detectOpenHandles --runInBand",
+		"prepare": "husky install"
 	},
 	"engines": {
 		"node": ">=18.0.0",
