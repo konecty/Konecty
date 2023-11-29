@@ -1707,14 +1707,14 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 	if (references?.from != null && isObject(references.from)) {
 		const referencesResult = await BluebirdPromise.mapSeries(Object.keys(references.from), async referenceName => {
 			const referenceMeta = references.from[referenceName];
-			const referenceCollection = MetaObject.Collections[referenceMeta.document];
+			const referenceCollection = MetaObject.Collections[referenceName];
 			if (referenceCollection == null) {
 				return errorReturn(`[${document}] Reference collection ${referenceMeta.document} not found`);
 			}
 
 			const foreignFoundIds = await BluebirdPromise.mapSeries(idsToDelete, async deletedId => {
-				const referenceConditions = Object.keys(referenceMeta.fields).map((acc, fieldName) => ({
-					[`${fieldName}._id`]: { $in: idsToDelete },
+				const referenceConditions = Object.keys(referenceMeta).map(fieldName => ({
+					[`${fieldName}._id`]: { $in: [deletedId] },
 				}));
 
 				if (referenceConditions.length === 0) {

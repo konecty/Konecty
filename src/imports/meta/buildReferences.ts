@@ -34,7 +34,7 @@ export default function buildReferences(Meta: Record<string, MetaObjectType>) {
 				References[field.document] = {
 					...References[field.document],
 					from: {
-						...References[field.document].from,
+						...References[field.document]?.from,
 						[metaName]: {
 							...References[field.document]?.from?.[metaName],
 							[fieldName]: {
@@ -56,12 +56,12 @@ export default function buildReferences(Meta: Record<string, MetaObjectType>) {
 				References[relation.document] = {
 					...References[relation.document],
 					relationsFrom: {
-						...References[relation.document].relationsFrom,
+						...References[relation.document]?.relationsFrom,
 						[metaName]: [...(References[relation.document]?.relationsFrom?.[metaName] || []), relation],
 					},
 
 					relationsTo: {
-						...References[relation.document].relationsTo,
+						...References[relation.document]?.relationsTo,
 						[relation.document]: [...(References[relation.document]?.relationsTo?.[relation.document] || []), relation],
 					},
 				};
