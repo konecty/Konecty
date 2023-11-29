@@ -3,16 +3,9 @@ on:
         tags:
             - '[0-9]+.[0-9]+.[0-9]+-dev.[0-9]+'
 jobs:
-    build:
+    install-dependencies:
         runs-on: ubuntu-latest
         steps:
-            - name: get latest release with tag
-              id: latestrelease
-              run: |
-                  echo "::set-output name=releasetag::$(curl -s https://api.github.com/repos/konecty/Konecty/releases | jq -r 'map(select(.prerelease)) | first | .tag_name')"
-            - name: confirm release tag
-              run: |
-                  echo ${{ steps.latestrelease.outputs.releasetag }}
             - name: Checkout
               uses: actions/checkout@v3
               with:
@@ -29,6 +22,8 @@ jobs:
               with:
                   path: |
                       node_modules
+                      .husky
+                      .husky
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Install Dependencies
               run: yarn --frozen-lockfile --no-progress --non-interactive
@@ -40,7 +35,70 @@ jobs:
               with:
                   path: |
                       node_modules
+                      .husky
+                      .husky
                   key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+    test:
+        name: Run Test
+        runs-on: ubuntu-latest
+        needs: [install-dependencies]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+            - name: Setup NodeJS
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: 'yarn'
+                  cache-dependency-path: yarn.lock
+            - name: Restore Dependencies Cache
+              uses: actions/cache/restore@v3
+              id: cache-restore-yarn
+              with:
+                  path: |
+                      node_modules
+                      .husky
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+            - name: Restore Tests Cache
+              uses: actions/cache/restore@v3
+              id: cache-restore-jest
+              with:
+                  path: .jestcache
+                  key: ${{ runner.os }}-jest-${{ hashFiles('**/yarn.lock') }}
+            - name: Running tests
+              env:
+                  TZ: 'America/Sao_Paulo'
+              run: yarn test --cacheDirectory ".jestcache"
+            - name: Save Tests Cache
+              uses: actions/cache/save@v3
+              id: cache-save
+              with:
+                  path: .jestcache
+                  key: ${{ steps.cache-restore-jest.outputs.cache-primary-key }}
+    build:
+        runs-on: ubuntu-latest
+        needs: [test]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                  ref: ${{ steps.latestrelease.outputs.releasetag }}
+            - name: Setup NodeJS
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: 'yarn'
+                  cache-dependency-path: yarn.lock
+            - name: Restore Dependencies Cache
+              uses: actions/cache/restore@v3
+              id: cache-restore
+              with:
+                  path: |
+                      node_modules
+                      .husky
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Build
               run: yarn build
             - name: Setup Docker Buildx
