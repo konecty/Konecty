@@ -16,7 +16,7 @@ export async function listView(document: string, id: string) {
 
 	const listColumns = sortBy(columnsArray, ['sort', 'name']);
 
-	const filtersList = sortBy(Object.values(list.filter?.conditions), ['sort', 'term']);
+	const filtersList = sortBy(Object.values(list.filter?.conditions || {}), ['sort', 'term']);
 
 	const listViewResult = DocumentListSchema.safeParse({
 		...list,
