@@ -69,3 +69,4 @@ package-lock.json
 .env.docker
 dist
 coverage
+.jestcache
