@@ -677,13 +677,13 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 
 		const record = await findById({
 			authTokenId,
-			document,
+			document: field.document,
 			fields: field.detailFields.join(','),
 			dataId: value._id,
 		});
 
 		if (has(record, 'data.0')) {
-			return record.data[0];
+			return { ...value, ...record.data[0] };
 		}
 	};
 
