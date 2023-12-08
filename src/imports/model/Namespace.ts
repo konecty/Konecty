@@ -30,7 +30,6 @@ const FSStorage = CommonStorageProps.extend({
 export const NamespaceSchema = z
 	.object({
 		type: z.literal('Namespace'),
-		useExternalKonsistent: z.boolean().optional(),
 		trackUserGeolocation: z.boolean().optional(),
 		loginExpiration: z.number().optional(),
 
@@ -46,6 +45,20 @@ export const NamespaceSchema = z
 						saveCampaignTarget: z.boolean().optional(),
 					})
 					.optional(),
+			})
+			.optional(),
+
+		plan: z
+			.object({
+				features: z
+					.object({
+						createHistory: z.boolean().optional(),
+						updateInheritedFields: z.boolean().optional(),
+						updateReverseLookups: z.boolean().optional(),
+						updateRelations: z.boolean().optional(),
+					})
+					.optional(),
+				useExternalKonsistent: z.boolean().optional(),
 			})
 			.optional(),
 	})

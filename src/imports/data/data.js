@@ -1152,7 +1152,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 
 		if (resultRecord != null) {
-			if (MetaObject.Namespace.useExternalKonsistent !== true) {
+			if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 				try {
 					await processIncomingChange(document, resultRecord, 'create', user);
 				} catch (e) {
@@ -1566,7 +1566,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 		}
 
-		if (MetaObject.Namespace.useExternalKonsistent !== true) {
+		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
 				for await (const record of updatedRecords) {
 					await processIncomingChange(document, record, 'update', user);
