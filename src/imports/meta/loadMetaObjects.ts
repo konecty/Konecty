@@ -281,7 +281,11 @@ async function dbLoad() {
 	});
 
 	rebuildReferences();
+	const namespace = await MetaObject.MetaObject.findOne({ type: 'namespace' });
+	Object.assign(MetaObject.Namespace, namespace);
+}
 
+function dbWatch() {
 	MetaObject.MetaObject.watch().on('change', async (change: any) => {
 		if (change.operationType === 'delete') {
 			switch (change.fullDocumentBeforeChange.type) {
@@ -332,10 +336,8 @@ async function dbLoad() {
 		}
 		rebuildReferences();
 	});
-
-	const namespace = await MetaObject.MetaObject.findOne({ type: 'namespace' });
-	Object.assign(MetaObject.Namespace, namespace);
 }
+
 
 const fsLoad = (metadataDir: string) => {
 	logger.info(`Loading MetaObject.Meta from directory ${metadataDir} ...`);
@@ -446,8 +448,11 @@ export async function loadMetaObjects() {
 	await checkInitialData();
 	if (process.env.METADATA_DIR != null) {
 		logger.info('Loading MetaObject.Meta from directory');
-		fsLoad(process.env.METADATA_DIR);
+		return fsLoad(process.env.METADATA_DIR);
 	}
 	logger.info('Loading MetaObject.Meta from database');
 	await dbLoad();
+	if (MetaObject.Namespace?.plan?.useExternalKonsistent) {
+		dbWatch();
+	}
 }
