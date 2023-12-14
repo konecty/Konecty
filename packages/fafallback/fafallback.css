@@ -1,3 +1,0 @@
-[class*='fa-']:before {
-	content: attr(icon-char);
-}

@@ -1,6 +1,7 @@
 **/bin/**
 **/build/*
 **/node_modules/*
+node_modules
 **/tmp/*
 *.bak
 *.iml
@@ -66,3 +67,6 @@ typo3temp
 .vscode
 package-lock.json
 .env.docker
+dist
+coverage
+.jestcache

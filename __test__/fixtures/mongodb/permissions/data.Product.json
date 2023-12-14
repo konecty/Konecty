@@ -1,0 +1,169 @@
+[
+	{
+		"_id": "Product_from_user_Default",
+		"_user": [
+			{
+				"_id": "User_access_Default",
+				"name": "User_access_Default",
+				"active": true
+			}
+		],
+		"purpose": ["Residencial"],
+		"zone": "Grande Porto Alegre",
+		"sale": {
+			"currency": "BRL",
+			"value": 220000
+		},
+		"sku": "abc",
+		"notes": "Apartamento à venda localizado na PROFESSORA SILVIA SIEBEN MEOTTI, no bairro São José da cidade Canoas. Este imóvel conta com área construída de 50.25m², 2 quartos, 1 banheiro e 1 vaga de garagem. Aproveite esta oportunidade e agende uma visita com um de nossos corretores.",
+		"status": "Ativo",
+		"type": "Apartamento",
+		"address": {
+			"city": "Canoas",
+			"state": "RS",
+			"country": "BRA",
+			"district": "São José",
+			"placeType": "Rua",
+			"place": "Professora Silvia Síeben Meotti",
+			"number": "84",
+			"geolocation": [-51.1744368, -29.8793242],
+			"complement": "40500",
+			"postalCode": "92420236"
+		},
+		"areaPrice": {
+			"currency": "BRL",
+			"value": 4400
+		},
+		"areaPrivate": 50,
+		"bathrooms": 1,
+		"bedrooms": 2,
+		"commission": 0.06,
+		"condominiumAmount": {
+			"currency": "BRL",
+			"value": 200
+		},
+		"supplier": [
+			{
+				"_id": "eF98cGkS5DxMTcaiA",
+				"name": {
+					"full": "Loft Marketplace"
+				},
+				"code": 1628836
+			}
+		],
+
+		"lavatories": 0,
+		"occupancy": "Desocupado",
+		"tax": {
+			"currency": "BRL",
+			"value": 41.67
+		},
+		"editorialStatus": "Aprovado",
+
+		"code": 295661,
+		"_createdAt": "2023-11-08T20:00:03.764+0000",
+		"_createdBy": {
+			"_id": "9HjDNuoi8FoFFgcem",
+			"name": "Loft Marketplace",
+			"group": {
+				"_id": "521c2fe4e4b057cdcba8e454",
+				"name": "SISTEMA"
+			}
+		},
+		"_updatedAt": "2023-01-01T00:00:00.000+0000",
+		"_updatedBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"name": "Administrador",
+			"group": {
+				"_id": "521c2fe4e4b057cdcba8e454",
+				"name": "SISTEMA"
+			},
+			"ts": "2023-11-08T20:00:22.280+0000"
+		},
+
+		"agencyOpportunity": {
+			"_id": "caNvDTXJ8t3hgNRX2",
+			"status": "Ativo"
+		}
+	},
+
+	{
+		"_id": "Product_from_user_User",
+		"_user": [
+			{
+				"_id": "User_access_User",
+				"name": "User_access_User",
+				"active": true
+			}
+		],
+		"purpose": ["Residencial"],
+		"zone": "Grande Porto Alegre",
+		"sale": {
+			"currency": "BRL",
+			"value": 220000
+		},
+		"sku": "abc",
+		"notes": "Apartamento à venda localizado na PROFESSORA SILVIA SIEBEN MEOTTI, no bairro São José da cidade Canoas. Este imóvel conta com área construída de 50.25m², 2 quartos, 1 banheiro e 1 vaga de garagem. Aproveite esta oportunidade e agende uma visita com um de nossos corretores.",
+		"status": "Ativo",
+		"type": "Apartamento",
+		"address": {
+			"city": "Canoas",
+			"state": "RS",
+			"country": "BRA",
+			"district": "São José",
+			"placeType": "Rua",
+			"place": "Professora Silvia Síeben Meotti",
+			"number": "84",
+			"geolocation": [-51.1744368, -29.8793242],
+			"complement": "40500",
+			"postalCode": "92420236"
+		},
+		"areaPrice": {
+			"currency": "BRL",
+			"value": 4400
+		},
+		"areaPrivate": 50,
+		"bathrooms": 1,
+		"bedrooms": 2,
+		"commission": 0.06,
+		"condominiumAmount": {
+			"currency": "BRL",
+			"value": 200
+		},
+		"supplier": "Leo Viva",
+
+		"lavatories": 0,
+		"occupancy": "Desocupado",
+		"tax": {
+			"currency": "BRL",
+			"value": 41.67
+		},
+		"editorialStatus": "Aprovado",
+
+		"code": 295632161,
+		"_createdAt": "2023-11-08T20:00:03.764+0000",
+		"_createdBy": {
+			"_id": "9HjDNuoi8FoFFgcem",
+			"name": "Loft Marketplace",
+			"group": {
+				"_id": "521c2fe4e4b057cdcba8e454",
+				"name": "SISTEMA"
+			}
+		},
+		"_updatedAt": "2023-01-01T00:00:00.000+0000",
+		"_updatedBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"name": "Administrador",
+			"group": {
+				"_id": "521c2fe4e4b057cdcba8e454",
+				"name": "SISTEMA"
+			},
+			"ts": "2023-11-08T20:00:22.280+0000"
+		},
+
+		"agencyOpportunity": {
+			"_id": "caNvDTXJ8t3hgNRX2",
+			"status": "Ativo"
+		}
+	}
+]
