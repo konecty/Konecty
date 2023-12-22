@@ -10,7 +10,7 @@ import { MetaObjectType } from '@imports/types/metadata';
 import { logger } from '@imports/utils/logger';
 import { CreateIndexesOptions, createCommentsIndexFor, createHistoryIndexFor, createInternalFieldsIndexFor, getFieldsToIndex, tryEnsureIndex } from './utils';
 
-const dropAllIndexes = false;
+const dropAllIndexes = process.env.DROP_ALL_INDEXES === 'true' || process.env.DROP_ALL_INDEXES === '1';
 
 export default async function applyIndexes(meta: MetaObjectType) {
 	if (isEmpty(process.env.DISABLE_REINDEX) || process.env.DISABLE_REINDEX === 'false' || process.env.DISABLE_REINDEX === '0') {
@@ -26,6 +26,7 @@ async function processIndexes(meta: MetaObjectType) {
 
 	// Drop all indexes of meta
 	if (dropAllIndexes) {
+		logger.info(`Droping all indexes at ${meta.collection}`);
 		await MetaObject.Collections[meta.name].dropIndexes();
 		await MetaObject.Collections[`${meta.name}.Comment`].dropIndexes();
 		await MetaObject.Collections[`${meta.name}.History`].dropIndexes();
@@ -40,40 +41,39 @@ async function processIndexes(meta: MetaObjectType) {
 	await BluebirdPromise.each(iterableMeta, async (fieldName: string) => {
 		const field = meta.fields[fieldName];
 
-		if (field.isUnique === true || ['lookup', 'address', 'autoNumber'].includes(field.type)) {
-			const options: CreateIndexesOptions = {
-				unique: 0,
-				name: fieldName,
-			};
+		const options: CreateIndexesOptions = {
+			unique: 0,
+			name: fieldName,
+		};
 
-			if (field.type === 'autoNumber' || field.isUnique === true) {
-				options.unique = 1;
-			}
-
-			if (field.isUnique === true && field.isRequired !== true) {
-				options.sparse = 1;
-			}
-
-			if (['username', 'emails'].includes(field.name) && meta.name === 'User') {
-				options.unique = 1;
-				options.sparse = 1;
-			}
-
-			const fields = getFieldsToIndex(field).reduce((acc, indexField) => ({ ...acc, [indexField]: 1 }), {});
-
-			logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
-			await tryEnsureIndex({
-				collection: MetaObject.Collections[meta.name],
-				fields,
-				options,
-			});
+		if (field.type === 'autoNumber' || field.isUnique === true) {
+			options.unique = 1;
 		}
+
+		if (field.isUnique === true && field.isRequired !== true) {
+			options.sparse = 1;
+		}
+
+		if (['username', 'emails'].includes(field.name) && meta.name === 'User') {
+			options.unique = 1;
+			options.sparse = 1;
+		}
+
+		const fields = getFieldsToIndex(field).reduce((acc, indexField) => ({ ...acc, [indexField]: 1 }), {});
+
+		logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
+		await tryEnsureIndex({
+			collection: MetaObject.Collections[meta.name],
+			fields,
+			options,
+		});
 	});
 
+	logger.debug('Creating indexes for %s, %s, %s', `${meta.collection}.History`, `${meta.collection}.Comment`, `${meta.collection} internal fields`);
 	/* prettier-ignore */
 	await BluebirdPromise.all([
-		createHistoryIndexFor(meta), 
-		createCommentsIndexFor(meta), 
+		createHistoryIndexFor(meta),
+		createCommentsIndexFor(meta),
 		createInternalFieldsIndexFor(meta)
 	]);
 
@@ -111,7 +111,7 @@ async function processIndexes(meta: MetaObjectType) {
 				await tryEnsureIndex({
 					collection: MetaObject.Collections[meta.name],
 					fields: keys,
-					options: { name: index.options.name },
+					options: index.options,
 				});
 			}
 		});

@@ -20,6 +20,7 @@ export const DocumentSchema = z.object({
 	indexes: z
 		.record(
 			z.object({
+				version: z.number().optional(),
 				keys: z.record(z.string(), z.number()),
 				options: z.object({
 					name: z.string().optional(),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { LabelSchema } from './Label';
 import { FieldSchema } from './Field';
+import { LabelSchema } from './Label';
 
 export const CompositeSchema = z.object({
 	type: z.literal('composite'),
@@ -14,6 +14,7 @@ export const CompositeSchema = z.object({
 		.record(
 			z.string(),
 			z.object({
+				version: z.number().optional(),
 				keys: z.record(z.string(), z.number()),
 				options: z.object({
 					name: z.string().optional(),

@@ -8,6 +8,7 @@ import unset from 'lodash/unset';
 import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectType } from '@imports/types/metadata';
+import { Promise as BluebirdPromise } from 'bluebird';
 import { checkInitialData } from '../data/initialData';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
@@ -68,22 +69,21 @@ const deregisterMeta = function (meta: any) {
 
 async function dbLoad() {
 	const data = await MetaObject.MetaObject.find<MetaObjectType>({}).toArray();
-	data.forEach(async meta => {
+	await BluebirdPromise.all(data.map(async meta => {
 		switch (meta.type) {
 			case 'access':
 				MetaObject.Access[meta._id as unknown as string] = meta as unknown as MetaAccess;
 				break;
 			case 'document':
 			case 'composite':
-				await registerMeta(meta);
-				break;
+				return registerMeta(meta);
 			case 'pivot':
 			case 'view':
 			case 'list':
 				MetaObject.DisplayMeta[meta._id as unknown as string] = meta;
 				break;
 		}
-	});
+	}));
 
 	rebuildReferences();
 	const namespace = await MetaObject.MetaObject.findOne({ type: 'namespace' });

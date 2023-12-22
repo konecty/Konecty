@@ -4,7 +4,7 @@ import { Field } from '@imports/model/Field';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectType } from '@imports/types/metadata';
 import { logger } from '@imports/utils/logger';
-import { CreateIndexesOptions as MongoCreateIndexOpts } from 'mongodb';
+import { CreateIndexesOptions as MongoCreateIndexOpts, MongoServerError } from 'mongodb';
 
 export type CreateIndexesOptions = {
 	[key in keyof MongoCreateIndexOpts]: MongoCreateIndexOpts[key] extends boolean | undefined ? boolean | 0 | 1 | undefined : MongoCreateIndexOpts[key];
@@ -19,8 +19,14 @@ interface TryEnsureIndexParams {
 export async function tryEnsureIndex({ collection, fields, options }: TryEnsureIndexParams) {
 	try {
 		await collection.createIndex(fields, options as MongoCreateIndexOpts);
+		return true;
 	} catch (e) {
-		logger.trace('Index Error: ', e);
+		if (e instanceof MongoServerError && e.code === 85) {
+			logger.trace("Index already exists: '%s'", options.name);
+		} else {
+			logger.error('Index Error: %s', (e as Error).message);
+		}
+		return false;
 	}
 }
 
