@@ -93,7 +93,6 @@ describe('Update Product', () => {
 			// Assert
 			expect(data.success).to.be.equal(true);
 			expect(data.data?.[0].name).to.be.equal('Test Updated');
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Update Product and test scriptBeforeValidation', async () => {
@@ -205,7 +204,6 @@ describe('Update Product', () => {
 			// Assert
 			expect(data.success).to.be.equal(true);
 			expect(data.data?.[0].name).to.be.equal('Test Updated');
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Should not update Product without permission', async () => {

@@ -1,0 +1,159 @@
+[
+	{
+		"_id": "zQpNXD4iJtDb6sLnD",
+		"_createdBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true
+		},
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "YM3utZ6EMmrFsbHZc",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Administrador",
+				"active": true
+			}
+		],
+		"access": {
+			"defaults": ["Full"]
+		},
+		"admin": true,
+		"name": "Administrator"
+	},
+	{
+		"_id": "Fr9y2Gc6xisQ3NkEu",
+		"_createdBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true
+		},
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "YM3utZ6EMmrFsbHZc",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Administrador",
+				"active": true
+			}
+		],
+		"access": {
+			"defaults": ["Default"]
+		},
+		"name": "User"
+	},
+	{
+		"_id": "uYkxgymdaYBsrdYyC",
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_createdBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true
+		},
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "YM3utZ6EMmrFsbHZc",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Administrador",
+				"active": true
+			}
+		],
+		"access": {
+			"defaults": ["Default"]
+		},
+		"name": "Manager"
+	},
+	{
+		"_id": "fMGmRMLH4WnmXfoFy",
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_createdBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true
+		},
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "YM3utZ6EMmrFsbHZc",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Administrador",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "YM3utZ6EMmrFsbHZc",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Administrador",
+				"active": true
+			}
+		],
+		"access": {
+			"defaults": ["Default"]
+		},
+		"name": "Director"
+	}
+]

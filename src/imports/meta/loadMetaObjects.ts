@@ -338,7 +338,6 @@ function dbWatch() {
 	});
 }
 
-
 const fsLoad = (metadataDir: string) => {
 	logger.info(`Loading MetaObject.Meta from directory ${metadataDir} ...`);
 

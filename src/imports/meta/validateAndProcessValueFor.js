@@ -25,7 +25,7 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '../utils/logger';
 
 import { removeInheritedFields } from '../meta/removeInheritedFields';
-import { getNextCode } from '../meta/getNextCode';
+import { getNextCode } from './getNextCode';
 import { stringToDate } from '../data/dateParser';
 import { copyDescriptionAndInheritedFields } from '../meta/copyDescriptionAndInheritedFields';
 

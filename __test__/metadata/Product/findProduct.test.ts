@@ -52,7 +52,6 @@ describe('Find Product', () => {
 			// compare data.data with the data created in beforeEach
 			expect(data.data?.[0].name).to.be.equal('Teste');
 			expect(data.data?.[0].status).to.be.equal('draft');
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Find Product', async () => {
@@ -73,7 +72,6 @@ describe('Find Product', () => {
 			// compare data.data with the data created in beforeEach
 			expect(data.data?.[0].name).to.be.equal('Teste');
 			expect(data.data?.[0].status).to.be.equal('draft');
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Find Product with field projection', async () => {

@@ -1,11 +1,12 @@
 import get from 'lodash/get';
 
 import { MetaObject } from '@imports/model/MetaObject';
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
+import { Filter } from 'mongodb';
 
 const GENERATE_CODE_MAX_DEPTH = 1000;
 
-export async function getNextCode(documentName, fieldName) {
+export async function getNextCode(documentName: string, fieldName: string) {
 	if (!fieldName) {
 		fieldName = 'code';
 	}
@@ -14,7 +15,7 @@ export async function getNextCode(documentName, fieldName) {
 	const documentCollection = MetaObject.Collections[documentName];
 
 	// Mount query, sort, update, and options
-	const query = { _id: fieldName };
+	const query: Filter<{ _id: string }> = { _id: fieldName };
 
 	const update = {
 		$inc: {
@@ -29,11 +30,16 @@ export async function getNextCode(documentName, fieldName) {
 
 	// Try to get next code
 	try {
-		const getNextCode = async (depth = 0) => {
-			const autoNumberResult = await autoNumberCollection.findOneAndUpdate(query, update, options);
-			const nextVal = get(autoNumberResult, 'value.next_val', 1);
+		const getNextCodeFunc = async (
+			depth = 0,
+		): Promise<{
+			success: boolean;
+			data?: number;
+			errors?: { message: string }[];
+		}> => {
+			const autoNumberResult = await autoNumberCollection.findOneAndUpdate(query as any, update, options);
+			const nextVal = get(autoNumberResult, 'next_val', 1);
 			const existingCodes = await documentCollection.countDocuments({ [fieldName]: nextVal });
-
 			if (existingCodes === 0) {
 				return {
 					success: true,
@@ -52,16 +58,16 @@ export async function getNextCode(documentName, fieldName) {
 				};
 			}
 
-			return getNextCode();
+			return getNextCodeFunc();
 		};
 
-		const result = await getNextCode();
+		const result = await getNextCodeFunc();
 
 		if (result.success === false) {
 			logger.error(`Duplicated key found on ${documentName}.${fieldName}: ${result.data}`);
 		}
 		return result;
-	} catch (e) {
+	} catch (e: any) {
 		logger.error(e, `Error creating new ${fieldName} value from ${documentName}: ${e.message}`);
 		return {
 			success: false,
