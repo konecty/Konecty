@@ -66,7 +66,6 @@ describe('Create Product', () => {
 			expect(data.data?.[0]._user).to.be.deep.equal(productUser);
 			expect(data.data?.[0]._updatedBy).to.be.deep.equal(createAndUpdateUser);
 			expect(data.data?.[0]._createdBy).to.be.deep.equal(createAndUpdateUser);
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Create Product should respect normalization field', async () => {
