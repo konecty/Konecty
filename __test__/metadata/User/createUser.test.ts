@@ -7,7 +7,7 @@ describe('Create User', () => {
 	describe('Admin', () => {
 		const authId = login('admin-test');
 
-		it('Create Product', async () => {
+		it('Create User', async () => {
 			// Arrange
 			const requiredFields = {
 				name: 'Teste',
