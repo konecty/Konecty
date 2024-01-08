@@ -1,15 +1,15 @@
 import { expect } from 'chai';
 import { login } from '../../utils/login';
 import { KonectyResponse } from '../../utils/types';
-
+import { faker } from '@faker-js/faker';
 async function createUserHelper(authId: string) {
 	const requiredFields = {
-		name: 'Teste',
+		name: faker.internet.userName(),
 		active: true,
 		group: { _id: 'YM3utZ6EMmrFsbHZc', name: 'User' },
 		role: { _id: 'Fr9y2Gc6xisQ3NkEu', name: 'User' },
 		locale: 'pt_BR',
-		username: 'teste',
+		username: faker.internet.userName(),
 	};
 	const data = (await fetch(`http://127.0.0.1:3000/rest/data/User`, {
 		method: 'POST',
