@@ -302,6 +302,15 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				};
 			}
 		}
+
+		return {
+			success: false,
+			errors: [
+				{
+					message: `Value for field ${fieldName} must contains a property named 'match' with one of values ['and', 'or']`,
+				},
+			],
+		};
 	};
 
 	const mustBeString = (v, path) => {

@@ -15,7 +15,7 @@ const file2Api: FastifyPluginCallback = (fastify, _, done) => {
 			recordCode: string;
 			fieldName: string;
 		};
-	}>('/rest/file2/:document/:recordCode/:fieldName', async function (req, reply) {
+	}>('/rest/file2/:document/:recordCode/:fieldName/', async function (req, reply) {
 		const authTokenId = getAuthTokenIdFromReq(req);
 		const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
 		if (success === false) {
