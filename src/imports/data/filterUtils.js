@@ -259,7 +259,7 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 
 				if (value.less_or_equals != null) {
 					if (value.less_or_equals.$date != null && isString(value.less_or_equals.$date)) {
-						value.less_or_equals = processValueByType(value.less_or_equals);
+						result.less_or_equals = processValueByType(value.less_or_equals);
 					} else {
 						result.less_or_equals = value.less_or_equals;
 					}
@@ -322,6 +322,10 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 			if (conditionValue != null && conditionValue.less_or_equals != null) {
 				queryCondition[condition.term].$lte = conditionValue.less_or_equals;
 			}
+			if (Object.keys(queryCondition[condition.term]).length === 0) {
+				delete queryCondition[condition.term];
+			}
+
 			break;
 		case 'exists':
 			queryCondition[condition.term] = { $exists: conditionValue };
