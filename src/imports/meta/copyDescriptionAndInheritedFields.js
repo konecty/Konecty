@@ -62,8 +62,8 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 				}
 			}),
 		);
-		if (inheritedFieldResults.some(result => result.success === false)) {
-			return inheritedFieldResults.find(result => result.success === false);
+		if (inheritedFieldResults.some(result => result != null && result.success === false)) {
+			return inheritedFieldResults.find(result => result != null && result.success === false);
 		}
 	}
 	return {
