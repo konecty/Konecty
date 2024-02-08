@@ -451,7 +451,6 @@ export async function loadMetaObjects() {
 	}
 	logger.info('Loading MetaObject.Meta from database');
 	await dbLoad();
-	if (MetaObject.Namespace?.plan?.useExternalKonsistent) {
-		dbWatch();
-	}
+
+	dbWatch();
 }
