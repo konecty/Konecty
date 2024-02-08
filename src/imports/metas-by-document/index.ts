@@ -71,17 +71,17 @@ export async function getMetasByDocument({ document, authTokenId }: Params) {
 					form: meta,
 					error: parsed.error,
 				},
-				`Error parsing meta ${meta.document}/${meta.type}/${meta.name}`,
+				`Error parsing meta ${meta.document ? meta.document + '/' : ''}${meta.type}/${meta.name}`,
 			);
-			return null;
+
+			return {
+				...meta,
+				failedMetaValidation: true,
+			};
 		}
 
 		return parsed.data;
 	});
-
-	if (validatedMetas.includes(null)) {
-		return null;
-	}
 
 	const formattedMetas = validatedMetas.map(meta => {
 		if (metaFormatter[meta!.type]) {

@@ -1,25 +1,25 @@
-import Mustache from 'mustache';
-import { CronJob } from 'cron';
 import BluebirdPromise from 'bluebird';
+import { CronJob } from 'cron';
+import Mustache from 'mustache';
 
 import { createTransport } from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
 
-import isObject from 'lodash/isObject';
 import extend from 'lodash/extend';
-import omit from 'lodash/omit';
-import isEmpty from 'lodash/isEmpty';
 import get from 'lodash/get';
 import has from 'lodash/has';
+import isEmpty from 'lodash/isEmpty';
+import isObject from 'lodash/isObject';
 import join from 'lodash/join';
 import map from 'lodash/map';
+import omit from 'lodash/omit';
 import range from 'lodash/range';
 import set from 'lodash/set';
 
-import { logger } from '../utils/logger';
 import { MetaObject } from '@imports/model/MetaObject';
-import { errorReturn, successReturn } from '../utils/return';
 import { renderTemplate } from '../template';
+import { logger } from '../utils/logger';
+import { errorReturn, successReturn } from '../utils/return';
 
 const MAIL_CONSUME_SCHEDULE = process.env.MAIL_CONSUME_SCHEDULE || '*/1 * * * * *';
 const TZ = process.env.TZ || 'America/Sao_Paulo';
@@ -199,7 +199,7 @@ async function consume() {
 	await BluebirdPromise.each(range(0, mailCount), async () => {
 		const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
 
-		if (updatedRecords.value == null) {
+		if (updatedRecords == null || updatedRecords.value == null) {
 			return;
 		}
 

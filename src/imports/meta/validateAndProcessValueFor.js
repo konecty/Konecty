@@ -2,32 +2,32 @@ import { hash as bcryptHash } from 'bcryptjs';
 
 import { createHash } from 'crypto';
 
+import has from 'lodash/has';
 import isArray from 'lodash/isArray';
+import isBoolean from 'lodash/isBoolean';
+import isDate from 'lodash/isDate';
+import isEqual from 'lodash/isEqual';
+import isFunction from 'lodash/isFunction';
 import isNumber from 'lodash/isNumber';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
-import isBoolean from 'lodash/isBoolean';
-import has from 'lodash/has';
-import size from 'lodash/size';
-import isFunction from 'lodash/isFunction';
-import isEqual from 'lodash/isEqual';
-import isDate from 'lodash/isDate';
 import omit from 'lodash/omit';
+import size from 'lodash/size';
 
 import { DateTime } from 'luxon';
 
 import { camelCase, capitalCase, constantCase, dotCase, headerCase, noCase, paramCase, pascalCase, pathCase, sentenceCase, snakeCase } from 'change-case';
+import { lowerCase } from 'lower-case';
 import { titleCase } from 'title-case';
 import { upperCase } from 'upper-case';
-import { lowerCase } from 'lower-case';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '../utils/logger';
 
-import { removeInheritedFields } from '../meta/removeInheritedFields';
-import { getNextCode } from './getNextCode';
 import { stringToDate } from '../data/dateParser';
 import { copyDescriptionAndInheritedFields } from '../meta/copyDescriptionAndInheritedFields';
+import { removeInheritedFields } from '../meta/removeInheritedFields';
+import { getNextCode } from './getNextCode';
 
 import { BCRYPT_SALT_ROUNDS } from '../consts';
 
@@ -1001,7 +1001,17 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					const referenceDataValidationResults = await Promise.all(
 						Object.keys(value).map(async key => {
 							const subValue = value[key];
-							const validationResult = await validateAndProcessValueFor({ referenceMeta, key, subValue, actionType, value, idsToUpdate });
+							const params = {
+								meta: referenceMeta,
+								fieldName: key,
+								value: subValue,
+								actionType,
+								objectOriginalValues: value,
+								objectNewValues: value,
+								idsToUpdate
+							};
+
+							const validationResult = await validateAndProcessValueFor(params);
 							if (validationResult.success === false) {
 								return validationResult;
 							}
