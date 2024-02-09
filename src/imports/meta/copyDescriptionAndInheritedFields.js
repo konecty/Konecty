@@ -38,7 +38,7 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 						idsToUpdate,
 					});
 					if (validateResult.success === true) {
-						Object.assign(value, { [inheritedField.fieldName]: validateResult.data });
+						Object.assign(objectNewValues, { [inheritedField.fieldName]: validateResult.data });
 					}
 					return validateResult;
 				} else {
@@ -55,7 +55,7 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 							idsToUpdate,
 						});
 						if (validateResult.success === true) {
-							Object.assign(value, { [inheritedField.fieldName]: validateResult.data });
+							Object.assign(objectNewValues, { [inheritedField.fieldName]: validateResult.data });
 						}
 						return validateResult;
 					}
