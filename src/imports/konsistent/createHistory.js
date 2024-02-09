@@ -33,11 +33,13 @@ export default async function createHistory(metaName, action, id, data, updatedB
 
     const historyQuery = { _id: changeId };
 
+    const userDetailFields = ["_id"].concat(get(meta, "fields._user.detailFields", ["name", "active"]));
+
     // Define base data to history
     const historyItem = {
         dataId: id,
         createdAt: updatedAt,
-        createdBy: updatedBy,
+        createdBy: get(updatedBy, userDetailFields),
         data: historyData,
         type: action,
     };
