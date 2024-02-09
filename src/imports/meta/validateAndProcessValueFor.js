@@ -29,6 +29,7 @@ import { copyDescriptionAndInheritedFields } from '../meta/copyDescriptionAndInh
 import { removeInheritedFields } from '../meta/removeInheritedFields';
 import { getNextCode } from './getNextCode';
 
+import { errorReturn } from '@imports/utils/return';
 import { BCRYPT_SALT_ROUNDS } from '../consts';
 
 const regexUtils = {
@@ -74,80 +75,38 @@ const ALLOWED_CURRENCIES = ['BRL'];
 
 export async function validateAndProcessValueFor({ meta, fieldName, value, actionType, objectOriginalValues, objectNewValues, idsToUpdate }) {
 	if (meta == null) {
-		return {
-			success: false,
-			errors: [
-				{
-					message: `MetaObject.Meta does not exists`,
-				},
-			],
-		};
+		return errorReturn(`MetaObject.Meta does not exists`);
 	}
 
 	const field = meta.fields[fieldName];
 
 	if (!field) {
-		return {
-			success: false,
-			errors: [
-				{
-					message: `Field ${fieldName} does not exists on ${meta._id}`,
-				},
-			],
-		};
+		return errorReturn(`Field ${fieldName} does not exists on ${meta._id}`);
 	}
 
 	// Validate required fields
 
 	if (field.isRequired === true && (value == null || (typeof value === 'string' && size(value) === 0))) {
-		return {
-			success: false,
-			errors: [
-				{
-					message: `Field ${fieldName} is required`,
-				},
-			],
-		};
+		return errorReturn(`Field ${fieldName} is required`);
 	}
 
 	// Validate List fields
 	if (field.isList === true) {
 		if (field.maxElements && field.maxElements > 0) {
 			if (!isArray(value) || value.length > field.maxElements) {
-				return {
-					success: false,
-					errors: [
-						{
-							message: `Value for field ${fieldName} must be array with the maximum of ${field.maxElements} item(s)`,
-						},
-					],
-				};
+				return errorReturn(`Value for field ${fieldName} must be array with the maximum of ${field.maxElements} item(s)`);
 			}
 		}
 
 		if (field.minElements && field.minElements > 0) {
 			if (!isArray(value) || value.length < field.minElements) {
-				return {
-					success: false,
-					errors: [
-						{
-							message: `Value for field ${fieldName} must be array with the minimum of ${field.minElements} item(s)`,
-						},
-					],
-				};
+				return errorReturn(`Value for field ${fieldName} must be array with the minimum of ${field.minElements} item(s)`);
 			}
 		}
 
 		if (field.isAllowDuplicates === false && isArray(value)) {
 			if (value.some((itemA, indexA) => value.some((itemB, indexB) => indexA !== indexB && isEqual(itemA, itemB)))) {
-				return {
-					success: false,
-					errors: [
-						{
-							message: `Value for field ${fieldName} must be array no duplicated values`,
-						},
-					],
-				};
+				return errorReturn(`Value for field ${fieldName} must be a list with no duplicated values`);
 			}
 		}
 	}
@@ -157,14 +116,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		if (isNumber(field.minSelected)) {
 			if (field.minSelected === 1) {
 				if (!value || (isArray(value) && value.length === 0)) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Value for field ${fieldName} must be an array with at least 1 item`,
-							},
-						],
-					};
+					return errorReturn(`Value for field ${fieldName} must be an array with at least 1 item`);
 				}
 			}
 		}
@@ -197,26 +149,12 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		const collection = MetaObject.Collections[meta.name];
 
 		if (collection == null) {
-			return {
-				success: false,
-				errors: [
-					{
-						message: `Collection for ${meta.name} does not exists`,
-					},
-				],
-			};
+			return errorReturn(`Collection for ${meta.name} does not exists`);
 		}
 
 		const count = await collection.countDocuments(query);
 		if (count > 0) {
-			return {
-				success: false,
-				errors: [
-					{
-						message: `Value for field ${fieldName} must be unique`,
-					},
-				],
-			};
+			return errorReturn(`Value for field ${fieldName} must be unique`);
 		}
 	}
 
@@ -521,14 +459,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 
 				if (isNumber(field.size) && field.size > 0) {
 					if (value.length > field.size) {
-						return {
-							success: false,
-							errors: [
-								{
-									message: `Value for field ${fieldName} must be less than ${field.size} characters`,
-								},
-							],
-						};
+						return errorReturn(`Value for field ${fieldName} must be less than ${field.size} characters`);
 					}
 				}
 
@@ -1051,27 +982,13 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 
 				const lookupCollection = MetaObject.Collections[field.document];
 				if (lookupCollection == null) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Collection ${field.document} not found`,
-							},
-						],
-					};
+					return errorReturn(`Collection ${field.document} not found`);
 				}
 
 				const record = await lookupCollection.findOne({ _id: value._id });
 
 				if (record == null) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Record not found for field ${fieldName} with _id [${value._id}] on document [${field.document}]`,
-							},
-						],
-					};
+					return errorReturn(`Record not found for field ${fieldName} with _id [${value._id}] on document [${field.document}]`);
 				}
 
 				const inheritedFieldsResult = await copyDescriptionAndInheritedFields({
