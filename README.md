@@ -23,6 +23,8 @@
 -   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to ‘PLAIN’
 -   `DEFAULT_SMTP_DEBUG`: SMTP config `debug` for nodemailer, if set to true, then logs SMTP traffic, otherwise logs only transaction events
 -   `UI_URL`: host for ui
+-   `LOG_LEVEL`: [Pino log levels](https://github.com/pinojs/pino/blob/HEAD/docs/api.md#level-string)
+-   `LOG_TO_FILE`: Optional file name to write all logs. Path relative to project root
 
 ## FILE STORAGE API
 
