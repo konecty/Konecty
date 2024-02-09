@@ -90,17 +90,17 @@ export default async function updateRelationReference(metaName: string, relation
 			const MetaObj = MetaObject.Meta[relation.document];
 			if (MetaObj.type !== 'document') return;
 
-			const aggregatorField = MetaObj.fields[Number(aggregator.field.split('.')[0])];
+			const aggregatorField = MetaObj.fields[Number(aggregator.field?.split('.')[0])];
 			({ type } = aggregatorField);
 
 			// If type is money ensure that field has .value
-			if (type === 'money' && !/\.value$/.test(aggregator.field)) {
+			if (type === 'money' && !/\.value$/.test(aggregator.field || '')) {
 				aggregator.field += '.value';
 			}
 
 			// And get first occurency of currency
 			if (type === 'money') {
-				group.$group.currency = { $first: `$${aggregator.field.replace('.value', '.currency')}` };
+				group.$group.currency = { $first: `$${aggregator.field?.replace('.value', '.currency')}` };
 			}
 
 			if (type === 'lookup' && aggregator.aggregator === 'addToSet') {
@@ -130,7 +130,7 @@ export default async function updateRelationReference(metaName: string, relation
 
 		// Try to execute agg and log error if fails
 		try {
-			let result = await collection.aggregate(pipeline, { cursor: { batchSize: 1 } }).toArray();
+			const result = await collection.aggregate(pipeline, { cursor: { batchSize: 1 } }).toArray();
 
 			// If result was an array with one item cotaining a property value
 			if (isArray(result) && isObject(result[0]) && result[0].value) {

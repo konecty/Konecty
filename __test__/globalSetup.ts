@@ -2,6 +2,7 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 import fs from 'fs/promises';
 import path from 'node:path';
+import { Promise as BluebirdPromise } from 'bluebird';
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -23,6 +24,7 @@ export default async function globalSetup() {
 	process.env.BASE_URL = 'http://127.0.0.1:3000/rest';
 	process.env.UI_URL = 'https://ui.konecty.com';
 	process.env.LOG_LEVEL = 'fatal';
+	process.env.ALLOWED_ORIGINS = 'http://localhost:3000';
 	global.__MONGOINSTANCE = instance;
 
 	const uri = instance.getUri();
@@ -50,13 +52,15 @@ async function loadFixtures() {
 	const files = await fs.readdir(fullPath('./fixtures/mongodb/jest'));
 	const db = (await import('@imports/database')).db;
 
-	for (const file of files) {
-		if (!file.endsWith('.json')) continue;
+	await BluebirdPromise.map(files, async file => {
+		if (!file.endsWith('.json')) {
+			return;
+		}
 
 		const collectionName = file.replace('.json', '');
 		const collection = db.collection(collectionName);
 		const data = await fs.readFile(fullPath(`./fixtures/mongodb/jest/${file}`), 'utf8');
 		await collection.insertMany(JSON.parse(data));
 		console.info(`\n✅ Loaded ${collectionName} fixtures`);
-	}
+	});
 }

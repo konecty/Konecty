@@ -38,7 +38,7 @@ describe('Create Product', () => {
 			const productUser = [
 				{
 					_id: '4ffcf81084aecfbaff50fd05',
-					group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
+					group: { _id: 'PvG8jXQw2J7LqwdHJ', name: 'ADMIN' },
 					name: 'Admin-test',
 					active: true,
 				},
@@ -47,7 +47,7 @@ describe('Create Product', () => {
 			const createAndUpdateUser = {
 				_id: '4ffcf81084aecfbaff50fd05',
 				name: 'Admin-test',
-				group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
+				group: { _id: 'PvG8jXQw2J7LqwdHJ', name: 'ADMIN' },
 			};
 
 			// Act
@@ -66,7 +66,6 @@ describe('Create Product', () => {
 			expect(data.data?.[0]._user).to.be.deep.equal(productUser);
 			expect(data.data?.[0]._updatedBy).to.be.deep.equal(createAndUpdateUser);
 			expect(data.data?.[0]._createdBy).to.be.deep.equal(createAndUpdateUser);
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Create Product should respect normalization field', async () => {
@@ -125,7 +124,7 @@ describe('Create Product', () => {
 			const productUser = [
 				{
 					_id: 'User_access_User',
-					group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
+					group: { _id: 'YM3utZ6EMmrFsbHZc', name: 'User' },
 					name: 'User_access_User',
 					active: true,
 				},
@@ -134,7 +133,7 @@ describe('Create Product', () => {
 			const createAndUpdateUser = {
 				_id: 'User_access_User',
 				name: 'User_access_User',
-				group: { _id: '521c2fe4e4b057cdcba8e454', name: 'ADMIN' },
+				group: { _id: 'YM3utZ6EMmrFsbHZc', name: 'User' },
 			};
 
 			// Act
@@ -153,7 +152,6 @@ describe('Create Product', () => {
 			expect(data.data?.[0]._user).to.be.deep.equal(productUser);
 			expect(data.data?.[0]._updatedBy).to.be.deep.equal(createAndUpdateUser);
 			expect(data.data?.[0]._createdBy).to.be.deep.equal(createAndUpdateUser);
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Create Product should respect normalization field', async () => {

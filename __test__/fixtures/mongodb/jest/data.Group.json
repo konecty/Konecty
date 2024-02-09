@@ -1,0 +1,76 @@
+[
+	{
+		"_id": "PvG8jXQw2J7LqwdHJ",
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_createdBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "4ffcf81084aecfbaff50fd05",
+			"active": true
+		},
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Admin-test",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "4ffcf81084aecfbaff50fd05",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Admin-test",
+				"active": true
+			}
+		],
+		"active": true,
+		"name": "ADMIN"
+	},
+	{
+		"_id": "YM3utZ6EMmrFsbHZc",
+		"_createdAt": "2024-01-08T13:45:12.789+0000",
+		"_createdBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "4ffcf81084aecfbaff50fd05",
+			"active": true
+		},
+		"_updatedAt": "2024-01-08T13:45:12.789+0000",
+		"_updatedBy": {
+			"_id": "4ffcf81084aecfbaff50fd05",
+			"group": {
+				"_id": "PvG8jXQw2J7LqwdHJ",
+				"name": "ADMIN"
+			},
+			"name": "Admin-test",
+			"active": true,
+			"ts": "2024-01-08T13:45:12.789+0000"
+		},
+		"_user": [
+			{
+				"_id": "4ffcf81084aecfbaff50fd05",
+				"group": {
+					"_id": "PvG8jXQw2J7LqwdHJ",
+					"name": "ADMIN"
+				},
+				"name": "Admin-test",
+				"active": true
+			}
+		],
+		"active": true,
+		"name": "User"
+	}
+]

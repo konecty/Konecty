@@ -177,7 +177,7 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			userId: string;
 			password: string;
 		};
-	}>('/rest/auth/setPassword/:userId/:password', async function (req, reply) {
+	}>('/rest/auth/setpassword/:userId/:password', async function (req, reply) {
 		const authTokenId = getAuthTokenIdFromReq(req);
 		const result = await setPassword({ authTokenId, userId: req.params.userId, password: req.params.password });
 		return reply.send(result);

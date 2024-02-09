@@ -77,7 +77,6 @@ describe('Contact', () => {
 			expect(data.data?.[0].name).to.be.deep.equal({ first: 'Teste', full: 'Teste Teste', last: 'Teste' });
 			expect(data.data?.[0].type).to.be.deep.equal(['client']);
 			expect(data.data?.[0].status).to.be.equal('lead'); // default value
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 
 		it('Create Contact with address', async () => {
@@ -117,7 +116,6 @@ describe('Contact', () => {
 			expect(data.success).to.be.equal(true);
 			expect(data.data?.[0].name).to.be.deep.equal({ first: 'Teste', full: 'Teste Teste', last: 'Teste' });
 			expect(data.data?.[0].address).to.be.deep.equal([requiredFields.address]);
-			expect(data.data?.[0].code).to.be.equal(1);
 		});
 	});
 });

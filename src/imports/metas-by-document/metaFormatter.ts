@@ -4,7 +4,7 @@ import sortBy from 'lodash/sortBy';
 
 const metaFormatter: Record<string, (meta: any) => any> = {
 	list: (meta: List) => {
-		const columnsList = sortBy(Object.values(meta.columns), ['sort', 'name']);
+		const columnsList = sortBy(Object.values(meta?.columns || {}), ['sort', 'name']);
 
 		const filtersList = sortBy(Object.values(meta.filter?.conditions || {}), ['sort', 'term']);
 
