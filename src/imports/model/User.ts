@@ -20,6 +20,27 @@ export const UserModel = z.object({
 		})
 		.catchall(z.any())
 		.optional(),
+	admin: z.boolean().optional(),
+	emails: z.array(
+		z.object({
+			address: z.string(),
+		}),
+	),
+	group: z
+		.object({
+			_id: z.string(),
+			name: z.string(),
+		})
+		.optional(),
+	locale: z.string().optional(),
+	name: z.string().optional(),
+	username: z.string().optional(),
+	role: z
+		.object({
+			_id: z.string(),
+			name: z.string(),
+		})
+		.optional(),
 });
 
 export type User = z.infer<typeof UserModel>;
