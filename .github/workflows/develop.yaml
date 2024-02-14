@@ -19,7 +19,7 @@ jobs:
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
-              uses: actions/cache/restore@v3
+              uses: actions/cache/restore@v4
               id: cache-restore
               with:
                   path: |
@@ -30,7 +30,7 @@ jobs:
               run: yarn --frozen-lockfile --no-progress --non-interactive
               if: steps.cache-restore.outputs.cache-hit != 'true'
             - name: Save Dependencies Cache
-              uses: actions/cache/save@v3
+              uses: actions/cache/save@v4
               if: steps.cache-restore.outputs.cache-hit != 'true'
               id: cache-save
               with:
@@ -54,7 +54,7 @@ jobs:
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
-              uses: actions/cache/restore@v3
+              uses: actions/cache/restore@v4
               id: cache-restore-yarn
               with:
                   path: |
@@ -62,7 +62,7 @@ jobs:
                       .husky
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Restore Tests Cache
-              uses: actions/cache/restore@v3
+              uses: actions/cache/restore@v4
               id: cache-restore-jest
               with:
                   path: .jestcache
@@ -72,7 +72,7 @@ jobs:
                   TZ: 'America/Sao_Paulo'
               run: yarn test --cacheDirectory ".jestcache"
             - name: Save Tests Cache
-              uses: actions/cache/save@v3
+              uses: actions/cache/save@v4
               id: cache-save
               with:
                   path: .jestcache
@@ -93,7 +93,7 @@ jobs:
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
-              uses: actions/cache/restore@v3
+              uses: actions/cache/restore@v4
               id: cache-restore
               with:
                   path: |
