@@ -1,17 +1,9 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 
-import concat from 'lodash/concat';
-import first from 'lodash/first';
-import get from 'lodash/get';
-import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
-import set from 'lodash/set';
 
-import { flatten } from 'flat';
-
-import { MetaObject } from '@imports/model/MetaObject';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 import { create, deleteData, find, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
@@ -20,9 +12,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { errorReturn } from '@imports/utils/return';
 
-import { csvExport } from '@imports/exports/csvExport';
-import { xlsExport } from '@imports/exports/xlsExport';
-import { List } from '@imports/model/List';
+import exportData from '@imports/data/export';
 
 export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.post<{ Body: { lead: unknown; save: unknown } }>('/rest/data/lead/save', async (req, reply) => {
@@ -205,23 +195,25 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	});
 
 	fastify.get<{
-		Params: { document: string; listName: string; type: string };
+		Params: { document: string; listName: string; type: 'csv' | 'xls' };
 		Querystring: {
-			filter: unknown;
-			sort?: unknown;
+			filter: string | object;
+			sort?: string;
 			fields?: string;
 			displayName?: string;
 			displayType?: string;
 			limit?: number;
 			start?: number;
 		};
-	}>('/rest/data/:document/list/:listName/:type', async function (req, res) {
+	}>('/rest/data/:document/list/:listName/:type', async (req, reply) => {
 		const authTokenId = getAuthTokenIdFromReq(req);
-		const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
-		if (success === false) {
-			return errorReturn(errors);
+		const userResult = await getUserSafe(authTokenId);
+
+		if (userResult.success === false) {
+			return userResult;
 		}
 
+		const user = userResult.data;
 		const { document, listName, type } = req.params;
 
 		const access = getAccessFor(document, user);
@@ -233,100 +225,29 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			return errorReturn(`[${document}] Value for type must be one of [csv, xls]`);
 		}
 
-		const listMeta = (await MetaObject.MetaObject.findOne({
-			type: 'list',
+		const result = await exportData({
 			document,
-			name: listName,
-		})) as List;
-
-		if (listMeta == null) {
-			return errorReturn(`[${document}] Can't find meta for list ${listName} of document ${document}`);
-		}
-
-		const metaObject = get(MetaObject.Meta, document);
-
-		if (metaObject == null) {
-			return errorReturn(`[${document}] Can't find meta`);
-		}
-
-		const userLocale = user.locale ?? 'en';
-
-		const getLabel = () => {
-			if (listMeta.plurals != null) {
-				return listMeta.plurals[userLocale] ?? listMeta.plurals.en ?? first(Object.values(listMeta.plurals));
-			}
-			if (listMeta.label != null) {
-				return listMeta.label[userLocale] ?? listMeta.label.en ?? first(Object.values(listMeta.label));
-			}
-			if (metaObject.plurals != null) {
-				return metaObject.plurals[userLocale] ?? metaObject.plurals.en ?? first(Object.values(metaObject.plurals));
-			}
-			if (metaObject.label != null) {
-				return metaObject.label[userLocale] ?? metaObject.label.en ?? first(Object.values(metaObject.label));
-			}
-			return document;
-		};
-
-		const name = getLabel();
-
-		if (isString(req.query.filter) === false && isObject(listMeta.filter)) {
-			req.query.filter = JSON.stringify(listMeta.filter);
-		}
-
-		if (isString(req.query.sort) === false && isArray(listMeta.sorters)) {
-			req.query.sort = JSON.stringify(listMeta.sorters);
-		}
-
-		const getFields = () => {
-			if (isString(req.query.fields)) {
-				return req.query.fields;
-			}
-			if (isObject(listMeta.columns)) {
-				return Object.values(listMeta.columns)
-					.filter(column => column.visible === true)
-					.map(column => column.linkField)
-					.join(',');
-			}
-			return undefined;
-		};
-
-		const fields = getFields();
-
-		const filter = isString(req.query.filter) ? JSON.parse(req.query.filter) : undefined;
-
-		const result = await find({
-			contextUser: user,
-			document,
+			listName,
+			type,
+			user,
+			filter: req.query.filter,
+			sort: req.query.sort,
+			fields: req.query.fields,
 			displayName: req.query.displayName,
 			displayType: req.query.displayType,
-			fields,
-			filter,
-			sort: req.query.sort,
 			limit: req.query.limit,
 			start: req.query.start,
-			withDetailFields: 'true',
-			getTotal: true,
-		} as any);
+		});
 
-		if (result == null || result.success === false) {
-			return res.send(result);
+		if (result.success === false) {
+			return result;
 		}
 
-		const dataResult = (get(result, 'data', []) as Array<unknown>).reduce(
-			(acc, item) => {
-				const flatItem = flatten(item);
-				set(acc as object, 'flatData', concat(get(acc, 'flatData', []), flatItem));
-				Object.keys(flatItem as object).forEach(key => set(acc as object, `keys.${key}`, 1));
-				return acc;
-			},
-			{ flatData: [], keys: {} },
-		);
-
-		if (type === 'xls') {
-			return xlsExport(Object.keys(get(dataResult, 'keys', {})), get(dataResult, 'flatData', []), name, res);
-		} else {
-			return csvExport(Object.keys(get(dataResult, 'keys', {})), get(dataResult, 'flatData', []), name, res);
+		for (const [header, value] of Object.entries(result.data.httpHeaders)) {
+			reply.header(header, value);
 		}
+
+		reply.send(result.data.content);
 	});
 
 	done();
