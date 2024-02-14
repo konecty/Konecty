@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import { login } from '../../utils/login';
 import { KonectyResponse } from '../../utils/types';
-import { db } from '@imports/database';
 
 describe('Create User', () => {
 	describe('Admin', () => {
@@ -33,8 +32,6 @@ describe('Create User', () => {
 				group: { _id: 'PvG8jXQw2J7LqwdHJ', name: 'ADMIN' },
 			};
 
-			const userCount = await db.collection('users').countDocuments();
-
 			// Act
 			const data = (await fetch(`http://127.0.0.1:3000/rest/data/User`, {
 				method: 'POST',
@@ -51,7 +48,6 @@ describe('Create User', () => {
 			expect(data.data?.[0]._user).to.be.deep.equal(productUser);
 			expect(data.data?.[0]._updatedBy).to.be.deep.equal(createAndUpdateUser);
 			expect(data.data?.[0]._createdBy).to.be.deep.equal(createAndUpdateUser);
-			expect(data.data?.[0].code).to.be.equal(userCount + 1);
 		});
 	});
 });

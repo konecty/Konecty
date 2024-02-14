@@ -111,7 +111,7 @@ export async function sendFile(filePath: string, reply: FastifyReply) {
 	try {
 		const fileContent = await readFile(fullPath);
 		const etag = crypto.createHash('md5').update(fileContent).digest('hex');
-		const contentType = mime.lookup(filePath) ?? 'application/octet-stream';
+		const contentType = mime.lookup(filePath) || 'application/octet-stream';
 		return reply
 			.headers({
 				'content-type': contentType,
