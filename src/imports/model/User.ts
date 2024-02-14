@@ -20,6 +20,7 @@ export const UserModel = z.object({
 		})
 		.catchall(z.any())
 		.optional(),
+	locale: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserModel>;

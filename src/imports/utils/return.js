@@ -1,3 +1,9 @@
+
+/**
+ * 
+ * @param {any} value 
+ * @returns {{success: true, data: any}}
+ */
 export const successReturn = function (value) {
 	if (value == null) {
 		return {
@@ -10,6 +16,11 @@ export const successReturn = function (value) {
 	};
 };
 
+/**
+ * 
+ * @param {string | string[]} messages 
+ * @returns {{success: false, errors: import("../types/result").KonectyError[]}}
+ */
 export const errorReturn = function (messages) {
 	if (Array.isArray(messages)) {
 		return {

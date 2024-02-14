@@ -1,17 +1,22 @@
 
-
-export function csvExport(headers, data, name,
-    /** @type FastifyReply */
-    reply
-) {
+/**
+ * 
+ * @param {string[]} headers 
+ * @param {object[]} data 
+ * @param {string} name 
+ * @returns {Promise<{ httpHeaders: object, content: string }>}
+ */
+export function csvExport(headers, data, name) {
     // Define separator, sufix and prefix
     const separator = '","';
     const prefix = '"';
     const sufix = '"';
 
     // Send headers with content type and file name
-    reply.header('Content-Type', 'application/csv');
-    reply.header('Content-Disposition', `attachment; filename=${name}.csv`);
+    const httpHeaders = {
+        'Content-Type': 'application/csv',
+        'Content-Disposition': `attachment; filename=${name}.csv`,
+    };
 
     // Iterate over keys to send header line
     let header = headers.join(separator);
@@ -21,8 +26,6 @@ export function csvExport(headers, data, name,
     }
 
     const content = [header];
-
-
 
     // Iterate over data
     for (let item of data) {
@@ -44,5 +47,5 @@ export function csvExport(headers, data, name,
         content.push(value);
     }
 
-    reply.send(content.join('\n'));
+    return { httpHeaders, content: content.join('\n') };
 }

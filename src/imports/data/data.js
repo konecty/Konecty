@@ -62,18 +62,26 @@ export async function getNextUserFromQueue({ authTokenId, document, queueId, con
 	return getNext(queueId, user);
 }
 
-/* Get a list of records
-	@param authTokenId
-	@param document
-	@param displayName
-	@param displayType
-	@param fields
-	@param filter
-	@param sort
-	@param limit
-	@param start
-	@param getTotal
-*/
+/**
+ * Get a list of records
+ * @param {Object} payload
+ * 
+ * @param {string} [payload.authTokenId]
+ * @param {string} payload.document
+ * @param {string | Object} payload.filter
+ * 
+ * @param {string} [payload.displayName]
+ * @param {string} [payload.displayType]
+ * @param {string} [payload.fields]
+ * @param {string} [payload.sort]
+ * @param {number} [payload.limit=50]
+ * @param {number} [payload.start=0]
+ * @param {boolean} [payload.getTotal=false]
+ * @param {'true'} [payload.withDetailFields]
+ * @param {import('../model/User').User} [payload.contextUser]
+ * 
+ * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
+ */
 
 export async function find({ authTokenId, document, displayName, displayType, fields, filter, sort, limit, start, getTotal, withDetailFields, contextUser }) {
 	try {
@@ -670,9 +678,9 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 		return;
 	}
 
-	const getDetailFieldsValue = async function (field, value, parent) {
+	const getDetailFieldsValue = async function (field, value) {
 		if (!has(value, '_id')) {
-			logger.error({ field, document: document, parent }, 'populateDetailFields: value without _id');
+			logger.error({ field, document }, 'populateDetailFields: value without _id');
 		}
 
 		const record = await findById({
@@ -682,9 +690,11 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 			dataId: value._id,
 		});
 
-		if (has(record, 'data.0')) {
+		if (record.success && record.data != null && record.data.length > 0) {
 			return { ...value, ...record.data[0] };
 		}
+
+		return value;
 	};
 
 	const metaObject = MetaObject.Meta[document];
@@ -698,12 +708,12 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 				if (field.isList === true) {
 					const values = isArray(value) ? value : [value];
 					const detailValues = await BluebirdPromise.mapSeries(values, async item => {
-						const detailValue = await getDetailFieldsValue(field, item, value);
+						const detailValue = await getDetailFieldsValue(field, item);
 						return detailValue;
 					});
 					acc[fieldName] = detailValues;
 				} else {
-					const detailValue = await getDetailFieldsValue(field, value, record);
+					const detailValue = await getDetailFieldsValue(field, value);
 					acc[fieldName] = detailValue;
 				}
 			} else {
