@@ -1,7 +1,15 @@
-import moment from 'moment';
-import isDate from 'lodash/isDate';
 import { Workbook } from 'excel4node';
-export function xlsExport(headers, data, name, reply) {
+import isDate from 'lodash/isDate';
+import moment from 'moment';
+
+/**
+ * 
+ * @param {string[]} headers 
+ * @param {object[]} data 
+ * @param {string} name 
+ * @returns {Promise<{ httpHeaders: object, content: Buffer }>}
+ */
+export async function xlsExport(headers, data, name) {
     let header, index;
     const wb = new Workbook();
     wb.debug = false;
@@ -58,5 +66,10 @@ export function xlsExport(headers, data, name, reply) {
         ws.column(index + 1).setWidth(widths[index]);
     }
 
-    return wb.write(`${name}.xlsx`, reply);
+    const httpHeaders = {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename=${name}.xlsx`,
+    };
+
+    return { httpHeaders, content: await wb.writeToBuffer() };
 }
