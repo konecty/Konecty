@@ -19,6 +19,11 @@ const dneApi: FastifyPluginCallback = (fastify, _, done) => {
 		reply.send(result);
 	});
 
+	fastify.get<{ Params: { state: string; city: string; district: string; place: string } }>('/rest/dne/BRA/:state/:city/:district/:place', async function (req, reply) {
+		const result = await DNE_Place_List(req.params.state, req.params.city, req.params.district, req.params.place);
+		reply.send(result);
+	});
+
 	fastify.get<{ Params: { state: string; city: string; district: string; place: string; number?: string } }>(
 		'/rest/dne/BRA/:state/:city/:district/:place/:number',
 		async function (req, reply) {
