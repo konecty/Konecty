@@ -6,11 +6,11 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
 const healthApi: FastifyPluginCallback = (fastify, opts, done) => {
-	fastify.get('/readiness', (_, reply) => {
+	fastify.get('/readiness', { logLevel: 'silent' }, (_, reply) => {
 		reply.send('OK');
 	});
 
-	fastify.get('/liveness', async (_, reply) => {
+	fastify.get('/liveness', { logLevel: 'silent' }, async (_, reply) => {
 		try {
 			await MetaObject.MetaObject.findOne({ _id: 'Namespace' } as any);
 			reply.send('OK');
