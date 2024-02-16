@@ -1,20 +1,20 @@
 import BluebirdPromise from 'bluebird';
-import { createContext, runInContext } from 'node:vm';
-import momentzone from 'moment-timezone';
 import moment from 'moment';
+import momentzone from 'moment-timezone';
+import { createContext, runInContext } from 'node:vm';
 import request from 'request';
 
+import get from 'lodash/get';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
-import get from 'lodash/get';
 
 import { MetaObject } from '@imports/model/MetaObject';
-import { populateLookupsData } from '../data/populateLookupsData';
 import { stringToDate } from '../data/dateParser';
-import { successReturn, errorReturn } from '../utils/return';
 import { parseDynamicData } from '../data/filterUtils';
-import { find } from './data';
+import { populateLookupsData } from '../data/populateLookupsData';
 import { logger } from '../utils/logger';
+import { errorReturn, successReturn } from '../utils/return';
+import { find } from './data';
 
 export async function runScriptBeforeValidation({ script, data, user, meta, extraData }) {
 	try {
@@ -126,7 +126,7 @@ export async function runScriptAfterSave({ script, data, user, extraData = {} })
 			data,
 			user,
 			console,
-			Collections: MetaObject.Collections,
+			Models: MetaObject.Collections,
 			extraData,
 			moment,
 			momentzone,
@@ -134,7 +134,7 @@ export async function runScriptAfterSave({ script, data, user, extraData = {} })
 		};
 
 		const sandbox = createContext(contextData);
-		const scriptToRun = `result = (function(data, user, console, MetaObject.Collections, extraData) { ${script} })(data, user, console, MetaObject.Collections, extraData);`;
+		const scriptToRun = `result = (function(data, user, console, Models, extraData) { ${script} })(data, user, console, Models, extraData);`;
 		await runInContext(scriptToRun, sandbox);
 
 		if (sandbox.result != null && isObject(sandbox.result)) {
