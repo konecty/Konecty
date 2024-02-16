@@ -33,6 +33,7 @@ import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } 
 import { parseSortArray } from './sortUtils';
 
 import { getUserSafe } from '@imports/auth/getUser';
+import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
 import { DEFAULT_PAGE_SIZE } from '../consts';
 import { dateToString, stringToDate } from '../data/dateParser';
@@ -144,10 +145,13 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
+		/**
+		 * @type {import('mongodb').FindOptions}
+		 */
 		const queryOptions = {
 			limit: parseInt(limit, 10),
 			skip: parseInt(start ?? 0, 10),
-			allowDiskUse: true,
+			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),
 		};
 
 		if (_isNaN(queryOptions.limit) || queryOptions.limit == null) {
