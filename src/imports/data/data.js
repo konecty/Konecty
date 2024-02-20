@@ -1584,7 +1584,10 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
 				for await (const record of updatedRecords) {
-					const changedProps = objectsDiff(existsRecords.find(r => r._id === record._id), record);
+					const original = existsRecords.find(r => r._id === record._id);
+					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
+
+					const changedProps = objectsDiff(original, newRecord);
 					await processIncomingChange(document, record, 'update', user, changedProps);
 				}
 			} catch (e) {
