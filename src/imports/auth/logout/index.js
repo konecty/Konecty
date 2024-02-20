@@ -1,4 +1,4 @@
-import { getUser, getHashedToken } from '@imports/auth/getUser';
+import { getHashedToken, getUser } from '@imports/auth/getUser';
 import { cleanupSessions } from '@imports/auth/login';
 import { MetaObject } from '../../model/MetaObject';
 
@@ -18,7 +18,7 @@ export async function logout(authTokenId) {
 
 		return { success: true };
 	} catch (error) {
-		if (/^[get-user]/.test(error.message)) {
+		if (/^\[get-user\]/.test(error.message)) {
 			return { success: false, errors: [{ message: 'User not found' }] };
 		}
 		throw error;
