@@ -625,7 +625,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return acc;
 				}, {});
 
-				value.full = keys
+				value.full = value.full ?? keys
 					.map(key => value[key] ?? '')
 					.filter(v => v.length > 0)
 					.join(' ');
