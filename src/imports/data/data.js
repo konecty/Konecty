@@ -35,6 +35,7 @@ import { parseSortArray } from './sortUtils';
 import { getUserSafe } from '@imports/auth/getUser';
 import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
+import objectsDiff from "@imports/utils/objectsDiff";
 import { DEFAULT_PAGE_SIZE } from '../consts';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -1168,7 +1169,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		if (resultRecord != null) {
 			if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 				try {
-					await processIncomingChange(document, resultRecord, 'create', user);
+					await processIncomingChange(document, resultRecord, 'create', user, resultRecord);
 				} catch (e) {
 					logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 				}
@@ -1583,7 +1584,8 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
 				for await (const record of updatedRecords) {
-					await processIncomingChange(document, record, 'update', user);
+					const changedProps = objectsDiff(existsRecords.find(r => r._id === record._id), record);
+					await processIncomingChange(document, record, 'update', user, changedProps);
 				}
 			} catch (e) {
 				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
