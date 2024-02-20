@@ -3,6 +3,8 @@ import cookie from '@fastify/cookie';
 import Fastify from 'fastify';
 
 import cors, { FastifyCorsOptions } from '@fastify/cors';
+import proxy from '@fastify/http-proxy';
+
 import { logger } from '@imports/utils/logger';
 import documentApi from './api/document';
 import formApi from './api/form';
@@ -59,7 +61,14 @@ fastify.register(file2Api);
 fastify.register(menuApi);
 fastify.register(processApi);
 fastify.register(rocketchatApi);
-fastify.register(viewPaths);
+if (process.env.UI_PROXY === 'true') {
+	fastify.register(proxy, {
+		upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
+		httpMethods: ['GET'],
+	});
+} else {
+	fastify.register(viewPaths);
+}
 fastify.register(healthApi);
 
 export async function serverStart() {
