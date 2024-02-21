@@ -940,7 +940,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	});
 
-	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.entries(metaObject.fields), async ([key]) => {
+	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async (key) => {
 		const value = cleanedData[key];
 		const result = await validateAndProcessValueFor({
 			meta: metaObject,
