@@ -179,7 +179,7 @@ export function validateOperator(condition, field, subTermPart) {
 	return successReturn();
 }
 
-export function parseFilterCondition(condition, metaObject, req, invert) {
+export function parseFilterCondition(condition, metaObject, { user }, invert) {
 	if (!isString(condition.term) || validOperators.indexOf(condition.operator) === -1 || !has(condition, 'value')) {
 		logger.error('All conditions must contain term, operator and value');
 		return errorReturn('All conditions must contain term, operator and value');
@@ -214,7 +214,7 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 		return operatorResult;
 	}
 
-	const conditionValueResult = parseConditionValue(condition, field, req, subTermPart);
+	const conditionValueResult = parseConditionValue(condition, field, { user }, subTermPart);
 	if (conditionValueResult.success === false) {
 		return conditionValueResult;
 	}
@@ -342,16 +342,16 @@ export function parseFilterCondition(condition, metaObject, req, invert) {
 	return successReturn(queryCondition);
 }
 
-export function parseFilterObject(filter, metaObject, data) {
+export function parseFilterObject(filter, metaObject, { user } = {}) {
 	const query = [];
 
 	if (isArray(filter.filters) && filter.filters.length > 0) {
-		const filters = filter.filters.map(subFilter => parseFilterObject(subFilter, metaObject, data));
+		const filters = filter.filters.map(subFilter => parseFilterObject(subFilter, metaObject, { user }));
 		query.push(...filters);
 	}
 
 	if (isArray(filter.conditions) && filter.conditions.length > 0) {
-		const conditions = filter.conditions.filter(({ disabled = false }) => disabled !== true).map(condition => parseFilterCondition(condition, metaObject, data));
+		const conditions = filter.conditions.filter(({ disabled = false }) => disabled !== true).map(condition => parseFilterCondition(condition, metaObject, { user }));
 
 		if (conditions.some(({ success }) => success === false)) {
 			return conditions.find(({ success }) => success === false);
@@ -361,7 +361,7 @@ export function parseFilterObject(filter, metaObject, data) {
 	} else if (isObject(filter.conditions) && Object.keys(filter.conditions).length > 0) {
 		const objectConditions = Object.entries(filter.conditions)
 			.filter(([, { disabled = false }]) => disabled !== true)
-			.map(([, condition]) => parseFilterCondition(condition, metaObject, data));
+			.map(([, condition]) => parseFilterCondition(condition, metaObject, { user }));
 
 		if (objectConditions.some(({ success }) => success === false)) {
 			return objectConditions.find(({ success }) => success === false);
