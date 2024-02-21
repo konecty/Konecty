@@ -5,7 +5,6 @@ import * as References from './updateReferences';
 
 import { DataDocument } from '@imports/types/data';
 import omit from 'lodash/omit';
-import { v4 as uuidV4 } from 'uuid';
 
 type Action = 'create' | 'update' | 'delete';
 
@@ -14,11 +13,9 @@ const logTimeSpent = (startTime: [number, number], message: string) => {
 	logger.debug(`${totalTime[0]}s ${totalTime[1] / 1000000}ms => ${message}`);
 };
 
-export default async function processIncomingChange(metaName: string, incomingChange: DataDocument, action: Action, user: object) {
+export default async function processIncomingChange(metaName: string, incomingChange: DataDocument, action: Action, user: object, changedProps: Record<string, any>) {
 	try {
 		const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
-		const changeId = uuidV4();
-
 		let startTime = process.hrtime();
 
 		if (action === 'update') {
@@ -32,7 +29,7 @@ export default async function processIncomingChange(metaName: string, incomingCh
 		await References.updateRelations(metaName, action, incomingChange._id, incomingChange);
 		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
 
-		await createHistory(metaName, action, incomingChange._id, omit(incomingChange, keysToIgnore), user, new Date(), changeId);
+		await createHistory(metaName, action, incomingChange._id, omit(incomingChange, keysToIgnore), user, new Date(), changedProps);
 		logTimeSpent(startTime, `Created history for ${metaName}`);
 	} catch (err) {
 		const error = err as Error;
