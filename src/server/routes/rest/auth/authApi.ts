@@ -1,22 +1,22 @@
-import { FastifyPluginCallback } from 'fastify';
 import formbody from '@fastify/formbody';
+import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 
 import { StatusCodes } from 'http-status-codes';
 
-import isString from 'lodash/isString';
 import get from 'lodash/get';
 import has from 'lodash/has';
+import isString from 'lodash/isString';
 
-import { MetaObject } from '@imports/model/MetaObject';
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
-import { login } from '@imports/auth/login';
-import { logout } from '@imports/auth/logout';
 import { saveGeoLocation } from '@imports/auth/geolocation';
 import { userInfo } from '@imports/auth/info';
-import { setPassword, resetPassword } from '@imports/auth/password';
+import { login } from '@imports/auth/login';
+import { logout } from '@imports/auth/logout';
+import { resetPassword, setPassword } from '@imports/auth/password';
 import { setRandomPasswordAndSendByEmail } from '@imports/auth/password/email';
+import { MetaObject } from '@imports/model/MetaObject';
 import { KonectyResult } from '@imports/types/result';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 function getDomain(host: string | undefined) {
 	if (host == null || /^localhost/.test(host)) {
@@ -107,12 +107,8 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			const authTokenId = getAuthTokenIdFromReq(req);
 			const result = await logout(authTokenId);
 
-			if (result.success === true) {
-				reply.header('set-cookie', `_authTokenId=; Version=1; Path=/; Max-Age=0`);
-				return reply.send(result as KonectyResult);
-			} else {
-				return reply.status(StatusCodes.UNAUTHORIZED).send(result as KonectyResult);
-			}
+			reply.header('set-cookie', `_authTokenId=; Version=1; Path=/; Max-Age=0`);
+			return reply.send(result as KonectyResult);
 		} catch (error) {
 			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ success: false, errors: [{ message: (error as Error).message }] });
 		}
