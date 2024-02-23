@@ -743,10 +743,6 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 	return result;
 }
 
-/* Create a new record
-	@param {Object} payload
-*/
-
 /**
  * @param {Object} payload
  * @param {string} payload.authTokenId
@@ -1230,15 +1226,19 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	return errorReturn(`[${document}] Error on insert, there is no affected record`);
 }
 
-/* Update records
-	@param authTokenId
-	@param document
-	@param data
+/**
+ * @param {Object} payload
+ * @param {string} payload.authTokenId
+ * @param {string} payload.document
+ * @param {Object} payload.data
+ * @param {import('../model/User').User} [payload.contextUser]
+ * @param {import('@opentelemetry/api').Span} [payload.tracingSpan]
+ * @returns {Promise<import('../types/result').KonectyResult<object>>} - Konecty result
+ */
+export async function update({ authTokenId, document, data, contextUser, tracingSpan }) {
+	tracingSpan?.setAttribute({ document });
 
-	@TODO Faltam código de erros
-*/
-
-export async function update({ authTokenId, document, data, contextUser }) {
+	tracingSpan?.addEvent('Get User', { authTokenId, contextUser: contextUser?._id });
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
@@ -1293,6 +1293,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		return errorReturn(`[${document}] Each id must contain an string field named _id an date field named _updatedAt`);
 	}
 
+	tracingSpan?.addEvent("Calculating update permissions");
 	const fieldPermissionResult = Object.keys(data.data).map(fieldName => {
 		const accessField = getFieldPermissions(access, fieldName);
 		if (accessField.isUpdatable !== true) {
@@ -1319,6 +1320,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		}
 	}
 
+	tracingSpan?.addEvent("Processing login");
 	const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
 	if (processLoginResult.success === false) {
 		return processLoginResult;
@@ -1345,6 +1347,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		set(filter, 'conditions', fieldFilterConditions);
 	}
 
+	tracingSpan?.addEvent("Parsing filter");
 	const updateFilterResult = parseFilterObject(filter, metaObject, { user });
 
 	const query = Object.assign({ _id: { $in: [] } }, updateFilterResult);
@@ -1363,6 +1366,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		});
 	}
 
+	tracingSpan?.addEvent("Finding records to update", { query, options });
 	const existsRecords = await collection.find(query, options).toArray();
 
 	// Validate if user have permission to update each record that he are trying
@@ -1408,6 +1412,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 
 			const historyCollection = MetaObject.Collections[`${document}.History`];
 
+			tracingSpan?.addEvent("Finding out of date records", { outOfDateQuery });
 			const outOfDateRecords = await historyCollection.find(outOfDateQuery).toArray();
 
 			if (outOfDateRecords.length > 0) {
@@ -1436,6 +1441,8 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		const bodyData = {};
 
 		if (metaObject.scriptBeforeValidation != null) {
+			tracingSpan?.addEvent("Validate&ProcessValueFor lookups");
+
 			const lookupValues = {};
 			const validateLookupsResults = await BluebirdPromise.mapSeries(
 				Object.keys(data.data).filter(key => metaObject.fields[key]?.type === 'lookup'),
@@ -1467,6 +1474,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 				);
 			}
 
+			tracingSpan?.addEvent("Running scriptBeforeValidation");
 			const extraData = {
 				original: first(existsRecords),
 				request: data.data,
@@ -1492,6 +1500,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 			}
 		}
 
+		tracingSpan?.addEvent("Validate&ProcessValueFor all fields");
 		const validateResult = await BluebirdPromise.mapSeries(Object.keys(data.data), async fieldName => {
 			if (bodyData[fieldName] == null) {
 				const result = await validateAndProcessValueFor({
@@ -1522,6 +1531,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		}
 
 		if (metaObject.validationScript != null) {
+			tracingSpan?.addEvent("Running validation script");
 			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, data: bodyData, fullData: extend({}, record, data.data), user });
 			if (validationScriptResult.success === false) {
 				logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
@@ -1558,10 +1568,14 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		};
 
 		try {
+			tracingSpan?.addEvent("Updating record", { filter, updateOperation });
 			await collection.updateOne(filter, updateOperation, { writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } });
 			return successReturn(record._id);
 		} catch (e) {
 			logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
+			tracingSpan?.addEvent("Error on update", { error: e.message });
+			tracingSpan?.setAttribute({ error: e.message });
+
 			if (e.code === 11000) {
 				return errorReturn(`[${document}] Duplicate key error`);
 			}
@@ -1593,6 +1607,7 @@ export async function update({ authTokenId, document, data, contextUser }) {
 			};
 
 			const urls = [].concat(MetaObject.Namespace.onUpdate);
+			tracingSpan?.addEvent("Running onUpdate hooks", { urls });
 
 			await BluebirdPromise.mapSeries(urls, async url => {
 				try {
@@ -1627,11 +1642,13 @@ export async function update({ authTokenId, document, data, contextUser }) {
 		const updatedRecords = await collection.find(updatedQuery).toArray();
 
 		if (metaObject.scriptAfterSave != null) {
+			tracingSpan?.addEvent("Running scriptAfterSave");
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 		}
 
 		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
+				tracingSpan?.addEvent("Processing sync Konsistent");
 				for await (const record of updatedRecords) {
 					const original = existsRecords.find(r => r._id === record._id);
 					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
@@ -1641,12 +1658,15 @@ export async function update({ authTokenId, document, data, contextUser }) {
 				}
 			} catch (e) {
 				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+				tracingSpan?.addEvent("Error on Konsistent", { error: e.message });
 			}
 		}
 
 		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record)).map(record => dateToString(record));
 
 		if (emailsToSend.length > 0) {
+			tracingSpan?.addEvent("Sending emails");
+
 			const messagesCollection = MetaObject.Collections['Message'];
 			const now = DateTime.local().toJSDate();
 			await messagesCollection.insertMany(

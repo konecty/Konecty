@@ -36,7 +36,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		}
 
 		const { tracer } = req.openTelemetry();
-		const tracingSpan = tracer.startSpan('find');
+		const tracingSpan = tracer.startSpan('GET find');
 
 		const result = await find({
 			authTokenId: getAuthTokenIdFromReq(req),
@@ -138,7 +138,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 	fastify.post<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
 		const { tracer } = req.openTelemetry();
-		const tracingSpan = tracer.startSpan('find');
+		const tracingSpan = tracer.startSpan('POST create');
 
 		const result = await create({
 			authTokenId: getAuthTokenIdFromReq(req),
@@ -152,12 +152,17 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	});
 
 	fastify.put<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('PUT update');
+
 		const result = await update({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
+			tracingSpan,
 		} as any);
 
+		tracingSpan.end();
 		reply.send(result);
 	});
 
