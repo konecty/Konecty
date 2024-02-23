@@ -35,6 +35,9 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			req.query.filter = JSON.parse(req.query.filter.replace(/\+/g, ' '));
 		}
 
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('GET find');
+
 		const result = await find({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -47,7 +50,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			start: req.query.start,
 			withDetailFields: req.query.withDetailFields,
 			getTotal: true,
+			tracingSpan,
 		} as any);
+
+		tracingSpan.end();
 		reply.send(result);
 	});
 
@@ -131,22 +137,32 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	);
 
 	fastify.post<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('POST create');
+
 		const result = await create({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
+			tracingSpan,
 		} as any);
 
+		tracingSpan.end();
 		reply.send(result);
 	});
 
 	fastify.put<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('PUT update');
+
 		const result = await update({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
+			tracingSpan,
 		} as any);
 
+		tracingSpan.end();
 		reply.send(result);
 	});
 
@@ -206,8 +222,12 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			start?: number;
 		};
 	}>('/rest/data/:document/list/:listName/:type', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('GET export');
+
 		const authTokenId = getAuthTokenIdFromReq(req);
 		const userResult = await getUserSafe(authTokenId);
+		tracingSpan.setAttribute('authTokenId', authTokenId ?? 'undefined');
 
 		if (userResult.success === false) {
 			return userResult;
@@ -215,6 +235,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		const user = userResult.data;
 		const { document, listName, type } = req.params;
+		tracingSpan.setAttributes(req.params);
 
 		const access = getAccessFor(document, user);
 		if (access === false || access.isReadable !== true) {
@@ -237,12 +258,14 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			displayType: req.query.displayType,
 			limit: req.query.limit,
 			start: req.query.start,
+			tracingSpan,
 		});
 
 		if (result.success === false) {
 			return result;
 		}
 
+		tracingSpan.addEvent('Setting headers', result.data.httpHeaders);
 		for (const [header, value] of Object.entries(result.data.httpHeaders)) {
 			reply.header(header, value);
 		}

@@ -3,12 +3,11 @@ import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 
+import { Span } from '@opentelemetry/api';
 import { flatten } from 'flat';
 
-import { MetaObject } from '@imports/model/MetaObject';
-
 import { find } from '@imports/data/data';
-
+import { MetaObject } from '@imports/model/MetaObject';
 import { errorReturn, successReturn } from '@imports/utils/return';
 
 import { csvExport } from '@imports/exports/csvExport';
@@ -31,6 +30,8 @@ type ExportDataParams = {
 	fields?: string;
 	limit?: number;
 	start?: number;
+
+	tracingSpan?: Span;
 };
 
 type ExportDataResponse = {
@@ -38,7 +39,7 @@ type ExportDataResponse = {
 	content: string | Buffer;
 };
 
-export default async function exportData({ document, listName, type = 'csv', user, ...query }: ExportDataParams): Promise<KonectyResult<ExportDataResponse>> {
+export default async function exportData({ document, listName, type = 'csv', user, tracingSpan, ...query }: ExportDataParams): Promise<KonectyResult<ExportDataResponse>> {
 	const listMeta = (await MetaObject.MetaObject.findOne({
 		type: 'list',
 		document,
@@ -73,6 +74,7 @@ export default async function exportData({ document, listName, type = 'csv', use
 	};
 
 	const name = getLabel();
+	tracingSpan?.setAttribute('name', name);
 
 	if (isString(query.filter) === false && isObject(listMeta.filter)) {
 		query.filter = JSON.stringify(listMeta.filter);
@@ -99,6 +101,7 @@ export default async function exportData({ document, listName, type = 'csv', use
 
 	const filter = isString(query.filter) ? JSON.parse(query.filter) : undefined;
 
+	tracingSpan?.addEvent('Executing find');
 	const result = await find({
 		contextUser: user,
 		document,
@@ -111,12 +114,14 @@ export default async function exportData({ document, listName, type = 'csv', use
 		start: query.start,
 		withDetailFields: 'true',
 		getTotal: true,
+		tracingSpan,
 	});
 
 	if (result == null || result.success === false) {
 		return result;
 	}
 
+	tracingSpan?.addEvent('Flattening data');
 	const dataResult = result.data.reduce(
 		(acc: { flatData: object[]; keys: Record<string, number> }, item) => {
 			const flatItem = flatten<object, object>(item);
