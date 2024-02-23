@@ -35,6 +35,9 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			req.query.filter = JSON.parse(req.query.filter.replace(/\+/g, ' '));
 		}
 
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('find');
+
 		const result = await find({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
@@ -47,7 +50,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			start: req.query.start,
 			withDetailFields: req.query.withDetailFields,
 			getTotal: true,
+			tracingSpan,
 		} as any);
+
+		tracingSpan.end();
 		reply.send(result);
 	});
 
@@ -131,12 +137,17 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	);
 
 	fastify.post<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('find');
+
 		const result = await create({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
+			tracingSpan,
 		} as any);
 
+		tracingSpan.end();
 		reply.send(result);
 	});
 
