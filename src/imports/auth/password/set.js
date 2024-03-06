@@ -1,11 +1,11 @@
-import crypto from 'crypto';
 import { hash as bcryptHash } from 'bcryptjs';
+import crypto from 'crypto';
 
-import { getAccessFor } from '../../utils/accessUtils';
 import { getUser } from '@imports/auth/getUser';
 import { MetaObject } from '../../model/MetaObject';
+import { getAccessFor } from '../../utils/accessUtils';
 
-import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH, BCRYPT_SALT_ROUNDS } from '../../consts';
+import { BCRYPT_SALT_ROUNDS, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../../consts';
 
 export async function setPassword({ authTokenId, userId, password }) {
 	try {
@@ -65,7 +65,7 @@ export async function setPassword({ authTokenId, userId, password }) {
 				'services.password.reset': true,
 				'services.resume.loginTokens': true,
 			},
-			$set: { 'services.password.bcryptjs': hashPassword },
+			$set: { 'services.password.bcrypt': hashPassword },
 		};
 
 		await MetaObject.Collections.User.updateOne({ _id: userRecord._id }, update);
