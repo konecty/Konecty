@@ -18,7 +18,7 @@ const app = async () => {
 		}
 
 		if (/true|1|enabled/i.test(process.env.DISABLE_KONSISTENT ?? '')) {
-			logger.warn('[konsistent] Konsistent is disabled');
+			logger.warn(`[konsistent] === ${db.databaseName} === Konsistent is disabled`);
 		} else {
 			logger.info(`[konsistent]  === ${db.databaseName} === Starting up`);
 

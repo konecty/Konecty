@@ -1454,6 +1454,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						actionType: 'update',
 						objectOriginalValues: record,
 						objectNewValues: data.data,
+						idsToUpdate: query._id.$in,
 					});
 					if (lookupValidateResult.success === false) {
 						return lookupValidateResult;
@@ -1510,6 +1511,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					actionType: 'update',
 					objectOriginalValues: record,
 					objectNewValues: data.data,
+					idsToUpdate: query._id.$in,
 				});
 				if (result.success === false) {
 					return result;
@@ -1648,6 +1650,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
+				logger.debug("Processing Konsistent");
 				tracingSpan?.addEvent("Processing sync Konsistent");
 				for await (const record of updatedRecords) {
 					const original = existsRecords.find(r => r._id === record._id);
