@@ -19,7 +19,7 @@ export default async function processIncomingChange(metaName: string, incomingCh
 		let startTime = process.hrtime();
 
 		if (action === 'update') {
-			await References.updateLookups(metaName, incomingChange._id, incomingChange);
+			await References.updateLookups(metaName, incomingChange._id, changedProps);
 			logTimeSpent(startTime, `Updated lookup references for ${metaName}`);
 		}
 

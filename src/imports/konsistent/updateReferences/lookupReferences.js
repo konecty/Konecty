@@ -80,6 +80,8 @@ export default async function updateLookupReferences(metaName, id, data) {
         return logger.error(`Can't find record ${id} from ${metaName}`);
     }
 
+    logger.debug(`Updating references for ${metaName} - ${Object.keys(referencesToUpdate).join(", ")}`);
+
     // Iterate over relations to process and iterate over each related field to execute a method to update relations
     await BluebirdPromise.mapSeries(Object.keys(referencesToUpdate), async referenceDocumentName => {
         fields = referencesToUpdate[referenceDocumentName];
