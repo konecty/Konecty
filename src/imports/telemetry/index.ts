@@ -8,7 +8,7 @@ import { Resource } from '@opentelemetry/resources';
 import { ConsoleMetricExporter, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 import { logger } from '../utils/logger';
 
@@ -41,8 +41,8 @@ export default async function initializeInstrumentation() {
 	};
 	const sdk = new NodeSDK({
 		resource: new Resource({
-			[SemanticResourceAttributes.SERVICE_NAME]: OTEL_SERVICE_NAME,
-			[SemanticResourceAttributes.SERVICE_VERSION]: OTEL_SERVICE_VERSION,
+			[SEMRESATTRS_SERVICE_NAME]: OTEL_SERVICE_NAME,
+			[SEMRESATTRS_SERVICE_VERSION]: OTEL_SERVICE_VERSION,
 		}),
 		traceExporter: getTraceExporter(),
 		metricReader: getMetricExporter(),
