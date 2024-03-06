@@ -165,7 +165,7 @@
 		"string-width": "4.1.0"
 	},
 	"author": "Konecty",
-	"license": "ISC",
+	"license": "AGPL-3.0-only",
 	"bugs": {
 		"url": "https://github.com/Konecty/Konecty/issues"
 	},
