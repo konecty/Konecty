@@ -15,6 +15,7 @@ import { xlsExport } from '@imports/exports/xlsExport';
 import { List } from '@imports/model/List';
 import { User } from '@imports/model/User';
 import { KonectyResult } from '@imports/types/result';
+import { dateToString } from './dateParser';
 
 type ExportDataParams = {
 	document: string;
@@ -113,7 +114,8 @@ export default async function exportData({ document, listName, type = 'csv', use
 		limit: query.limit,
 		start: query.start,
 		withDetailFields: 'true',
-		getTotal: true,
+		getTotal: false,
+		transformDatesToString: false,
 		tracingSpan,
 	});
 
@@ -125,8 +127,9 @@ export default async function exportData({ document, listName, type = 'csv', use
 	const dataResult = result.data.reduce(
 		(acc: { flatData: object[]; keys: Record<string, number> }, item) => {
 			const flatItem = flatten<object, object>(item);
+			const transformed = dateToString<typeof flatItem>(flatItem, date => date.toFormat('dd/MM/yyyy HH:mm:ss'));
 
-			acc.flatData.push(flatItem);
+			acc.flatData.push(transformed);
 			Object.keys(flatItem as object).forEach(key => (acc.keys[key] = 1));
 
 			return acc;
