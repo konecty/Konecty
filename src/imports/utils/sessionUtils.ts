@@ -1,6 +1,6 @@
 import { FastifyRequest } from 'fastify';
 
-export function getAuthTokenIdFromReq(req: FastifyRequest): string | undefined | null {
+export function getAuthTokenIdFromReq(req: FastifyRequest): string | undefined {
 	if (req.headers['authorization'] != null) {
 		return req.headers['authorization'] as string;
 	}
@@ -13,5 +13,5 @@ export function getAuthTokenIdFromReq(req: FastifyRequest): string | undefined |
 		return req.cookies['_authTokenId'];
 	}
 
-	return null;
+	return undefined;
 }
