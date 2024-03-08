@@ -1,15 +1,16 @@
 import BluebirdPromise from 'bluebird';
 
-import isObject from 'lodash/isObject';
-import isArray from 'lodash/isArray';
 import get from 'lodash/get';
-import size from 'lodash/size';
-import map from 'lodash/map';
 import identity from 'lodash/identity';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
+import map from 'lodash/map';
+import size from 'lodash/size';
 
-import { getAccessFor } from '../../utils/accessUtils';
-import { MetaObject } from '../../model/MetaObject';
 import { getUserSafe } from '@imports/auth/getUser';
+import { isPlainObject } from 'lodash';
+import { MetaObject } from '../../model/MetaObject';
+import { getAccessFor } from '../../utils/accessUtils';
 import { errorReturn } from '../../utils/return';
 
 /* Get system menu
@@ -40,17 +41,10 @@ export async function menuFull({ authTokenId }) {
 	const metaObjectsToValidate = await MetaObject.MetaObject.find({ type: { $nin: ['namespace', 'access'] } }, { sort: { _id: 1 } }).toArray();
 
 	await BluebirdPromise.each(metaObjectsToValidate, async function (metaObject) {
-		let value;
 		metaObject.namespace = namespace.ns;
-
 		metaObject._id = metaObject.namespace + ':' + metaObject._id;
 
-		let access = undefined;
-		if (metaObject.document) {
-			access = getAccess(metaObject.document);
-		} else {
-			access = getAccess(metaObject.name);
-		}
+		const access = getAccess(metaObject.document ?? metaObject.name);
 
 		if (access === false && !['document', 'composite'].includes(metaObject.type)) {
 			return;
@@ -61,32 +55,17 @@ export async function menuFull({ authTokenId }) {
 			metaObject.access = metaObject.namespace + ':' + access._id;
 		}
 
-		const columns = [];
-
-		for (var key in metaObject.columns) {
-			value = metaObject.columns[key];
-			columns.push(value);
-		}
-
-		metaObject.columns = columns;
-
 		if (metaObject.oldVisuals) {
 			metaObject.visuals = metaObject.oldVisuals;
 			delete metaObject.oldVisuals;
 		}
 
+		metaObject.columns = metaObject.columns ? Object.values(metaObject.columns) : [];
+		metaObject.fields = metaObject.fields ? Object.values(metaObject.fields) : [];
+
 		if (metaObject.columns.length === 0) {
 			delete metaObject.columns;
 		}
-
-		const fields = [];
-
-		for (key in metaObject.fields) {
-			value = metaObject.fields[key];
-			fields.push(value);
-		}
-
-		metaObject.fields = fields;
 
 		if (metaObject.fields.length === 0) {
 			delete metaObject.fields;
@@ -96,6 +75,17 @@ export async function menuFull({ authTokenId }) {
 			for (let field of metaObject.fields) {
 				if (field.type === 'lookup' && size(get(field, 'inheritedFields')) > 0) {
 					field.type = 'inheritLookup';
+				}
+			}
+		}
+
+		if (metaObject.filter && isPlainObject(metaObject.filter.conditions)) {
+			for (const key in metaObject.filter.conditions) {
+				const item = metaObject.filter.conditions[key];
+
+				if (item?.value instanceof Date) {
+					item.value = { "$date": item.value.toISOString() };
+					metaObject.filter.conditions[key] = item;
 				}
 			}
 		}
