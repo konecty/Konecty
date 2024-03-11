@@ -292,7 +292,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 		if (withDetailFields === 'true') {
 			tracingSpan?.addEvent('Populating detail fields');
 			result.data = await BluebirdPromise.mapSeries(result.data, async record => {
-				const populatedRecord = await populateDetailFieldsInRecord({ record, document, authTokenId });
+				const populatedRecord = await populateDetailFieldsInRecord({ record, document, authTokenId, contextUser });
 				return populatedRecord;
 			});
 		}
@@ -318,14 +318,20 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 	}
 }
 
-/* Get a record by id
-	@param authTokenId
-	@param document
-	@param fields
-	@param dataId
-*/
-export async function findById({ authTokenId, document, fields, dataId, withDetailFields }) {
-	const { success, data: user, errors } = await getUserSafe(authTokenId);
+/**
+ * Get an document based on ID
+ * @param {object} payload
+ * @param {string} payload.document
+ * @param {string} payload.dataId
+ * @param {string} [payload.fields]
+ * @param {string} [payload.withDetailFields]
+ * @param {string} [payload.authTokenId]
+ * @param {import('../model/User').User} [payload.contextUser]
+ *  
+ * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
+ */
+export async function findById({ authTokenId, document, fields, dataId, withDetailFields, contextUser }) {
+	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
 	}
@@ -451,7 +457,7 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 		}, {});
 
 		if (withDetailFields === 'true') {
-			const populatedData = await populateDetailFieldsInRecord({ record: resultData, document, authTokenId });
+			const populatedData = await populateDetailFieldsInRecord({ record: resultData, document, authTokenId, contextUser });
 			return {
 				success: true,
 				data: [populatedData],
@@ -689,10 +695,11 @@ export async function findByLookup({ authTokenId, document, field, search, extra
 
 /* Receive a record and populate with detail fields
 	@param authTokenId
+	@param contextUser
 	@param document
 	@param record
 */
-export async function populateDetailFieldsInRecord({ record, document, authTokenId }) {
+export async function populateDetailFieldsInRecord({ record, document, authTokenId, contextUser }) {
 	if (record == null) {
 		return;
 	}
@@ -704,6 +711,7 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 
 		const record = await findById({
 			authTokenId,
+			contextUser,
 			document: field.document,
 			fields: field.detailFields.join(','),
 			dataId: value._id,
