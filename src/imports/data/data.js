@@ -81,12 +81,13 @@ export async function getNextUserFromQueue({ authTokenId, document, queueId, con
  * @param {boolean} [payload.getTotal=false]
  * @param {'true'} [payload.withDetailFields]
  * @param {import('../model/User').User} [payload.contextUser]
+ * @param {boolean} [payload.transformDatesToString=true]
  * @param {import('@opentelemetry/api').Span} [payload.tracingSpan]
  * 
  * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
  */
 
-export async function find({ authTokenId, document, displayName, displayType, fields, filter, sort, limit, start, getTotal, withDetailFields, contextUser, tracingSpan }) {
+export async function find({ authTokenId, document, displayName, displayType, fields, filter, sort, limit, start, getTotal, withDetailFields, contextUser, transformDatesToString = true, tracingSpan }) {
 	try {
 		tracingSpan?.setAttribute('document', document);
 
@@ -296,11 +297,13 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 			});
 		}
 
-		result.data = result.data.map(dateToString);
+		if (transformDatesToString) {
+			result.data = result.data.map(dateToString);
+		}
 
 		return result;
 	} catch (error) {
-		tracingSpan?.setAttributes("error", error.message);
+		tracingSpan?.setAttribute("error", error.message);
 		logger.error(error, `Error executing query: ${error.message}`);
 
 		return {

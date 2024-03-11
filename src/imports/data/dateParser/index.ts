@@ -1,24 +1,28 @@
 import { DateTime } from 'luxon';
 
-import isObject from 'lodash/isObject';
-import isFunction from 'lodash/isFunction';
-import reduce from 'lodash/reduce';
-import isDate from 'lodash/isDate';
 import isArray from 'lodash/isArray';
+import isDate from 'lodash/isDate';
+import isFunction from 'lodash/isFunction';
+import isObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
 import map from 'lodash/map';
+import reduce from 'lodash/reduce';
 
 type RecordObject = {
 	toHexString?: () => string;
 };
 
-export function dateToString(record: any): string | Array<any> | object {
+type TransformFn = (date: DateTime) => string;
+
+export function dateToString<ReturnT = string | Array<any> | object>(record: any, transformFn?: TransformFn): ReturnT {
 	if (isObject(record)) {
 		const typedRecord = record as RecordObject;
 
 		if (isFunction(typedRecord.toHexString)) {
-			return typedRecord.toHexString();
+			return typedRecord.toHexString() as ReturnT;
 		}
+
+		const transformToString = isFunction(transformFn) ? transformFn : (date: DateTime) => date.toISO();
 
 		return reduce(
 			typedRecord,
@@ -26,19 +30,19 @@ export function dateToString(record: any): string | Array<any> | object {
 				if (isDate(value)) {
 					return {
 						...acc,
-						[key]: DateTime.fromJSDate(value).toISO(),
+						[key]: transformToString(DateTime.fromJSDate(value)),
 					};
 				}
 				if (isArray(value)) {
 					return {
 						...acc,
-						[key]: map(value, dateToString),
+						[key]: map(value, v => dateToString(v, transformFn)),
 					};
 				}
 				if (isObject(value)) {
 					return {
 						...acc,
-						[key]: dateToString(value),
+						[key]: dateToString(value, transformFn),
 					};
 				}
 				return {
@@ -47,9 +51,9 @@ export function dateToString(record: any): string | Array<any> | object {
 				};
 			},
 			{},
-		);
+		) as ReturnT;
 	} else if (isArray(record)) {
-		return map(record, dateToString);
+		return map(record, v => dateToString(v, transformFn)) as ReturnT;
 	} else {
 		return record;
 	}
