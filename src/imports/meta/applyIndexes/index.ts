@@ -61,7 +61,7 @@ async function processIndexes(meta: MetaObjectType) {
 
 		const fields = getFieldsToIndex(field).reduce((acc, indexField) => ({ ...acc, [indexField]: 1 }), {});
 
-		logger.info(`Ensure Index at ${meta.collection}: ${fieldName}`);
+		logger.debug(`Ensure Index at ${meta.collection}: ${fieldName}`);
 		await tryEnsureIndex({
 			collection: MetaObject.Collections[meta.name],
 			fields,
@@ -101,7 +101,7 @@ async function processIndexes(meta: MetaObjectType) {
 				index.options.name = indexName;
 			}
 
-			logger.info(`Ensure Index at ${meta.collection}: ${index.options.name}`);
+			logger.debug(`Ensure Index at ${meta.collection}: ${index.options.name}`);
 			if (Object.keys(index.keys).length > 0) {
 				const keys = Object.entries(index.keys).reduce((acc, [key, direction]) => {
 					acc[key.replace(/:/g, '.')] = direction;
@@ -129,7 +129,7 @@ async function processIndexes(meta: MetaObjectType) {
 			weights: {},
 		};
 
-		logger.info(`Ensure Index at ${meta.collection}: ${options.name}`);
+		logger.debug(`Ensure Index at ${meta.collection}: ${options.name}`);
 
 		const keys = Object.entries(meta.indexText).reduce((acc, [key, weight]) => {
 			acc[key.replace(/:/g, '.')] = 'text';
