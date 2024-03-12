@@ -37,7 +37,7 @@ const fastify = Fastify({
 	logger,
 });
 
-initializeInstrumentation().then(fastify.register.bind(fastify));
+fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });
 
 fastify.register(cookie, {
 	secret: process.env.COOKIES_SECRET ?? 'konecty-secret',

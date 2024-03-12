@@ -1,27 +1,29 @@
-import { userInfo } from '.';
 import { getUser } from '@imports/auth/getUser';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
+import { userInfo } from '.';
 
 const mockGetUser = getUser as jest.Mock;
-jest.mock('@imports/auth/getUser', () => ({
-	...jest.requireActual('@imports/auth/getUser'),
-	getUser: jest.fn(),
-}));
+jest.mock('@imports/auth/getUser', () =>
+	Object.assign({}, jest.requireActual('@imports/auth/getUser'), {
+		getUser: jest.fn(),
+	}),
+);
 
-jest.mock('@imports/model/MetaObject', () => ({
-	...jest.requireActual('@imports/model/MetaObject'),
-	MetaObject: {
-		Namespace: {
-			ns: 'namespace',
-			logoURL: 'logoURL',
-			siteURL: 'siteURL',
-			title: 'title',
-			watermark: 'watermark',
-			addressComplementValidation: 'addressComplementValidation',
+jest.mock('@imports/model/MetaObject', () =>
+	Object.assign({}, jest.requireActual('@imports/model/MetaObject'), {
+		MetaObject: {
+			Namespace: {
+				ns: 'namespace',
+				logoURL: 'logoURL',
+				siteURL: 'siteURL',
+				title: 'title',
+				watermark: 'watermark',
+				addressComplementValidation: 'addressComplementValidation',
+			},
 		},
-	},
-}));
+	}),
+);
 
 describe('userInfo', () => {
 	it('should return user info', async () => {

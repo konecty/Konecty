@@ -17,7 +17,7 @@ const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME ?? 'konecty';
 const OTEL_SERVICE_VERSION = process.env.OTEL_SERVICE_VERSION ?? '1.0.0';
 
-export default async function initializeInstrumentation() {
+export default function initializeInstrumentation() {
 	const getTraceExporter = () => {
 		if (OTEL_URL != null) {
 			logger.info(`Using OTLP exporter with url: ${OTEL_URL}`);
