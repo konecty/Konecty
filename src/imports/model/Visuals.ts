@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
-const VisualSymlinkSchema = z.object({
-	type: z.literal('visualSymlink'),
-	fieldName: z.string(),
-});
+const VisualSymlinkSchema = z
+	.object({
+		type: z.literal('visualSymlink'),
+		fieldName: z.string(),
+	})
+	.catchall(z.any());
 
 type VisualSymlink = z.infer<typeof VisualSymlinkSchema>;
 

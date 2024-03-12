@@ -4,7 +4,7 @@ import fp from 'fastify-plugin';
 import { addUser, countInactive, defineUser, removeUser, replaceUser, removeInactive, setQueue } from '@imports/data/changeUser';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-const changeUserApi: FastifyPluginCallback = async (fastify, _, done) => {
+const changeUserApi: FastifyPluginCallback = async fastify => {
 	fastify.post<{ Params: { document: string }; Body: { ids: Array<unknown>; data: unknown } }>('/rest/changeUser/:document/add', async (req, reply) => {
 		const result = await addUser({
 			authTokenId: getAuthTokenIdFromReq(req),
@@ -89,8 +89,6 @@ const changeUserApi: FastifyPluginCallback = async (fastify, _, done) => {
 
 		reply.send(result);
 	});
-
-	done();
 };
 
 export default fp(changeUserApi);
