@@ -8,7 +8,7 @@ import { buildI18N } from '@imports/lib/buildI18N';
 import { getUserFromRequest } from '@imports/auth/getUser';
 import { logger } from '@imports/utils/logger';
 
-const translationApi: FastifyPluginCallback = async (fastify, _, done) => {
+const translationApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{ Params: { lang: string } }>('/api/translation/:lang', async (req, reply) => {
 		const lang = path.basename(req.params.lang, '.json') ?? 'en';
 

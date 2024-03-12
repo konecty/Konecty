@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@imports//auth/getUser';
 import { logger } from '@imports//utils/logger';
 import { mainMenu } from '@imports//menu/main';
 
-const mainMenuApi: FastifyPluginCallback = async (fastify, _, done) => {
+const mainMenuApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get('/api/menu/main', async (req, reply) => {
 		try {
 			const user = await getUserFromRequest(req);

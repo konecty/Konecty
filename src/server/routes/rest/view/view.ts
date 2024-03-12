@@ -28,7 +28,7 @@ const getEnv = () => {
 	return '';
 };
 
-export const viewPaths: FastifyPluginCallback = async (fastify, _, done) => {
+export const viewPaths: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get('/login', async function (_, reply) {
 		const loginTemplate = path.join(templatePath(), 'login/login.hbs');
 

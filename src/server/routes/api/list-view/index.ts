@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@imports/auth/getUser';
 import { logger } from '@imports/utils/logger';
 import { listView } from '@imports/list-view';
 
-const listViewApi: FastifyPluginCallback = async (fastify, _, done) => {
+const listViewApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{ Params: { document: string; id: string } }>('/api/list-view/:document/:id', async (req, reply) => {
 		if (req.originalUrl == null || req.params == null) {
 			return reply.status(404).send('Not found');

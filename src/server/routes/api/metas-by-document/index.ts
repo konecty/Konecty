@@ -5,7 +5,7 @@ import { logger } from '@imports/utils/logger';
 import { getMetasByDocument } from '@imports/metas-by-document';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-const metasByDocumentApi: FastifyPluginCallback = async (fastify, _, done) => {
+const metasByDocumentApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{ Params: { document: string } }>('/api/metas/:document', async (req, reply) => {
 		if (req.originalUrl == null || req.params == null) {
 			return reply.status(404).send('Not found');

@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@imports/auth/getUser';
 import { getDocument } from '@imports/document';
 import { logger } from '@imports/utils/logger';
 
-const documentAPi: FastifyPluginCallback = async (fastify, _, done) => {
+const documentAPi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{ Params: { name: string } }>('/api/document/:name', async (req, reply) => {
 		if (req.originalUrl == null || req.params == null) {
 			return reply.status(404).send('Not found');
