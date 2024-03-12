@@ -5,7 +5,6 @@ import Fastify from 'fastify';
 import cors, { FastifyCorsOptions } from '@fastify/cors';
 import proxy from '@fastify/http-proxy';
 
-import initializeInstrumentation from '@imports/telemetry';
 import { logger } from '@imports/utils/logger';
 
 import documentApi from './api/document';
@@ -37,7 +36,7 @@ const fastify = Fastify({
 	logger,
 });
 
-initializeInstrumentation().then(fastify.register.bind(fastify));
+//initializeInstrumentation().then(fastify.register.bind(fastify));
 
 fastify.register(cookie, {
 	secret: process.env.COOKIES_SECRET ?? 'konecty-secret',
