@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@imports//auth/getUser';
 import { logger } from '@imports//utils/logger';
 import { mainMenu } from '@imports//menu/main';
 
-const mainMenuApi: FastifyPluginCallback = (fastify, _, done) => {
+const mainMenuApi: FastifyPluginCallback = async fastify => {
 	fastify.get('/api/menu/main', async (req, reply) => {
 		try {
 			const user = await getUserFromRequest(req);
@@ -25,8 +25,6 @@ const mainMenuApi: FastifyPluginCallback = (fastify, _, done) => {
 			return reply.status(500).send('Internal server error');
 		}
 	});
-
-	done();
 };
 
 export default fp(mainMenuApi);

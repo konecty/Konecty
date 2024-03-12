@@ -5,7 +5,7 @@ import { getUserFromRequest } from '@imports/auth/getUser';
 import { logger } from '@imports/utils/logger';
 import { getDocumentForm } from '@imports/form';
 
-const formApi: FastifyPluginCallback = (fastify, _, done) => {
+const formApi: FastifyPluginCallback = async fastify => {
 	fastify.get<{ Params: { document: string; id: string } }>('/api/form/:document/:id', async (req, reply) => {
 		const document = req.params.document;
 		const id = req.params.id;
@@ -36,8 +36,6 @@ const formApi: FastifyPluginCallback = (fastify, _, done) => {
 			return reply.status(500).send('Internal server error');
 		}
 	});
-
-	done();
 };
 
 export default fp(formApi);

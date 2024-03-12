@@ -4,7 +4,7 @@ import fp from 'fastify-plugin';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { findComments, createComment } from '@imports/data/comments';
 
-const commentApi: FastifyPluginCallback = (fastify, _, done) => {
+const commentApi: FastifyPluginCallback = async fastify => {
 	fastify.get<{ Params: { document: string; dataId: string } }>('/rest/comment/:document/:dataId', async (req, reply) => {
 		const result = await findComments({
 			authTokenId: getAuthTokenIdFromReq(req),
@@ -25,8 +25,6 @@ const commentApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		return reply.send(result);
 	});
-
-	done();
 };
 
 export default fp(commentApi);

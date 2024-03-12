@@ -8,7 +8,7 @@ import { buildI18N } from '@imports/lib/buildI18N';
 import { getUserFromRequest } from '@imports/auth/getUser';
 import { logger } from '@imports/utils/logger';
 
-const translationApi: FastifyPluginCallback = (fastify, _, done) => {
+const translationApi: FastifyPluginCallback = async fastify => {
 	fastify.get<{ Params: { lang: string } }>('/api/translation/:lang', async (req, reply) => {
 		const lang = path.basename(req.params.lang, '.json') ?? 'en';
 
@@ -36,8 +36,6 @@ const translationApi: FastifyPluginCallback = (fastify, _, done) => {
 			return reply.status(500).send('Internal server error');
 		}
 	});
-
-	done();
 };
 
 export default fp(translationApi);

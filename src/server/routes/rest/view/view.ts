@@ -28,7 +28,7 @@ const getEnv = () => {
 	return '';
 };
 
-export const viewPaths: FastifyPluginCallback = (fastify, _, done) => {
+export const viewPaths: FastifyPluginCallback = async fastify => {
 	fastify.get('/login', async function (_, reply) {
 		const loginTemplate = path.join(templatePath(), 'login/login.hbs');
 
@@ -107,8 +107,6 @@ export const viewPaths: FastifyPluginCallback = (fastify, _, done) => {
 			logger.error(error, 'Error on GET /');
 		}
 	});
-
-	done();
 };
 
 export default fp(viewPaths);
