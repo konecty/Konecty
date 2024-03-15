@@ -107,6 +107,21 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			const authTokenId = getAuthTokenIdFromReq(req);
 			const result = await logout(authTokenId);
 
+			const origin = req.headers['origin'];
+
+			if (origin) {
+				const suffix = origin.match(/(\.dev|\.com)(\.br)?/g)?.[0];
+
+				const domainNoSuffix = origin
+					.replace(/https?:\/\//, '')
+					.replace(/:\d+/, '')
+					.replace(/(\.dev|\.com)(\.br)?/g, '')
+					.split('.')
+					.reverse()[0];
+
+				reply.header('set-cookie', `_authTokenId=; Domain=${domainNoSuffix}${suffix}; Version=1; Path=/; Max-Age=0`);
+			}
+
 			reply.header('set-cookie', `_authTokenId=; Version=1; Path=/; Max-Age=0`);
 			return reply.send(result as KonectyResult);
 		} catch (error) {
