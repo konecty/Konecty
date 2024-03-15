@@ -450,8 +450,11 @@ export function parseDynamicData(filter, keyword, data) {
  */
 export function clearProjectionPathCollision(projection) {
 	const fields = Object.entries(projection);
-	const cleaned = uniqBy(fields, field => field[0].split('.')[0]);
-	return fromPairs(cleaned);
+	const fieldsCleaned = uniqBy(fields, field => field[0].split('.')[0]);
+
+	const fieldsFiltered = fieldsCleaned.filter(([field]) => field != null && field.length > 0);
+
+	return fromPairs(fieldsFiltered);
 }
 
 export function filterConditionToFn(condition, metaObject, req) {

@@ -35,7 +35,7 @@ import { parseSortArray } from './sortUtils';
 import { getUserSafe } from '@imports/auth/getUser';
 import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
-import objectsDiff from "@imports/utils/objectsDiff";
+import objectsDiff from '@imports/utils/objectsDiff';
 import { DEFAULT_PAGE_SIZE } from '../consts';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -67,11 +67,11 @@ export async function getNextUserFromQueue({ authTokenId, document, queueId, con
 /**
  * Get a list of records
  * @param {Object} payload
- * 
+ *
  * @param {string} [payload.authTokenId]
  * @param {string} payload.document
  * @param {string | Object} payload.filter
- * 
+ *
  * @param {string} [payload.displayName]
  * @param {string} [payload.displayType]
  * @param {string} [payload.fields]
@@ -83,11 +83,26 @@ export async function getNextUserFromQueue({ authTokenId, document, queueId, con
  * @param {import('../model/User').User} [payload.contextUser]
  * @param {boolean} [payload.transformDatesToString=true]
  * @param {import('@opentelemetry/api').Span} [payload.tracingSpan]
- * 
+ *
  * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
  */
 
-export async function find({ authTokenId, document, displayName, displayType, fields, filter, sort, limit, start, getTotal, withDetailFields, contextUser, transformDatesToString = true, tracingSpan }) {
+export async function find({
+	authTokenId,
+	document,
+	displayName,
+	displayType,
+	fields,
+	filter,
+	sort,
+	limit,
+	start,
+	getTotal,
+	withDetailFields,
+	contextUser,
+	transformDatesToString = true,
+	tracingSpan,
+}) {
 	try {
 		tracingSpan?.setAttribute('document', document);
 
@@ -303,7 +318,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
 
 		return result;
 	} catch (error) {
-		tracingSpan?.setAttribute("error", error.message);
+		tracingSpan?.setAttribute('error', error.message);
 		logger.error(error, `Error executing query: ${error.message}`);
 
 		return {
@@ -327,7 +342,7 @@ export async function find({ authTokenId, document, displayName, displayType, fi
  * @param {string} [payload.withDetailFields]
  * @param {string} [payload.authTokenId]
  * @param {import('../model/User').User} [payload.contextUser]
- *  
+ *
  * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
  */
 export async function findById({ authTokenId, document, fields, dataId, withDetailFields, contextUser }) {
@@ -798,7 +813,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		return errorReturn(`[${document}] Data must have at least one field`);
 	}
 
-	tracingSpan?.addEvent("Calculating create permissions");
+	tracingSpan?.addEvent('Calculating create permissions');
 	const fieldPermissionResult = Object.keys(data).map(fieldName => {
 		const accessField = getFieldPermissions(access, fieldName);
 		if (accessField.isCreatable !== true) {
@@ -841,7 +856,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	}
 
-	tracingSpan?.addEvent("Processing login");
+	tracingSpan?.addEvent('Processing login');
 	const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
 	if (processLoginResult.success === false) {
 		return processLoginResult;
@@ -859,7 +874,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		cleanedData._user = { _id: user._id };
 
 		if (metaObject.name !== 'QueueUser' && isString(data?.queue?._id)) {
-			tracingSpan?.addEvent("Deriving _user from passed queue", { queueId: data.queue._id });
+			tracingSpan?.addEvent('Deriving _user from passed queue', { queueId: data.queue._id });
 
 			const userQueueResult = await getNextUserFromQueue({ document, queueId: data.queue._id, contextUser: user });
 			if (userQueueResult.success == false) {
@@ -873,7 +888,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	}
 
-	tracingSpan.addEvent("Validating _user");
+	tracingSpan.addEvent('Validating _user');
 	const validateUserResult = await validateAndProcessValueFor({
 		meta: metaObject,
 		fieldName: '_user',
@@ -893,7 +908,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 	const emailsToSend = [];
 
-	tracingSpan.addEvent("Validate&ProcessValueFor lookups");
+	tracingSpan.addEvent('Validate&ProcessValueFor lookups');
 	const validationResults = await BluebirdPromise.mapSeries(
 		Object.keys(metaObject.fields).filter(k => metaObject.fields[k]?.type === 'lookup'),
 		async key => {
@@ -929,7 +944,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	}
 
 	if (metaObject.scriptBeforeValidation != null) {
-		tracingSpan.addEvent("Running scriptBeforeValidation");
+		tracingSpan.addEvent('Running scriptBeforeValidation');
 		const scriptResult = await runScriptBeforeValidation({
 			script: metaObject.scriptBeforeValidation,
 			data: cleanedData,
@@ -980,8 +995,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	});
 
-	tracingSpan?.addEvent("Validate&processValueFor all fields");
-	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async (key) => {
+	tracingSpan?.addEvent('Validate&processValueFor all fields');
+	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
 		const value = cleanedData[key];
 		const result = await validateAndProcessValueFor({
 			meta: metaObject,
@@ -1010,7 +1025,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	}
 
 	if (metaObject.validationScript != null) {
-		tracingSpan?.addEvent("Running validation script");
+		tracingSpan?.addEvent('Running validation script');
 
 		const validation = await processValidationScript({ script: metaObject.validationScript, data, fullData: extend({}, data, cleanedData), user });
 		if (validation.success === false) {
@@ -1019,7 +1034,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	}
 
-	tracingSpan?.addEvent("Processing autoNumber");
+	tracingSpan?.addEvent('Processing autoNumber');
 	const autoNumberResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
 		const field = metaObject.fields[key];
 		if (field.type === 'autoNumber') {
@@ -1117,29 +1132,29 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					unset(updateOperation, '$setOnInsert');
 				}
 
-				tracingSpan?.addEvent("Upserting record");
+				tracingSpan?.addEvent('Upserting record');
 				const upsertResult = await collection.updateOne(stringToDate(upsert), stringToDate(updateOperation), {
 					upsert: true,
 					writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT },
 				});
 				if (upsertResult.upsertedId != null) {
 					set(insertedQuery, '_id', upsertResult.upsertedId);
-					tracingSpan?.addEvent("Record upserted", { upsertedId: upsertResult.upsertedId });
+					tracingSpan?.addEvent('Record upserted', { upsertedId: upsertResult.upsertedId });
 				} else if (upsertResult.modifiedCount > 0) {
 					const upsertedRecord = await collection.findOne(stringToDate(upsert));
 					if (upsertedRecord != null) {
 						set(insertedQuery, '_id', upsertedRecord._id);
-						tracingSpan?.addEvent("Record updated", { upsertedId: upsertedRecord._id });
+						tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
 					}
 				}
 			} else {
 				const insertResult = await collection.insertOne(stringToDate(newRecord));
 				set(insertedQuery, '_id', insertResult.insertedId);
-				tracingSpan?.addEvent("Record inserted", { insertedId: insertResult.insertedId });
+				tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
 			}
 		} catch (e) {
 			logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-			tracingSpan?.addEvent("Error on insert", { error: e.message });
+			tracingSpan?.addEvent('Error on insert', { error: e.message });
 			tracingSpan?.setAttribute({ error: e.message });
 
 			if (e.code === 11000) {
@@ -1149,7 +1164,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 
 		if (insertedQuery._id == null) {
-			tracingSpan?.setAttribute({ error: "InsertedQuery id is null" });
+			tracingSpan?.setAttribute({ error: 'InsertedQuery id is null' });
 			return errorReturn(`[${document}] Error on insert, there is no affected record`);
 		}
 
@@ -1165,7 +1180,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			};
 
 			const urls = [].concat(MetaObject.Namespace.onCreate);
-			tracingSpan?.addEvent("Running onCreate hooks", { urls });
+			tracingSpan?.addEvent('Running onCreate hooks', { urls });
 
 			await BluebirdPromise.mapSeries(urls, async url => {
 				try {
@@ -1196,7 +1211,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		const resultRecord = await collection.findOne(insertedQuery, { readConcern: { level: 'majority' } });
 
 		if (metaObject.scriptAfterSave != null) {
-			tracingSpan?.addEvent("Running scriptAfterSave");
+			tracingSpan?.addEvent('Running scriptAfterSave');
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [resultRecord], user });
 		}
 
@@ -1223,10 +1238,10 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		if (resultRecord != null) {
 			if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 				try {
-					tracingSpan?.addEvent("Processing sync Konsistent");
+					tracingSpan?.addEvent('Processing sync Konsistent');
 					await processIncomingChange(document, resultRecord, 'create', user, resultRecord);
 				} catch (e) {
-					tracingSpan?.addEvent("Error on Konsistent", { error: e.message });
+					tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 					logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 				}
 			}
@@ -1304,7 +1319,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		return errorReturn(`[${document}] Each id must contain an string field named _id an date field named _updatedAt`);
 	}
 
-	tracingSpan?.addEvent("Calculating update permissions");
+	tracingSpan?.addEvent('Calculating update permissions');
 	const fieldPermissionResult = Object.keys(data.data).map(fieldName => {
 		const accessField = getFieldPermissions(access, fieldName);
 		if (accessField.isUpdatable !== true) {
@@ -1331,7 +1346,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 	}
 
-	tracingSpan?.addEvent("Processing login");
+	tracingSpan?.addEvent('Processing login');
 	const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
 	if (processLoginResult.success === false) {
 		return processLoginResult;
@@ -1358,7 +1373,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		set(filter, 'conditions', fieldFilterConditions);
 	}
 
-	tracingSpan?.addEvent("Parsing filter");
+	tracingSpan?.addEvent('Parsing filter');
 	const updateFilterResult = parseFilterObject(filter, metaObject, { user });
 
 	const query = Object.assign({ _id: { $in: [] } }, updateFilterResult);
@@ -1377,7 +1392,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		});
 	}
 
-	tracingSpan?.addEvent("Finding records to update", { query, options });
+	tracingSpan?.addEvent('Finding records to update', { query, options });
 	const existsRecords = await collection.find(query, options).toArray();
 
 	// Validate if user have permission to update each record that he are trying
@@ -1423,7 +1438,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			const historyCollection = MetaObject.Collections[`${document}.History`];
 
-			tracingSpan?.addEvent("Finding out of date records", { outOfDateQuery });
+			tracingSpan?.addEvent('Finding out of date records', { outOfDateQuery });
 			const outOfDateRecords = await historyCollection.find(outOfDateQuery).toArray();
 
 			if (outOfDateRecords.length > 0) {
@@ -1431,7 +1446,8 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
+									record.createdBy.name
 								}`,
 							);
 						}
@@ -1452,7 +1468,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		const bodyData = {};
 
 		if (metaObject.scriptBeforeValidation != null) {
-			tracingSpan?.addEvent("Validate&ProcessValueFor lookups");
+			tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
 
 			const lookupValues = {};
 			const validateLookupsResults = await BluebirdPromise.mapSeries(
@@ -1486,7 +1502,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				);
 			}
 
-			tracingSpan?.addEvent("Running scriptBeforeValidation");
+			tracingSpan?.addEvent('Running scriptBeforeValidation');
 			const extraData = {
 				original: first(existsRecords),
 				request: data.data,
@@ -1512,7 +1528,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			}
 		}
 
-		tracingSpan?.addEvent("Validate&ProcessValueFor all fields");
+		tracingSpan?.addEvent('Validate&ProcessValueFor all fields');
 		const validateResult = await BluebirdPromise.mapSeries(Object.keys(data.data), async fieldName => {
 			if (bodyData[fieldName] == null) {
 				const result = await validateAndProcessValueFor({
@@ -1544,7 +1560,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 
 		if (metaObject.validationScript != null) {
-			tracingSpan?.addEvent("Running validation script");
+			tracingSpan?.addEvent('Running validation script');
 			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, data: bodyData, fullData: extend({}, record, data.data), user });
 			if (validationScriptResult.success === false) {
 				logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
@@ -1581,12 +1597,12 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		};
 
 		try {
-			tracingSpan?.addEvent("Updating record", { filter, updateOperation });
+			tracingSpan?.addEvent('Updating record', { filter, updateOperation });
 			await collection.updateOne(filter, updateOperation, { writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } });
 			return successReturn(record._id);
 		} catch (e) {
 			logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-			tracingSpan?.addEvent("Error on update", { error: e.message });
+			tracingSpan?.addEvent('Error on update', { error: e.message });
 			tracingSpan?.setAttribute({ error: e.message });
 
 			if (e.code === 11000) {
@@ -1620,7 +1636,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			};
 
 			const urls = [].concat(MetaObject.Namespace.onUpdate);
-			tracingSpan?.addEvent("Running onUpdate hooks", { urls });
+			tracingSpan?.addEvent('Running onUpdate hooks', { urls });
 
 			await BluebirdPromise.mapSeries(urls, async url => {
 				try {
@@ -1655,14 +1671,14 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		const updatedRecords = await collection.find(updatedQuery).toArray();
 
 		if (metaObject.scriptAfterSave != null) {
-			tracingSpan?.addEvent("Running scriptAfterSave");
+			tracingSpan?.addEvent('Running scriptAfterSave');
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 		}
 
 		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 			try {
-				logger.debug("Processing Konsistent");
-				tracingSpan?.addEvent("Processing sync Konsistent");
+				logger.debug('Processing Konsistent');
+				tracingSpan?.addEvent('Processing sync Konsistent');
 				for await (const record of updatedRecords) {
 					const original = existsRecords.find(r => r._id === record._id);
 					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
@@ -1672,14 +1688,14 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				}
 			} catch (e) {
 				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
-				tracingSpan?.addEvent("Error on Konsistent", { error: e.message });
+				tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 			}
 		}
 
 		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record)).map(record => dateToString(record));
 
 		if (emailsToSend.length > 0) {
-			tracingSpan?.addEvent("Sending emails");
+			tracingSpan?.addEvent('Sending emails');
 
 			const messagesCollection = MetaObject.Collections['Message'];
 			const now = DateTime.local().toJSDate();
