@@ -25,6 +25,10 @@ export default function initializeInstrumentation() {
 				url: OTEL_URL,
 			});
 		}
+		if (process.env.NODE_ENV === 'test') {
+			return undefined;
+		}
+
 		return new ConsoleSpanExporter();
 	};
 
@@ -34,6 +38,9 @@ export default function initializeInstrumentation() {
 			return new PrometheusExporter({
 				endpoint: PROMETHEUS_URL,
 			});
+		}
+		if (process.env.NODE_ENV === 'test') {
+			return undefined;
 		}
 		return new PeriodicExportingMetricReader({
 			exporter: new ConsoleMetricExporter(),

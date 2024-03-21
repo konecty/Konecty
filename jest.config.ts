@@ -25,7 +25,7 @@ const jestConfig: JestConfigWithTsJest = {
 	modulePaths: [compilerOptions.baseUrl],
 	moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/src' }),
 	watchPathIgnorePatterns: ['globalConfig'],
-	testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/build/'],
+	testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/build/', '/dist/'],
 };
 
 export default jestConfig;

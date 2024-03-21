@@ -41,7 +41,6 @@ describe('Update User', () => {
 					'Content-Type': 'application/json',
 				},
 			}).then(res => res.json())) as KonectyResponse;
-			console.log(data);
 
 			// Assert
 			expect(data.success).to.be.equal(true);
