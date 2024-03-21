@@ -24,6 +24,7 @@ import set from 'lodash/set';
 import size from 'lodash/size';
 import tail from 'lodash/tail';
 import unset from 'lodash/unset';
+import isDate from 'lodash/isDate';
 import words from 'lodash/words';
 
 import { MetaObject } from '@imports/model/MetaObject';
@@ -1305,12 +1306,16 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			return false;
 		}
 		if (metaObject.ignoreUpdatedAt !== true) {
-			if (isObject(id._updatedAt) === false) {
+			if (isObject(id._updatedAt) === true) {
+				if (isString(id._updatedAt.$date) === true || isDate(id._updatedAt.$date) === true) {
+					return true;
+				}
 				return false;
 			}
-			if (isString(id._updatedAt.$date) === false) {
-				return false;
+			if (isString(id._updatedAt) === true || isDate(id._updatedAt) === true) {
+				return true;
 			}
+			return false;
 		}
 		return true;
 	});
@@ -1767,9 +1772,16 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 			return false;
 		}
 		if (metaObject.ignoreUpdatedAt !== true) {
-			if (id?._updatedAt == null || isObject(id._updatedAt) === false || isString(id._updatedAt.$date) === false) {
+			if (isObject(id._updatedAt) === true) {
+				if (isString(id._updatedAt.$date) === true || isDate(id._updatedAt.$date) === true) {
+					return true;
+				}
 				return false;
 			}
+			if (isString(id._updatedAt) === true || isDate(id._updatedAt) === true) {
+				return true;
+			}
+			return false;
 		}
 		return true;
 	});

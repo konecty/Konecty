@@ -95,6 +95,161 @@ describe('Update Product', () => {
 			expect(data.data?.[0].name).to.be.equal('Test Updated');
 		});
 
+		it('Update Product with other type of date', async () => {
+			// Arrange
+			const product = await createProductHelper(authId);
+
+			const requestFields = {
+				data: {
+					name: 'Test Updated',
+				},
+				ids: [
+					{
+						_id: product?._id,
+						_updatedAt: product?._updatedAt,
+					},
+				],
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'PUT',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestFields),
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(true);
+			expect(data.data?.[0].name).to.be.equal('Test Updated');
+		});
+
+		it('should not update Product without _updatedAt on id', async () => {
+			// Arrange
+			const product = await createProductHelper(authId);
+
+			const requestFields = {
+				data: {
+					name: 'Test Updated',
+				},
+				ids: [
+					{
+						_id: product?._id,
+						_updatedAt: undefined,
+					},
+				],
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'PUT',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestFields),
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(false);
+			expect(data.errors?.[0]?.message).to.be.equal('[Product] Each id must contain an string field named _id an date field named _updatedAt');
+		});
+
+		it('should not update Product with invalid _updatedAt on id', async () => {
+			// Arrange
+			const product = await createProductHelper(authId);
+
+			const requestFields = {
+				data: {
+					name: 'Test Updated',
+				},
+				ids: [
+					{
+						_id: product?._id,
+						_updatedAt: 123,
+					},
+				],
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'PUT',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestFields),
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(false);
+			expect(data.errors?.[0]?.message).to.be.equal('[Product] Each id must contain an string field named _id an date field named _updatedAt');
+		});
+
+		it('should not update Product with invalid _updatedAt on id', async () => {
+			// Arrange
+			const product = await createProductHelper(authId);
+
+			const requestFields = {
+				data: {
+					name: 'Test Updated',
+				},
+				ids: [
+					{
+						_id: product?._id,
+						_updatedAt: true,
+					},
+				],
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'PUT',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestFields),
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(false);
+			expect(data.errors?.[0]?.message).to.be.equal('[Product] Each id must contain an string field named _id an date field named _updatedAt');
+		});
+
+		it('Update Product with other type of date 2', async () => {
+			// Arrange
+			const product = await createProductHelper(authId);
+
+			const requestFields = {
+				data: {
+					name: 'Test Updated',
+				},
+				ids: [
+					{
+						_id: product?._id,
+						_updatedAt: new Date(product?._updatedAt as string),
+					},
+				],
+			};
+
+			// Act
+			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+				method: 'PUT',
+				headers: {
+					Cookie: `_authTokenId=${authId}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestFields),
+			}).then(res => res.json())) as KonectyResponse;
+
+			// Assert
+			expect(data.success).to.be.equal(true);
+			expect(data.data?.[0].name).to.be.equal('Test Updated');
+		});
+
 		it('Update Product and test scriptBeforeValidation', async () => {
 			// Arrange
 			const product = await createProductHelper(authId);
