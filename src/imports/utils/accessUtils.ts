@@ -1,15 +1,10 @@
 import isObject from 'lodash/isObject';
-
 import { Filter } from '@imports/model/Filter';
 import { MetaAccess } from '@imports/model/MetaAccess';
 import { MetaObject } from '@imports/model/MetaObject';
+import { MetaObjectType } from '@imports/types/metadata';
 import { User } from '@imports/model/User';
-import { clearProjectionPathCollision, filterConditionToFn } from '@imports/data/filterUtils';
-import { errorReturn, successReturn } from './return';
-import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
-import { getUserSafe } from '@imports/auth/getUser';
-import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from './convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
-
+import { filterConditionToFn } from '@imports/data/filterUtils';
 
 export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	const accessField = metaAccess.fields?.[fieldName];
@@ -130,7 +125,7 @@ export function getAccessFor(documentName: string, user: User): MetaAccess | fal
 	return false;
 }
 
-export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>, user: any, metaObject: any) {
+export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>, user: User, metaObject: MetaObjectType) {
 	if (!isObject(data)) {
 		return data;
 	}
