@@ -4,6 +4,12 @@ import { Filter } from '@imports/model/Filter';
 import { MetaAccess } from '@imports/model/MetaAccess';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
+import { clearProjectionPathCollision, filterConditionToFn } from '@imports/data/filterUtils';
+import { errorReturn, successReturn } from './return';
+import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
+import { getUserSafe } from '@imports/auth/getUser';
+import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from './convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
+
 
 export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	const accessField = metaAccess.fields?.[fieldName];
@@ -124,17 +130,30 @@ export function getAccessFor(documentName: string, user: User): MetaAccess | fal
 	return false;
 }
 
-export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>) {
+export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>, user: any, metaObject: any) {
 	if (!isObject(data)) {
 		return data;
 	}
+	const newData: typeof data = {};
 
 	for (const fieldName in data) {
 		const access = getFieldPermissions(metaAccess, fieldName);
 		if (access.isReadable !== true) {
-			delete data[fieldName];
+			continue
 		}
+		const accessFieldConditions = getFieldConditions(metaAccess, fieldName);
+		if (accessFieldConditions.READ != null) {
+			const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
+			if(condition.success === false) {
+				continue
+			}
+
+			if(condition.data(data) === false) {
+				continue
+			}
+		}
+		newData[fieldName] = data[fieldName];
 	}
 
-	return data;
+	return newData;
 }

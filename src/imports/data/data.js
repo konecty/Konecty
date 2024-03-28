@@ -271,7 +271,7 @@ export async function find({
 
 			return acc;
 		}, {});
-
+		
 		const startTime = process.hrtime();
 
 		tracingSpan?.addEvent('Executing find query', { query, queryOptions });
@@ -346,6 +346,7 @@ export async function find({
  *
  * @returns {Promise<import('../types/result').KonectyResult<object[]>>} - Konecty result
  */
+
 export async function findById({ authTokenId, document, fields, dataId, withDetailFields, contextUser }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
@@ -1697,8 +1698,8 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			}
 		}
 
-		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record)).map(record => dateToString(record));
-
+		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
+	
 		if (emailsToSend.length > 0) {
 			tracingSpan?.addEvent('Sending emails');
 
