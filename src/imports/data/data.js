@@ -12,6 +12,7 @@ import first from 'lodash/first';
 import get from 'lodash/get';
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
+import isDate from 'lodash/isDate';
 import isEmpty from 'lodash/isEmpty';
 import _isNaN from 'lodash/isNaN';
 import isObject from 'lodash/isObject';
@@ -24,7 +25,6 @@ import set from 'lodash/set';
 import size from 'lodash/size';
 import tail from 'lodash/tail';
 import unset from 'lodash/unset';
-import isDate from 'lodash/isDate';
 import words from 'lodash/words';
 
 import { MetaObject } from '@imports/model/MetaObject';
@@ -177,7 +177,7 @@ export async function find({
 			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),
 		};
 
-		if (_isNaN(queryOptions.limit) || queryOptions.limit == null) {
+		if (_isNaN(queryOptions.limit) || queryOptions.limit == null || queryOptions.limit <= 0) {
 			queryOptions.limit = DEFAULT_PAGE_SIZE;
 		}
 
@@ -695,7 +695,7 @@ export async function findByLookup({ authTokenId, document, field, search, extra
 		sort: lookupSort,
 	};
 
-	if (_isNaN(options.limit) || !options.limit) {
+	if (_isNaN(options.limit) || !options.limit || options.limit <= 0) {
 		options.limit = 100;
 	}
 
@@ -1451,8 +1451,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
-									record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
 								}`,
 							);
 						}
