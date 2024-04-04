@@ -1,9 +1,10 @@
 import isObject from 'lodash/isObject';
-
 import { Filter } from '@imports/model/Filter';
 import { MetaAccess } from '@imports/model/MetaAccess';
 import { MetaObject } from '@imports/model/MetaObject';
+import { MetaObjectType } from '@imports/types/metadata';
 import { User } from '@imports/model/User';
+import { filterConditionToFn } from '@imports/data/filterUtils';
 
 export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	const accessField = metaAccess.fields?.[fieldName];
@@ -124,17 +125,30 @@ export function getAccessFor(documentName: string, user: User): MetaAccess | fal
 	return false;
 }
 
-export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>) {
+export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Record<string, unknown>, user: User, metaObject: MetaObjectType) {
 	if (!isObject(data)) {
 		return data;
 	}
+	const newData: typeof data = {};
 
 	for (const fieldName in data) {
 		const access = getFieldPermissions(metaAccess, fieldName);
 		if (access.isReadable !== true) {
-			delete data[fieldName];
+			continue
 		}
+		const accessFieldConditions = getFieldConditions(metaAccess, fieldName);
+		if (accessFieldConditions.READ != null) {
+			const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
+			if(condition.success === false) {
+				continue
+			}
+
+			if(condition.data(data) === false) {
+				continue
+			}
+		}
+		newData[fieldName] = data[fieldName];
 	}
 
-	return data;
+	return newData;
 }
