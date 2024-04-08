@@ -1150,7 +1150,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					}
 				}
 			} else {
-				const insertResult = await collection.insertOne(stringToDate(newRecord));
+				const insertResult = await collection.insertOne(stringToDate(newRecord), { writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } });
 				set(insertedQuery, '_id', insertResult.insertedId);
 				tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
 			}
