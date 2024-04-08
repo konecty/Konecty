@@ -271,7 +271,7 @@ export async function find({
 
 			return acc;
 		}, {});
-		
+
 		const startTime = process.hrtime();
 
 		tracingSpan?.addEvent('Executing find query', { query, queryOptions });
@@ -1150,7 +1150,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					}
 				}
 			} else {
-				const insertResult = await collection.insertOne(stringToDate(newRecord));
+				const insertResult = await collection.insertOne(stringToDate(newRecord), { writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } });
 				set(insertedQuery, '_id', insertResult.insertedId);
 				tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
 			}
@@ -1171,6 +1171,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 
 		const affectedRecord = await collection.findOne(insertedQuery, { readConcern: { level: 'majority' } });
+		const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
 
 		if (isEmpty(MetaObject.Namespace.onCreate) === false) {
 			const hookData = {
@@ -1178,7 +1179,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				ns: MetaObject.Namespace.ns,
 				documentName: document,
 				user: pick(user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
-				data: [affectedRecord], // Find records before apply access filter to query
+				data: [resultRecord], // Find records before apply access filter to query
 			};
 
 			const urls = [].concat(MetaObject.Namespace.onCreate);
@@ -1205,19 +1206,13 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			});
 		}
 
-		if (isObject(access.readFilter)) {
-			const readFilter = parseFilterObject(access.readFilter, metaObject, { user });
-			merge(insertedQuery, readFilter);
-		}
-
-		const resultRecord = await collection.findOne(insertedQuery, { readConcern: { level: 'majority' } });
-
 		if (metaObject.scriptAfterSave != null) {
 			tracingSpan?.addEvent('Running scriptAfterSave');
 			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [resultRecord], user });
 		}
 
 		if (emailsToSend.length > 0) {
+			tracingSpan?.addEvent('Sending emails');
 			const messagesCollection = MetaObject.Collections['Message'];
 			const now = DateTime.local().toJSDate();
 			await messagesCollection.insertMany(
@@ -1698,7 +1693,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 
 		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
-	
+
 		if (emailsToSend.length > 0) {
 			tracingSpan?.addEvent('Sending emails');
 
