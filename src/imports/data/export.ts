@@ -123,11 +123,13 @@ export default async function exportData({ document, listName, type = 'csv', use
 		return result;
 	}
 
+	const dateFormat = MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
+
 	tracingSpan?.addEvent('Flattening data');
 	const dataResult = result.data.reduce(
 		(acc: { flatData: object[]; keys: Record<string, number> }, item) => {
 			const flatItem = flatten<object, object>(item);
-			const transformed = dateToString<typeof flatItem>(flatItem, date => date.toFormat('ccc LLL dd yyyy TTT'));
+			const transformed = dateToString<typeof flatItem>(flatItem, date => date.toFormat(dateFormat));
 
 			acc.flatData.push(transformed);
 			Object.keys(flatItem as object).forEach(key => (acc.keys[key] = 1));
