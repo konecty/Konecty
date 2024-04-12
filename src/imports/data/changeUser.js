@@ -4,11 +4,11 @@ import isString from 'lodash/isString';
 
 import { MetaObject } from '@imports/model/MetaObject';
 
-import { getAccessFor } from '../utils/accessUtils';
 import { getUserSafe } from '@imports/auth/getUser';
-import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { stringToDate } from '../data/dateParser';
 import { getNextUserFromQueue } from '../meta/getNextUserFromQueue';
+import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
+import { getAccessFor } from '../utils/accessUtils';
 
 function validateRequest({ document, ids, users, access }) {
 	// Verify if user have permission to update record
@@ -798,7 +798,7 @@ export async function setQueue({ authTokenId, document, ids, queue }) {
 			const newUserResult = await validateAndProcessValueFor({
 				meta,
 				fieldName: '_user',
-				value: userQueueResult.data,
+				value: userQueueResult.data.user,
 				actionType: 'update',
 				objectOriginalValues: {},
 				objectNewValues: {},
