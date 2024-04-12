@@ -32,6 +32,7 @@ export const NamespaceSchema = z
 		type: z.literal('Namespace'),
 		trackUserGeolocation: z.boolean().optional(),
 		loginExpiration: z.number().optional(),
+		dateFormat: z.string().optional(),
 
 		storage: z.discriminatedUnion('type', [S3Storage, FSStorage]).optional(),
 		RocketChat: z
