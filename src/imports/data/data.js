@@ -1447,7 +1447,8 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
+									record.createdBy.name
 								}`,
 							);
 						}
@@ -1579,7 +1580,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			return acc;
 		}, {});
 
-		const ignoreUpdate = Object.keys(bodyData).every(key => metaObject.fields[key].ignoreHistory === true);
+		const ignoreUpdate = Object.keys(bodyData).every(key => {
+			if (metaObject.fields == null || metaObject.fields[key] == null) {
+				return false;
+			}
+
+			return metaObject.fields[key].ignoreHistory === true;
+		});
 
 		if (ignoreUpdate === false) {
 			set(updateOperation, '$set._updatedAt', DateTime.local().toJSDate());
