@@ -69,15 +69,19 @@ export async function runScriptBeforeValidation({ script, data, user, meta, extr
 	}
 }
 
-export async function processValidationScript({ script, data, fullData, user }) {
-	if (data != null) {
-		const extraData = BluebirdPromise.reduce(
-			Object.keys(data),
+export async function processValidationScript({ script, validationData, fullData, user }) {
+	if (validationData != null) {
+		const extraData = await BluebirdPromise.reduce(
+			Object.keys(validationData),
 			async (acc, validationField) => {
-				const validationFilter = data[validationField];
+				const validationFilter = validationData[validationField];
 				const validationDataFilter = await parseDynamicData(validationFilter, '$this', fullData);
+				if (validationDataFilter.success !== true) {
+					return acc;
+				}
+
 				const fieldResult = await find({
-					...validationDataFilter,
+					...validationDataFilter.data,
 					contextUser: user,
 				});
 

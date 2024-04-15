@@ -1029,7 +1029,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	if (metaObject.validationScript != null) {
 		tracingSpan?.addEvent('Running validation script');
 
-		const validation = await processValidationScript({ script: metaObject.validationScript, data, fullData: extend({}, data, cleanedData), user });
+		const validation = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, data, cleanedData), user });
 		if (validation.success === false) {
 			logger.error(validation, `Create - Script Validation Error - ${validation.reason}`);
 			return errorReturn(`[${document}] ${validation.reason}`);
@@ -1447,8 +1447,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					Object.keys(data.data).forEach(fieldName => {
 						if (record.diffs[fieldName] != null) {
 							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${
-									record.createdBy.name
+								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
 								}`,
 							);
 						}
@@ -1562,7 +1561,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 		if (metaObject.validationScript != null) {
 			tracingSpan?.addEvent('Running validation script');
-			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, data: bodyData, fullData: extend({}, record, data.data), user });
+			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, data.data), user });
 			if (validationScriptResult.success === false) {
 				logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
 				return errorReturn(validationScriptResult.reason);
