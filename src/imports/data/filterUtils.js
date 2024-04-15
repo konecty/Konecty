@@ -10,6 +10,7 @@ import map from 'lodash/map';
 import reduce from 'lodash/reduce';
 import size from 'lodash/size';
 import startsWith from 'lodash/startsWith';
+import tail from 'lodash/tail';
 import uniqBy from 'lodash/uniqBy';
 
 import { MetaObject } from '@imports/model/MetaObject';
@@ -576,7 +577,7 @@ export function filterConditionToFn(condition, metaObject, req) {
 				return value;
 			}
 
-			return get(value, termParts[1]);
+			return get(value, tail(termParts));
 		});
 	};
 
