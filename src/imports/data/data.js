@@ -815,40 +815,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		return errorReturn(`[${document}] Data must have at least one field`);
 	}
 
-	tracingSpan?.addEvent('Calculating create permissions');
-	const fieldPermissionResult = Object.keys(data).map(fieldName => {
-		const accessField = getFieldPermissions(access, fieldName);
-		if (accessField.isCreatable !== true) {
-			return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
-		}
-
-		const accessFieldConditions = getFieldConditions(access, fieldName);
-		if (accessFieldConditions.CREATE != null) {
-			const getConditionFilterResult = filterConditionToFn(accessFieldConditions.CREATE, metaObject, { user });
-
-			if (getConditionFilterResult.success === false) {
-				return getConditionFilterResult;
-			}
-
-			const isAllowToCreateField = getConditionFilterResult.data(data);
-
-			if (isAllowToCreateField === false) {
-				return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
-			}
-		}
-
-		return successReturn();
-	});
-
-	if (fieldPermissionResult.some(result => result.success === false)) {
-		return errorReturn(
-			fieldPermissionResult
-				.filter(result => result.success === false)
-				.map(result => result.errors)
-				.flat(),
-		);
-	}
-
 	if (data._user != null) {
 		if (isArray(data._user) === false) {
 			return errorReturn(`[${document}] _user must be array`);
@@ -906,6 +872,40 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 	if (validateUserResult.data != null) {
 		cleanedData._user = validateUserResult.data;
+	}
+
+	tracingSpan?.addEvent('Calculating create permissions');
+	const fieldPermissionResult = Object.keys(cleanedData).map(fieldName => {
+		const accessField = getFieldPermissions(access, fieldName);
+		if (accessField.isCreatable !== true) {
+			return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+		}
+
+		const accessFieldConditions = getFieldConditions(access, fieldName);
+		if (accessFieldConditions.CREATE != null) {
+			const getConditionFilterResult = filterConditionToFn(accessFieldConditions.CREATE, metaObject, { user });
+
+			if (getConditionFilterResult.success === false) {
+				return getConditionFilterResult;
+			}
+
+			const isAllowToCreateField = getConditionFilterResult.data(cleanedData);
+
+			if (isAllowToCreateField === false) {
+				return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+			}
+		}
+
+		return successReturn();
+	});
+
+	if (fieldPermissionResult.some(result => result.success === false)) {
+		return errorReturn(
+			fieldPermissionResult
+				.filter(result => result.success === false)
+				.map(result => result.errors)
+				.flat(),
+		);
 	}
 
 	const emailsToSend = [];
