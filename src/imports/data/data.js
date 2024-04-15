@@ -502,7 +502,7 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 	@param useChangeUserFilter
 */
 
-export async function findByLookup({ authTokenId, document, field, search, extraFilter, start, limit, useChangeUserFilter }) {
+export async function findByLookup({ authTokenId, document, field: fieldName, search, extraFilter, start, limit, useChangeUserFilter }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId);
 	if (success === false) {
 		return errorReturn(errors);
@@ -518,21 +518,21 @@ export async function findByLookup({ authTokenId, document, field, search, extra
 		return errorReturn(`[${document}] Document not found`);
 	}
 
-	const fieldObject = metaObject.fields[field];
-	if (fieldObject == null) {
+	const field = metaObject.fields[fieldName];
+	if (field == null) {
 		return errorReturn(`[${document}] Field not found`);
 	}
 
-	if (fieldObject.type !== 'lookup') {
+	if (field.type !== 'lookup') {
 		return errorReturn(`[${document}] Field is not a lookup`);
 	}
 
-	const lookupMetaObject = MetaObject.Meta[fieldObject.document];
+	const lookupMetaObject = MetaObject.Meta[field.document];
 	if (lookupMetaObject == null) {
 		return errorReturn(`[${document}] Lookup document not found`);
 	}
 
-	const lookupCollection = MetaObject.Collections[fieldObject.document];
+	const lookupCollection = MetaObject.Collections[field.document];
 	if (lookupCollection == null) {
 		return errorReturn(`[${document}] Lookup collection not found`);
 	}
@@ -543,8 +543,8 @@ export async function findByLookup({ authTokenId, document, field, search, extra
 
 	const lookupSort = {};
 	const descriptionFieldsQuery = {};
-	if (isArray(fieldObject.descriptionFields)) {
-		const descriptionFields = fieldObject.descriptionFields.concat(fieldObject.searchableFields ?? []);
+	if (isArray(field.descriptionFields)) {
+		const descriptionFields = field.descriptionFields.concat(field.searchableFields ?? []);
 
 		let sortArrayField = false;
 
