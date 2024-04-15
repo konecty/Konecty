@@ -786,7 +786,7 @@ export async function populateDetailFieldsInRecord({ record, document, authToken
 export async function create({ authTokenId, document, data, contextUser, upsert, updateOnUpsert, ignoreAutoNumber = false, tracingSpan }) {
 	tracingSpan?.setAttribute({ document, upsert, updateOnUpsert, ignoreAutoNumber });
 
-	tracingSpan.addEvent('Get User', { authTokenId, contextUser: contextUser?._id });
+	tracingSpan?.addEvent('Get User', { authTokenId, contextUser: contextUser?._id });
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {
 		return errorReturn(errors);
@@ -856,7 +856,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 	}
 
-	tracingSpan.addEvent('Validating _user');
+	tracingSpan?.addEvent('Validating _user');
 	const validateUserResult = await validateAndProcessValueFor({
 		meta: metaObject,
 		fieldName: '_user',
@@ -910,7 +910,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 	const emailsToSend = [];
 
-	tracingSpan.addEvent('Validate&ProcessValueFor lookups');
+	tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
 	const validationResults = await BluebirdPromise.mapSeries(
 		Object.keys(metaObject.fields).filter(k => metaObject.fields[k]?.type === 'lookup'),
 		async key => {
@@ -946,7 +946,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	}
 
 	if (metaObject.scriptBeforeValidation != null) {
-		tracingSpan.addEvent('Running scriptBeforeValidation');
+		tracingSpan?.addEvent('Running scriptBeforeValidation');
 		const scriptResult = await runScriptBeforeValidation({
 			script: metaObject.scriptBeforeValidation,
 			data: cleanedData,
@@ -1943,11 +1943,6 @@ export async function relationCreate({ authTokenId, document, fieldName, data, p
 		return errorReturn(errors);
 	}
 
-	const access = getAccessFor(document, user);
-	if (access === false || access.isDeletable !== true) {
-		return errorReturn(`[${document}] You don't have permission to delete records`);
-	}
-
 	const metaObject = MetaObject.Meta[document];
 	if (metaObject == null) {
 		return errorReturn(`[${document}] Document not found`);
@@ -2068,7 +2063,7 @@ export async function relationCreate({ authTokenId, document, fieldName, data, p
 					emailData[relation.document] = [];
 				}
 
-				const populatedData = BluebirdPromise.mapSeries(insertResult.data, async resultData => {
+				const populatedData = await BluebirdPromise.mapSeries(insertResult.data, async resultData => {
 					const populatedData = await populateLookupsData({
 						documentName: relation.document,
 						data: resultData,
