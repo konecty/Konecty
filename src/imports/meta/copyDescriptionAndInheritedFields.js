@@ -8,10 +8,16 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 	};
 
 	if (isArray(field.descriptionFields)) {
-		const subFieldsIdKeys = Array.from(
-			new Set(field.descriptionFields.filter(fieldName => /\./.test(fieldName)).map(fieldName => `${fieldName.split('.').slice(0, -1).join('.')}._id`)),
+		// Add _id for each part of subfields to guarantee internals lookup _id
+		const subfieldsWithId = Array.from(
+			new Set(field.descriptionFields
+				.filter(fieldName => /\./.test(fieldName))
+				.reduce((acc, fieldName) => {
+					const parts = fieldName.split('.');
+					return acc.concat(...parts.map(part => `${part}._id`));
+				}, [])),
 		);
-		const fieldsToCopy = Array.from(new Set([].concat('_id').concat(subFieldsIdKeys).concat(field.descriptionFields)));
+		const fieldsToCopy = Array.from(new Set([].concat('_id').concat(subfieldsWithId).concat(field.descriptionFields)));
 		Object.assign(value, pick(record, fieldsToCopy));
 	}
 
