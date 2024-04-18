@@ -1474,7 +1474,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			const validateLookupsResults = await BluebirdPromise.mapSeries(
 				Object.keys(data.data).filter(key => metaObject.fields[key]?.type === 'lookup'),
 				async key => {
-					const lookupValidateResult = validateAndProcessValueFor({
+					const lookupValidateResult = await validateAndProcessValueFor({
 						meta: metaObject,
 						fieldName: key,
 						value: data.data[key],
