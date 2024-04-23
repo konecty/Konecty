@@ -86,7 +86,7 @@ function getLookups(records: DataDocument[], metaObject: Document): BulkLookups 
 	return records.reduce((acc, record) => {
 		const lookupFields = Object.keys(record).filter(fieldName => {
 			const field = metaObject.fields[fieldName];
-			return record[fieldName] != null && field != null && size(field.detailFields) > 0;
+			return record[fieldName] != null && field != null && field.type === 'lookup' && size(field.detailFields) > 0;
 		});
 
 		for (const fieldName of lookupFields) {
