@@ -48,6 +48,7 @@ import { renderTemplate } from '../template';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
+import populateDetailFields from './populateDetailFields';
 
 const WRITE_TIMEOUT = 3e4; // 30 seconds
 
@@ -278,7 +279,7 @@ export async function find({
 		const records = await collection.find(query, queryOptions).toArray();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`.brightCyan;
+		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
 		logger.trace(log);
 
 		const resultData = records.map(record =>
@@ -307,10 +308,7 @@ export async function find({
 
 		if (withDetailFields === 'true') {
 			tracingSpan?.addEvent('Populating detail fields');
-			result.data = await BluebirdPromise.mapSeries(result.data, async record => {
-				const populatedRecord = await populateDetailFieldsInRecord({ record, document, authTokenId, contextUser });
-				return populatedRecord;
-			});
+			result.data = await populateDetailFields({ records: resultData, document, contextUser: user });
 		}
 
 		if (transformDatesToString) {
@@ -457,7 +455,7 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 
 	const totalTime = process.hrtime(startTime);
 
-	const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`.brightCyan;
+	const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
 	logger.trace(log);
 
 	if (record != null) {
@@ -474,10 +472,10 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 		}, {});
 
 		if (withDetailFields === 'true') {
-			const populatedData = await populateDetailFieldsInRecord({ record: resultData, document, authTokenId, contextUser });
+			const populatedData = await populateDetailFields({ records: [resultData], document, contextUser: user });
 			return {
 				success: true,
-				data: [populatedData],
+				data: populatedData,
 				total: 1,
 			};
 		}
@@ -708,67 +706,6 @@ export async function findByLookup({ authTokenId, document, field: fieldName, se
 		data: map(data, dateToString),
 		total,
 	};
-}
-
-/* Receive a record and populate with detail fields
-	@param authTokenId
-	@param contextUser
-	@param document
-	@param record
-*/
-export async function populateDetailFieldsInRecord({ record, document, authTokenId, contextUser }) {
-	if (record == null) {
-		return;
-	}
-
-	const getDetailFieldsValue = async function (field, value) {
-		if (!has(value, '_id')) {
-			logger.error({ field, document }, 'populateDetailFields: value without _id');
-		}
-
-		const record = await findById({
-			authTokenId,
-			contextUser,
-			document: field.document,
-			fields: field.detailFields.join(','),
-			dataId: value._id,
-		});
-
-		if (record.success && record.data != null && record.data.length > 0) {
-			return { ...value, ...record.data[0] };
-		}
-
-		return value;
-	};
-
-	const metaObject = MetaObject.Meta[document];
-
-	const result = await BluebirdPromise.reduce(
-		Object.keys(record),
-		async (acc, fieldName) => {
-			const value = record[fieldName];
-			const field = metaObject.fields[fieldName];
-			if (value && field && field.type === 'lookup' && size(field.detailFields) > 0) {
-				if (field.isList === true) {
-					const values = isArray(value) ? value : [value];
-					const detailValues = await BluebirdPromise.mapSeries(values, async item => {
-						const detailValue = await getDetailFieldsValue(field, item);
-						return detailValue;
-					});
-					acc[fieldName] = detailValues;
-				} else {
-					const detailValue = await getDetailFieldsValue(field, value);
-					acc[fieldName] = detailValue;
-				}
-			} else {
-				acc[fieldName] = value;
-			}
-			return acc;
-		},
-		{},
-	);
-
-	return result;
 }
 
 /**
