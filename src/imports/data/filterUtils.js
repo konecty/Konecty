@@ -343,6 +343,13 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 	return successReturn(queryCondition);
 }
 
+/**
+ * 
+ * @param {import("@imports/model/Filter").KonFilter} filter 
+ * @param {import("@imports/types/metadata").MetaObjectType} metaObject 
+ * @param {{ user: import('@imports/model/User').User }} req
+ * @returns {import('mongodb').Filter} - mongo filter
+ */
 export function parseFilterObject(filter, metaObject, { user } = {}) {
 	const query = [];
 
@@ -446,8 +453,8 @@ export function parseDynamicData(filter, keyword, data) {
  * @example clearProjectionPathCollision({ group: 1, 'group._id': 1, _user: 1 })
  * // returns { group: 1, _user: 1 }
  *
- * @param {Object<string, number>} projection
- * @returns {Object<string, number>} projection
+ * @param {Object<string, unknown>} projection
+ * @returns {Object<string, unknown>} projection
  */
 export function clearProjectionPathCollision(projection) {
 	const fields = Object.entries(projection);

@@ -6,7 +6,7 @@ import isString from 'lodash/isString';
 import { Span } from '@opentelemetry/api';
 import { flatten } from 'flat';
 
-import { find } from '@imports/data/data';
+import { find } from '@imports/data/api';
 import { MetaObject } from '@imports/model/MetaObject';
 import { errorReturn, successReturn } from '@imports/utils/return';
 
@@ -129,7 +129,7 @@ export default async function exportData({ document, listName, type = 'csv', use
 	const dataResult = result.data.reduce(
 		(acc: { flatData: object[]; keys: Record<string, number> }, item) => {
 			const flatItem = flatten<object, object>(item);
-			const transformed = dateToString<typeof flatItem>(flatItem, date => date.toFormat(dateFormat));
+			const transformed = dateToString(flatItem, date => date.toFormat(dateFormat));
 
 			acc.flatData.push(transformed);
 			Object.keys(flatItem as object).forEach(key => (acc.keys[key] = 1));

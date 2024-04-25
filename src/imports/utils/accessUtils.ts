@@ -1,14 +1,14 @@
-import isObject from 'lodash/isObject';
-import { Filter } from '@imports/model/Filter';
+import { filterConditionToFn } from '@imports/data/filterUtils';
+import { KonCondition } from '@imports/model/Filter';
 import { MetaAccess } from '@imports/model/MetaAccess';
 import { MetaObject } from '@imports/model/MetaObject';
-import { MetaObjectType } from '@imports/types/metadata';
 import { User } from '@imports/model/User';
-import { filterConditionToFn } from '@imports/data/filterUtils';
+import { MetaObjectType } from '@imports/types/metadata';
+import isObject from 'lodash/isObject';
 
 export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	const accessField = metaAccess.fields?.[fieldName];
-	const conditions: Filter = {};
+	const conditions: Partial<Record<'UPDATE' | 'READ' | 'CREATE', KonCondition>> = {};
 
 	if (accessField?.UPDATE?.condition != null) {
 		conditions.UPDATE = accessField.UPDATE.condition;
@@ -134,17 +134,17 @@ export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Reco
 	for (const fieldName in data) {
 		const access = getFieldPermissions(metaAccess, fieldName);
 		if (access.isReadable !== true) {
-			continue
+			continue;
 		}
 		const accessFieldConditions = getFieldConditions(metaAccess, fieldName);
 		if (accessFieldConditions.READ != null) {
 			const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
-			if(condition.success === false) {
-				continue
+			if (condition.success === false) {
+				continue;
 			}
 
-			if(condition.data(data) === false) {
-				continue
+			if (condition.data(data) === false) {
+				continue;
 			}
 		}
 		newData[fieldName] = data[fieldName];

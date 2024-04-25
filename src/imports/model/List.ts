@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { KonFilter } from './Filter';
 import { LabelSchema } from './Label';
 
 export const ListSchema = z.object({
@@ -26,24 +27,7 @@ export const ListSchema = z.object({
 		}),
 	),
 	view: z.string().default('Default'),
-	filter: z
-		.object({
-			match: z.string().optional(),
-			conditions: z.record(
-				z
-					.object({
-						operator: z.string(),
-						term: z.string(),
-						editable: z.boolean().optional(),
-						disabled: z.boolean().optional(),
-						sort: z.number().optional(),
-						value: z.any().optional(),
-						style: z.any().optional(),
-					})
-					.optional(),
-			),
-		})
-		.optional(),
+	filter: KonFilter.optional(),
 	defaultFormat: z.string().optional(),
 	boards: z
 		.array(

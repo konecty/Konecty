@@ -1,6 +1,6 @@
 import isString from 'lodash/isString';
 
-export function convertStringOfFieldsSeparatedByCommaIntoObjectToFind(fieldsString) {
+export function convertStringOfFieldsSeparatedByCommaIntoObjectToFind(fieldsString: string | any): Record<string, unknown> {
 	if (isString(fieldsString)) {
 		return fieldsString
 			.replace(/\s/g, '')

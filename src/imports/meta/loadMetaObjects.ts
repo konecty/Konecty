@@ -69,21 +69,23 @@ const deregisterMeta = function (meta: any) {
 
 async function dbLoad() {
 	const data = await MetaObject.MetaObject.find<MetaObjectType>({}).toArray();
-	await BluebirdPromise.all(data.map(async meta => {
-		switch (meta.type) {
-			case 'access':
-				MetaObject.Access[meta._id as unknown as string] = meta as unknown as MetaAccess;
-				break;
-			case 'document':
-			case 'composite':
-				return registerMeta(meta);
-			case 'pivot':
-			case 'view':
-			case 'list':
-				MetaObject.DisplayMeta[meta._id as unknown as string] = meta;
-				break;
-		}
-	}));
+	await BluebirdPromise.all(
+		data.map(async meta => {
+			switch (meta.type) {
+				case 'access':
+					MetaObject.Access[meta._id as unknown as string] = meta as unknown as MetaAccess;
+					break;
+				case 'document':
+				case 'composite':
+					return registerMeta(meta);
+				case 'pivot':
+				case 'view':
+				case 'list':
+					MetaObject.DisplayMeta[meta._id as unknown as string] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
+					break;
+			}
+		}),
+	);
 
 	rebuildReferences();
 	const namespace = await MetaObject.MetaObject.findOne({ type: 'namespace' });
@@ -135,7 +137,7 @@ function dbWatch() {
 				case 'pivot':
 				case 'view':
 				case 'list':
-					MetaObject.DisplayMeta[fullDocument._id as unknown as string] = fullDocument;
+					MetaObject.DisplayMeta[fullDocument._id as unknown as string] = fullDocument as unknown as (typeof MetaObject.DisplayMeta)[string];
 					break;
 			}
 		}
