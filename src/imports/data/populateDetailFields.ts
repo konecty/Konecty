@@ -1,11 +1,12 @@
+import { find } from '@imports/data/api';
 import { Document } from '@imports/model/Document';
+import { KonFilter } from '@imports/model/Filter';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
 import { DataDocument } from '@imports/types/data';
 import Bluebird from 'bluebird';
 import merge from 'lodash/merge';
 import size from 'lodash/size';
-import { find } from './data';
 
 type Params = {
 	records: DataDocument[];
@@ -27,26 +28,30 @@ export default async function populateDetailFields({ records, document, contextU
 	const lookups = getLookups(records, metaObject);
 	const lookupFields = Object.keys(lookups);
 
-	const findResults = await Bluebird.map(lookupFields, async fieldName => {
-		const lookupField = metaObject.fields[fieldName];
-		const lookupValues = lookups[fieldName];
+	const findResults = await Bluebird.map(
+		lookupFields,
+		async fieldName => {
+			const lookupField = metaObject.fields[fieldName];
+			const lookupValues = lookups[fieldName];
 
-		const idsToFind = lookupValues.map(lookupValue => lookupValue._id);
-		const konFilter = {
-			match: 'and',
-			conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
-		};
+			const idsToFind = lookupValues.map(lookupValue => lookupValue._id);
+			const konFilter: KonFilter = {
+				match: 'and',
+				conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
+			};
 
-		const result = await find({
-			document: lookupField.document ?? 'no-doc',
-			filter: konFilter,
-			contextUser,
-			fields: (lookupField.detailFields || []).join(','),
-			limit: idsToFind.length,
-		});
+			const result = await find({
+				document: lookupField.document ?? 'no-doc',
+				filter: konFilter,
+				contextUser,
+				fields: (lookupField.detailFields || []).join(','),
+				limit: idsToFind.length,
+			});
 
-		return { ...result, fieldName };
-	});
+			return { ...result, fieldName };
+		},
+		{ concurrency: 4 },
+	);
 
 	const successLookupsResults = findResults.filter(result => result.success) as { data: DataDocument[]; fieldName: string }[];
 

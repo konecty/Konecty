@@ -14,6 +14,7 @@ import { getAccessFor } from '@imports/utils/accessUtils';
 import { errorReturn } from '@imports/utils/return';
 
 import exportData from '@imports/data/export';
+import { Workbook } from 'excel4node';
 
 export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.post<{ Body: { lead: unknown; save: unknown } }>('/rest/data/lead/save', async (req, reply) => {
@@ -271,7 +272,11 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			reply.header(header, value);
 		}
 
-		reply.send(result.data.content);
+		tracingSpan.end();
+		if (result.data.content instanceof Workbook) {
+			return await result.data.content.writeToBuffer();
+		}
+		return reply.send(result.data.content);
 	});
 
 	done();

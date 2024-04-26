@@ -1,0 +1,97 @@
+/// <reference path="excel4node.d.ts" />
+
+import { errorReturn, successReturn } from '@imports/utils/return';
+
+import { ExportDataResponse, TransformFlattenData } from '@imports/data/export';
+import { KonectyResult } from '@imports/types/result';
+import { Workbook, Worksheet } from 'excel4node';
+import isDate from 'lodash/isDate';
+import moment from 'moment';
+import { Readable } from 'stream';
+
+export default async function xlsExport(dataStream: Readable, name: string): Promise<KonectyResult<ExportDataResponse>> {
+	const wb = new Workbook();
+
+	const headerStyle = wb.createStyle({
+		font: {
+			bold: true,
+		},
+		fill: {
+			type: 'pattern',
+			patternType: 'solid',
+			fgColor: '#F2F2F2',
+		},
+	});
+
+	const ws = wb.addWorksheet(name);
+	const flattenData = new TransformFlattenData();
+
+	const widths: Record<string, number> = {};
+
+	dataStream.pipe(flattenData).reduce(addToWorksheet(flattenData, widths), ws);
+
+	const addHeaders = () => {
+		const headers = Array.from(flattenData.headers);
+		const headerNum = headers.length;
+
+		for (let collumn = 1; collumn <= headerNum; collumn++) {
+			const header = headers[collumn - 1];
+			const cell = ws.cell(1, collumn);
+
+			cell.string(header).style(headerStyle);
+			ws.column(collumn).setWidth(widths[header] ?? 10);
+		}
+	};
+
+	return new Promise((resolve, reject) => {
+		dataStream.on('end', () => {
+			addHeaders();
+			resolve(
+				successReturn({
+					httpHeaders: {
+						'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+						'Content-Disposition': `attachment; filename=${name}.xlsx`,
+					},
+					content: wb,
+				}),
+			);
+		});
+
+		dataStream.on('error', err => {
+			reject(errorReturn('Error writing file'));
+		});
+	});
+}
+
+function addToWorksheet(flattenData: TransformFlattenData, widths: Record<string, number>) {
+	let row = 2;
+
+	return (acc: Worksheet, record: Record<string, unknown>) => {
+		const headers = Array.from(flattenData.headers);
+		const headerNum = headers.length;
+
+		for (let index = 0; index < headerNum; index++) {
+			const header = headers[index];
+			let value = record[header] || '';
+			const cell = acc.cell(row, index + 1);
+
+			if (isDate(value)) {
+				value = moment(value).format('DD/MM/YYYY HH:mm:ss');
+			}
+
+			if (typeof value === 'object') {
+				value = '';
+			}
+
+			const width = String(value).length * 1.1;
+			if (widths[header] == null || widths[header] < width) {
+				widths[header] = width;
+			}
+
+			cell.string(String(value));
+		}
+
+		row += 1;
+		return acc;
+	};
+}

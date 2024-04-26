@@ -23,7 +23,9 @@ import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/
 import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
 import { Collection, Filter, FindOptions } from 'mongodb';
+import { Readable } from 'node:stream';
 
+const STREAM_CONCURRENCY = 10;
 type KonSort = object;
 
 type FindParams = {
@@ -42,6 +44,7 @@ type FindParams = {
 	contextUser?: User;
 	transformDatesToString?: boolean;
 	tracingSpan?: Span;
+	asStream?: boolean;
 } & ({ authTokenId: string; contextUser?: User } | { authTokenId?: string; contextUser: User });
 
 export default async function find({
@@ -59,7 +62,8 @@ export default async function find({
 	contextUser,
 	transformDatesToString = true,
 	tracingSpan,
-}: FindParams): Promise<KonectyResult<object[]>> {
+	asStream,
+}: FindParams): Promise<KonectyResult<DataDocument[] | Readable>> {
 	try {
 		tracingSpan?.setAttribute('document', document);
 
@@ -222,13 +226,14 @@ export default async function find({
 		const startTime = process.hrtime();
 
 		tracingSpan?.addEvent('Executing find query', { queryOptions: JSON.stringify(queryOptions) });
-		const records = await collection.find(query, queryOptions).toArray();
+		const cursor = collection.find(query, queryOptions);
+		const recordStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
 		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
 		logger.trace(log);
 
-		const resultData = records.map(record =>
+		recordStream.map((record: DataDocument) =>
 			Object.keys(record).reduce<typeof record>(
 				(acc, key) => {
 					if (accessConditions[key] != null) {
@@ -245,9 +250,9 @@ export default async function find({
 			),
 		);
 
-		const result: KonectyResultSuccess<DataDocument[]> = {
+		const result: KonectyResultSuccess<typeof recordStream> = {
 			success: true,
-			data: resultData,
+			data: recordStream,
 		};
 
 		if (getTotal === true) {
@@ -257,14 +262,21 @@ export default async function find({
 
 		if (withDetailFields === 'true') {
 			tracingSpan?.addEvent('Populating detail fields');
-			result.data = await populateDetailFields({ records: resultData, document, contextUser: user });
+			result.data = result.data.map(async (record: DataDocument) => populateDetailFields({ records: [record], document, contextUser: user }), {
+				concurrency: STREAM_CONCURRENCY,
+			});
 		}
 
 		if (transformDatesToString) {
-			result.data = result.data.map(value => dateToString(value));
+			result.data = result.data.map((record: DataDocument) => dateToString(record), { concurrency: STREAM_CONCURRENCY });
 		}
 
-		return result;
+		if (asStream) {
+			return result;
+		}
+
+		const arrayResult = Object.assign({}, result, { data: await result.data.toArray() });
+		return arrayResult;
 	} catch (err) {
 		const error = err as Error;
 		tracingSpan?.setAttribute('error', error.message);

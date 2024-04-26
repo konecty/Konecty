@@ -73,7 +73,7 @@ async function dbLoad() {
 		data.map(async meta => {
 			switch (meta.type) {
 				case 'access':
-					MetaObject.Access[meta._id as unknown as string] = meta as unknown as MetaAccess;
+					MetaObject.Access[meta._id] = meta as unknown as MetaAccess;
 					break;
 				case 'document':
 				case 'composite':
@@ -81,7 +81,7 @@ async function dbLoad() {
 				case 'pivot':
 				case 'view':
 				case 'list':
-					MetaObject.DisplayMeta[meta._id as unknown as string] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
+					MetaObject.DisplayMeta[meta._id] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
 					break;
 			}
 		}),
