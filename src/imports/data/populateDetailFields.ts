@@ -2,7 +2,9 @@ import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
 import { DataDocument } from '@imports/types/data';
+import { KonectyResult } from '@imports/types/result';
 import Bluebird from 'bluebird';
+import chunk from 'lodash/chunk';
 import merge from 'lodash/merge';
 import size from 'lodash/size';
 import { find } from './data';
@@ -17,6 +19,8 @@ type BulkLookups = {
 	[fieldName: string]: DataDocument<{ recordId: string }>[];
 };
 
+const PAGE_SIZE = 500;
+
 export default async function populateDetailFields({ records, document, contextUser }: Params) {
 	if (records.length === 0) {
 		return records;
@@ -27,28 +31,40 @@ export default async function populateDetailFields({ records, document, contextU
 	const lookups = getLookups(records, metaObject);
 	const lookupFields = Object.keys(lookups);
 
-	const findResults = await Bluebird.map(lookupFields, async fieldName => {
-		const lookupField = metaObject.fields[fieldName];
-		const lookupValues = lookups[fieldName];
+	const findResults = await Bluebird.map(
+		lookupFields,
+		async fieldName => {
+			const lookupField = metaObject.fields[fieldName];
+			const lookupValues = lookups[fieldName];
 
-		const idsToFind = lookupValues.map(lookupValue => lookupValue._id);
-		const konFilter = {
-			match: 'and',
-			conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
-		};
+			const results = await Bluebird.map(
+				chunk(lookupValues, PAGE_SIZE),
+				async chunkedLookupValues => {
+					const idsToFind = chunkedLookupValues.map(lookupValue => lookupValue._id);
+					const konFilter = {
+						match: 'and',
+						conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
+					};
 
-		const result = await find({
-			document: lookupField.document ?? 'no-doc',
-			filter: konFilter,
-			contextUser,
-			fields: (lookupField.detailFields || []).join(','),
-			limit: idsToFind.length,
-		});
+					const result = await find({
+						document: lookupField.document ?? 'no-doc',
+						filter: konFilter,
+						contextUser,
+						fields: (lookupField.detailFields || []).join(','),
+						limit: idsToFind.length,
+					});
 
-		return { ...result, fieldName };
-	});
+					return result as KonectyResult<DataDocument[]>;
+				},
+				{ concurrency: 5 },
+			);
 
-	const successLookupsResults = findResults.filter(result => result.success) as { data: DataDocument[]; fieldName: string }[];
+			const data = results.reduce<DataDocument[]>((acc, result) => (result.success ? acc.concat(result.data) : acc), []);
+
+			return { data, fieldName };
+		},
+		{ concurrency: 4 },
+	);
 
 	const populatedRecords = records.map(record => {
 		for (const lookupField of lookupFields) {
@@ -56,7 +72,7 @@ export default async function populateDetailFields({ records, document, contextU
 				continue;
 			}
 
-			const values = successLookupsResults.find(f => f.fieldName === lookupField)?.data;
+			const values = findResults.find(f => f.fieldName === lookupField)?.data;
 			if (values == null) continue;
 
 			const idsToIncorporate = lookups[lookupField].filter(v => v.recordId === record._id).map(v => v._id);
