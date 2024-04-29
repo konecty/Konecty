@@ -107,7 +107,6 @@ export default async function exportData({ document, listName, type = 'csv', use
 		displayType: query.displayType,
 		fields,
 		filter,
-		sort: query.sort,
 		limit: query.limit,
 		start: query.start,
 		withDetailFields: 'true',
@@ -136,14 +135,12 @@ export default async function exportData({ document, listName, type = 'csv', use
 
 export class TransformFlattenData extends Transform {
 	headers: Set<string> = new Set<string>();
-	i = 0;
 
 	constructor() {
 		super({ objectMode: true, defaultEncoding: 'utf8' });
 	}
 
 	_transform(record: Record<string, unknown>, encoding: string, callback: internal.TransformCallback) {
-		this.i += 1;
 		const dateFormat = MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
 		const flatItem = flatten<object, object>(record);
 		const transformed = dateToString(flatItem, date => date.toFormat(dateFormat));
