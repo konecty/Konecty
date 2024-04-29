@@ -13,11 +13,11 @@ import { logger } from '@imports/utils/logger';
 import { getUserSafe } from '@imports/auth/getUser';
 import { DEFAULT_PAGE_SIZE } from '@imports/consts';
 import { dateToString } from '@imports/data/dateParser';
-import populateDetailFields from '@imports/data/populateDetailFields';
 import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
 import { KonFilter } from '@imports/model/Filter';
 import { User } from '@imports/model/User';
 import { DataDocument } from '@imports/types/data';
+import { AggregatePipeline } from '@imports/types/mongo';
 import { KonectyResult, KonectyResultError, KonectyResultSuccess } from '@imports/types/result';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { errorReturn, successReturn } from '@imports/utils/return';
@@ -226,7 +226,52 @@ export default async function find({
 		const startTime = process.hrtime();
 
 		tracingSpan?.addEvent('Executing find query', { queryOptions: JSON.stringify(queryOptions) });
-		const cursor = collection.find(query, queryOptions);
+		const aggregateStages: AggregatePipeline = [{ $match: query }];
+		if (queryOptions.sort) {
+			aggregateStages.push({ $sort: queryOptions.sort });
+		}
+		if (queryOptions.skip) {
+			aggregateStages.push({ $skip: queryOptions.skip });
+		}
+		if (queryOptions.limit) {
+			aggregateStages.push({ $limit: queryOptions.limit });
+		}
+
+		if (withDetailFields === 'true') {
+			const lookupFields = Object.keys(metaObject.fields).filter(
+				fieldName => metaObject.fields[fieldName].type === 'lookup' && metaObject.fields[fieldName].detailFields?.length,
+			);
+			const fieldsRetrieved = Object.keys(queryOptions.projection ?? {}).map(field => field.split('.')[0]);
+			const lookupsToPopulate = lookupFields.filter(lookupField => fieldsRetrieved.includes(lookupField));
+
+			for (const lookup of lookupsToPopulate) {
+				const field = metaObject.fields[lookup];
+				aggregateStages.push({
+					$lookup: {
+						from: MetaObject.Collections[field.document ?? 'no-coll'].collectionName,
+						localField: `${lookup}._id`,
+						foreignField: '_id',
+						as: lookup,
+					},
+				});
+
+				if (field.isList !== true) {
+					aggregateStages.push({ $addFields: { [lookup]: { $arrayElemAt: [`$${lookup}`, 0] } } });
+				}
+
+				const lookupProjection = ['_id'].concat(field.detailFields ?? []).concat(field.descriptionFields ?? []);
+				const detailFieldsProjection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(lookupProjection.map(detailField => `${field.name}.${detailField}`).join());
+				delete queryOptions.projection[lookup];
+
+				Object.assign(queryOptions.projection, detailFieldsProjection);
+			}
+		}
+
+		if (Object.keys(queryOptions.projection).length > 0) {
+			aggregateStages.push({ $project: queryOptions.projection });
+		}
+
+		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true });
 		const recordStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
@@ -260,12 +305,12 @@ export default async function find({
 			result.total = await collection.countDocuments(query);
 		}
 
-		if (withDetailFields === 'true') {
-			tracingSpan?.addEvent('Populating detail fields');
-			result.data = result.data.map(async (record: DataDocument) => populateDetailFields({ records: [record], document, contextUser: user }), {
-				concurrency: STREAM_CONCURRENCY,
-			});
-		}
+		// if (withDetailFields === 'true') {
+		// 	tracingSpan?.addEvent('Populating detail fields');
+		// 	result.data = result.data.map(async (record: DataDocument) => populateDetailFields({ records: [record], document, contextUser: user }), {
+		// 		concurrency: STREAM_CONCURRENCY,
+		// 	});
+		// }
 
 		if (transformDatesToString) {
 			result.data = result.data.map((record: DataDocument) => dateToString(record), { concurrency: STREAM_CONCURRENCY });
