@@ -42,7 +42,7 @@ export default async function xlsExport(dataStream: Readable, name: string): Pro
 	};
 
 	return new Promise((resolve, reject) => {
-		dataStream.on('end', () => {
+		dataStream.on('end', async () => {
 			addHeaders();
 			resolve(
 				successReturn({
@@ -50,7 +50,7 @@ export default async function xlsExport(dataStream: Readable, name: string): Pro
 						'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 						'Content-Disposition': `attachment; filename=${name}.xlsx`,
 					},
-					content: wb,
+					content: await wb.writeToBuffer(),
 				}),
 			);
 		});

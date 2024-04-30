@@ -14,7 +14,6 @@ import csvExport from '@imports/exports/csvExport';
 import xlsExport from '@imports/exports/xlsExport';
 import { User } from '@imports/model/User';
 import { KonectyResult } from '@imports/types/result';
-import { Workbook } from 'excel4node';
 import internal, { Stream, Transform } from 'node:stream';
 import { dateToString } from './dateParser';
 
@@ -38,7 +37,7 @@ type ExportDataParams = {
 
 export type ExportDataResponse = {
 	httpHeaders: Record<string, string>;
-	content: Stream | Workbook;
+	content: Stream | Buffer;
 };
 
 export default async function exportData({ document, listName, type = 'csv', user, tracingSpan, ...query }: ExportDataParams): Promise<KonectyResult<ExportDataResponse>> {
