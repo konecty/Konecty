@@ -27,16 +27,15 @@ import { Readable } from 'node:stream';
 import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
 const STREAM_CONCURRENCY = 10;
-type KonSort = object;
 
-type FindParams = {
+type FindParams<AsStream> = {
 	document: string;
 	displayName?: string;
 	displayType?: string;
 
 	fields?: string;
 	filter?: KonFilter;
-	sort?: KonSort | string;
+	sort?: object | string;
 	limit?: number | string;
 	start?: number | string;
 
@@ -45,10 +44,12 @@ type FindParams = {
 	contextUser?: User;
 	transformDatesToString?: boolean;
 	tracingSpan?: Span;
-	asStream?: boolean;
+	asStream?: AsStream;
 } & ({ authTokenId: string; contextUser?: User } | { authTokenId?: string; contextUser: User });
 
-export default async function find({
+type FindReturnType<AsStream> = KonectyResult<AsStream extends true ? Readable : DataDocument[]>;
+
+export default async function find<AsStream extends boolean = false>({
 	authTokenId,
 	document,
 	displayName,
@@ -64,7 +65,7 @@ export default async function find({
 	transformDatesToString = true,
 	tracingSpan,
 	asStream,
-}: FindParams): Promise<KonectyResult<DataDocument[] | Readable>> {
+}: FindParams<AsStream>): Promise<FindReturnType<AsStream>> {
 	try {
 		tracingSpan?.setAttribute('document', document);
 
@@ -289,7 +290,7 @@ export default async function find({
 		}
 
 		if (asStream) {
-			return result;
+			return result as FindReturnType<AsStream>;
 		}
 
 		const arrayResult = Object.assign({}, result, { data: await result.data.toArray() });

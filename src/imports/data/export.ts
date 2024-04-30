@@ -118,9 +118,6 @@ export default async function exportData({ document, listName, type = 'csv', use
 	if (result == null || result.success === false) {
 		return result;
 	}
-	if (result.data instanceof Stream === false) {
-		return errorReturn('Oops something wen wrong! [data-not-stream]');
-	}
 
 	tracingSpan?.addEvent('Flattening data');
 	const dataStream = result.data;
