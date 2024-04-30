@@ -45,7 +45,7 @@ import { renderTemplate } from '../template';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
-import populateDetailFields from './populateDetailFields';
+import populateDetailFields from './populateDetailFields/fromArray';
 
 const WRITE_TIMEOUT = 3e4; // 30 seconds
 

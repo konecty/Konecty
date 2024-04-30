@@ -42,7 +42,7 @@ export default async function populateDetailFields({ records, document, contextU
 				chunk(lookupValues, PAGE_SIZE),
 				async chunkedLookupValues => {
 					const idsToFind = chunkedLookupValues.map(lookupValue => lookupValue._id);
-					const konFilter = {
+					const konFilter: KonFilter = {
 						match: 'and',
 						conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
 					};

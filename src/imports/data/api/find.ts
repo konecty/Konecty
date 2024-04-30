@@ -24,6 +24,7 @@ import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
 import { Collection, Filter, FindOptions } from 'mongodb';
 import { Readable } from 'node:stream';
+import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
 const STREAM_CONCURRENCY = 10;
 type KonSort = object;
@@ -238,32 +239,10 @@ export default async function find({
 		}
 
 		if (withDetailFields === 'true') {
-			const lookupFields = Object.keys(metaObject.fields).filter(
-				fieldName => metaObject.fields[fieldName].type === 'lookup' && metaObject.fields[fieldName].detailFields?.length,
-			);
-			const fieldsRetrieved = Object.keys(queryOptions.projection ?? {}).map(field => field.split('.')[0]);
-			const lookupsToPopulate = lookupFields.filter(lookupField => fieldsRetrieved.includes(lookupField));
+			const lookupStages = addDetailFieldsIntoAggregate(document, queryOptions.projection);
 
-			for (const lookup of lookupsToPopulate) {
-				const field = metaObject.fields[lookup];
-				aggregateStages.push({
-					$lookup: {
-						from: MetaObject.Collections[field.document ?? 'no-coll'].collectionName,
-						localField: `${lookup}._id`,
-						foreignField: '_id',
-						as: lookup,
-					},
-				});
-
-				if (field.isList !== true) {
-					aggregateStages.push({ $addFields: { [lookup]: { $arrayElemAt: [`$${lookup}`, 0] } } });
-				}
-
-				const lookupProjection = ['_id'].concat(field.detailFields ?? []).concat(field.descriptionFields ?? []);
-				const detailFieldsProjection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(lookupProjection.map(detailField => `${field.name}.${detailField}`).join());
-				delete queryOptions.projection[lookup];
-
-				Object.assign(queryOptions.projection, detailFieldsProjection);
+			if (lookupStages.length > 0) {
+				aggregateStages.push(...lookupStages);
 			}
 		}
 
@@ -304,13 +283,6 @@ export default async function find({
 			tracingSpan?.addEvent('Calculating total');
 			result.total = await collection.countDocuments(query);
 		}
-
-		// if (withDetailFields === 'true') {
-		// 	tracingSpan?.addEvent('Populating detail fields');
-		// 	result.data = result.data.map(async (record: DataDocument) => populateDetailFields({ records: [record], document, contextUser: user }), {
-		// 		concurrency: STREAM_CONCURRENCY,
-		// 	});
-		// }
 
 		if (transformDatesToString) {
 			result.data = result.data.map((record: DataDocument) => dateToString(record), { concurrency: STREAM_CONCURRENCY });
