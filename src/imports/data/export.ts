@@ -135,15 +135,16 @@ export default async function exportData({ document, listName, type = 'csv', use
 
 export class TransformFlattenData extends Transform {
 	headers: Set<string> = new Set<string>();
+	dateFormat: string;
 
-	constructor() {
+	constructor(dateFormat?: string) {
 		super({ objectMode: true, defaultEncoding: 'utf8' });
+		this.dateFormat = dateFormat ?? MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
 	}
 
 	_transform(record: Record<string, unknown>, encoding: string, callback: internal.TransformCallback) {
-		const dateFormat = MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
 		const flatItem = flatten<object, object>(record);
-		const transformed = dateToString(flatItem, date => date.toFormat(dateFormat));
+		const transformed = dateToString(flatItem, date => date.toFormat(this.dateFormat));
 
 		for (const key of Object.keys(flatItem)) this.headers.add(key);
 

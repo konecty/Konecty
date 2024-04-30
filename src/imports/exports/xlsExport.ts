@@ -5,8 +5,6 @@ import { errorReturn, successReturn } from '@imports/utils/return';
 import { ExportDataResponse, TransformFlattenData } from '@imports/data/export';
 import { KonectyResult } from '@imports/types/result';
 import { Workbook, Worksheet } from 'excel4node';
-import isDate from 'lodash/isDate';
-import moment from 'moment';
 import { Readable } from 'stream';
 
 export default async function xlsExport(dataStream: Readable, name: string): Promise<KonectyResult<ExportDataResponse>> {
@@ -24,7 +22,7 @@ export default async function xlsExport(dataStream: Readable, name: string): Pro
 	});
 
 	const ws = wb.addWorksheet(name);
-	const flattenData = new TransformFlattenData();
+	const flattenData = new TransformFlattenData('dd/MM/yyyy HH:mm:ss');
 
 	const widths: Record<string, number> = {};
 
@@ -74,10 +72,6 @@ function addToWorksheet(flattenData: TransformFlattenData, widths: Record<string
 			const header = headers[index];
 			let value = record[header] || '';
 			const cell = acc.cell(row, index + 1);
-
-			if (isDate(value)) {
-				value = moment(value).format('DD/MM/YYYY HH:mm:ss');
-			}
 
 			if (typeof value === 'object') {
 				value = '';
