@@ -38,9 +38,18 @@ export default async function xlsExport(dataStream: Readable, name: string): Pro
 function addToWorksheet(flattenData: TransformFlattenData, widths: Record<string, number>) {
 	let row = 2;
 
+	let headers: string[] = [];
+	let headerNum = 0;
+
+	/**
+	 * Headers must be picked on every itteration because they can change, as they are dynamic
+	 * @see {@link TransformFlattenData._transform} line 145
+	 */
 	return (acc: Worksheet, record: Record<string, unknown>) => {
-		const headers = Array.from(flattenData.headers);
-		const headerNum = headers.length;
+		if (headerNum !== flattenData.headers.size) {
+			headers = Array.from(flattenData.headers);
+			headerNum = headers.length;
+		}
 
 		for (let index = 0; index < headerNum; index++) {
 			const header = headers[index];
