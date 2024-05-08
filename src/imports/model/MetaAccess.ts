@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { Condition, KonFilter } from './Filter';
 
 export const FieldAccessSchema = z.record(
 	z.literal('CREATE').or(z.literal('READ')).or(z.literal('UPDATE')).or(z.literal('DELETE')),
 	z.object({
-		condition: z.unknown().optional(),
+		condition: Condition.optional(),
 		allow: z.boolean().optional(),
 	}),
 );
@@ -22,6 +23,9 @@ export const MetaAccessSchema = z.object({
 	isCreatable: z.boolean().optional(),
 	isReadable: z.boolean().optional(),
 	isDeletable: z.boolean().optional(),
+
+	readFilter: KonFilter.optional(),
+	updateFilter: KonFilter.optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;

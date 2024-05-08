@@ -6,7 +6,8 @@ import isString from 'lodash/isString';
 
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-import { create, deleteData, find, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
+import { find } from '@imports/data/api';
+import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
@@ -270,7 +271,9 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			reply.header(header, value);
 		}
 
-		reply.send(result.data.content);
+		tracingSpan.end();
+
+		return reply.send(result.data.content);
 	});
 
 	done();

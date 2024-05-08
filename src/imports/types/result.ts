@@ -3,12 +3,15 @@ export type KonectyError = {
 	code?: number;
 };
 
-export type KonectyResult<T = unknown> =
-	| {
-			success: true;
-			data: T;
-	  }
-	| {
-			success: false;
-			errors: Array<KonectyError>;
-	  };
+export type KonectyResult<T = unknown> = KonectyResultSuccess<T> | KonectyResultError;
+
+export type KonectyResultSuccess<T = unknown> = {
+	success: true;
+	data: T;
+	total?: number;
+};
+
+export type KonectyResultError = {
+	success: false;
+	errors: Array<KonectyError>;
+};

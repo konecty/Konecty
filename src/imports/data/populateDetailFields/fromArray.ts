@@ -1,4 +1,6 @@
+import { find } from '@imports/data/api';
 import { Document } from '@imports/model/Document';
+import { KonFilter } from '@imports/model/Filter';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
 import { DataDocument } from '@imports/types/data';
@@ -7,7 +9,6 @@ import Bluebird from 'bluebird';
 import chunk from 'lodash/chunk';
 import merge from 'lodash/merge';
 import size from 'lodash/size';
-import { find } from './data';
 
 type Params = {
 	records: DataDocument[];
@@ -41,7 +42,7 @@ export default async function populateDetailFields({ records, document, contextU
 				chunk(lookupValues, PAGE_SIZE),
 				async chunkedLookupValues => {
 					const idsToFind = chunkedLookupValues.map(lookupValue => lookupValue._id);
-					const konFilter = {
+					const konFilter: KonFilter = {
 						match: 'and',
 						conditions: [{ term: '_id', operator: 'in', value: idsToFind }],
 					};

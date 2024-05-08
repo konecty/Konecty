@@ -1,7 +1,6 @@
 import BluebirdPromise from 'bluebird';
 import { Collection, Filter, UpdateFilter } from 'mongodb';
 
-import has from 'lodash/has';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 
@@ -29,7 +28,7 @@ export default async function updateRelationReference(metaName: string, relation
 	}
 
 	// Init a query with filter of relation
-	if (has(relation, 'filter')) {
+	if ('filter' in relation && relation.filter != null) {
 		query = parseFilterObject(relation.filter, meta);
 	}
 

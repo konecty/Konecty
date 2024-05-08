@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { KonFilter } from './Filter';
 
 export const RelationSchema = z.object({
 	document: z.string(),
@@ -9,22 +10,7 @@ export const RelationSchema = z.object({
 			field: z.string().optional(),
 		}),
 	),
-	filter: z
-		.object({
-			match: z.enum(['and', 'or']),
-			conditions: z.array(
-				z.object({
-					operator: z.string(),
-					term: z.string(),
-					editable: z.boolean().optional(),
-					disabled: z.boolean().optional(),
-					sort: z.number().optional(),
-					value: z.any().optional(),
-					style: z.any().optional(),
-				}),
-			),
-		})
-		.optional(),
+	filter: KonFilter.optional(),
 });
 
 export type Relation = z.infer<typeof RelationSchema>;

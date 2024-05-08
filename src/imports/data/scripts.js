@@ -8,13 +8,13 @@ import get from 'lodash/get';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 
+import { find } from '@imports/data/api';
 import { MetaObject } from '@imports/model/MetaObject';
 import { stringToDate } from '../data/dateParser';
 import { parseDynamicData } from '../data/filterUtils';
 import { populateLookupsData } from '../data/populateLookupsData';
 import { logger } from '../utils/logger';
 import { errorReturn, successReturn } from '../utils/return';
-import { find } from './data';
 
 export async function runScriptBeforeValidation({ script, data, user, meta, extraData }) {
 	try {

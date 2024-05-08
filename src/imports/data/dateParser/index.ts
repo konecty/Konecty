@@ -14,7 +14,7 @@ type RecordObject = {
 
 type TransformFn = (date: DateTime) => string;
 
-export function dateToString<ReturnT = string | Array<any> | object>(record: any, transformFn?: TransformFn): ReturnT {
+export function dateToString<ReturnT = string | Array<any> | object>(record: ReturnT, transformFn?: TransformFn): ReturnT {
 	if (isObject(record)) {
 		const typedRecord = record as RecordObject;
 

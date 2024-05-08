@@ -18,7 +18,7 @@ export const successReturn = function (value) {
 
 /**
  * 
- * @param {string | string[]} messages 
+ * @param {string | string[] | {message: string}[]} messages 
  * @returns {{success: false, errors: import("../types/result").KonectyError[]}}
  */
 export const errorReturn = function (messages) {

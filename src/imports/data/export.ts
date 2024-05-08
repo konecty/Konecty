@@ -6,15 +6,15 @@ import isString from 'lodash/isString';
 import { Span } from '@opentelemetry/api';
 import { flatten } from 'flat';
 
-import { find } from '@imports/data/data';
+import { find } from '@imports/data/api';
 import { MetaObject } from '@imports/model/MetaObject';
-import { errorReturn, successReturn } from '@imports/utils/return';
+import { errorReturn } from '@imports/utils/return';
 
-import { csvExport } from '@imports/exports/csvExport';
-import { xlsExport } from '@imports/exports/xlsExport';
-import { List } from '@imports/model/List';
+import csvExport from '@imports/exports/csvExport';
+import xlsExport from '@imports/exports/xlsExport';
 import { User } from '@imports/model/User';
 import { KonectyResult } from '@imports/types/result';
+import internal, { Stream, Transform } from 'node:stream';
 import { dateToString } from './dateParser';
 
 type ExportDataParams = {
@@ -35,19 +35,15 @@ type ExportDataParams = {
 	tracingSpan?: Span;
 };
 
-type ExportDataResponse = {
+export type ExportDataResponse = {
 	httpHeaders: Record<string, string>;
-	content: string | Buffer;
+	content: Stream | Buffer;
 };
 
 export default async function exportData({ document, listName, type = 'csv', user, tracingSpan, ...query }: ExportDataParams): Promise<KonectyResult<ExportDataResponse>> {
-	const listMeta = (await MetaObject.MetaObject.findOne({
-		type: 'list',
-		document,
-		name: listName,
-	})) as List;
+	const listMeta = MetaObject.DisplayMeta[`${document}:list:${listName}`];
 
-	if (listMeta == null) {
+	if (listMeta == null || listMeta.type !== 'list') {
 		return errorReturn(`[${document}] Can't find list ${listName} of document ${document}`);
 	}
 
@@ -110,12 +106,12 @@ export default async function exportData({ document, listName, type = 'csv', use
 		displayType: query.displayType,
 		fields,
 		filter,
-		sort: query.sort,
 		limit: query.limit,
 		start: query.start,
 		withDetailFields: 'true',
 		getTotal: false,
 		transformDatesToString: false,
+		asStream: true,
 		tracingSpan,
 	});
 
@@ -123,25 +119,32 @@ export default async function exportData({ document, listName, type = 'csv', use
 		return result;
 	}
 
-	const dateFormat = MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
-
 	tracingSpan?.addEvent('Flattening data');
-	const dataResult = result.data.reduce(
-		(acc: { flatData: object[]; keys: Record<string, number> }, item) => {
-			const flatItem = flatten<object, object>(item);
-			const transformed = dateToString<typeof flatItem>(flatItem, date => date.toFormat(dateFormat));
-
-			acc.flatData.push(transformed);
-			Object.keys(flatItem as object).forEach(key => (acc.keys[key] = 1));
-
-			return acc;
-		},
-		{ flatData: [], keys: {} },
-	);
+	const dataStream = result.data;
 
 	if (type === 'xls') {
-		return successReturn(await xlsExport(Object.keys(dataResult.keys), dataResult.flatData, name));
+		return xlsExport(dataStream, name);
 	}
 
-	return successReturn(csvExport(Object.keys(dataResult.keys), dataResult.flatData, name));
+	return csvExport(dataStream, name);
+}
+
+export class TransformFlattenData extends Transform {
+	headers: Set<string> = new Set<string>();
+	dateFormat: string;
+
+	constructor(dateFormat?: string) {
+		super({ objectMode: true, defaultEncoding: 'utf8' });
+		this.dateFormat = dateFormat ?? MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
+	}
+
+	_transform(record: Record<string, unknown>, encoding: string, callback: internal.TransformCallback) {
+		const flatItem = flatten<object, object>(record);
+		const transformed = dateToString(flatItem, date => date.toFormat(this.dateFormat));
+
+		for (const key of Object.keys(flatItem)) this.headers.add(key);
+
+		this.push(transformed);
+		callback();
+	}
 }
