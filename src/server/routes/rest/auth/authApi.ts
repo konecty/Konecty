@@ -136,10 +136,9 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			ns?: string;
 		};
 	}>('/rest/auth/reset', async function (req, reply) {
-		// Map body parameters
 		const { user, ns } = req.body;
 
-		const result = await resetPassword({ user, ns, host: req.headers['host'] });
+		const result = await resetPassword({ user, ns: ns ?? '', host: req.headers['host'] ?? '' });
 
 		return reply.send(result);
 	});
