@@ -1,0 +1,82 @@
+name: Run Tests on Merge Requests
+
+on:
+    pull_request:
+        branches:
+            - '*'
+
+jobs:
+    install-dependencies:
+        name: Install Dependencies
+        runs-on: ubuntu-latest
+        environment: develop
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Setup NodeJS
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+                  cache: 'yarn'
+                  cache-dependency-path: yarn.lock
+            - name: Restore Dependencies Cache
+              uses: actions/cache/restore@v4
+              id: cache-restore
+              with:
+                  path: |
+                      node_modules
+                      .husky
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+            - name: Install Dependencies
+              run: yarn --frozen-lockfile --no-progress --non-interactive
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+            - name: Save Dependencies Cache
+              uses: actions/cache/save@v4
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+              id: cache-save
+              with:
+                  path: |
+                      node_modules
+                      .husky
+                  key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+    test:
+        name: Run Test
+        runs-on: ubuntu-latest
+        needs: [install-dependencies]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Setup NodeJS
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+                  cache: 'yarn'
+                  cache-dependency-path: yarn.lock
+            - name: Restore Dependencies Cache
+              uses: actions/cache/restore@v4
+              id: cache-restore-yarn
+              with:
+                  path: |
+                      node_modules
+                      .husky
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+            - name: Restore Tests Cache
+              uses: actions/cache/restore@v4
+              id: cache-restore-jest
+              with:
+                  path: .jestcache
+                  key: ${{ runner.os }}-jest-${{ hashFiles('**/yarn.lock') }}
+            - name: Running tests
+              env:
+                  TZ: 'America/Sao_Paulo'
+              run: yarn test --cacheDirectory ".jestcache"
+            - name: Save Tests Cache
+              uses: actions/cache/save@v4
+              id: cache-save
+              with:
+                  path: .jestcache
+                  key: ${{ steps.cache-restore-jest.outputs.cache-primary-key }}

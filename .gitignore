@@ -1,6 +1,7 @@
 **/bin/**
 **/build/*
 **/node_modules/*
+node_modules
 **/tmp/*
 *.bak
 *.iml
@@ -63,6 +64,9 @@ Thumbs.db
 thumbs.db
 tramp
 typo3temp
-.vscode
+.vscode/settings.json
 package-lock.json
 .env.docker
+dist
+coverage
+.jestcache

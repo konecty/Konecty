@@ -1,0 +1,1591 @@
+[
+	{
+		"_id": "Activity",
+		"fields": {
+			"queue": {
+				"descriptionFields": ["name"],
+				"type": "lookup",
+				"name": "queue",
+				"label": {
+					"en": "Queue",
+					"pt_BR": "Roleta"
+				},
+				"document": "Queue",
+				"isInherited": true
+			},
+			"assignedTo": {
+				"name": "assignedTo",
+				"label": {
+					"en": "Assigned To",
+					"pt_BR": "Atribuída Para"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name"],
+				"type": "lookup",
+				"isInherited": true
+			},
+			"code": {
+				"isUnique": true,
+				"isSortable": true,
+				"type": "autoNumber",
+				"name": "code",
+				"label": {
+					"pt_BR": "Código",
+					"en": "Code"
+				},
+				"isInherited": true
+			},
+			"completedAt": {
+				"label": {
+					"en": "Completed",
+					"pt_BR": "Concluído"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "completedAt",
+				"isInherited": true
+			},
+			"contact": {
+				"name": "contact",
+				"label": {
+					"en": "Contact",
+					"pt_BR": "Contato"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "Contact",
+				"descriptionFields": ["code", "name.full"],
+				"detailFields": ["email", "phone"],
+				"type": "lookup",
+				"isInherited": true
+			},
+			"description": {
+				"type": "richText",
+				"name": "description",
+				"label": {
+					"en": "Description",
+					"pt_BR": "Descrição"
+				},
+				"isInherited": true
+			},
+			"endAt": {
+				"type": "dateTime",
+				"name": "endAt",
+				"label": {
+					"en": "End",
+					"pt_BR": "Fim"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"opportunity": {
+				"descriptionFields": ["code", "label"],
+				"inheritedFields": [
+					{
+						"fieldName": "contact",
+						"inherit": "always"
+					}
+				],
+				"type": "lookup",
+				"name": "opportunity",
+				"label": {
+					"en": "Opportunity",
+					"pt_BR": "Oportunidade"
+				},
+				"isSortable": true,
+				"document": "Opportunity",
+				"isInherited": true
+			},
+			"priority": {
+				"type": "picklist",
+				"isSortable": true,
+				"label": {
+					"en": "Priority",
+					"pt_BR": "Prioridade"
+				},
+				"options": {
+					"high": {
+						"pt_BR": "Alta",
+						"en": "High",
+						"sort": 1
+					},
+					"medium": {
+						"en": "Medium",
+						"pt_BR": "Média",
+						"sort": 2
+					},
+					"low": {
+						"en": "Low",
+						"pt_BR": "Baixa",
+						"sort": 3
+					}
+				},
+				"renderAs": "without_scroll",
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "priority",
+				"optionsSorter": "sort",
+				"isInherited": true
+			},
+			"private": {
+				"type": "boolean",
+				"name": "private",
+				"label": {
+					"en": "Private",
+					"pt_BR": "Privado"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"product": {
+				"type": "lookup",
+				"name": "product",
+				"label": {
+					"en": "Product",
+					"pt_BR": "Produto"
+				},
+				"isSortable": true,
+				"document": "Product",
+				"descriptionFields": ["code", "type", "sale", "_user"],
+				"isInherited": true,
+				"inheritedFields": [
+					{
+						"fieldName": "sale",
+						"inherit": "once"
+					},
+					{
+						"fieldName": "tags",
+						"inherit": "once"
+					}
+				]
+			},
+			"webElement": {
+				"name": "webElement",
+				"label": {
+					"en": "Web element",
+					"pt_BR": "Elemento web"
+				},
+				"isSortable": true,
+				"isList": false,
+				"document": "WebElement",
+				"descriptionFields": ["code", "name"],
+				"type": "lookup",
+				"isInherited": true
+			},
+			"reminder": {
+				"type": "time",
+				"name": "reminder",
+				"label": {
+					"pt_BR": "Lembrete",
+					"en": "Reminder"
+				},
+				"isList": true,
+				"isInherited": true
+			},
+			"startAt": {
+				"type": "dateTime",
+				"name": "startAt",
+				"label": {
+					"en": "Start",
+					"pt_BR": "Início"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"status": {
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "status",
+				"optionsSorter": "sort",
+				"isSortable": true,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"options": {
+					"new": {
+						"en": "New",
+						"pt_BR": "Nova",
+						"sort": 1
+					},
+					"in-progress": {
+						"en": "In Progress",
+						"pt_BR": "Em Andamento",
+						"sort": 2
+					},
+					"done": {
+						"en": "Done",
+						"pt_BR": "Concluída",
+						"sort": 3
+					},
+					"canceled": {
+						"en": "Canceled",
+						"pt_BR": "Cancelada",
+						"sort": 4
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"isInherited": true
+			},
+			"subject": {
+				"type": "text",
+				"name": "subject",
+				"label": {
+					"pt_BR": "Assunto",
+					"en": "Subject"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"isInherited": true
+			},
+			"type": {
+				"maxSelected": 1,
+				"minSelected": 1,
+				"name": "type",
+				"optionsSorter": "asc",
+				"isSortable": true,
+				"label": {
+					"en": "Type",
+					"pt_BR": "Tipo"
+				},
+				"options": {
+					"phone-call": {
+						"en": "Phone Call",
+						"pt_BR": "Ligação"
+					},
+					"demo": {
+						"en": "Demo",
+						"pt_BR": "Demonstração"
+					},
+					"email": {
+						"en": "Email",
+						"pt_BR": "Email"
+					},
+					"execution-control": {
+						"en": "Execution Control",
+						"pt_BR": "Controle de Execução"
+					},
+					"appointment": {
+						"en": "Appointment",
+						"pt_BR": "Agendamento"
+					},
+					"note": {
+						"en": "Note",
+						"pt_BR": "Anotação"
+					},
+					"delivery": {
+						"en": "Delivery",
+						"pt_BR": "Entrega"
+					},
+					"social-networks": {
+						"en": "Social Networks",
+						"pt_BR": "Redes Sociais"
+					},
+					"expression-of-gratitude": {
+						"en": "Expression of Gratitude",
+						"pt_BR": "Agradecimento"
+					}
+				},
+				"renderAs": "without_scroll",
+				"type": "picklist",
+				"isInherited": true
+			},
+			"_createdAt": {
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_createdAt",
+				"isInherited": true
+			},
+			"_createdBy": {
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"isInherited": true
+			},
+			"campaign": {
+				"type": "lookup",
+				"name": "campaign",
+				"label": {
+					"en": "Campaign",
+					"pt_BR": "Campanha"
+				},
+				"isSortable": true,
+				"document": "Campaign",
+				"descriptionFields": ["code", "name", "type"],
+				"isInherited": true
+			},
+			"reason": {
+				"name": "reason",
+				"label": {
+					"en": "Reason",
+					"pt_BR": "Motivo"
+				},
+				"type": "text",
+				"isInherited": true
+			},
+			"_user": {
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "director.nickname", "active"],
+				"detailFields": ["phone", "emails"],
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"approvedAt": {
+				"label": {
+					"en": "Approval Date",
+					"pt_BR": "Data Aprovação"
+				},
+				"type": "dateTime",
+				"name": "approvedAt",
+				"isSortable": true
+			},
+			"tags": {
+				"type": "lookup",
+				"label": {
+					"en": "Tags",
+					"pt_BR": "Tags"
+				},
+				"isSortable": true,
+				"isList": true,
+				"detailFields": ["name"],
+				"name": "tags",
+				"document": "Tag",
+				"descriptionFields": ["code", "type", "name"],
+				"minItems": 0
+			},
+			"sale": {
+				"isSortable": true,
+				"minValue": 0,
+				"type": "money",
+				"name": "sale",
+				"label": {
+					"en": "Sale",
+					"pt_BR": "Valor de Venda"
+				},
+				"isInherited": true
+			}
+		},
+		"icon": "check",
+		"label": {
+			"en": "Activity",
+			"pt_BR": "Atividade"
+		},
+		"menuSorter": 1,
+		"name": "Activity",
+		"plurals": {
+			"pt_BR": "Atividades",
+			"en": "Activities"
+		},
+		"saveHistory": true,
+		"type": "document",
+		"indexes": {
+			"activity_more_unique": {
+				"keys": {
+					"contact:_id": 1,
+					"campaign:_id": 1,
+					"product:_id": 1,
+					"status": 1
+				},
+				"options": {
+					"unique": true,
+					"name": "activity_more_unique"
+				}
+			}
+		},
+		"sendAlerts": true
+	},
+	{
+		"_id": "Activity:access:Default",
+		"document": "Activity",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isReadable": true,
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"pt_BR": "Default",
+			"en": "Default"
+		},
+		"name": "Default",
+		"readFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"operator": "equals",
+					"term": "_user._id",
+					"value": "$user"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "Activity:access:Director",
+		"changeUser": true,
+		"replaceUser": true,
+		"addUser": true,
+		"removeUser": true,
+		"defineUser": true,
+		"removeInactiveUser": true,
+		"document": "Activity",
+		"fieldDefaults": {
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true,
+			"isUpdatable": true
+		},
+		"fields": {},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"pt_BR": "Diretor",
+			"en": "Director"
+		},
+		"name": "Director",
+
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"operator": "in",
+					"term": "_user.group._id",
+					"value": "$groups"
+				},
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			]
+		},
+		"type": "access",
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$groups",
+					"operator": "in"
+				}
+			]
+		}
+	},
+	{
+		"_id": "Activity:access:Manager",
+		"changeUser": true,
+		"document": "Activity",
+		"fieldDefaults": {
+			"isUpdatable": true,
+			"isReadable": true,
+			"isDeletable": false,
+			"isCreatable": true
+		},
+		"fields": {},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Manager",
+			"pt_BR": "Gerente"
+		},
+		"name": "Manager",
+
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "_user.group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"replaceUser": true,
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "Activity:list:Default",
+		"calendars": [
+			{
+				"name": "Agenda",
+				"startAt": "startAt",
+				"help": {},
+				"visible": true,
+				"endAt": "endAt",
+				"descriminator": "type",
+				"title": "subject",
+				"label": {},
+				"description": {}
+			}
+		],
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 60,
+				"sort": 0
+			},
+			"type": {
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 100,
+				"name": "type",
+				"sort": 2
+			},
+			"startAt": {
+				"name": "startAt",
+				"linkField": "startAt",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 8
+			},
+			"endAt": {
+				"name": "endAt",
+				"linkField": "endAt",
+				"visible": false,
+				"minWidth": 150,
+				"sort": 18
+			},
+			"completedAt": {
+				"name": "completedAt",
+				"linkField": "completedAt",
+				"minWidth": 150,
+				"sort": 19
+			},
+			"subject": {
+				"name": "subject",
+				"linkField": "subject",
+				"visible": true,
+				"minWidth": 250,
+				"sort": 5
+			},
+			"description": {
+				"name": "description",
+				"linkField": "description",
+				"minWidth": 250,
+				"sort": 7,
+				"visible": true
+			},
+			"priority": {
+				"name": "priority",
+				"linkField": "priority",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 12
+			},
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 1
+			},
+			"reason": {
+				"linkField": "reason",
+				"minWidth": 150,
+				"name": "reason",
+				"sort": 6,
+				"visible": true
+			},
+			"assignedTo": {
+				"name": "assignedTo",
+				"linkField": "assignedTo",
+				"minWidth": 50,
+				"sort": 21
+			},
+			"opportunity": {
+				"name": "opportunity",
+				"linkField": "opportunity",
+				"visible": true,
+				"minWidth": 110,
+				"sort": 4
+			},
+			"contact": {
+				"minWidth": 180,
+				"name": "contact",
+				"linkField": "contact",
+				"visible": true,
+				"sort": 3
+			},
+			"product": {
+				"minWidth": 200,
+				"name": "product",
+				"linkField": "product",
+				"visible": true,
+				"sort": 10
+			},
+			"webElement": {
+				"minWidth": 200,
+				"name": "webElement",
+				"linkField": "webElement",
+				"sort": 11
+			},
+			"reminder": {
+				"name": "reminder",
+				"linkField": "reminder",
+				"minWidth": 50,
+				"sort": 22
+			},
+			"private": {
+				"name": "private",
+				"linkField": "private",
+				"minWidth": 50,
+				"sort": 23
+			},
+			"queue": {
+				"name": "queue",
+				"linkField": "queue",
+				"minWidth": 200,
+				"sort": 9,
+				"visible": true
+			},
+			"_user": {
+				"minWidth": 160,
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"sort": 17
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"minWidth": 160,
+				"sort": 16,
+				"visible": true
+			},
+			"_createdBy": {
+				"minWidth": 160,
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"sort": 15,
+				"visible": true
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"style": {
+					"colorBasedOnTime": "0:green:white,15:yellow,30:red:white,45:gray:white,60:black:white"
+				},
+				"minWidth": 160,
+				"sort": 14,
+				"visible": true
+			},
+			"_updatedBy": {
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"minWidth": 160,
+				"sort": 13,
+				"visible": true
+			},
+			"campaign": {
+				"linkField": "campaign",
+				"minWidth": 200,
+				"name": "campaign",
+				"sort": 11,
+				"visible": true
+			}
+		},
+		"document": "Activity",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"code:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"term": "code",
+					"sort": 0
+				},
+				"subject:contains": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "subject",
+					"operator": "contains",
+					"sort": 4
+				},
+				"status:in": {
+					"term": "status",
+					"value": ["Nova", "Em Andamento"],
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"columns": 1,
+						"renderAs": "checkbox"
+					},
+					"sort": 5
+				},
+				"type:in": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 2
+					},
+					"term": "type",
+					"operator": "in",
+					"sort": 6
+				},
+				"priority:in": {
+					"term": "priority",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 3
+					},
+					"sort": 7
+				},
+				"contact:_id:equals": {
+					"term": "contact._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"sort": 8
+				},
+				"opportunity:_id:equals": {
+					"term": "opportunity._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"sort": 9
+				},
+				"campaign:_id:equals": {
+					"disabled": true,
+					"style": {
+						"removable": true,
+						"hideOnDisable": true,
+						"renderAs": "lookupfield"
+					},
+					"term": "campaign._id",
+					"operator": "equals",
+					"editable": true,
+					"sort": 10
+				},
+				"queue:_id:equals": {
+					"term": "queue._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"sort": 11
+				},
+				"product:_id:equals": {
+					"term": "product._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"hideOnDisable": true,
+						"renderAs": "lookupfield",
+						"removable": true
+					},
+					"sort": 12
+				},
+				"_user:_id:equals": {
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"sort": 13
+				},
+				"_user:active:equals": {
+					"term": "_user.active",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"columns": 2,
+						"hideOnDisable": true,
+						"renderAs": "radiobox"
+					},
+					"sort": 14
+				},
+				"_user:group:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user.group._id",
+					"operator": "equals",
+					"sort": 15
+				},
+				"_createdAt:between": {
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_createdAt",
+					"sort": 16
+				},
+				"_updatedAt:between": {
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"sort": 17
+				},
+				"approvedAt:between": {
+					"term": "approvedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datefield",
+						"hideOnDisable": true
+					},
+					"sort": 27
+				},
+				"product:code:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"term": "product.code",
+					"sort": 1
+				},
+				"reason:contains": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "textfield"
+					},
+					"term": "reason",
+					"operator": "contains",
+					"sort": 3
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"pt_BR": "Atividade",
+			"en": "Activity"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Activities",
+			"pt_BR": "Atividades"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				15,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "code",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "Activity:list:ForLookup",
+		"calendars": [
+			{
+				"name": "Agenda",
+				"startAt": "startAt",
+				"help": {},
+				"visible": true,
+				"endAt": "endAt",
+				"descriminator": "type",
+				"title": "subject",
+				"label": {},
+				"description": {}
+			}
+		],
+		"columns": {
+			"code": {
+				"name": "code",
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 60,
+				"sort": 0
+			},
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 1
+			},
+			"type": {
+				"linkField": "type",
+				"visible": true,
+				"minWidth": 100,
+				"name": "type",
+				"sort": 2
+			},
+			"contact": {
+				"minWidth": 180,
+				"name": "contact",
+				"linkField": "contact",
+				"visible": true,
+				"sort": 3
+			},
+			"subject": {
+				"name": "subject",
+				"linkField": "subject",
+				"visible": true,
+				"minWidth": 250,
+				"sort": 5
+			},
+			"reason": {
+				"linkField": "reason",
+				"visible": true,
+				"minWidth": 150,
+				"name": "reason",
+				"sort": 6
+			},
+			"startAt": {
+				"name": "startAt",
+				"linkField": "startAt",
+				"visible": true,
+				"minWidth": 150,
+				"sort": 8
+			},
+			"priority": {
+				"name": "priority",
+				"linkField": "priority",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 12
+			},
+			"endAt": {
+				"name": "endAt",
+				"linkField": "endAt",
+				"visible": false,
+				"minWidth": 150,
+				"sort": 18
+			},
+			"completedAt": {
+				"name": "completedAt",
+				"linkField": "completedAt",
+				"minWidth": 150,
+				"sort": 19
+			},
+			"assignedTo": {
+				"name": "assignedTo",
+				"linkField": "assignedTo",
+				"minWidth": 50,
+				"sort": 21
+			},
+			"reminder": {
+				"name": "reminder",
+				"linkField": "reminder",
+				"minWidth": 50,
+				"sort": 22
+			},
+			"private": {
+				"name": "private",
+				"linkField": "private",
+				"minWidth": 50,
+				"sort": 23
+			}
+		},
+		"document": "Activity",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"code:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "numberfield"
+					},
+					"term": "code",
+					"sort": 0
+				},
+				"status:in": {
+					"term": "status",
+					"operator": "in",
+					"editable": true,
+					"style": {
+						"columns": 1,
+						"renderAs": "checkbox"
+					},
+					"sort": 3
+				},
+				"type:in": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 2
+					},
+					"term": "type",
+					"operator": "in",
+					"sort": 4
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"pt_BR": "Atividade",
+			"en": "Activity"
+		},
+		"loadDataAtOpen": true,
+		"name": "ForLookup",
+
+		"plurals": {
+			"en": "Activities",
+			"pt_BR": "Atividades"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				15,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200
+			],
+			"default": 25
+		},
+		"sorters": [
+			{
+				"term": "code",
+				"direction": "desc"
+			}
+		],
+		"type": "list",
+		"view": "Default",
+		"menuSorter": -1
+	},
+	{
+		"_id": "Activity:pivot:Default",
+		"columns": {
+			"status": {
+				"name": "status",
+				"linkField": "status",
+				"visible": true,
+				"minWidth": 150,
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"isInherited": true
+			}
+		},
+		"document": "Activity",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"status:in": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 1
+					},
+					"term": "status",
+					"value": ["Nova", "Em Andamento"],
+					"operator": "in",
+					"sort": 0
+				},
+				"type:in": {
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 2,
+						"hideOnDisable": true
+					},
+					"term": "type",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"sort": 1
+				},
+				"priority:in": {
+					"term": "priority",
+					"operator": "in",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "checkbox",
+						"columns": 3,
+						"hideOnDisable": true
+					},
+					"sort": 2
+				},
+				"contact:_id:equals": {
+					"term": "contact._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"sort": 4
+				},
+				"opportunity:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"term": "opportunity._id",
+					"sort": 5
+				},
+				"campaign:_id:equals": {
+					"disabled": true,
+					"style": {
+						"removable": true,
+						"hideOnDisable": true,
+						"renderAs": "lookupfield"
+					},
+					"term": "campaign._id",
+					"operator": "equals",
+					"editable": true,
+					"sort": 6
+				},
+				"queue:_id:equals": {
+					"term": "queue._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"removable": true,
+						"hideOnDisable": true
+					},
+					"sort": 7
+				},
+				"_user:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "_user._id",
+					"operator": "equals",
+					"sort": 8
+				},
+				"_user:group:_id:equals": {
+					"term": "_user.group._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"sort": 9
+				},
+				"_createdAt:between": {
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 10
+				},
+				"_updatedAt:between": {
+					"term": "_updatedAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"sort": 11
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Report",
+			"pt_BR": "Relatório"
+		},
+		"refreshRate": {
+			"options": [0],
+			"default": 0
+		},
+		"rows": [
+			{
+				"name": "_user.group",
+				"linkField": "_user.group",
+				"visible": true,
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				}
+			},
+			{
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				}
+			}
+		],
+		"rowsPerPage": {
+			"options": [100, 1000, 10000, 100000],
+			"default": 1000
+		},
+		"sorters": [
+			{
+				"term": "status",
+				"direction": "asc"
+			}
+		],
+		"type": "pivot",
+		"values": [
+			{
+				"linkField": "code",
+				"visible": true,
+				"minWidth": 50,
+				"label": {
+					"en": "Code",
+					"pt_BR": "Código"
+				},
+				"aggregator": "count",
+				"name": "code"
+			}
+		]
+	},
+	{
+		"_id": "Activity:view:Default",
+		"document": "Activity",
+		"label": {
+			"en": "{code}: {type} - {subject}",
+			"pt_BR": "{code}: {type} - {subject}"
+		},
+		"name": "Default",
+		"plurals": {
+			"en": "New Activity",
+			"pt_BR": "Nova Atividade"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {},
+				"label": {
+					"en": "Formulário",
+					"pt_BR": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"title": {
+								"pt_BR": "Informações",
+								"en": "Information"
+							}
+						},
+						"label": {
+							"en": "Information",
+							"pt_BR": "Informações"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"readOnlyVersion": true
+								},
+								"fieldName": "code"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "type"
+							},
+							{
+								"fieldName": "priority",
+								"defaultValue": "Média",
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								}
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"renderAs": "with_scroll"
+								},
+								"fieldName": "status",
+								"defaultValue": "new"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "reason"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "subject"
+							}
+						]
+					},
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "zoom-in",
+							"title": {
+								"pt_BR": "Detalhes",
+								"en": "Details"
+							}
+						},
+						"label": {
+							"en": "Details",
+							"pt_BR": "Detalhes"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"fieldName": "private"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"height": 250
+								},
+								"fieldName": "description"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "startAt"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "endAt"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "completedAt"
+							}
+						]
+					},
+					{
+						"type": "visualGroup",
+						"style": {
+							"title": {
+								"pt_BR": "Referências",
+								"en": "References"
+							},
+							"icon": "link"
+						},
+						"label": {
+							"en": "References",
+							"pt_BR": "Referências"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "campaign"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "queue"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "opportunity"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "product"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "webElement"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "contact"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

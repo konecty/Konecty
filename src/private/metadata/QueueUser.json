@@ -1,0 +1,605 @@
+[
+	{
+		"_id": "QueueUser",
+		"fields": {
+			"count": {
+				"isSortable": true,
+				"decimalSize": 0,
+				"defaultValue": 0,
+				"type": "number",
+				"label": {
+					"en": "Count",
+					"pt_BR": "Contador"
+				},
+				"comments": "Contador do usuário",
+				"name": "count",
+				"isRequired": true,
+				"minValue": 0,
+				"isInherited": true
+			},
+			"order": {
+				"decimalSize": 0,
+				"defaultValue": 0,
+				"type": "number",
+				"label": {
+					"en": "Order",
+					"pt_BR": "Ordem"
+				},
+				"comments": "Ordem para inserção dos usuários",
+				"isSortable": true,
+				"name": "order",
+				"isRequired": true,
+				"minValue": 0,
+				"isInherited": true
+			},
+			"queue": {
+				"descriptionFields": ["name"],
+				"inheritedFields": [
+					{
+						"fieldName": "_user",
+						"inherit": "always"
+					},
+					{
+						"fieldName": "type",
+						"inherit": "always"
+					}
+				],
+				"type": "lookup",
+				"name": "queue",
+				"label": {
+					"en": "Queue",
+					"pt_BR": "Roleta"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"document": "Queue",
+				"isInherited": true
+			},
+			"user": {
+				"descriptionFields": ["name", "group.name", "active"],
+				"type": "lookup",
+				"name": "user",
+				"label": {
+					"en": "Participant",
+					"pt_BR": "Participante"
+				},
+				"isRequired": true,
+				"isSortable": true,
+				"document": "User",
+				"conditionFields": [
+					{
+						"value": false,
+						"operator": "not_equals",
+						"term": "queueAllowed"
+					}
+				],
+				"isInherited": true
+			},
+			"extension": {
+				"type": "number",
+				"name": "extension",
+				"label": {
+					"pt_BR": "Ramal",
+					"en": "Extension"
+				},
+				"isSortable": true,
+				"isInherited": true
+			},
+			"_createdAt": {
+				"label": {
+					"en": "Created At",
+					"pt_BR": "Criado em"
+				},
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_createdAt",
+				"isInherited": true
+			},
+			"_createdBy": {
+				"type": "lookup",
+				"name": "_createdBy",
+				"label": {
+					"en": "Created by",
+					"pt_BR": "Criado por"
+				},
+				"isSortable": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"isInherited": true
+			},
+			"_updatedAt": {
+				"isSortable": true,
+				"type": "dateTime",
+				"name": "_updatedAt",
+				"label": {
+					"en": "Updated At",
+					"pt_BR": "Atualizado em"
+				},
+				"isInherited": true
+			},
+			"_updatedBy": {
+				"document": "User",
+				"descriptionFields": ["name", "group.name"],
+				"type": "lookup",
+				"name": "_updatedBy",
+				"label": {
+					"en": "Updated by",
+					"pt_BR": "Atualizado por"
+				},
+				"isInherited": true
+			},
+			"status": {
+				"minSelected": 0,
+				"maxSelected": 1,
+				"optionsSorter": "asc",
+				"type": "picklist",
+				"name": "status",
+				"label": {
+					"en": "Status",
+					"pt_BR": "Situação"
+				},
+				"renderAs": "without_scroll",
+				"isInherited": true
+			},
+			"_user": {
+				"type": "lookup",
+				"name": "_user",
+				"label": {
+					"en": "User",
+					"pt_BR": "Usuário"
+				},
+				"isSortable": true,
+				"isList": true,
+				"document": "User",
+				"descriptionFields": ["name", "group.name", "active"],
+				"detailFields": ["phone", "emails"],
+				"isInherited": true
+			},
+			"type": {
+				"type": "picklist",
+				"label": {
+					"pt_BR": "Tipo",
+					"en": "Type"
+				},
+				"name": "type",
+				"maxSelected": 4,
+				"minSelected": 0,
+				"options": {
+					"Chat": {
+						"en": "Chat",
+						"pt_BR": "Chat"
+					},
+					"Telefone": {
+						"en": "Phone",
+						"pt_BR": "Telefone"
+					},
+					"Formulario": {
+						"en": "Form",
+						"pt_BR": "Formulário"
+					},
+					"Email": {
+						"en": "Email",
+						"pt_BR": "Email"
+					}
+				},
+				"optionsSorter": "asc",
+				"renderAs": "without_scroll",
+				"isInherited": true
+			}
+		},
+		"group": "Queue",
+		"icon": "retweet",
+		"label": {
+			"pt_BR": "Usuário da Roleta",
+			"en": "Queue User"
+		},
+		"ignoreUpdatedAt": true,
+		"menuSorter": 11,
+		"name": "QueueUser",
+
+		"plurals": {
+			"en": "Queue Users",
+			"pt_BR": "Usuários da Roleta"
+		},
+		"saveHistory": true,
+		"type": "document"
+	},
+	{
+		"_id": "QueueUser:access:Default",
+		"document": "QueueUser",
+		"fieldDefaults": {
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true,
+			"isDeletable": true
+		},
+		"isCreatable": true,
+		"isDeletable": false,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Default",
+			"pt_BR": "Default"
+		},
+		"name": "Default",
+		"readFilter": {
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			],
+			"match": "and"
+		},
+		"updateFilter": {
+			"match": "and",
+			"conditions": [
+				{
+					"term": "_user._id",
+					"value": "$user",
+					"operator": "equals"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "QueueUser:access:Director",
+		"changeUser": true,
+		"document": "QueueUser",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "user.group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				},
+				{
+					"operator": "equals",
+					"term": "_user._id",
+					"value": "$user"
+				}
+			]
+		},
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"isCreatable": true,
+		"isDeletable": true,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Director",
+			"pt_BR": "Diretor"
+		},
+		"name": "Director",
+		"replaceUser": true,
+		"type": "access",
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$groups",
+					"operator": "in"
+				}
+			]
+		}
+	},
+	{
+		"_id": "QueueUser:access:Manager",
+		"changeUser": true,
+		"document": "QueueUser",
+		"export": {
+			"html": ["view", "list", "pivot"],
+			"pdf": ["view", "list", "pivot"]
+		},
+		"fieldDefaults": {
+			"isDeletable": true,
+			"isCreatable": true,
+			"isUpdatable": true,
+			"isReadable": true
+		},
+		"isCreatable": true,
+		"isDeletable": true,
+		"isReadable": true,
+		"isUpdatable": true,
+		"label": {
+			"en": "Manager",
+			"pt_BR": "Gerente"
+		},
+		"name": "Manager",
+		"readFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"operator": "in",
+					"term": "_user.group._id",
+					"value": "$allgroups"
+				}
+			]
+		},
+		"replaceUser": true,
+		"changeUserFilter": {
+			"match": "or",
+			"conditions": [
+				{
+					"term": "group._id",
+					"value": "$allgroups",
+					"operator": "in"
+				}
+			]
+		},
+		"type": "access"
+	},
+	{
+		"_id": "QueueUser:list:Default",
+		"columns": {
+			"queue": {
+				"name": "queue",
+				"linkField": "queue",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 0
+			},
+			"count": {
+				"name": "count",
+				"linkField": "count",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 1
+			},
+			"order": {
+				"name": "order",
+				"linkField": "order",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 2
+			},
+			"extension": {
+				"name": "extension",
+				"linkField": "extension",
+				"visible": true,
+				"minWidth": 70,
+				"sort": 3
+			},
+			"user": {
+				"name": "user",
+				"linkField": "user",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 4
+			},
+			"_createdAt": {
+				"name": "_createdAt",
+				"linkField": "_createdAt",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 5
+			},
+			"_createdBy": {
+				"minWidth": 200,
+				"name": "_createdBy",
+				"linkField": "_createdBy",
+				"visible": true,
+				"sort": 6
+			},
+			"_updatedAt": {
+				"name": "_updatedAt",
+				"linkField": "_updatedAt",
+				"visible": true,
+				"minWidth": 100,
+				"sort": 7
+			},
+			"_updatedBy": {
+				"visible": true,
+				"minWidth": 200,
+				"name": "_updatedBy",
+				"linkField": "_updatedBy",
+				"sort": 8
+			},
+			"_user": {
+				"name": "_user",
+				"linkField": "_user",
+				"visible": true,
+				"minWidth": 200,
+				"sort": 9
+			}
+		},
+		"document": "QueueUser",
+		"filter": {
+			"match": "and",
+			"conditions": {
+				"queue:_id:equals": {
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"term": "queue._id",
+					"operator": "equals",
+					"sort": 0
+				},
+				"user:_id:equals": {
+					"term": "user._id",
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield"
+					},
+					"sort": 1
+				},
+				"user:group:_id:equals": {
+					"operator": "equals",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "lookupfield",
+						"hideOnDisable": true
+					},
+					"term": "user.group._id",
+					"sort": 2
+				},
+				"_createdAt:between": {
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_createdAt",
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"sort": 3
+				},
+				"_updatedAt:between": {
+					"value": {},
+					"operator": "between",
+					"editable": true,
+					"disabled": true,
+					"style": {
+						"renderAs": "datetimefield",
+						"hideOnDisable": true
+					},
+					"term": "_updatedAt",
+					"sort": 4
+				}
+			},
+			"minFilledConditions": 0
+		},
+		"label": {
+			"en": "Queue User",
+			"pt_BR": "Usuário da Roleta"
+		},
+		"loadDataAtOpen": true,
+		"name": "Default",
+
+		"plurals": {
+			"en": "Queue Users",
+			"pt_BR": "Usuários da Roleta"
+		},
+		"refreshRate": {
+			"options": [
+				0,
+				5,
+				10,
+				30,
+				60,
+				300,
+				600,
+				900,
+				1800,
+				3600
+			],
+			"default": 0
+		},
+		"rowsPerPage": {
+			"options": [
+				5,
+				10,
+				15,
+				20,
+				25,
+				50,
+				100,
+				200,
+				500,
+				1000
+			],
+			"default": 50
+		},
+		"sorters": [
+			{
+				"term": "queue",
+				"direction": "asc"
+			},
+			{
+				"direction": "asc",
+				"term": "count"
+			},
+			{
+				"term": "order",
+				"direction": "asc"
+			}
+		],
+		"type": "list",
+		"view": "Default"
+	},
+	{
+		"_id": "QueueUser:view:Default",
+		"document": "QueueUser",
+		"label": {
+			"en": "{queue.name} - {user.name}",
+			"pt_BR": "{queue.name} - {user.name}"
+		},
+		"name": "Default",
+
+		"plurals": {
+			"en": "New Queue User",
+			"pt_BR": "Novo Usuário da Roleta"
+		},
+		"type": "view",
+		"visuals": [
+			{
+				"type": "visualGroup",
+				"style": {
+					"title": "Formulário"
+				},
+				"visuals": [
+					{
+						"type": "visualGroup",
+						"style": {
+							"icon": "info-sign",
+							"title": {
+								"en": "Information",
+								"pt_BR": "Informações"
+							}
+						},
+						"label": {
+							"pt_BR": "Informações",
+							"en": "Information"
+						},
+						"visuals": [
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "queue"
+							},
+							{
+								"type": "visualSymlink",
+								"style": {
+									"linkedFormName": "Default"
+								},
+								"fieldName": "user"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "count"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "order"
+							},
+							{
+								"type": "visualSymlink",
+								"fieldName": "extension"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

@@ -1,0 +1,33 @@
+{
+	"ts-node": {
+		"require": ["tsconfig-paths/register"]
+	},
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"allowJs": true,
+		"checkJs": false,
+		"rootDir": ".",
+		"forceConsistentCasingInFileNames": true,
+		"strictNullChecks": true,
+		"baseUrl": "./src",
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"declaration": true,
+		"paths": {
+			"@imports/*": ["./imports/*"],
+			"@private/*": ["./private/*"],
+			"@server/*": ["./server/*"]
+		},
+		"outDir": "./build",
+		"lib": ["ESNext"],
+		"module": "CommonJS",
+		"target": "esnext",
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"moduleDetection": "force",
+		"strict": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*", "__test__/**/*"],
+	"exclude": ["node_modules", "./build/", "scripts"]
+}
