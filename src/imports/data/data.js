@@ -748,11 +748,11 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		const now = DateTime.local().toJSDate();
 
 		const newRecord = Object.assign({}, cleanedData, {
-			_id: get(data, '_id', randomId()),
-			_createdAt: get(data, '_createdAt', now),
-			_createdBy: get(data, '_createdBy', pick(user, ['_id', 'name', 'group'])),
-			_updatedAt: get(data, '_updatedAt', now),
-			_updatedBy: get(data, '_updatedBy', pick(user, ['_id', 'name', 'group'])),
+			_id: get(cleanedData, '_id', randomId()),
+			_createdAt: get(cleanedData, '_createdAt', now),
+			_createdBy: get(cleanedData, '_createdBy', pick(user, ['_id', 'name', 'group'])),
+			_updatedAt: get(cleanedData, '_updatedAt', now),
+			_updatedBy: get(cleanedData, '_updatedBy', pick(user, ['_id', 'name', 'group'])),
 		});
 
 		try {
