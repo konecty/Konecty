@@ -258,7 +258,13 @@ export default async function find<AsStream extends boolean = false>({
 		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
 		logger.trace(log);
 
-		recordStream.map((record: DataDocument) =>
+		const result: KonectyResultSuccess<typeof recordStream> = {
+			success: true,
+			data: recordStream,
+		};
+
+		// Apply permissions, remove fields not allowed to READ
+		result.data = result.data.map((record: DataDocument) =>
 			Object.keys(record).reduce<typeof record>(
 				(acc, key) => {
 					if (accessConditions[key] != null) {
@@ -274,11 +280,6 @@ export default async function find<AsStream extends boolean = false>({
 				{ _id: '' },
 			),
 		);
-
-		const result: KonectyResultSuccess<typeof recordStream> = {
-			success: true,
-			data: recordStream,
-		};
 
 		if (getTotal === true) {
 			tracingSpan?.addEvent('Calculating total');
