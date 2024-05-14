@@ -263,23 +263,19 @@ export default async function find<AsStream extends boolean = false>({
 			data: recordStream,
 		};
 
-		// Apply permissions, remove fields not allowed to READ
-		result.data = result.data.map((record: DataDocument) =>
-			Object.keys(record).reduce<typeof record>(
-				(acc, key) => {
-					if (accessConditions[key] != null) {
-						if (accessConditions[key](record) === true) {
-							acc[key] = record[key];
-						}
-					} else {
-						acc[key] = record[key];
+		const conditionsKeys = Object.keys(accessConditions);
+		if (conditionsKeys.length > 0) {
+			tracingSpan?.addEvent('Removing unauthorized fields from records');
+			result.data = result.data.map((record: DataDocument) =>
+				conditionsKeys.reduce<typeof record>((acc, key) => {
+					if (accessConditions[key](record) === false) {
+						delete acc[key];
 					}
 
 					return acc;
-				},
-				{ _id: '' },
-			),
-		);
+				}, record),
+			);
+		}
 
 		if (getTotal === true) {
 			tracingSpan?.addEvent('Calculating total');
