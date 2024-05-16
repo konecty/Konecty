@@ -266,14 +266,16 @@ export default async function find<AsStream extends boolean = false>({
 		const conditionsKeys = Object.keys(accessConditions);
 		if (conditionsKeys.length > 0) {
 			tracingSpan?.addEvent('Removing unauthorized fields from records');
-			result.data = result.data.map((record: DataDocument) =>
-				conditionsKeys.reduce<typeof record>((acc, key) => {
-					if (accessConditions[key](record) === false) {
-						delete acc[key];
-					}
+			result.data = result.data.map(
+				(record: DataDocument) =>
+					conditionsKeys.reduce<typeof record>((acc, key) => {
+						if (accessConditions[key](record) === false) {
+							delete acc[key];
+						}
 
-					return acc;
-				}, record),
+						return acc;
+					}, record),
+				{ concurrency: STREAM_CONCURRENCY },
 			);
 		}
 
