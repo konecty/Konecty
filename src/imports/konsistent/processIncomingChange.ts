@@ -29,7 +29,7 @@ export default async function processIncomingChange(metaName: string, incomingCh
 		await References.updateRelations(metaName, action, incomingChange._id, incomingChange);
 		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
 
-		await createHistory(metaName, action, incomingChange._id, omit(incomingChange, keysToIgnore), user, new Date(), changedProps);
+		await createHistory(metaName, action, incomingChange._id, incomingChange, user, new Date(), omit(changedProps, keysToIgnore));
 		logTimeSpent(startTime, `Created history for ${metaName}`);
 	} catch (err) {
 		const error = err as Error;
