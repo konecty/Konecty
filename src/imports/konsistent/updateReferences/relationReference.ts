@@ -1,5 +1,5 @@
 import BluebirdPromise from 'bluebird';
-import { Collection, Filter, UpdateFilter } from 'mongodb';
+import { ClientSession, Collection, Filter, UpdateFilter } from 'mongodb';
 
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
@@ -13,7 +13,7 @@ import { Relation } from '@imports/model/Relation';
 import type { AggregatePipeline } from '@imports/types/mongo';
 import { logger } from '@imports/utils/logger';
 
-export default async function updateRelationReference(metaName: string, relation: Relation, lookupId: string, documentName: string) {
+export default async function updateRelationReference(metaName: string, relation: Relation, lookupId: string, documentName: string, dbSession?: ClientSession) {
 	// Try to get metadata
 	let e, query: Filter<object> | undefined;
 	const meta = MetaObject.Meta[metaName];
@@ -129,7 +129,7 @@ export default async function updateRelationReference(metaName: string, relation
 
 		// Try to execute agg and log error if fails
 		try {
-			const result = await collection.aggregate(pipeline, { cursor: { batchSize: 1 } }).toArray();
+			const result = await collection.aggregate(pipeline, { cursor: { batchSize: 1 }, session: dbSession }).toArray();
 
 			// If result was an array with one item cotaining a property value
 			if (isArray(result) && isObject(result[0]) && result[0].value) {
@@ -178,7 +178,7 @@ export default async function updateRelationReference(metaName: string, relation
 
 	// Try to execute update query
 	try {
-		const { modifiedCount: affected } = await referenceCollection.updateOne(updateQuery, valuesToUpdate);
+		const { modifiedCount: affected } = await referenceCollection.updateOne(updateQuery, valuesToUpdate, { session: dbSession });
 
 		// If there are affected records
 		if (affected > 0) {

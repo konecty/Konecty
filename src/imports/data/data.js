@@ -916,7 +916,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 						try {
 							tracingSpan?.addEvent('Processing sync Konsistent');
-							await processIncomingChange(document, resultRecord, 'create', user, resultRecord);
+							await processIncomingChange(document, resultRecord, 'create', user, resultRecord, dbSession);
 						} catch (e) {
 							tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 							logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
@@ -1387,7 +1387,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 							const original = existsRecords.find(r => r._id === record._id);
 
 							const changedProps = objectsDiff(original, record);
-							await processIncomingChange(document, record, 'update', user, changedProps);
+							await processIncomingChange(document, record, 'update', user, changedProps, dbSession);
 						}
 					} catch (e) {
 						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);

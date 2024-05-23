@@ -4,7 +4,7 @@ import get from "lodash/get";
 import pick from "lodash/pick";
 import { v4 as uuidV4 } from 'uuid';
 
-export default async function createHistory(metaName, action, id, data, updatedBy, updatedAt, changed) {
+export default async function createHistory(metaName, action, id, data, updatedBy, updatedAt, changed, dbSession) {
     // If data is empty or no update data is avaible then abort
     if (Object.keys(data).length === 0 || updatedAt == null || updatedBy == null) {
         return;
@@ -49,7 +49,7 @@ export default async function createHistory(metaName, action, id, data, updatedB
 
     // Create history!
     try {
-        await history.updateOne(historyQuery, { $set: historyItem, $setOnInsert: historyQuery }, { upsert: true });
+        await history.updateOne(historyQuery, { $set: historyItem, $setOnInsert: historyQuery }, { upsert: true, session: dbSession });
 
         const updateTime = process.hrtime(startTime);
         // Log operation to shell
