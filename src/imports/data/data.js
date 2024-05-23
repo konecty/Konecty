@@ -32,7 +32,7 @@ import { logger } from '../utils/logger';
 import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } from './filterUtils';
 
 import { getUserSafe } from '@imports/auth/getUser';
-import { TRANSACTION_OPTIONS, WRITE_TIMEOUT } from '@imports/consts';
+import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
@@ -928,6 +928,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		});
 
 		if (transactionResult != null && transactionResult.success != null) {
+			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
 			return transactionResult;
 		}
 	} catch (e) {
@@ -1041,382 +1042,400 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 	}
 
-	tracingSpan?.addEvent('Processing login');
-	const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
-	if (processLoginResult.success === false) {
-		return processLoginResult;
-	}
-
-	const fieldFilterConditions = Object.keys(data.data).reduce((acc, fieldName) => {
-		const accessFieldConditions = getFieldConditions(access, fieldName);
-		if (accessFieldConditions.UPDATE) {
-			acc.push(accessFieldConditions.UPDATE);
-		}
-		return acc;
-	}, []);
-
-	const filter = {
-		match: 'and',
-		filters: [],
-	};
-
-	if (isObject(access.updateFilter)) {
-		filter.filters.push(access.updateFilter);
-	}
-
-	if (fieldFilterConditions.length > 0) {
-		set(filter, 'conditions', fieldFilterConditions);
-	}
-
-	tracingSpan?.addEvent('Parsing filter');
-	const updateFilterResult = parseFilterObject(filter, metaObject, { user });
-
-	const query = Object.assign({ _id: { $in: [] } }, updateFilterResult);
-
-	if (isArray(query._id.$in)) {
-		data.ids.forEach(id => {
-			query._id.$in.push(id._id);
-		});
-	}
-
-	const options = {};
-
-	if (metaObject.scriptBeforeValidation == null && metaObject.validationScript == null && metaObject.scriptAfterSave == null) {
-		set(options, 'fields', {
-			_updatedAt: 1,
-		});
-	}
-
-	tracingSpan?.addEvent('Finding records to update', { query, options });
-	const existsRecords = await collection.find(query, options).toArray();
-
-	// Validate if user have permission to update each record that he are trying
-	const forbiddenRecords = data.ids.filter(id => {
-		const record = existsRecords.find(record => record._id === id._id);
-		if (record == null) {
-			return true;
-		}
-		return false;
-	});
-
-	if (forbiddenRecords.length > 0) {
-		return errorReturn(`[${document}] You don't have permission to update records ${forbiddenRecords.map(record => record._id).join(', ')} or they don't exists`);
-	}
-
-	// outdateRecords are records that user are trying to update but they are out of date
-	if (metaObject.ignoreUpdatedAt !== true) {
-		const outdateRecords = data.ids.filter(id => {
-			const record = existsRecords.find(record => record._id === id._id);
-			if (record == null) {
-				return true;
+	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
+	try {
+		const transactionResult = await dbSession.withTransaction(async function updateTransaction() {
+			tracingSpan?.addEvent('Processing login');
+			const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
+			if (processLoginResult.success === false) {
+				return processLoginResult;
 			}
-			if (DateTime.fromJSDate(record._updatedAt).diff(DateTime.fromISO(id._updatedAt.$date)).milliseconds !== 0) {
-				return true;
-			}
-			return false;
-		});
 
-		if (outdateRecords.length > 0) {
-			const mapOfFieldsToUpdateForHistoryQuery = Object.keys(data.data).reduce((acc, fieldName) => {
-				acc.push({ [`diffs.${fieldName}`]: { $exists: 1 } });
+			const fieldFilterConditions = Object.keys(data.data).reduce((acc, fieldName) => {
+				const accessFieldConditions = getFieldConditions(access, fieldName);
+				if (accessFieldConditions.UPDATE) {
+					acc.push(accessFieldConditions.UPDATE);
+				}
 				return acc;
 			}, []);
-			const outOfDateQuery = {
-				$or: outdateRecords.map(record => ({
-					dataId: record._id,
-					createdAt: {
-						$gt: DateTime.fromISO(record._updatedAt.$date).toJSDate(),
-					},
-					$or: mapOfFieldsToUpdateForHistoryQuery,
-				})),
+
+			const filter = {
+				match: 'and',
+				filters: [],
 			};
 
-			const historyCollection = MetaObject.Collections[`${document}.History`];
+			if (isObject(access.updateFilter)) {
+				filter.filters.push(access.updateFilter);
+			}
 
-			tracingSpan?.addEvent('Finding out of date records', { outOfDateQuery });
-			const outOfDateRecords = await historyCollection.find(outOfDateQuery).toArray();
+			if (fieldFilterConditions.length > 0) {
+				set(filter, 'conditions', fieldFilterConditions);
+			}
 
-			if (outOfDateRecords.length > 0) {
-				const errorMessage = outOfDateRecords.reduce((acc, record) => {
-					Object.keys(data.data).forEach(fieldName => {
-						if (record.diffs[fieldName] != null) {
-							acc.push(
-								`[${document}] Record ${record.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(record.createdAt).toISO()} by ${record.createdBy.name
-								}`,
-							);
+			tracingSpan?.addEvent('Parsing filter');
+			const updateFilterResult = parseFilterObject(filter, metaObject, { user });
+
+			const query = Object.assign({ _id: { $in: [] } }, updateFilterResult);
+
+			if (isArray(query._id.$in)) {
+				data.ids.forEach(id => {
+					query._id.$in.push(id._id);
+				});
+			}
+
+			const options = { session: dbSession };
+
+			if (metaObject.scriptBeforeValidation == null && metaObject.validationScript == null && metaObject.scriptAfterSave == null) {
+				set(options, 'fields', {
+					_updatedAt: 1,
+				});
+			}
+
+			tracingSpan?.addEvent('Finding records to update', { query, options });
+			const existsRecords = await collection.find(query, options).toArray();
+
+			// Validate if user have permission to update each record that he are trying
+			const forbiddenRecords = data.ids.filter(id => {
+				const record = existsRecords.find(record => record._id === id._id);
+				if (record == null) {
+					return true;
+				}
+				return false;
+			});
+
+			if (forbiddenRecords.length > 0) {
+				return errorReturn(`[${document}] You don't have permission to update records ${forbiddenRecords.map(record => record._id).join(', ')} or they don't exists`);
+			}
+
+			// outdateRecords are records that user are trying to update but they are out of date
+			if (metaObject.ignoreUpdatedAt !== true) {
+				const outdateRecords = data.ids.filter(id => {
+					const record = existsRecords.find(record => record._id === id._id);
+					if (record == null) {
+						return true;
+					}
+					if (DateTime.fromJSDate(record._updatedAt).diff(DateTime.fromISO(id._updatedAt.$date)).milliseconds !== 0) {
+						return true;
+					}
+					return false;
+				});
+
+				if (outdateRecords.length > 0) {
+					const mapOfFieldsToUpdateForHistoryQuery = Object.keys(data.data).reduce((acc, fieldName) => {
+						acc.push({ [`data.${fieldName}`]: { $exists: 1 } });
+						return acc;
+					}, []);
+					const outOfDateQuery = {
+						$or: outdateRecords.map(record => ({
+							dataId: record._id,
+							createdAt: {
+								$gt: DateTime.fromISO(record._updatedAt.$date).toJSDate(),
+							},
+							$or: mapOfFieldsToUpdateForHistoryQuery,
+						})),
+					};
+
+					const historyCollection = MetaObject.Collections[`${document}.History`];
+
+					tracingSpan?.addEvent('Finding out of date records', { outOfDateQuery });
+					const outOfDateRecords = await historyCollection.find(outOfDateQuery, { session: dbSession }).toArray();
+
+					if (outOfDateRecords.length > 0) {
+						const errorMessage = outOfDateRecords.reduce((acc, history) => {
+							Object.keys(data.data).forEach(fieldName => {
+								if (history.data[fieldName] != null) {
+									acc.push(
+										`[${document}] Record ${history.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(history.createdAt).toISO()} by ${get(history, "updatedBy.name", "Unknown")}`,
+									);
+								}
+							});
+							return acc;
+						}, []);
+
+						if (errorMessage.length > 0) {
+							return errorReturn(errorMessage.join('\n'));
 						}
-					});
-					return acc;
-				}, []);
-
-				if (errorMessage.length > 0) {
-					return errorReturn(errorMessage.join('\n'));
+					}
 				}
 			}
-		}
-	}
 
-	const emailsToSend = [];
+			const emailsToSend = [];
 
-	const updateResults = await BluebirdPromise.mapSeries(existsRecords, async record => {
-		const bodyData = {};
+			const updateResults = await BluebirdPromise.mapSeries(existsRecords, async record => {
+				const bodyData = {};
 
-		if (metaObject.scriptBeforeValidation != null) {
-			tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
+				if (metaObject.scriptBeforeValidation != null) {
+					tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
 
-			const lookupValues = {};
-			const validateLookupsResults = await BluebirdPromise.mapSeries(
-				Object.keys(data.data).filter(key => metaObject.fields[key]?.type === 'lookup'),
-				async key => {
-					const lookupValidateResult = await validateAndProcessValueFor({
-						meta: metaObject,
-						fieldName: key,
-						value: data.data[key],
-						actionType: 'update',
-						objectOriginalValues: record,
-						objectNewValues: data.data,
-						idsToUpdate: query._id.$in,
-					});
-					if (lookupValidateResult.success === false) {
-						return lookupValidateResult;
+					const lookupValues = {};
+					const validateLookupsResults = await BluebirdPromise.mapSeries(
+						Object.keys(data.data).filter(key => metaObject.fields[key]?.type === 'lookup'),
+						async key => {
+							const lookupValidateResult = await validateAndProcessValueFor({
+								meta: metaObject,
+								fieldName: key,
+								value: data.data[key],
+								actionType: 'update',
+								objectOriginalValues: record,
+								objectNewValues: data.data,
+								idsToUpdate: query._id.$in,
+							}, dbSession);
+							if (lookupValidateResult.success === false) {
+								return lookupValidateResult;
+							}
+							if (lookupValidateResult.data != null) {
+								set(lookupValues, key, lookupValidateResult.data);
+							}
+							return successReturn();
+						},
+					);
+
+					if (validateLookupsResults.some(result => result.success === false)) {
+						return errorReturn(
+							validateLookupsResults
+								.filter(result => result.success === false)
+								.map(result => result.errors)
+								.flat(),
+						);
 					}
-					if (lookupValidateResult.data != null) {
-						set(lookupValues, key, lookupValidateResult.data);
+
+					tracingSpan?.addEvent('Running scriptBeforeValidation');
+					const extraData = {
+						original: first(existsRecords),
+						request: data.data,
+						validated: lookupValues,
+					};
+					const scriptResult = await runScriptBeforeValidation({
+						script: metaObject.scriptBeforeValidation,
+						data: extend({}, first(existsRecords), data.data, lookupValues),
+						user,
+						meta: metaObject,
+						extraData,
+					});
+
+					if (scriptResult.success === false) {
+						return scriptResult;
+					}
+
+					if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
+						Object.assign(bodyData, scriptResult.data.result);
+					}
+					if (scriptResult.data?.emailsToSend != null && isArray(scriptResult.data.emailsToSend)) {
+						emailsToSend.push(...scriptResult.data.emailsToSend);
+					}
+				}
+
+				tracingSpan?.addEvent('Validate&ProcessValueFor all fields');
+				const validateResult = await BluebirdPromise.mapSeries(Object.keys(data.data), async fieldName => {
+					if (bodyData[fieldName] == null) {
+						const result = await validateAndProcessValueFor({
+							meta: metaObject,
+							fieldName,
+							value: data.data[fieldName],
+							actionType: 'update',
+							objectOriginalValues: record,
+							objectNewValues: data.data,
+							idsToUpdate: query._id.$in,
+						}, dbSession);
+						if (result.success === false) {
+							return result;
+						}
+						if (result.data !== undefined) {
+							set(bodyData, fieldName, result.data);
+						}
 					}
 					return successReturn();
-				},
-			);
+				});
 
-			if (validateLookupsResults.some(result => result.success === false)) {
+				if (validateResult.some(result => result.success === false)) {
+					return errorReturn(
+						validateResult
+							.filter(result => result.success === false)
+							.map(result => result.errors)
+							.flat(),
+					);
+				}
+
+				if (metaObject.validationScript != null) {
+					tracingSpan?.addEvent('Running validation script');
+					const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, data.data), user });
+					if (validationScriptResult.success === false) {
+						logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
+						return validationScriptResult;
+					}
+				}
+
+				const updateOperation = Object.keys(bodyData).reduce((acc, key) => {
+					if (bodyData[key] !== undefined) {
+						if (bodyData[key] === null) {
+							set(acc, `$unset.${key}`, 1);
+						} else {
+							set(acc, `$set.${key}`, bodyData[key]);
+						}
+					}
+					return acc;
+				}, {});
+
+				const ignoreUpdate = Object.keys(bodyData).every(key => {
+					if (metaObject.fields == null || metaObject.fields[key] == null) {
+						return false;
+					}
+
+					return metaObject.fields[key].ignoreHistory === true;
+				});
+
+				if (ignoreUpdate === false) {
+					set(updateOperation, '$set._updatedAt', DateTime.local().toJSDate());
+					set(
+						updateOperation,
+						'$set._updatedBy',
+						Object.assign({}, pick(user, ['_id', 'name', 'group']), {
+							ts: get(updateOperation, '$set._updatedAt'),
+						}),
+					);
+				}
+
+				const filter = {
+					_id: record._id,
+				};
+
+				try {
+					tracingSpan?.addEvent('Updating record', { filter, updateOperation });
+					await collection.updateOne(filter, updateOperation, { session: dbSession });
+					return successReturn(record._id);
+				} catch (e) {
+					logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
+					tracingSpan?.addEvent('Error on update', { error: e.message });
+					tracingSpan?.setAttribute({ error: e.message });
+
+					if (e.code === 11000) {
+						return errorReturn(`[${document}] Duplicate key error`);
+					}
+					return errorReturn(`[${document}] ${e.message}`);
+				}
+			});
+
+			if (updateResults.some(result => result.success === false)) {
 				return errorReturn(
-					validateLookupsResults
+					updateResults
 						.filter(result => result.success === false)
 						.map(result => result.errors)
 						.flat(),
 				);
 			}
 
-			tracingSpan?.addEvent('Running scriptBeforeValidation');
-			const extraData = {
-				original: first(existsRecords),
-				request: data.data,
-				validated: lookupValues,
-			};
-			const scriptResult = await runScriptBeforeValidation({
-				script: metaObject.scriptBeforeValidation,
-				data: extend({}, first(existsRecords), data.data, lookupValues),
-				user,
-				meta: metaObject,
-				extraData,
-			});
+			const updatedIs = updateResults.map(result => result.data);
 
-			if (scriptResult.success === false) {
-				return scriptResult;
-			}
+			if (updatedIs.length > 0) {
+				if (MetaObject.Namespace.onUpdate != null) {
+					const hookRecords = await collection.find({ _id: { $in: updatedIs } }).toArray();
 
-			if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
-				Object.assign(bodyData, scriptResult.data.result);
-			}
-			if (scriptResult.data?.emailsToSend != null && isArray(scriptResult.data.emailsToSend)) {
-				emailsToSend.push(...scriptResult.data.emailsToSend);
-			}
-		}
+					const hookData = {
+						action: 'update',
+						ns: MetaObject.Namespace.ns,
+						documentName: document,
+						user: pick(user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
+						data: hookRecords,
+					};
 
-		tracingSpan?.addEvent('Validate&ProcessValueFor all fields');
-		const validateResult = await BluebirdPromise.mapSeries(Object.keys(data.data), async fieldName => {
-			if (bodyData[fieldName] == null) {
-				const result = await validateAndProcessValueFor({
-					meta: metaObject,
-					fieldName,
-					value: data.data[fieldName],
-					actionType: 'update',
-					objectOriginalValues: record,
-					objectNewValues: data.data,
-					idsToUpdate: query._id.$in,
-				});
-				if (result.success === false) {
-					return result;
-				}
-				if (result.data !== undefined) {
-					set(bodyData, fieldName, result.data);
-				}
-			}
-			return successReturn();
-		});
+					const urls = [].concat(MetaObject.Namespace.onUpdate);
+					tracingSpan?.addEvent('Running onUpdate hooks', { urls });
 
-		if (validateResult.some(result => result.success === false)) {
-			return errorReturn(
-				validateResult
-					.filter(result => result.success === false)
-					.map(result => result.errors)
-					.flat(),
-			);
-		}
-
-		if (metaObject.validationScript != null) {
-			tracingSpan?.addEvent('Running validation script');
-			const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, data.data), user });
-			if (validationScriptResult.success === false) {
-				logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
-				return errorReturn(validationScriptResult.reason);
-			}
-		}
-
-		const updateOperation = Object.keys(bodyData).reduce((acc, key) => {
-			if (bodyData[key] !== undefined) {
-				if (bodyData[key] === null) {
-					set(acc, `$unset.${key}`, 1);
-				} else {
-					set(acc, `$set.${key}`, bodyData[key]);
-				}
-			}
-			return acc;
-		}, {});
-
-		const ignoreUpdate = Object.keys(bodyData).every(key => {
-			if (metaObject.fields == null || metaObject.fields[key] == null) {
-				return false;
-			}
-
-			return metaObject.fields[key].ignoreHistory === true;
-		});
-
-		if (ignoreUpdate === false) {
-			set(updateOperation, '$set._updatedAt', DateTime.local().toJSDate());
-			set(
-				updateOperation,
-				'$set._updatedBy',
-				Object.assign({}, pick(user, ['_id', 'name', 'group']), {
-					ts: get(updateOperation, '$set._updatedAt'),
-				}),
-			);
-		}
-
-		const filter = {
-			_id: record._id,
-		};
-
-		try {
-			tracingSpan?.addEvent('Updating record', { filter, updateOperation });
-			await collection.updateOne(filter, updateOperation, { writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } });
-			return successReturn(record._id);
-		} catch (e) {
-			logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-			tracingSpan?.addEvent('Error on update', { error: e.message });
-			tracingSpan?.setAttribute({ error: e.message });
-
-			if (e.code === 11000) {
-				return errorReturn(`[${document}] Duplicate key error`);
-			}
-			return errorReturn(`[${document}] ${e.message}`);
-		}
-	});
-
-	if (updateResults.some(result => result.success === false)) {
-		return errorReturn(
-			updateResults
-				.filter(result => result.success === false)
-				.map(result => result.errors)
-				.flat(),
-		);
-	}
-
-	const updatedIs = updateResults.map(result => result.data);
-
-	if (updatedIs.length > 0) {
-		if (MetaObject.Namespace.onUpdate != null) {
-			const hookRecords = await collection.find({ _id: { $in: updatedIs } }).toArray();
-
-			const hookData = {
-				action: 'update',
-				ns: MetaObject.Namespace.ns,
-				documentName: document,
-				user: pick(user, ['_id', 'code', 'name', 'active', 'username', 'nickname', 'group', 'emails', 'locale']),
-				data: hookRecords,
-			};
-
-			const urls = [].concat(MetaObject.Namespace.onUpdate);
-			tracingSpan?.addEvent('Running onUpdate hooks', { urls });
-
-			await BluebirdPromise.mapSeries(urls, async url => {
-				try {
-					const hookUrl = url.replace('${dataId}', updatedIs.join(',')).replace('${documentId}', `${MetaObject.Namespace.ns}:${document}`);
-					const hookResponse = await fetch(hookUrl, {
-						method: 'POST',
-						body: JSON.stringify(hookData),
+					await BluebirdPromise.mapSeries(urls, async url => {
+						try {
+							const hookUrl = url.replace('${dataId}', updatedIs.join(',')).replace('${documentId}', `${MetaObject.Namespace.ns}:${document}`);
+							const hookResponse = await fetch(hookUrl, {
+								method: 'POST',
+								body: JSON.stringify(hookData),
+							});
+							if (hookResponse.status === 200) {
+								logger.info(`Hook ${hookUrl} executed successfully`);
+							} else {
+								logger.error(`Error on hook ${url}: ${hookResponse.statusText}`);
+							}
+						} catch (e) {
+							logger.error(e, `Error on hook ${url}: ${e.message}`);
+						}
 					});
-					if (hookResponse.status === 200) {
-						logger.info(`Hook ${hookUrl} executed successfully`);
-					} else {
-						logger.error(`Error on hook ${url}: ${hookResponse.statusText}`);
+				}
+
+				const updatedQuery = {
+					_id: {
+						$in: updatedIs,
+					},
+				};
+
+				if (isObject(access.readFilter)) {
+					const readFilter = parseFilterObject(access.readFilter, metaObject, { user });
+
+					merge(updatedQuery, readFilter);
+				}
+
+				const updatedRecords = await collection.find(updatedQuery, { session: dbSession }).toArray();
+
+				if (metaObject.scriptAfterSave != null) {
+					tracingSpan?.addEvent('Running scriptAfterSave');
+					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
+				}
+
+				if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
+					try {
+						logger.debug('Processing Konsistent');
+						tracingSpan?.addEvent('Processing sync Konsistent');
+
+						for await (const record of updatedRecords) {
+							const original = existsRecords.find(r => r._id === record._id);
+
+							const changedProps = objectsDiff(original, record);
+							await processIncomingChange(document, record, 'update', user, changedProps);
+						}
+					} catch (e) {
+						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 					}
-				} catch (e) {
-					logger.error(e, `Error on hook ${url}: ${e.message}`);
 				}
-			});
-		}
 
-		const updatedQuery = {
-			_id: {
-				$in: updatedIs,
-			},
-		};
+				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
-		if (isObject(access.readFilter)) {
-			const readFilter = parseFilterObject(access.readFilter, metaObject, { user });
+				if (emailsToSend.length > 0) {
+					tracingSpan?.addEvent('Sending emails');
 
-			merge(updatedQuery, readFilter);
-		}
-
-		const updatedRecords = await collection.find(updatedQuery).toArray();
-
-		if (metaObject.scriptAfterSave != null) {
-			tracingSpan?.addEvent('Running scriptAfterSave');
-			await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
-		}
-
-		if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
-			try {
-				logger.debug('Processing Konsistent');
-				tracingSpan?.addEvent('Processing sync Konsistent');
-				for await (const record of updatedRecords) {
-					const original = existsRecords.find(r => r._id === record._id);
-					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
-
-					const changedProps = objectsDiff(original, newRecord);
-					await processIncomingChange(document, record, 'update', user, changedProps);
+					const messagesCollection = MetaObject.Collections['Message'];
+					const now = DateTime.local().toJSDate();
+					await messagesCollection.insertMany(
+						emailsToSend.map(email =>
+							Object.assign(
+								{},
+								{
+									_id: randomId(),
+									_createdAt: now,
+									_createdBy: pick(user, ['_id', 'name', 'group']),
+									_updatedAt: now,
+									_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
+								},
+								email,
+							),
+						),
+						{ session: dbSession }
+					);
 				}
-			} catch (e) {
-				logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
-				tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
+
+				return successReturn(responseData);
 			}
+		});
+
+		if (transactionResult != null && transactionResult.success != null) {
+			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+			return transactionResult;
 		}
-
-		const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
-
-		if (emailsToSend.length > 0) {
-			tracingSpan?.addEvent('Sending emails');
-
-			const messagesCollection = MetaObject.Collections['Message'];
-			const now = DateTime.local().toJSDate();
-			await messagesCollection.insertMany(
-				emailsToSend.map(email =>
-					Object.assign(
-						{},
-						{
-							_id: randomId(),
-							_createdAt: now,
-							_createdBy: pick(user, ['_id', 'name', 'group']),
-							_updatedAt: now,
-							_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
-						},
-						email,
-					),
-				),
-			);
-		}
-
-		return successReturn(responseData);
+	} catch (e) {
+		tracingSpan?.addEvent('Error on transaction', { error: e.message });
+		tracingSpan?.setAttribute({ error: e.message });
+		logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
+	}
+	finally {
+		tracingSpan?.addEvent('Ending session');
+		dbSession.endSession();
 	}
 
 	return errorReturn(`[${document}] Error on update, there is no affected record`);
