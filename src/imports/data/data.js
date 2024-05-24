@@ -1172,13 +1172,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			tracingSpan?.addEvent('Running scriptBeforeValidation');
 			const extraData = {
-				original: first(existsRecords),
+				original: existsRecords.find(r => r._id === record._id),
 				request: data.data,
 				validated: lookupValues,
 			};
 			const scriptResult = await runScriptBeforeValidation({
 				script: metaObject.scriptBeforeValidation,
-				data: extend({}, first(existsRecords), data.data, lookupValues),
+				data: extend({}, record, data.data, lookupValues),
 				user,
 				meta: metaObject,
 				extraData,
