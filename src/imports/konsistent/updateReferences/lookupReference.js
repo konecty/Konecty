@@ -10,7 +10,7 @@ import uniq from 'lodash/uniq';
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
-export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName) {
+export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName, dbSession) {
     // Try to get related meta
     const meta = MetaObject.Meta[metaName];
     if (!meta) {
@@ -88,7 +88,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
                             subQuery = { _id: record[inheritedField.fieldName]._id.valueOf() };
 
                             // Find records
-                            lookupRecord = await lookupCollection.findOne(subQuery);
+                            lookupRecord = await lookupCollection.findOne(subQuery, { sesion: dbSession });
 
                             // If no record found log error
                             if (!lookupRecord) {
@@ -125,7 +125,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
                                 },
                             };
 
-                            const subOptions = {};
+                            const subOptions = { session: dbSession };
                             if (isArray(inheritedMetaField.descriptionFields)) {
                                 subOptions.projection = inheritedMetaField.descriptionFields.reduce((obj, item) => {
                                     const key = item.split('.')[0];
@@ -175,7 +175,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
 
     try {
         // Execute update and get affected records
-        const updateResult = await collection.updateMany(query, updateData);
+        const updateResult = await collection.updateMany(query, updateData, { session: dbSession });
 
         // If there are affected records then log
         if (updateResult.modifiedCount > 0) {

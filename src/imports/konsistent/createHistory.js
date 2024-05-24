@@ -10,7 +10,6 @@ export default async function createHistory(metaName, action, id, data, updatedB
         return;
     }
 
-    const startTime = process.hrtime();
     const changeId = uuidV4();
 
     const historyData = {};
@@ -50,24 +49,6 @@ export default async function createHistory(metaName, action, id, data, updatedB
     // Create history!
     try {
         await history.updateOne(historyQuery, { $set: historyItem, $setOnInsert: historyQuery }, { upsert: true, session: dbSession });
-
-        const updateTime = process.hrtime(startTime);
-        // Log operation to shell
-        let log = metaName;
-
-        switch (action) {
-            case 'create':
-                log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to create action over  ${log}`;
-                break;
-            case 'update':
-                log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to update action over ${log}`;
-                break;
-            case 'delete':
-                log = `${updateTime[0]}s ${updateTime[1] / 1000000}ms => Create history to delete action over ${log}`;
-                break;
-        }
-
-        logger.debug(log);
     } catch (e) {
         logger.error(e, 'Error on create history');
     }

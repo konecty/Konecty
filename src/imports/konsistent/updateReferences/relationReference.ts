@@ -125,6 +125,10 @@ export default async function updateRelationReference(metaName: string, relation
 			group.$group.value[`$${aggregator.aggregator}`] = `$${aggregator.field}`;
 		}
 
+		if (group.$group.currency == null) {
+			delete group.$group.currency;
+		}
+
 		pipeline.push(group);
 
 		// Try to execute agg and log error if fails
@@ -148,6 +152,7 @@ export default async function updateRelationReference(metaName: string, relation
 		} catch (error) {
 			e = error as Error;
 			logger.error(e, `Error on aggregate relation ${relation.document} on document ${metaName}: ${e.message}`);
+			throw e;
 		}
 	});
 
@@ -177,28 +182,23 @@ export default async function updateRelationReference(metaName: string, relation
 	const updateQuery: Filter<{ _id: string }> = { _id: lookupId };
 
 	// Try to execute update query
-	try {
-		const { modifiedCount: affected } = await referenceCollection.updateOne(updateQuery, valuesToUpdate, { session: dbSession });
 
-		// If there are affected records
-		if (affected > 0) {
-			// Log Status
-			logger.info(`∑ ${documentName} < ${metaName} (${affected})`);
+	const { modifiedCount: affected } = await referenceCollection.updateOne(updateQuery, valuesToUpdate, { session: dbSession });
 
-			// And log all aggregatores for this status
-			Object.entries(relation.aggregators).forEach(([fieldName, aggregator]) => {
-				if (aggregator.field) {
-					logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`);
-				} else {
-					logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`);
-				}
-			});
-		}
+	// If there are affected records
+	if (affected > 0) {
+		// Log Status
+		logger.info(`∑ ${documentName} < ${metaName} (${affected})`);
 
-		return affected;
-	} catch (error1) {
-		logger.error(error1, 'Error on updateRelationReference');
+		// And log all aggregatores for this status
+		Object.entries(relation.aggregators).forEach(([fieldName, aggregator]) => {
+			if (aggregator.field) {
+				logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}.${aggregator.field}`);
+			} else {
+				logger.info(`  ${documentName}.${fieldName} < ${aggregator.aggregator} ${metaName}`);
+			}
+		});
 	}
 
-	return 0;
+	return affected;
 }

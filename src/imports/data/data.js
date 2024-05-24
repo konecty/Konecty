@@ -573,7 +573,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			});
 
 			if (fieldPermissionResult.some(result => result.success === false)) {
-				dbSession.abortTransaction();
+				await dbSession.abortTransaction();
 				return errorReturn(
 					fieldPermissionResult
 						.filter(result => result.success === false)
@@ -611,7 +611,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			);
 
 			if (validationResults.some(result => result.success === false)) {
-				dbSession.abortTransaction();
+				await dbSession.abortTransaction();
 				return errorReturn(
 					validationResults
 						.filter(result => result.success === false)
@@ -693,7 +693,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			});
 
 			if (validateAllFieldsResult.some(result => result.success === false)) {
-				dbSession.abortTransaction();
+				await dbSession.abortTransaction();
 				return errorReturn(
 					validateAllFieldsResult
 						.filter(result => result.success === false)
@@ -707,7 +707,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 				const validation = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, data, cleanedData), user });
 				if (validation.success === false) {
-					dbSession.abortTransaction();
+					await dbSession.abortTransaction();
 					logger.error(validation, `Create - Script Validation Error - ${validation.reason}`);
 					return errorReturn(`[${document}] ${validation.reason}`);
 				}
@@ -743,7 +743,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			});
 
 			if (autoNumberResult.some(result => result.success === false)) {
-				dbSession.abortTransaction();
+				await dbSession.abortTransaction();
 				return errorReturn(
 					autoNumberResult
 						.filter(result => result.success === false)
@@ -836,7 +836,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on insert', { error: e.message });
 					tracingSpan?.setAttribute({ error: e.message });
-					dbSession.abortTransaction();
+					await dbSession.abortTransaction();
 
 					if (e.code === 11000) {
 						return errorReturn(`[${document}] Duplicate key error`);
@@ -920,6 +920,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						} catch (e) {
 							tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 							logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+							await dbSession.abortTransaction();
+							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 						}
 					}
 					return successReturn([dateToString(resultRecord)]);
@@ -1392,6 +1394,9 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					} catch (e) {
 						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
+						await dbSession.abortTransaction();
+
+						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 					}
 				}
 
