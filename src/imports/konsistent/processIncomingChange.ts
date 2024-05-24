@@ -5,7 +5,7 @@ import * as References from './updateReferences';
 
 import { DataDocument } from '@imports/types/data';
 import omit from 'lodash/omit';
-import { ClientSession } from 'mongodb';
+import { ClientSession, MongoServerError } from 'mongodb';
 
 type Action = 'create' | 'update' | 'delete';
 
@@ -25,17 +25,26 @@ export default async function processIncomingChange(
 	const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
 	let startTime = process.hrtime();
 
-	if (action === 'update') {
-		await References.updateLookups(metaName, incomingChange._id, changedProps, dbSession);
-		logTimeSpent(startTime, `Updated lookup references for ${metaName}`);
+	try {
+		if (action === 'update') {
+			await References.updateLookups(metaName, incomingChange._id, changedProps, dbSession);
+			logTimeSpent(startTime, `Updated lookup references for ${metaName}`);
+		}
+
+		await processReverseLookups(metaName, incomingChange._id, incomingChange, action);
+		logTimeSpent(startTime, `Process'd reverse lookups for ${metaName}`);
+
+		await References.updateRelations(metaName, action, incomingChange._id, incomingChange, dbSession);
+		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
+
+		await createHistory(metaName, action, incomingChange._id, incomingChange, user, new Date(), omit(changedProps, keysToIgnore), dbSession);
+		logTimeSpent(startTime, `Created history for ${metaName}`);
+	} catch (e) {
+		if ((e as MongoServerError).codeName === 'NoSuchTransaction') {
+			logger.trace('Transaction was already closed');
+			return;
+		}
+
+		throw e;
 	}
-
-	await processReverseLookups(metaName, incomingChange._id, incomingChange, action);
-	logTimeSpent(startTime, `Process'd reverse lookups for ${metaName}`);
-
-	await References.updateRelations(metaName, action, incomingChange._id, incomingChange, dbSession);
-	logTimeSpent(startTime, `Updated relation references for ${metaName}`);
-
-	await createHistory(metaName, action, incomingChange._id, incomingChange, user, new Date(), omit(changedProps, keysToIgnore), dbSession);
-	logTimeSpent(startTime, `Created history for ${metaName}`);
 }

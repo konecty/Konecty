@@ -11,6 +11,10 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
 export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName, dbSession) {
+    if (dbSession?.hasEnded) {
+        return;
+    }
+
     // Try to get related meta
     const meta = MetaObject.Meta[metaName];
     if (!meta) {
