@@ -12,6 +12,8 @@ export const FieldAccessSchema = z.record(
 export type FieldAccess = z.infer<typeof FieldAccessSchema>;
 
 export const MetaAccessSchema = z.object({
+	document: z.string(),
+
 	fields: z.record(FieldAccessSchema),
 	fieldDefaults: z.object({
 		isUpdatable: z.boolean().optional(),
