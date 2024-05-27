@@ -12,7 +12,10 @@ export const FieldAccessSchema = z.record(
 export type FieldAccess = z.infer<typeof FieldAccessSchema>;
 
 export const MetaAccessSchema = z.object({
+	_id: z.string(),
 	document: z.string(),
+	name: z.string(),
+	type: z.literal('access'),
 
 	fields: z.record(FieldAccessSchema),
 	fieldDefaults: z.object({
