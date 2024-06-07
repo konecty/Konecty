@@ -18,4 +18,4 @@ patches:
         spec:
           containers:
             - name: konecty
-              image: konecty/konecty:2.0.0
+              image: konecty/konecty:2.0.2
