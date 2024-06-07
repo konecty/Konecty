@@ -54,10 +54,11 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			geolocation?: { longitude: number; latitude: number };
 			resolution?: { width: number; height: number };
 			password_SHA256?: string;
+			source?: string;
 		};
 	}>('/rest/auth/login', async function (req, reply) {
 		// Map body parameters
-		const { user, password, ns, geolocation, resolution, password_SHA256 } = req.body;
+		const { user, password, ns, geolocation, resolution, password_SHA256, source } = req.body;
 
 		const namespace = await MetaObject.MetaObject.findOne({ _id: 'MetaObject.Namespace' } as unknown as any);
 
@@ -81,6 +82,7 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			geolocation,
 			resolution,
 			userAgent,
+			source,
 		});
 
 		if (get(loginResult, 'success', false) === true) {

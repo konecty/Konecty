@@ -1,11 +1,11 @@
-import { hash as bcryptHash, compare as bcryptCompare } from 'bcryptjs';
-import { UAParser } from 'ua-parser-js';
+import { compare as bcryptCompare, hash as bcryptHash } from 'bcryptjs';
 import get from 'lodash/get';
+import { UAParser } from 'ua-parser-js';
 
-import { MetaObject } from '@imports/model/MetaObject';
-import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '../../consts';
 import { generateStampedLoginToken } from '@imports/auth/login/token';
+import { MetaObject } from '@imports/model/MetaObject';
 import { ObjectId } from 'mongodb';
+import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '../../consts';
 
 interface LoginParams {
 	ip?: string | string[];
@@ -15,6 +15,7 @@ interface LoginParams {
 	geolocation?: { longitude: number; latitude: number } | string;
 	resolution?: { width: number; height: number } | string;
 	userAgent?: string;
+	source?: string;
 }
 
 interface accessLog {
@@ -29,6 +30,7 @@ interface accessLog {
 	geolocation?: [number, number];
 	resolution?: { width: number; height: number };
 	reason?: string;
+	source?: string;
 	_user?: [
 		{
 			_id: string;
@@ -38,7 +40,7 @@ interface accessLog {
 	];
 }
 
-export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent }: LoginParams) {
+export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent, source }: LoginParams) {
 	const ua = new UAParser(userAgent ?? 'API Call').getResult();
 
 	const accessLog: accessLog = {
@@ -50,6 +52,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		browserVersion: ua.browser.version,
 		os: ua.os.name,
 		platform: ua.device.type,
+		source,
 	};
 
 	if (resolution != null) {
