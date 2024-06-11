@@ -562,7 +562,16 @@ export function filterConditionToFn(condition, metaObject, req) {
 		}
 	};
 
-	const conditionValue = getValue(conditionValueResult.data);
+	/**
+	 * If the condition value points to another field from the data, then retrieve it
+	 * Otherwise, process as normal
+	 * @param {object} data - The whole document to search
+	 * @returns {Array.<string | number | boolean>} - The field value as an array
+	 */
+	const getConditionValue = data => {
+		const condValue = getValue(conditionValueResult.data);
+		return get(data, condValue, condValue);
+	}
 
 	/**
 	 * @param {object} data - The whole document to search
@@ -592,36 +601,37 @@ export function filterConditionToFn(condition, metaObject, req) {
 		case 'equals':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => value === conditionValue);
+				return fieldValue.some(value => value === getConditionValue(data));
 			});
 		case 'not_equals':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.every(value => value !== conditionValue);
+				return fieldValue.every(value => value !== getConditionValue(data));
 			});
 		case 'contains':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => String(value).includes(conditionValue));
+				return fieldValue.some(value => String(value).includes(getConditionValue(data)));
 			});
 		case 'not_contains':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.every(value => !String(value).includes(conditionValue));
+				return fieldValue.every(value => !String(value).includes(getConditionValue(data)));
 			});
 		case 'starts_with':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => String(value).startsWith(conditionValue));
+				return fieldValue.some(value => String(value).startsWith(getConditionValue(data)));
 			});
 		case 'end_with':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => String(value).endsWith(conditionValue));
+				return fieldValue.some(value => String(value).endsWith(getConditionValue(data)));
 			});
 		case 'in':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
+				const conditionValue = getConditionValue(data);
 				if (!isArray(conditionValue)) {
 					return false;
 				}
@@ -631,6 +641,7 @@ export function filterConditionToFn(condition, metaObject, req) {
 		case 'not_in':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
+				const conditionValue = getConditionValue(data);
 				if (!isArray(conditionValue)) {
 					return false;
 				}
@@ -640,26 +651,27 @@ export function filterConditionToFn(condition, metaObject, req) {
 		case 'greater_than':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => value > conditionValue);
+				return fieldValue.some(value => value > getConditionValue(data));
 			});
 		case 'greater_or_equals':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => value >= conditionValue);
+				return fieldValue.some(value => value >= getConditionValue(data));
 			});
 		case 'less_than':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => value < conditionValue);
+				return fieldValue.some(value => value < getConditionValue(data));
 			});
 		case 'less_or_equals':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
-				return fieldValue.some(value => value <= conditionValue);
+				return fieldValue.some(value => value <= getConditionValue(data));
 			});
 		case 'between':
 			return successReturn(data => {
 				const fieldValue = getFieldValue(data);
+				const conditionValue = getConditionValue(data);
 				return fieldValue.some(value => conditionValue.greater_or_equals <= value && value <= conditionValue.less_or_equals);
 			});
 		case 'exists':

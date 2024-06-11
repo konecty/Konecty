@@ -224,6 +224,7 @@ export default async function find<AsStream extends boolean = false>({
 
 			return acc;
 		}, {});
+		let conditionsKeys = Object.keys(accessConditions);
 
 		const startTime = process.hrtime();
 
@@ -249,6 +250,9 @@ export default async function find<AsStream extends boolean = false>({
 
 		if (Object.keys(queryOptions.projection).length > 0) {
 			aggregateStages.push({ $project: queryOptions.projection });
+
+			// Only check permissions on fields that are in the projection
+			conditionsKeys = conditionsKeys.filter(key => has(queryOptions.projection, key));
 		}
 
 		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true });
@@ -263,7 +267,6 @@ export default async function find<AsStream extends boolean = false>({
 			data: recordStream,
 		};
 
-		const conditionsKeys = Object.keys(accessConditions);
 		if (conditionsKeys.length > 0) {
 			tracingSpan?.addEvent('Removing unauthorized fields from records');
 			result.data = result.data.map(
