@@ -22,7 +22,7 @@ import { KonectyResult, KonectyResultError, KonectyResultSuccess } from '@import
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
-import { Collection, Filter, FindOptions } from 'mongodb';
+import { Collection, Document, Filter, FindOptions } from 'mongodb';
 import { Readable } from 'node:stream';
 import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
@@ -130,9 +130,10 @@ export default async function find<AsStream extends boolean = false>({
 
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
-		const queryOptions: FindOptions = {
+		const queryOptions: FindOptions & { projection: Document } = {
 			limit: _isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parseInt(String(limit), 10),
 			skip: parseInt(String(start ?? 0), 10),
+			projection: {},
 			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),
 		};
 
@@ -252,7 +253,11 @@ export default async function find<AsStream extends boolean = false>({
 			aggregateStages.push({ $project: queryOptions.projection });
 
 			// Only check permissions on fields that are in the projection
-			conditionsKeys = conditionsKeys.filter(key => has(queryOptions.projection, key));
+			if (emptyFields) {
+				conditionsKeys = conditionsKeys.filter(key => !queryOptions.projection[key]);
+			} else {
+				conditionsKeys = conditionsKeys.filter(key => queryOptions.projection[key]);
+			}
 		}
 
 		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true });
