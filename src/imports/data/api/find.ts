@@ -122,6 +122,10 @@ export default async function find<AsStream extends boolean = false>({
 		// Parse filters
 		tracingSpan?.addEvent('Parsing filter');
 		const readFilter = parseFilterObject(queryFilter, metaObject, { user }) as Filter<DataDocument>;
+		if (readFilter.success === false) {
+			return readFilter as KonectyResultError;
+		}
+
 		const query = isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {};
 
 		if (isObject(filter) && isString(filter.textSearch)) {
