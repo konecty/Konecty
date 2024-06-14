@@ -132,6 +132,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 			$set: {
 				lastLogin: new Date(),
 			},
+			// @ts-ignore-next-line
 			$push: {
 				'services.resume.loginTokens': hashStampedToken,
 			},
@@ -172,6 +173,7 @@ export const cleanupSessions = async (userId: ObjectId, all = false) => {
 		await MetaObject.Collections.User.updateOne(
 			{ _id: userId },
 			{
+				// @ts-ignore-next-line
 				$pull: {
 					'services.resume.loginTokens': {
 						$or: [{ when: { $exists: true } }],
@@ -184,6 +186,7 @@ export const cleanupSessions = async (userId: ObjectId, all = false) => {
 		await MetaObject.Collections.User.updateOne(
 			{ _id: userId, $or: [{ 'services.resume.loginTokens.when': { $lt: oldestValidDate } }, { 'services.resume.loginTokens.when': { $lt: +oldestValidDate } }] },
 			{
+				// @ts-ignore-next-line
 				$pull: {
 					'services.resume.loginTokens': {
 						$or: [{ when: { $lt: oldestValidDate } }, { when: { $lt: +oldestValidDate } }],
