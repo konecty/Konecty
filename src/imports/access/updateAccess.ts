@@ -16,6 +16,7 @@ const AccessUpdateSchema = z.union([
 			.object({
 				fieldNames: z.array(z.string()),
 				allow: z.boolean(),
+				operation: z.literal('READ').or(z.literal('UPDATE')).or(z.literal('DELETE')).or(z.literal('CREATE')),
 				condition: Condition.optional(),
 			})
 			.array(),
@@ -74,9 +75,9 @@ export default async function updateAccess({ document, accessName, data, authTok
 	const updateObj: Required<Pick<UpdateFilter<MetaAccess>, '$set'>> = { $set: {} };
 
 	if ('fields' in data) {
-		for (const { fieldNames, allow, condition } of data.fields) {
+		for (const { fieldNames, allow, condition, operation } of data.fields) {
 			for (const fieldName of fieldNames) {
-				updateObj.$set[`fields.${fieldName}`] = { allow, condition };
+				updateObj.$set[`fields.${fieldName}.${operation}`] = { allow, condition };
 			}
 		}
 	}

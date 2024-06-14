@@ -29,8 +29,8 @@ export const MetaAccessSchema = z.object({
 	isReadable: z.boolean().optional(),
 	isDeletable: z.boolean().optional(),
 
-	readFilter: KonFilter.optional(),
-	updateFilter: KonFilter.optional(),
+	readFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
+	updateFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;

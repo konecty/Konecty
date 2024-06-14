@@ -16,9 +16,9 @@ const accessApi: FastifyPluginCallback = (fastify, _, done) => {
 		reply.send(result);
 	});
 
-	fastify.post<{ Params: { document: string; accessName: string } }>('/rest/access/:document/:accessName', async function (req, reply) {
+	fastify.put<{ Params: { document: string; accessName: string } }>('/rest/access/:document/:accessName', async function (req, reply) {
 		const { tracer } = req.openTelemetry();
-		const tracingSpan = tracer.startSpan('POST updateAccess');
+		const tracingSpan = tracer.startSpan('PUT updateAccess');
 
 		const result = await updateAccess({
 			document: req.params.document,
