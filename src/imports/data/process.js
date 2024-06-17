@@ -335,7 +335,7 @@ export async function processOpportunity({ data, contextUser }) {
 				productFilter = { _id: { $in: data.product.ids } };
 			}
 
-			if (Object.keys(productFilter).length > 0) {
+			if (productFilter && Object.keys(productFilter).length > 0) {
 				const products = await MetaObject.Collections['Product'].find(productFilter).toArray();
 
 				products.forEach(product => {
