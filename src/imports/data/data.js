@@ -1533,7 +1533,7 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 
 			if (foreignFoundIds.some(id => id != null)) {
 				const Meta = MetaObject.Meta[referenceName];
-				const moduleLabel = get(Meta, 'label.pt_BR', get(Meta, 'label.en', referenceName));
+				const moduleLabel = get(Meta, 'plurals.pt_BR', get(Meta, 'plurals.en', referenceName));
 				return errorReturn(
 					`[${document}] Cannot delete records ${foreignFoundIds.filter(id => id != null).join(', ')} because they are referenced by [${moduleLabel}]`,
 				);
