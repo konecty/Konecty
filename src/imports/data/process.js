@@ -343,13 +343,6 @@ export async function processOpportunity({ data, contextUser }) {
 					createRequest.data['inCondominium'] = product['inCondominium'];
 				}
 
-				if (product['zone']) {
-					if (!createRequest.data['zone']) {
-						createRequest.data['zone'] = [];
-					}
-					createRequest.data['zone'].push(product['zone']);
-				}
-
 				if (product['type']) {
 					if (!createRequest.data['filterType']) {
 						createRequest.data['filterType'] = [];
@@ -442,10 +435,6 @@ export async function processOpportunity({ data, contextUser }) {
 					}
 				}
 
-				if (createRequest.data['zone']) {
-					createRequest.data['zone'] = uniq(createRequest.data['zone']);
-				}
-
 				if (createRequest.data['filterType']) {
 					createRequest.data['filterType'] = uniq(createRequest.data['filterType']);
 				}
@@ -461,14 +450,18 @@ export async function processOpportunity({ data, contextUser }) {
 			data.campaign = campaign;
 		}
 
-		const source = await findChannel(data.source, contextUser);
-		if (source) {
-			data.source = source;
+		if (data.source) {
+			const source = await findChannel(data.source, contextUser);
+			if (source) {
+				data.source = source;
+			}
 		}
 
-		const channel = await findChannel(data.channel, contextUser);
-		if (channel) {
-			data.channel = channel;
+		if (data.channel) {
+			const channel = await findChannel(data.channel, contextUser);
+			if (channel) {
+				data.channel = channel;
+			}
 		}
 
 		createRequest.data = extend(createRequest.data, data);
@@ -521,7 +514,7 @@ export async function processOpportunity({ data, contextUser }) {
 			productsList = data.product.ids;
 		}
 
-		if (productsList) {
+		if (productsList && data.contact?._id) {
 			await BluebirdPromise.each(productsList, async function (productId) {
 				record = await find({
 					document: 'ProductsPerOpportunities',
@@ -1331,8 +1324,7 @@ async function findCampaign(search, contextUser) {
 	}
 
 	if (has(search, '_id')) {
-		let ref;
-		return (ref = { _id: search._id }), ref;
+		return { _id: search._id };
 	}
 
 	if (has(search, 'code')) {
@@ -1349,7 +1341,7 @@ async function findCampaign(search, contextUser) {
 		};
 	}
 
-	if (!filter) {
+	if (!filter || !filter.value) {
 		return null;
 	}
 
@@ -1363,8 +1355,7 @@ async function findCampaign(search, contextUser) {
 	});
 
 	if (has(record, 'data.0._id')) {
-		let ref1;
-		return (ref1 = { _id: record.data[0]._id }), ref1;
+		return { _id: record.data[0]._id };
 	}
 }
 
