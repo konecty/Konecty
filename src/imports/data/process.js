@@ -328,132 +328,119 @@ export async function processOpportunity({ data, contextUser }) {
 		if (data.product) {
 			let productFilter;
 			if (data.product._id) {
-				productFilter = data.product._id;
+				productFilter = { _id: data.product._id };
 			} else if (data.product.code) {
 				productFilter = { code: data.product.code };
 			} else if (data.product.ids) {
 				productFilter = { _id: { $in: data.product.ids } };
 			}
 
-			const products = await MetaObject.Collections['Product'].find(productFilter).toArray();
+			if (productFilter && Object.keys(productFilter).length > 0) {
+				const products = await MetaObject.Collections['Product'].find(productFilter).toArray();
 
-			products.forEach(product => {
-				if (product['inCondominium']) {
-					// @TODO how to decide multiple?
-					createRequest.data['inCondominium'] = product['inCondominium'];
-				}
+				products.forEach(product => {
 
-				if (product['zone']) {
-					if (!createRequest.data['zone']) {
-						createRequest.data['zone'] = [];
-					}
-					createRequest.data['zone'].push(product['zone']);
-				}
-
-				if (product['type']) {
-					if (!createRequest.data['filterType']) {
-						createRequest.data['filterType'] = [];
-					}
-					createRequest.data['filterType'].push(product['type']);
-				}
-
-				if (product['purpose']) {
-					if (!createRequest.data['filterPurpose']) {
-						createRequest.data['filterPurpose'] = [];
-					}
-					createRequest.data['filterPurpose'] = createRequest.data['filterPurpose'].concat(product['purpose']);
-				}
-
-				// if product['development']?
-				// 	# @TODO how to decide multiple?
-				// 	createRequest.data['development'] = product['development']
-
-				if (product['sale']) {
-					if (!createRequest.data['minSale']) {
-						createRequest.data['minSale'] = { value: 9999999999 };
-					}
-					if (!createRequest.data['maxSale']) {
-						createRequest.data['maxSale'] = { value: 0 };
+					if (product['type']) {
+						if (!createRequest.data['filterType']) {
+							createRequest.data['filterType'] = [];
+						}
+						createRequest.data['filterType'].push(product['type']);
 					}
 
-					if (product['sale'].value * 0.85 < createRequest.data['minSale'].value) {
-						createRequest.data['minSale'] = {
-							currency: 'BRL',
-							value: product['sale'].value * 0.85,
-						};
+					if (product['purpose']) {
+						if (!createRequest.data['filterPurpose']) {
+							createRequest.data['filterPurpose'] = [];
+						}
+						createRequest.data['filterPurpose'] = createRequest.data['filterPurpose'].concat(product['purpose']);
 					}
 
-					if (product['sale'].value * 1.15 > createRequest.data['maxSale'].value) {
-						createRequest.data['maxSale'] = {
-							currency: 'BRL',
-							value: product['sale'].value * 1.15,
-						};
-					}
-				}
+					// if product['development']?
+					// 	# @TODO how to decide multiple?
+					// 	createRequest.data['development'] = product['development']
 
-				if (product['areaPrivate']) {
-					if (!createRequest.data['minAreaPrivate']) {
-						createRequest.data['minAreaPrivate'] = 9999999999;
-					}
-					if (!createRequest.data['maxAreaPrivate']) {
-						createRequest.data['maxAreaPrivate'] = 0;
-					}
+					if (product['sale']) {
+						if (!createRequest.data['minSale']) {
+							createRequest.data['minSale'] = { value: 9999999999 };
+						}
+						if (!createRequest.data['maxSale']) {
+							createRequest.data['maxSale'] = { value: 0 };
+						}
 
-					if (product['areaPrivate'] * 0.85 < createRequest.data['minAreaPrivate']) {
-						createRequest.data['minAreaPrivate'] = product['areaPrivate'] * 0.85;
-					}
+						if (product['sale'].value * 0.85 < createRequest.data['minSale'].value) {
+							createRequest.data['minSale'] = {
+								currency: 'BRL',
+								value: product['sale'].value * 0.85,
+							};
+						}
 
-					if (product['areaPrivate'] * 1.15 > createRequest.data['maxAreaPrivate']) {
-						createRequest.data['maxAreaPrivate'] = product['areaPrivate'] * 1.15;
-					}
-				}
-
-				if (product['bedrooms']) {
-					if (!createRequest.data['minBedrooms']) {
-						createRequest.data['minBedrooms'] = 999;
-					}
-					if (!createRequest.data['maxBedrooms']) {
-						createRequest.data['maxBedrooms'] = 0;
+						if (product['sale'].value * 1.15 > createRequest.data['maxSale'].value) {
+							createRequest.data['maxSale'] = {
+								currency: 'BRL',
+								value: product['sale'].value * 1.15,
+							};
+						}
 					}
 
-					if (product['bedrooms'] < createRequest.data['minBedrooms']) {
-						createRequest.data['minBedrooms'] = product['bedrooms'];
+					if (product['areaPrivate']) {
+						if (!createRequest.data['minAreaPrivate']) {
+							createRequest.data['minAreaPrivate'] = 9999999999;
+						}
+						if (!createRequest.data['maxAreaPrivate']) {
+							createRequest.data['maxAreaPrivate'] = 0;
+						}
+
+						if (product['areaPrivate'] * 0.85 < createRequest.data['minAreaPrivate']) {
+							createRequest.data['minAreaPrivate'] = product['areaPrivate'] * 0.85;
+						}
+
+						if (product['areaPrivate'] * 1.15 > createRequest.data['maxAreaPrivate']) {
+							createRequest.data['maxAreaPrivate'] = product['areaPrivate'] * 1.15;
+						}
 					}
 
-					if (product['bedrooms'] > createRequest.data['maxBedrooms']) {
-						createRequest.data['maxBedrooms'] = product['bedrooms'];
+					if (product['bedrooms']) {
+						if (!createRequest.data['minBedrooms']) {
+							createRequest.data['minBedrooms'] = 999;
+						}
+						if (!createRequest.data['maxBedrooms']) {
+							createRequest.data['maxBedrooms'] = 0;
+						}
+
+						if (product['bedrooms'] < createRequest.data['minBedrooms']) {
+							createRequest.data['minBedrooms'] = product['bedrooms'];
+						}
+
+						if (product['bedrooms'] > createRequest.data['maxBedrooms']) {
+							createRequest.data['maxBedrooms'] = product['bedrooms'];
+						}
 					}
-				}
 
-				if (product['parkingSpaces']) {
-					if (!createRequest.data['minParkingSpaces']) {
-						createRequest.data['minParkingSpaces'] = 999;
+					if (product['parkingSpaces']) {
+						if (!createRequest.data['minParkingSpaces']) {
+							createRequest.data['minParkingSpaces'] = 999;
+						}
+						if (!createRequest.data['maxParkingSpaces']) {
+							createRequest.data['maxParkingSpaces'] = 0;
+						}
+
+						if (product['parkingSpaces'] < createRequest.data['minParkingSpaces']) {
+							createRequest.data['minParkingSpaces'] = product['parkingSpaces'];
+						}
+
+						if (product['parkingSpaces'] > createRequest.data['maxParkingSpaces']) {
+							createRequest.data['maxParkingSpaces'] = product['parkingSpaces'];
+						}
 					}
-					if (!createRequest.data['maxParkingSpaces']) {
-						createRequest.data['maxParkingSpaces'] = 0;
+
+					if (createRequest.data['filterType']) {
+						createRequest.data['filterType'] = uniq(createRequest.data['filterType']);
 					}
 
-					if (product['parkingSpaces'] < createRequest.data['minParkingSpaces']) {
-						createRequest.data['minParkingSpaces'] = product['parkingSpaces'];
+					if (createRequest.data['filterPurpose']) {
+						return (createRequest.data['filterPurpose'] = uniq(createRequest.data['filterPurpose']));
 					}
-
-					if (product['parkingSpaces'] > createRequest.data['maxParkingSpaces']) {
-						createRequest.data['maxParkingSpaces'] = product['parkingSpaces'];
-					}
-				}
-
-				if (createRequest.data['zone']) {
-					createRequest.data['zone'] = uniq(createRequest.data['zone']);
-				}
-
-				if (createRequest.data['filterType']) {
-					createRequest.data['filterType'] = uniq(createRequest.data['filterType']);
-				}
-
-				if (createRequest.data['filterPurpose']) {
-					return (createRequest.data['filterPurpose'] = uniq(createRequest.data['filterPurpose']));
-				}
-			});
+				});
+			}
 		}
 
 		const campaign = await findCampaign(data.campaign, contextUser);
@@ -461,14 +448,18 @@ export async function processOpportunity({ data, contextUser }) {
 			data.campaign = campaign;
 		}
 
-		const source = await findChannel(data.source, contextUser);
-		if (source) {
-			data.source = source;
+		if (data.source) {
+			const source = await findChannel(data.source, contextUser);
+			if (source) {
+				data.source = source;
+			}
 		}
 
-		const channel = await findChannel(data.channel, contextUser);
-		if (channel) {
-			data.channel = channel;
+		if (data.channel) {
+			const channel = await findChannel(data.channel, contextUser);
+			if (channel) {
+				data.channel = channel;
+			}
 		}
 
 		createRequest.data = extend(createRequest.data, data);
@@ -521,7 +512,7 @@ export async function processOpportunity({ data, contextUser }) {
 			productsList = data.product.ids;
 		}
 
-		if (productsList) {
+		if (productsList && data.contact?._id) {
 			await BluebirdPromise.each(productsList, async function (productId) {
 				record = await find({
 					document: 'ProductsPerOpportunities',
@@ -1331,8 +1322,7 @@ async function findCampaign(search, contextUser) {
 	}
 
 	if (has(search, '_id')) {
-		let ref;
-		return (ref = { _id: search._id }), ref;
+		return { _id: search._id };
 	}
 
 	if (has(search, 'code')) {
@@ -1349,7 +1339,7 @@ async function findCampaign(search, contextUser) {
 		};
 	}
 
-	if (!filter) {
+	if (!filter || !filter.value) {
 		return null;
 	}
 
@@ -1363,8 +1353,7 @@ async function findCampaign(search, contextUser) {
 	});
 
 	if (has(record, 'data.0._id')) {
-		let ref1;
-		return (ref1 = { _id: record.data[0]._id }), ref1;
+		return { _id: record.data[0]._id };
 	}
 }
 

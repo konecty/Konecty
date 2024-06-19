@@ -138,10 +138,14 @@ export async function runScriptAfterSave({ script, data, user, extraData = {} })
 		};
 
 		const sandbox = createContext(contextData);
-		const scriptToRun = `result = (function(data, user, console, Models, extraData) { ${script} })(data, user, console, Models, extraData);`;
+		const scriptToRun = `result = (async function(data, user, console, Models, extraData) { ${script} })(data, user, console, Models, extraData);`;
 		await runInContext(scriptToRun, sandbox);
 
 		if (sandbox.result != null && isObject(sandbox.result)) {
+			if (sandbox.result.then != null) {
+				const result = await sandbox.result;
+				return result || {};
+			}
 			return sandbox.result;
 		} else {
 			return {};

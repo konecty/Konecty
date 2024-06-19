@@ -22,7 +22,7 @@ import { KonectyResult, KonectyResultError, KonectyResultSuccess } from '@import
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
-import { Collection, Filter, FindOptions } from 'mongodb';
+import { Collection, Document, Filter, FindOptions } from 'mongodb';
 import { Readable } from 'node:stream';
 import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
@@ -122,6 +122,10 @@ export default async function find<AsStream extends boolean = false>({
 		// Parse filters
 		tracingSpan?.addEvent('Parsing filter');
 		const readFilter = parseFilterObject(queryFilter, metaObject, { user }) as Filter<DataDocument>;
+		if (readFilter.success === false) {
+			return readFilter as KonectyResultError;
+		}
+
 		const query = isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {};
 
 		if (isObject(filter) && isString(filter.textSearch)) {
@@ -130,9 +134,10 @@ export default async function find<AsStream extends boolean = false>({
 
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
-		const queryOptions: FindOptions = {
+		const queryOptions: FindOptions & { projection: Document } = {
 			limit: _isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parseInt(String(limit), 10),
 			skip: parseInt(String(start ?? 0), 10),
+			projection: {},
 			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),
 		};
 
@@ -224,6 +229,7 @@ export default async function find<AsStream extends boolean = false>({
 
 			return acc;
 		}, {});
+		let conditionsKeys = Object.keys(accessConditions);
 
 		const startTime = process.hrtime();
 
@@ -249,6 +255,13 @@ export default async function find<AsStream extends boolean = false>({
 
 		if (Object.keys(queryOptions.projection).length > 0) {
 			aggregateStages.push({ $project: queryOptions.projection });
+
+			// Only check permissions on fields that are in the projection
+			if (emptyFields) {
+				conditionsKeys = conditionsKeys.filter(key => !queryOptions.projection[key]);
+			} else {
+				conditionsKeys = conditionsKeys.filter(key => queryOptions.projection[key]);
+			}
 		}
 
 		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true });
@@ -258,27 +271,25 @@ export default async function find<AsStream extends boolean = false>({
 		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
 		logger.trace(log);
 
-		recordStream.map((record: DataDocument) =>
-			Object.keys(record).reduce<typeof record>(
-				(acc, key) => {
-					if (accessConditions[key] != null) {
-						if (accessConditions[key](record) === true) {
-							acc[key] = record[key];
-						}
-					} else {
-						acc[key] = record[key];
-					}
-
-					return acc;
-				},
-				{ _id: '' },
-			),
-		);
-
 		const result: KonectyResultSuccess<typeof recordStream> = {
 			success: true,
 			data: recordStream,
 		};
+
+		if (conditionsKeys.length > 0) {
+			tracingSpan?.addEvent('Removing unauthorized fields from records');
+			result.data = result.data.map(
+				(record: DataDocument) =>
+					conditionsKeys.reduce<typeof record>((acc, key) => {
+						if (accessConditions[key](record) === false) {
+							delete acc[key];
+						}
+
+						return acc;
+					}, record),
+				{ concurrency: STREAM_CONCURRENCY },
+			);
+		}
 
 		if (getTotal === true) {
 			tracingSpan?.addEvent('Calculating total');

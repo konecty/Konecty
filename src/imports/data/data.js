@@ -668,6 +668,12 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	tracingSpan?.addEvent('Validate&processValueFor all fields');
 	const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
 		const value = cleanedData[key];
+		const field = metaObject.fields[key];
+
+		if (field.type === 'autoNumber' && (ignoreAutoNumber || value != null)) {
+			return successReturn();
+		}
+
 		const result = await validateAndProcessValueFor({
 			meta: metaObject,
 			fieldName: key,
@@ -702,44 +708,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			logger.error(validation, `Create - Script Validation Error - ${validation.reason}`);
 			return errorReturn(`[${document}] ${validation.reason}`);
 		}
-	}
-
-	tracingSpan?.addEvent('Processing autoNumber');
-	const autoNumberResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
-		const field = metaObject.fields[key];
-		if (field.type === 'autoNumber') {
-			const value = get(data, key);
-
-			if (ignoreAutoNumber !== true || value == null) {
-				const autoNumberResult = await validateAndProcessValueFor({
-					meta: metaObject,
-					fieldName: key,
-					value,
-					actionType: 'insert',
-					objectOriginalValues: data,
-					objectNewValues: cleanedData,
-				});
-
-				if (autoNumberResult.success === false) {
-					return autoNumberResult;
-				}
-				if (autoNumberResult.data != null) {
-					cleanedData[key] = autoNumberResult.data;
-				}
-			} else {
-				cleanedData[key] = value;
-			}
-		}
-		return successReturn();
-	});
-
-	if (autoNumberResult.some(result => result.success === false)) {
-		return errorReturn(
-			autoNumberResult
-				.filter(result => result.success === false)
-				.map(result => result.errors)
-				.flat(),
-		);
 	}
 
 	if (Object.keys(cleanedData).length > 0) {
@@ -1172,13 +1140,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			tracingSpan?.addEvent('Running scriptBeforeValidation');
 			const extraData = {
-				original: first(existsRecords),
+				original: existsRecords.find(r => r._id === record._id),
 				request: data.data,
 				validated: lookupValues,
 			};
 			const scriptResult = await runScriptBeforeValidation({
 				script: metaObject.scriptBeforeValidation,
-				data: extend({}, first(existsRecords), data.data, lookupValues),
+				data: extend({}, record, data.data, lookupValues),
 				user,
 				meta: metaObject,
 				extraData,
@@ -1533,7 +1501,7 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 
 			if (foreignFoundIds.some(id => id != null)) {
 				const Meta = MetaObject.Meta[referenceName];
-				const moduleLabel = get(Meta, 'label.pt_BR', get(Meta, 'label.en', referenceName));
+				const moduleLabel = get(Meta, 'plurals.pt_BR', get(Meta, 'plurals.en', referenceName));
 				return errorReturn(
 					`[${document}] Cannot delete records ${foreignFoundIds.filter(id => id != null).join(', ')} because they are referenced by [${moduleLabel}]`,
 				);
