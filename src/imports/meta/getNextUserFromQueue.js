@@ -44,9 +44,11 @@ export async function getNextUserFromQueue(queueStrId, user) {
 	const queueUser = await collection.findOneAndUpdate(query, update, options);
 
 	if (queueUser != null) {
+		const user = convertObjectIds(queueUser);
 		return {
 			success: true,
-			data: convertObjectIds(queueUser),
+			data: user,
+			user
 		};
 	}
 
@@ -64,9 +66,11 @@ export async function getNextUserFromQueue(queueStrId, user) {
 	}
 
 	if (queueOwner?._user != null && queueOwner._user.length > 0) {
+		const user = convertObjectIds({ user: queueOwner._user[0] });
 		return {
 			success: true,
-			data: convertObjectIds({ user: queueOwner._user[0] }),
+			data: user,
+			user
 		};
 	}
 
