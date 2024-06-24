@@ -2,14 +2,34 @@
 
 # Konecty Open source Tech Business Platform
 
+## How to run local/development
+
+You will need a mongodb database (you can use a free account at cloud.mongodb.com or a local mongodb install)
+
+Create .env using the sample.
+
+Fill MONGO_URL with your database url, adding authentication and options
+
+MONGO_URL=mongodb+srv://login:password@konecty.mongodb.net/?appName=konecty 
+
+
+```
+yarn
+yarn start
+```
+
+If this is a empty database, basic metadata and starting collections will be automatically created.
+
+The UI will be running at `localhost:3000`
+
+
+
 ## Konecty environment variables
 
 -   `KONECTY_MODE`: Can be `production` or `development`
 -   `DISABLE_KONSISTENT`: can be to `true` if you don't want Konsistent to run on the same process as Kondata. It's enabled by default.
 -   `MONGO_URL`: Mongo database URL
--   `MONGO_OPLOG_URL`: Mongo database oplog URL
 -   `DISABLE_REINDEX`: can be to `true` if you don't want to verify if all index are created.
--   `ROOT_URL`: your public url
 -   `ALLOWED_ORIGINS`: a list of cors alloweds URLs separated by `|`
 -   `LOG_REQUEST=true`: if provide all requests are loggeds
 -   `DEFAULT_SMTP_HOST`: SMTP host for default email sender (**required**)
@@ -59,11 +79,3 @@ Examples of REST usage can be found here: [REST](REST.md)
 ## Logs
 
 -   KONDATA only log requests when **_status code_** of the response isn't 200 (OK).
-
-## DEVELOPMENT
-
-```
-sudo apt install build-essential
-meteor npm install
-meteor
-```
