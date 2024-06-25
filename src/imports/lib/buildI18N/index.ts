@@ -4,9 +4,21 @@ import set from 'lodash/set';
 import { MetaObjectType } from '../../types/metadata';
 import { MetaObject } from '../../model/MetaObject';
 import { User } from '../../model/User';
-import { getAccessFor, getFieldPermissions } from '../../utils/accessUtils';
-import { MetaAccess } from '../../model/MetaAccess';
-
+import { getAccessFor } from '../../utils/accessUtils';
+import { Label } from '@imports/model/Label';
+const negative: Label = {
+	en: 'Not',
+	de: 'Nicht',
+	es: 'No',
+	fr: 'Pas',
+	it: 'Non',
+	ja: 'いいえ',
+	nl: 'Niet',
+	pt: 'Não',
+	'pt-BR': 'Não',
+	ru: 'нет',
+	zh: '不',
+};
 export const buildI18N = async (user: User): Promise<Record<string, unknown>> => {
 	const metas: MetaObjectType[] = await MetaObject.MetaObject.find<MetaObjectType>(
 		{},
@@ -52,28 +64,38 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 			Object.entries(plurals).forEach(([lang, label]) => set(acc, [fixISO(lang), ...keyPath, 'plural'], label));
 		}
 
-		const hasAccess = (fieldName: string) => {
-			if (meta.type === 'group') {
-				return true;
-			}
-			const fieldAccess = getFieldPermissions(access as MetaAccess, fieldName);
-			return [fieldAccess.isReadable, fieldAccess.isUpdatable, fieldAccess.isCreatable].some(p => p === true);
-		};
-
 		['fields', 'columns', 'rows', 'values'].forEach(metaProp => {
 			const entry = get(meta, metaProp);
 			if (entry != null) {
 				if (Array.isArray(entry)) {
 					entry.forEach(field => {
-						if (field.label != null && hasAccess(field.name)) {
+						if (field.label != null) {
 							Object.entries(field.label).forEach(([lang, label]) => set(acc, [fixISO(lang), ...keyPath, metaProp, field.name], label as string));
 						}
 					});
 				} else {
 					Object.entries(entry).forEach(([field, fieldLabel]) => {
 						const label = get(fieldLabel, 'label');
-						if (label != null && hasAccess(field)) {
-							Object.entries(label).forEach(([lang, value]) => set(acc, [fixISO(lang), ...keyPath, metaProp, field], value as string));
+						const options = get(fieldLabel, 'options');
+						const type = get(fieldLabel, 'type');
+						if (metaProp === 'fields' && options != null) {
+							Object.entries(options).forEach(entry => {
+								const [option, optionLabels] = entry as [string, Label];
+								Object.entries(optionLabels).forEach(([lang, value]) => set(acc, [fixISO(lang), ...keyPath, 'options', field, option], value as string));
+							});
+						}
+						if (label != null) {
+							Object.entries(label).forEach(([lang, value]) => {
+								set(acc, [fixISO(lang), ...keyPath, metaProp, field], value as string);
+								if (metaProp === 'fields' && type === 'boolean') {
+									console.log('field', fieldLabel);
+									const boolLabels = {
+										true: value as string,
+										false: get(fieldLabel, 'labelOpposite', `${negative[lang] ?? 'not'} ${value}`),
+									};
+									set(acc, [fixISO(lang), ...keyPath, 'options', field], boolLabels);
+								}
+							});
 						}
 					});
 				}
