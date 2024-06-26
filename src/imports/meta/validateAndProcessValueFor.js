@@ -123,7 +123,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 	}
 
 	if (actionType === 'update' && value == null && field.type === 'lookup') {
-		Object.assign(objectNewValues, removeInheritedFields(field));
+		Object.assign(objectNewValues, removeInheritedFields(field, objectNewValues));
 	}
 
 	if (value == null && field.type !== 'autoNumber') {
