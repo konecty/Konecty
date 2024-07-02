@@ -135,7 +135,7 @@ export async function processSubmit({ authTokenId, data, contextUser }) {
 
 		if (get(piecesReturn, `${piece.name}.success`) !== true) {
 			result.success = false;
-			result.errors = result.errors.concat(piecesReturn[piece.name].errors);
+			result.errors = result.errors.concat(piecesReturn[piece.name].errors.map(error => ({ ...error, piece: piece.name })));
 			logger.error(result, `Error processing piece ${piece.name}.`);
 			return;
 		}
