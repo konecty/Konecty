@@ -156,6 +156,7 @@ export async function processGeneric({ document, name, data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	const createRequest = {
@@ -195,6 +196,7 @@ export async function processCampaignTarget({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	if (MetaObject.Namespace.skipCampaignTargetForActiveOpportunities === true) {
@@ -260,6 +262,7 @@ export async function processOpportunity({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	let record = await find({
@@ -594,6 +597,7 @@ export async function processMessage({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {}
 	};
 
 	const campaign = await findCampaign(data.campaign, contextUser);
@@ -642,6 +646,7 @@ export async function processActivity({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	if (has(data, 'campaign.code') && !has(data, 'campaign._id')) {
@@ -759,6 +764,7 @@ export async function processContact({ data, options, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	let codeSent = false;
@@ -767,7 +773,7 @@ export async function processContact({ data, options, contextUser }) {
 	}
 	let phoneSent = [];
 
-	if (data.phone && !isEmpty(data.phone)) {
+	if (data.phone && (!isEmpty(data.phone) || data.phone > 0)) {
 		phoneSent = phoneSent.concat(data.phone);
 	}
 
@@ -779,7 +785,7 @@ export async function processContact({ data, options, contextUser }) {
 	// validate if phone or email was passed
 	if (codeSent === false && emailSent.length === 0 && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [{ meaage: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.' }];
+		response.errors = [{ message: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.' }];
 		delete response.processData;
 		return response;
 	}
@@ -1244,8 +1250,6 @@ export async function processContact({ data, options, contextUser }) {
 		delete contactData.medium;
 		delete contactData.referrerURL;
 	}
-
-	let operationPerformed = 'created';
 
 	// creates a contact if not found one
 	if (contact == null) {
