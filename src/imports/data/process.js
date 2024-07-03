@@ -87,6 +87,7 @@ export async function processSubmit({ authTokenId, data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	if (isArray(data === false)) {
@@ -134,12 +135,13 @@ export async function processSubmit({ authTokenId, data, contextUser }) {
 
 		if (get(piecesReturn, `${piece.name}.success`) !== true) {
 			result.success = false;
-			result.errors = result.errors.concat(piecesReturn[piece.name].errors);
+			result.errors = result.errors.concat(piecesReturn[piece.name].errors.map(error => ({ ...error, piece: piece.name })));
 			logger.error(result, `Error processing piece ${piece.name}.`);
 			return;
 		}
 
 		result.processData = extend(result.processData, piecesReturn[piece.name].processData);
+		result.changes = extend(result.changes, piecesReturn[piece.name].changes);
 	});
 
 	if (result.errors.length === 0) {
@@ -154,6 +156,7 @@ export async function processGeneric({ document, name, data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	const createRequest = {
@@ -183,6 +186,7 @@ export async function processGeneric({ document, name, data, contextUser }) {
 	}
 
 	response.processData[name] = saveResult.data[0];
+	response.changes[document] = "created";
 
 	return response;
 }
@@ -192,6 +196,7 @@ export async function processCampaignTarget({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	if (MetaObject.Namespace.skipCampaignTargetForActiveOpportunities === true) {
@@ -246,6 +251,7 @@ export async function processCampaignTarget({ data, contextUser }) {
 	}
 
 	response.processData['campaignTarget'] = saveResult.data[0];
+	response.changes['campaignTarget'] = 'created';
 
 	return response;
 }
@@ -256,6 +262,7 @@ export async function processOpportunity({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	let record = await find({
@@ -479,6 +486,7 @@ export async function processOpportunity({ data, contextUser }) {
 		}
 
 		response.processData['opportunity'] = saveResult.data[0];
+		response.changes['opportunity'] = 'created';
 
 		opportunityId = saveResult.data[0]._id;
 	}
@@ -569,6 +577,7 @@ export async function processOpportunity({ data, contextUser }) {
 						response.processData['productsPerOpportunities'] = [];
 					}
 
+					response.changes['productsPerOpportunities'] = 'created';
 					return response.processData['productsPerOpportunities'].push(saveProductResult.data[0]);
 				}
 			});
@@ -587,6 +596,7 @@ export async function processMessage({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {}
 	};
 
 	const campaign = await findCampaign(data.campaign, contextUser);
@@ -625,6 +635,7 @@ export async function processMessage({ data, contextUser }) {
 	}
 
 	response.processData['message'] = saveResult.data[0];
+	response.changes['message'] = 'created';
 
 	return response;
 }
@@ -634,6 +645,7 @@ export async function processActivity({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	if (has(data, 'campaign.code') && !has(data, 'campaign._id')) {
@@ -680,6 +692,7 @@ export async function processActivity({ data, contextUser }) {
 	}
 
 	response.processData['activity'] = saveResult.data[0];
+	response.changes['activity'] = 'created';
 
 	return response;
 }
@@ -723,6 +736,7 @@ export async function processActivity({ data, contextUser }) {
 
 export async function processContact({ data, options, contextUser }) {
 	let record, result;
+	const adminUser = (await MetaObject.Collections['User'].findOne({ username: 'admin' })) ?? contextUser;
 	// const context = this;
 	// meta = @meta
 
@@ -749,6 +763,7 @@ export async function processContact({ data, options, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
+		changes: {},
 	};
 
 	let codeSent = false;
@@ -757,7 +772,7 @@ export async function processContact({ data, options, contextUser }) {
 	}
 	let phoneSent = [];
 
-	if (data.phone && !isEmpty(data.phone)) {
+	if (data.phone && (!isEmpty(data.phone) || data.phone > 0)) {
 		phoneSent = phoneSent.concat(data.phone);
 	}
 
@@ -769,7 +784,7 @@ export async function processContact({ data, options, contextUser }) {
 	// validate if phone or email was passed
 	if (codeSent === false && emailSent.length === 0 && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [{ meaage: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.' }];
+		response.errors = [{ message: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: código, email e telefone.' }];
 		delete response.processData;
 		return response;
 	}
@@ -791,7 +806,7 @@ export async function processContact({ data, options, contextUser }) {
 				],
 			},
 			limit: 1,
-			contextUser,
+			contextUser: adminUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -814,7 +829,7 @@ export async function processContact({ data, options, contextUser }) {
 				],
 			},
 			limit: 1,
-			contextUser,
+			contextUser: adminUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -843,7 +858,7 @@ export async function processContact({ data, options, contextUser }) {
 				],
 			},
 			limit: 1,
-			contextUser,
+			contextUser: adminUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -865,7 +880,7 @@ export async function processContact({ data, options, contextUser }) {
 				],
 			},
 			limit: 1,
-			contextUser,
+			contextUser: adminUser,
 		});
 
 		if (has(record, 'data.0')) {
@@ -1069,7 +1084,7 @@ export async function processContact({ data, options, contextUser }) {
 						},
 					],
 					fields: '_id, _user',
-					contextUser,
+					contextUser: adminUser,
 				});
 
 				some(get(record, 'data.0._user'), userFromOpportunity => {
@@ -1120,7 +1135,7 @@ export async function processContact({ data, options, contextUser }) {
 						},
 					],
 					fields: '_id, _user',
-					contextUser,
+					contextUser: adminUser,
 				});
 
 				some(get(record, 'data.0._user'), userFromActivity => {
@@ -1176,7 +1191,7 @@ export async function processContact({ data, options, contextUser }) {
 					],
 				},
 				fields: '_id,targetQueue',
-				contextUser,
+				contextUser: adminUser,
 			});
 
 			if (has(record, 'data.0.targetQueue')) {
@@ -1260,6 +1275,7 @@ export async function processContact({ data, options, contextUser }) {
 		}
 
 		result = await create(createRequest);
+		response.changes["contact"] = 'created';
 	} else if (!isEmpty(contactData)) {
 		const updateRequest = {
 			document: 'Contact',
@@ -1271,6 +1287,7 @@ export async function processContact({ data, options, contextUser }) {
 		};
 
 		result = await update(updateRequest);
+		response.changes["contact"] = 'updated';
 	} else {
 		result = {
 			success: true,
