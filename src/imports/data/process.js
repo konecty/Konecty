@@ -301,7 +301,6 @@ export async function processOpportunity({ data, contextUser }) {
 		opportunity = record.data[0];
 		opportunityId = record.data[0]._id;
 		response.processData['opportunity'] = record.data[0];
-		response.changes['opportunity'] = 'updated';
 
 		if (MetaObject.Namespace.alertUserOnExistingOpportunity) {
 			const date = new Date();
