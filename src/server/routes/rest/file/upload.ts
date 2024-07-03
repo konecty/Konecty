@@ -214,7 +214,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 					const s3Result = await s3.send(
 						new PutObjectCommand({
 							Bucket: bucket,
-							Key: `${namespace}/${directory}/${name}`,
+							Key: `${directory}/${name}`,
 							ContentType: contentType,
 							Body: content,
 						}),
@@ -226,7 +226,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 						{
 							params: {
 								Bucket: bucket,
-								Key: `${namespace}/${directory}/${fileName}`,
+								Key: `${directory}/${fileName}`,
 								ContentType: contentType,
 							},
 							result: s3Result,
@@ -244,8 +244,8 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
 
 				await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
-					await mkdirp(path.dirname(join(storageDirectory, namespace, directory, name)));
-					const filePath = join(storageDirectory, namespace, directory, name);
+					await mkdirp(path.dirname(join(storageDirectory, directory, name)));
+					const filePath = join(storageDirectory, directory, name);
 					await writeFile(filePath, content);
 				});
 			}
@@ -268,7 +268,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 						await s3.send(
 							new DeleteObjectCommand({
 								Bucket: bucket,
-								Key: `${namespace}/${directory}/${name}`,
+								Key: `${directory}/${name}`,
 								VersionId: fileData.version,
 							}),
 						);
@@ -276,7 +276,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				} else {
 					const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
 					await BluebirdPromise.each(filesToSave, async ({ name }) => {
-						await unlink(join(storageDirectory, namespace, directory, name));
+						await unlink(join(storageDirectory, directory, name));
 					});
 				}
 				return reply.send(coreResponse);

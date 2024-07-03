@@ -1,10 +1,9 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { pathToRegexp } from 'path-to-regexp';
 import path from 'path';
+import { pathToRegexp } from 'path-to-regexp';
 
-import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
 
 import { sendFile } from './sendFile';
@@ -30,22 +29,21 @@ async function fileDownloadFn(
 	}>,
 	reply: FastifyReply,
 ) {
-	const incomingPath = req.params['*'];
-	const namespace = MetaObject.Namespace.name;
+	const incomingPath = req.params['*'].split('/').map(decodeURIComponent).join('/');
 
 	if (downloadUrlRegex.test(incomingPath)) {
 		logger.trace(`DOWNLOAD_URL_PATTERN ${incomingPath}`);
 		const [, document, code, fieldName, fileName] = downloadUrlRegex.exec(incomingPath) ?? [];
 
-		const destination = path.join(namespace, document, code, fieldName, fileName);
+		const destination = path.join(document, code, fieldName, fileName);
 		return sendFile(destination, reply);
 	}
 
 	if (legacyDownloadUrlRegex.test(incomingPath)) {
 		logger.trace(`LEGACY_DOWNLOAD_URL_PATTERN ${incomingPath}`);
-		const [, , document, code, fieldName, fileName] = legacyDownloadUrlRegex.exec(incomingPath) ?? [];
+		const [, , , document, code, fieldName, fileName] = legacyDownloadUrlRegex.exec(incomingPath) ?? [];
 
-		const destination = path.join(namespace, document, code, fieldName, fileName);
+		const destination = path.join(document, code, fieldName, fileName);
 		return sendFile(destination, reply);
 	}
 
