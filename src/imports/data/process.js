@@ -784,7 +784,7 @@ export async function processContact({ data, options, contextUser }) {
 	// validate if phone or email was passed
 	if (codeSent === false && emailSent.length === 0 && phoneSent.length === 0) {
 		response.success = false;
-		response.errors = [{ message: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: code, email e telefone.' }];
+		response.errors = [{ message: 'É obrigatório o preenchimento de ao menos um dos seguintes campos: código, email e telefone.' }];
 		delete response.processData;
 		return response;
 	}
