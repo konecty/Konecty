@@ -29,7 +29,7 @@ async function fileDownloadFn(
 	}>,
 	reply: FastifyReply,
 ) {
-	const incomingPath = req.params['*'].split('/').map(decodeURIComponent).join('/');
+	const incomingPath = req.params['*'];
 
 	if (downloadUrlRegex.test(incomingPath)) {
 		logger.trace(`DOWNLOAD_URL_PATTERN ${incomingPath}`);

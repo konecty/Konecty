@@ -70,11 +70,11 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 			const data = await req.file();
 
 			if (data == null) {
-				return errorReturn('[${document}] No file sent');
+				return errorReturn(`[${document}] No file sent`);
 			}
 
 			const contentType = data.mimetype;
-			const fileName = sanitizeFilename(decodeURIComponent(data.filename));
+			const fileName = encodeURIComponent(sanitizeFilename(decodeURIComponent(data.filename)));
 
 			let fileContent = await data.toBuffer();
 

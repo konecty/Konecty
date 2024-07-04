@@ -33,7 +33,7 @@ async function imageApiFn(
 	}>,
 	reply: FastifyReply,
 ) {
-	const incomingPath = req.params['*'].split('/').map(decodeURIComponent).join('/');
+	const incomingPath = req.params['*'];
 
 	if (getFullRegex.test(incomingPath)) {
 		logger.trace(`GET_FULL_PATTERN ${incomingPath}`);
