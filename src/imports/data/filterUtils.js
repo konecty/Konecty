@@ -241,7 +241,7 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 				}
 				break;
 			case "phone.phoneNumber":
-				if (!isString(value)) {
+				if (value && !isString(value)) {
 					return value.toString();
 				}
 				break;
