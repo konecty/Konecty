@@ -23,6 +23,7 @@ export default async function updateLookupReferences(metaName, id, data, dbSessi
     const references = MetaObject.References[metaName];
 
     if (!isObject(references) || size(keys(references.from)) === 0) {
+        logger.debug(`No references from ${metaName}`);
         return;
     }
 
@@ -55,17 +56,25 @@ export default async function updateLookupReferences(metaName, id, data, dbSessi
     }
 
     if (Object.keys(referencesToUpdate).length === 0) {
+        logger.debug(`No references to update for ${metaName}`);
         return;
     }
 
-    const record = await collection.findOne({ _id: id }, { session: dbSession });
+    if (Array.isArray(id) && id.length > 1) {
+        const records = await collection.find({ _id: { $in: id } }, { session: dbSession }).toArray();
+        return await Promise.all(records.map(record => processReferences({ referencesToUpdate, metaName, record, dbSession })));
+    }
+
+    const record = await collection.findOne({ _id: [].concat(id)[0] }, { session: dbSession });
     if (!record) {
         return logger.error(`Can't find record ${id} from ${metaName}`);
     }
 
     logger.debug(`Updating references for ${metaName} - ${Object.keys(referencesToUpdate).join(", ")}`);
-
-    await BluebirdPromise.map(Object.keys(referencesToUpdate), async referenceDocumentName => {
+    return await processReferences({ referencesToUpdate, metaName, record, dbSession });
+}
+const processReferences = async ({ referencesToUpdate, metaName, record, dbSession }) => {
+    return await BluebirdPromise.map(Object.keys(referencesToUpdate), async referenceDocumentName => {
         const fields = referencesToUpdate[referenceDocumentName];
         await BluebirdPromise.map(Object.keys(fields), async fieldName => {
             const field = fields[fieldName];

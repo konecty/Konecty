@@ -87,9 +87,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
             const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(Object.keys(updateData).join());
 
             const modified = await collection.find(query, { projection }).toArray();
-            await Promise.all(modified.map(async (modifiedRecord) =>
-                updateLookupReferences(metaName, modifiedRecord._id, modifiedRecord, dbSession)
-            ));
+            await updateLookupReferences(metaName, modified.map(m => m._id), updateData, dbSession);
         }
 
         return updateResult.modifiedCount;
