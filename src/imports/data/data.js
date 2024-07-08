@@ -1116,7 +1116,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						value: data.data[key],
 						actionType: 'update',
 						objectOriginalValues: record,
-						objectNewValues: data.data,
+						objectNewValues: bodyData,
 						idsToUpdate: query._id.$in,
 					});
 					if (lookupValidateResult.success === false) {
@@ -1173,7 +1173,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					value: data.data[fieldName],
 					actionType: 'update',
 					objectOriginalValues: record,
-					objectNewValues: data.data,
+					objectNewValues: bodyData,
 					idsToUpdate: query._id.$in,
 				});
 				if (result.success === false) {
