@@ -2,12 +2,14 @@
 import groupBy from 'lodash/groupBy';
 import isArray from 'lodash/isArray';
 import merge from 'lodash/merge';
+import mergeWith from 'lodash/mergeWith';
 import pick from 'lodash/pick';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { logger } from '@imports/utils/logger';
 import { getFieldNamesOfPaths } from '../utils';
+import updateLookupReferences from './lookupReferences';
 
 async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, meta }) {
     const fieldsToUpdate = {}
@@ -29,15 +31,27 @@ async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, met
             fieldsToUpdate[field.name] = record[field.name];
         }
 
+        // For inherited lookup fields we need to inherit recursively and merge all results
         for await (const lookupField of lookupFields) {
             const keysToFind = [].concat(lookupField.descriptionFields || [], lookupField.inheritedFields || []).map(getFieldNamesOfPaths).join();
             const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(keysToFind);
 
             const Collection = MetaObject.Collections[lookupField.document];
-            const lookupRecord = await Collection.findOne({ _id: record[lookupField.name]._id }, { projection });
+            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v._id) } }, { projection }).toArray();
 
-            const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRecord, metaField: lookupField, meta });
-            merge(fieldsToUpdate, result);
+            for await (const lookupRec of lookupRecord) {
+                const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRec, metaField: lookupField, meta });
+                if (lookupField.isList) {
+                    mergeWith(fieldsToUpdate, result, (objValue = [], srcValue = [], key) => /\$$/.test(key) ? [].concat(objValue, srcValue) : undefined);
+                } else {
+                    merge(fieldsToUpdate, result);
+                }
+            }
+
+            if (fieldsToUpdate[`${lookupField.name}.$`]) {
+                fieldsToUpdate[lookupField.name] = fieldsToUpdate[`${lookupField.name}.$`];
+                delete fieldsToUpdate[`${lookupField.name}.$`];
+            }
         }
     }
 
@@ -66,10 +80,17 @@ export default async function updateLookupReference(metaName, fieldName, field, 
 
         if (updateResult.modifiedCount > 0) {
             logger.debug(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${updateResult.modifiedCount})`);
+            const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(Object.keys(updateData).join());
+
+            const modified = await collection.find(query, { projection }).toArray();
+            await Promise.all(modified.map(async (modifiedRecord) =>
+                updateLookupReferences(metaName, modifiedRecord._id, modifiedRecord)
+            ));
         }
 
         return updateResult.modifiedCount;
     } catch (e) {
         logger.error(e, 'Error updating lookup reference');
+        logger.error({ metaName, fieldName, field, relatedMetaName })
     }
 }

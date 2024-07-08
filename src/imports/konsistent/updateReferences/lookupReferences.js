@@ -61,7 +61,6 @@ export default async function updateLookupReferences(metaName, id, data) {
     }
 
     const record = await collection.findOne({ _id: id });
-
     if (!record) {
         return logger.error(`Can't find record ${id} from ${metaName}`);
     }
