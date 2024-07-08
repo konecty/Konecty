@@ -57,9 +57,12 @@ export default async function updateLookupReference(metaName, fieldName, field, 
 
     try {
         const updateData = await getDescriptionAndInheritedFieldsToUpdate({ record, metaField: field, meta });
+        if (Object.keys(updateData).length === 0) {
+            return;
+        }
 
         const query = { [`${fieldName}._id`]: record._id };
-        const updateResult = await collection.updateMany(query, updateData);
+        const updateResult = await collection.updateMany(query, { $set: updateData });
 
         if (updateResult.modifiedCount > 0) {
             logger.debug(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${updateResult.modifiedCount})`);
