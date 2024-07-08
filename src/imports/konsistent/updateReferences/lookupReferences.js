@@ -19,7 +19,7 @@ import { getFieldNamesOfPaths } from '../utils';
  * @param {object} data 
  * @returns {Promise<void>}
  */
-export default async function updateLookupReferences(metaName, id, data) {
+export default async function updateLookupReferences(metaName, id, data, dbSession) {
     const references = MetaObject.References[metaName];
 
     if (!isObject(references) || size(keys(references.from)) === 0) {
@@ -41,12 +41,10 @@ export default async function updateLookupReferences(metaName, id, data) {
             const field = fields[fieldName];
             let keysToUpdate = [].concat(field.descriptionFields || [], field.inheritedFields || []).map(getFieldNamesOfPaths);
 
-            // Remove duplicated fields
+            // Remove duplicated fields & get only fields that were updated
             keysToUpdate = uniq(keysToUpdate);
-            // Get only keys that exists in references and list of updated keys
             keysToUpdate = intersection(keysToUpdate, updatedKeys);
 
-            // If there are common fields, add field to list of relations to be processed
             if (keysToUpdate.length > 0) {
                 if (!referencesToUpdate[referenceDocumentName]) {
                     referencesToUpdate[referenceDocumentName] = {};
@@ -60,18 +58,18 @@ export default async function updateLookupReferences(metaName, id, data) {
         return;
     }
 
-    const record = await collection.findOne({ _id: id });
+    const record = await collection.findOne({ _id: id }, { session: dbSession });
     if (!record) {
         return logger.error(`Can't find record ${id} from ${metaName}`);
     }
 
     logger.debug(`Updating references for ${metaName} - ${Object.keys(referencesToUpdate).join(", ")}`);
 
-    await BluebirdPromise.mapSeries(Object.keys(referencesToUpdate), async referenceDocumentName => {
+    await BluebirdPromise.map(Object.keys(referencesToUpdate), async referenceDocumentName => {
         const fields = referencesToUpdate[referenceDocumentName];
-        await BluebirdPromise.mapSeries(Object.keys(fields), async fieldName => {
+        await BluebirdPromise.map(Object.keys(fields), async fieldName => {
             const field = fields[fieldName];
-            return updateLookupReference(referenceDocumentName, fieldName, field, record, metaName);
-        });
-    });
+            return updateLookupReference(referenceDocumentName, fieldName, field, record, metaName, dbSession);
+        }, { concurrency: 5 });
+    }, { concurrency: 5 });
 }

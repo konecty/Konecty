@@ -11,7 +11,7 @@ import { logger } from '@imports/utils/logger';
 import { getFieldNamesOfPaths } from '../utils';
 import updateLookupReferences from './lookupReferences';
 
-async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, meta }) {
+async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, meta, dbSession }) {
     const fieldsToUpdate = {}
 
     if (isArray(metaField.descriptionFields) && metaField.descriptionFields.length > 0) {
@@ -37,10 +37,10 @@ async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, met
             const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(keysToFind);
 
             const Collection = MetaObject.Collections[lookupField.document];
-            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v._id) } }, { projection }).toArray();
+            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v._id) } }, { projection, session: dbSession }).toArray();
 
             for await (const lookupRec of lookupRecord) {
-                const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRec, metaField: lookupField, meta });
+                const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRec, metaField: lookupField, meta, dbSession });
                 if (lookupField.isList) {
                     mergeWith(fieldsToUpdate, result, (objValue = [], srcValue = [], key) => /\$$/.test(key) ? [].concat(objValue, srcValue) : undefined);
                 } else {
@@ -58,7 +58,11 @@ async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, met
     return fieldsToUpdate;
 }
 
-export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName) {
+export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName, dbSession) {
+    if (dbSession?.hasEnded) {
+        return;
+    }
+
     const meta = MetaObject.Meta[metaName];
     if (!meta) {
         return logger.error(`MetaObject.Meta ${metaName} does not exists`);
@@ -76,7 +80,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
         }
 
         const query = { [`${fieldName}._id`]: record._id };
-        const updateResult = await collection.updateMany(query, { $set: updateData });
+        const updateResult = await collection.updateMany(query, { $set: updateData }, { session: dbSession });
 
         if (updateResult.modifiedCount > 0) {
             logger.debug(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${updateResult.modifiedCount})`);
@@ -84,7 +88,7 @@ export default async function updateLookupReference(metaName, fieldName, field, 
 
             const modified = await collection.find(query, { projection }).toArray();
             await Promise.all(modified.map(async (modifiedRecord) =>
-                updateLookupReferences(metaName, modifiedRecord._id, modifiedRecord)
+                updateLookupReferences(metaName, modifiedRecord._id, modifiedRecord, dbSession)
             ));
         }
 
