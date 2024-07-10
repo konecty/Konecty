@@ -1,12 +1,12 @@
 import get from 'lodash/get';
 
 import { MetaObject } from '@imports/model/MetaObject';
-import { logger } from '../../utils/logger';
-import { Filter } from 'mongodb';
+import { logger } from '@imports/utils/logger';
+import { ClientSession, Filter, FindOneAndUpdateOptions } from 'mongodb';
 
 const GENERATE_CODE_MAX_DEPTH = 1000;
 
-export async function getNextCode(documentName: string, fieldName: string) {
+export async function getNextCode(documentName: string, fieldName: string, dbSession?: ClientSession) {
 	if (!fieldName) {
 		fieldName = 'code';
 	}
@@ -23,9 +23,10 @@ export async function getNextCode(documentName: string, fieldName: string) {
 		},
 	};
 
-	const options = {
+	const options: FindOneAndUpdateOptions = {
 		upsert: true,
-		returnNewDocument: true,
+		returnDocument: 'after',
+		session: dbSession,
 	};
 
 	// Try to get next code
@@ -39,7 +40,7 @@ export async function getNextCode(documentName: string, fieldName: string) {
 		}> => {
 			const autoNumberResult = await autoNumberCollection.findOneAndUpdate(query as any, update, options);
 			const nextVal = get(autoNumberResult, 'next_val', 1);
-			const existingCodes = await documentCollection.countDocuments({ [fieldName]: nextVal });
+			const existingCodes = await documentCollection.countDocuments({ [fieldName]: nextVal }, { session: dbSession });
 			if (existingCodes === 0) {
 				return {
 					success: true,

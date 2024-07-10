@@ -2,7 +2,7 @@ import { Field } from '@imports/model/Field';
 import { Relation } from '@imports/model/Relation';
 import { MetaObjectType } from '@imports/types/metadata';
 
-type Reference = Pick<Field, 'type' | 'isList' | 'descriptionFields' | 'inheritedFields' | 'detailFields'> & { field: string };
+type Reference = Pick<Field, 'type' | 'isList' | 'descriptionFields' | 'inheritedFields' | 'detailFields' | 'name'> & { field: string };
 
 type References = {
 	[document: string]: {
@@ -40,6 +40,7 @@ export default function buildReferences(Meta: Record<string, MetaObjectType>) {
 							[fieldName]: {
 								type: field.type,
 								field: fieldName,
+								name: fieldName,
 								isList: field.isList,
 								descriptionFields: field.descriptionFields,
 								detailFields: field.detailFields,
