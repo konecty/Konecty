@@ -15,7 +15,7 @@ import { getFieldNamesOfPaths } from '../utils';
  * When some document changes, verify if it's a lookup in some other document.
  * If it is, update description & inherited fields in all related documents.
  * @param {string} metaName 
- * @param {string} id 
+ * @param {string | string[]} id 
  * @param {object} data 
  * @returns {Promise<void>}
  */
