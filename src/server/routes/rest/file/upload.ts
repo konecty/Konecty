@@ -133,7 +133,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 					.resize({
 						width: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
 						height: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
-						fit: 'inside',
+						fit: 'cover',
 					})
 					.jpeg({
 						quality: MetaObject.Namespace.storage?.jpeg?.quality ?? DEFAULT_JPEG_QUALITY,

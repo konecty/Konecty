@@ -69,7 +69,7 @@ async function imageApiFn(
 		const getImagePath = () => {
 			const maxDimension = Math.max(parseInt(width, 10), parseInt(height, 10));
 			if (maxDimension <= thumbnailSize) {
-				return path.join(document, recordId, fieldName, 'thumbnail', fileName);
+				return path.join(document, recordId, fieldName, 'thumbnail', fileName).replace(/\.jpeg$/, '') + '.jpeg';
 			}
 			if (preprocess != null) {
 				return path.join(document, recordId, fieldName, 'watermark', fileName);

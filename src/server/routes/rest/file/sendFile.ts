@@ -80,7 +80,7 @@ export async function sendFile(filePath: string, reply: FastifyReply) {
 							Bucket: MetaObject.Namespace.storage.bucket,
 							Key: filePath,
 						},
-						result: s3Result,
+						result: s3Result.$metadata,
 					},
 					`Proxying file ${filePath} from S3`,
 				);
