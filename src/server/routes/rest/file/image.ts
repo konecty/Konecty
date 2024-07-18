@@ -34,13 +34,12 @@ async function imageApiFn(
 	reply: FastifyReply,
 ) {
 	const incomingPath = req.params['*'];
-	const namespace = MetaObject.Namespace.name;
 
 	if (getFullRegex.test(incomingPath)) {
 		logger.trace(`GET_FULL_PATTERN ${incomingPath}`);
 		const [, document, recordId, fieldName, fileName] = getFullRegex.exec(incomingPath) ?? [];
 
-		const destination = path.join(namespace, document, recordId, fieldName, fileName);
+		const destination = path.join(document, recordId, fieldName, fileName);
 		return sendFile(destination, reply);
 	}
 
@@ -55,7 +54,7 @@ async function imageApiFn(
 				wm: 'watermark',
 			};
 
-			const destination = path.join(...([namespace, document, recordId, fieldName, dirEnum[style], fileName].filter(Boolean) as string[]));
+			const destination = path.join(...([document, recordId, fieldName, dirEnum[style], fileName].filter(Boolean) as string[]));
 			return sendFile(destination, reply);
 		}
 	}
@@ -70,12 +69,13 @@ async function imageApiFn(
 		const getImagePath = () => {
 			const maxDimension = Math.max(parseInt(width, 10), parseInt(height, 10));
 			if (maxDimension <= thumbnailSize) {
-				return path.join(namespace, document, recordId, fieldName, 'thumbnail', fileName);
+				const filePath = path.join(document, recordId, fieldName, 'thumbnail', fileName);
+				return /\.jpe?g$/.test(fileName) ? filePath : `${filePath}.jpeg`;
 			}
 			if (preprocess != null) {
-				return path.join(namespace, document, recordId, fieldName, 'watermark', fileName);
+				return path.join(document, recordId, fieldName, 'watermark', fileName);
 			}
-			return path.join(namespace, document, recordId, fieldName, fileName);
+			return path.join(document, recordId, fieldName, fileName);
 		};
 
 		const destination = getImagePath();
@@ -86,8 +86,7 @@ async function imageApiFn(
 		logger.trace(`LEGACY_FULL_FILE_URL_PATTERN ${incomingPath}`);
 		const [, , preprocess, document, recordId, fieldName, fileName] = legacyFullFileUrlRegex.exec(incomingPath) ?? [];
 
-		const destination =
-			preprocess != null ? path.join(namespace, document, recordId, fieldName, 'watermark', fileName) : path.join(namespace, document, recordId, fieldName, fileName);
+		const destination = preprocess != null ? path.join(document, recordId, fieldName, 'watermark', fileName) : path.join(document, recordId, fieldName, fileName);
 
 		return sendFile(destination, reply);
 	}

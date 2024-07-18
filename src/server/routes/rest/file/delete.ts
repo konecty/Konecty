@@ -20,8 +20,6 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 		async function (req, reply) {
 			const { metaDocumentId: document, recordId, fieldName, fileName } = req.params;
 
-			const namespace = MetaObject.Namespace.name;
-
 			const authTokenId = getAuthTokenIdFromReq(req);
 
 			const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
@@ -54,7 +52,7 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 					await s3.send(
 						new DeleteObjectCommand({
 							Bucket: MetaObject.Namespace.storage.bucket,
-							Key: `${namespace}/${document}/${recordId}/${fieldName}/${fileName}`,
+							Key: `${document}/${recordId}/${fieldName}/${fileName}`,
 						}),
 					);
 				} catch (e) {
@@ -65,7 +63,7 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 					await s3.send(
 						new DeleteObjectCommand({
 							Bucket: MetaObject.Namespace.storage.bucket,
-							Key: `${namespace}/${document}/${recordId}/${fieldName}/thumbnail/${fileName}`,
+							Key: `${document}/${recordId}/${fieldName}/thumbnail/${fileName}`,
 						}),
 					);
 				} catch (e) {
@@ -77,7 +75,7 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 						await s3.send(
 							new DeleteObjectCommand({
 								Bucket: MetaObject.Namespace.storage.bucket,
-								Key: `${namespace}/${document}/${recordId}/${fieldName}/watermark/${fileName}`,
+								Key: `${document}/${recordId}/${fieldName}/watermark/${fileName}`,
 							}),
 						);
 					} catch (e) {
@@ -85,25 +83,9 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 					}
 				}
 			} else {
-				const fullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', namespace, document, recordId, fieldName, decodeURIComponent(fileName));
-				const thumbnailFullPath = path.join(
-					MetaObject.Namespace.storage?.directory ?? '/tmp',
-					namespace,
-					document,
-					recordId,
-					fieldName,
-					'thumbnail',
-					decodeURIComponent(fileName),
-				);
-				const watermarkFullPath = path.join(
-					MetaObject.Namespace.storage?.directory ?? '/tmp',
-					namespace,
-					document,
-					recordId,
-					fieldName,
-					'watermark',
-					decodeURIComponent(fileName),
-				);
+				const fullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, decodeURIComponent(fileName));
+				const thumbnailFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, 'thumbnail', decodeURIComponent(fileName));
+				const watermarkFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, 'watermark', decodeURIComponent(fileName));
 				try {
 					unlink(fullPath);
 				} catch (error) {

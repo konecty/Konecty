@@ -35,6 +35,7 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 
 const fastify = Fastify({
 	logger,
+	maxParamLength: 250,
 });
 
 fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });

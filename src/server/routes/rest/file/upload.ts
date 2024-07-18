@@ -70,11 +70,11 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 			const data = await req.file();
 
 			if (data == null) {
-				return errorReturn('[${document}] No file sent');
+				return errorReturn(`[${document}] No file sent`);
 			}
 
 			const contentType = data.mimetype;
-			const fileName = sanitizeFilename(decodeURIComponent(data.filename));
+			const fileName = encodeURIComponent(sanitizeFilename(decodeURIComponent(data.filename)));
 
 			let fileContent = await data.toBuffer();
 
@@ -133,7 +133,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 					.resize({
 						width: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
 						height: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
-						fit: 'inside',
+						fit: 'cover',
 					})
 					.jpeg({
 						quality: MetaObject.Namespace.storage?.jpeg?.quality ?? DEFAULT_JPEG_QUALITY,
@@ -214,7 +214,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 					const s3Result = await s3.send(
 						new PutObjectCommand({
 							Bucket: bucket,
-							Key: `${namespace}/${directory}/${name}`,
+							Key: `${directory}/${name}`,
 							ContentType: contentType,
 							Body: content,
 						}),
@@ -226,7 +226,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 						{
 							params: {
 								Bucket: bucket,
-								Key: `${namespace}/${directory}/${fileName}`,
+								Key: `${directory}/${fileName}`,
 								ContentType: contentType,
 							},
 							result: s3Result,
@@ -244,8 +244,8 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
 
 				await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
-					await mkdirp(path.dirname(join(storageDirectory, namespace, directory, name)));
-					const filePath = join(storageDirectory, namespace, directory, name);
+					await mkdirp(path.dirname(join(storageDirectory, directory, name)));
+					const filePath = join(storageDirectory, directory, name);
 					await writeFile(filePath, content);
 				});
 			}
@@ -268,7 +268,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 						await s3.send(
 							new DeleteObjectCommand({
 								Bucket: bucket,
-								Key: `${namespace}/${directory}/${name}`,
+								Key: `${directory}/${name}`,
 								VersionId: fileData.version,
 							}),
 						);
@@ -276,7 +276,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 				} else {
 					const storageDirectory = MetaObject.Namespace.storage?.directory ?? '/tmp';
 					await BluebirdPromise.each(filesToSave, async ({ name }) => {
-						await unlink(join(storageDirectory, namespace, directory, name));
+						await unlink(join(storageDirectory, directory, name));
 					});
 				}
 				return reply.send(coreResponse);
