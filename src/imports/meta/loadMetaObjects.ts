@@ -139,6 +139,9 @@ function dbWatch() {
 				case 'list':
 					MetaObject.DisplayMeta[fullDocument._id as unknown as string] = fullDocument as unknown as (typeof MetaObject.DisplayMeta)[string];
 					break;
+				case 'namespace':
+					Object.assign(MetaObject.Namespace, fullDocument);
+					break;
 			}
 		}
 		rebuildReferences();
