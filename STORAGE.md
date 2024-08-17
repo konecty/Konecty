@@ -5,7 +5,7 @@ The files api is [located here](./src/server/routes/rest/file/).
 
 ## Configuration Structure
 
-The storage API configuration is located at the Namespace document: `MetaObjects > { "_id": "Namespace" }`, and is structured as the following example:
+The storage API configuration is part of the [Namespace](./src/imports/model/Namespace.ts) configuration. In any given deployment, it is located at the Namespace document: `MetaObjects > { "_id": "Namespace" }`, and is structured as the following example:
 
 ```json
 {
@@ -33,7 +33,7 @@ The storage API configuration is located at the Namespace document: `MetaObjects
     -   **local**
 -   **directory**: The directory where files will be stored, in the local filesystem. In this case, it is set to `"/kon-files"`.
 
--   **wm**: This field is set to `null`. It is reserved for watermarking functionality, which is not currently implemented in this configuration.
+-   **wm**: This field is reserved for watermarking functionality. In this case set to `null` meaning no Watermark. The field type is described at [src/imports/types/watermark.ts](./src/imports/types/watermark.ts)
 
 -   **maxFileSize**: The maximum allowed file size for uploads, specified in bytes. Here, it is set to `1073741824` bytes (1 GB).
 
