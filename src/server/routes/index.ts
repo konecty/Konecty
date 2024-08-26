@@ -32,10 +32,12 @@ import viewPaths from './rest/view/view';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
+const DISABLE_REQUEST_LOGGING = process.env.LOG_REQUESTS !== 'true';
 
 const fastify = Fastify({
 	logger,
 	maxParamLength: 250,
+	disableRequestLogging: DISABLE_REQUEST_LOGGING,
 });
 
 fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });

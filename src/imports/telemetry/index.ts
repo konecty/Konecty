@@ -16,6 +16,7 @@ const OTEL_URL = process.env.OTEL_URL;
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL;
 const OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME ?? 'konecty';
 const OTEL_SERVICE_VERSION = process.env.OTEL_SERVICE_VERSION ?? '1.0.0';
+const DISABLE_TELEMETRY_LOGS = process.env.DISABLE_TELEMETRY_LOGS === 'true';
 
 export default function initializeInstrumentation() {
 	const getTraceExporter = () => {
@@ -29,7 +30,7 @@ export default function initializeInstrumentation() {
 			return undefined;
 		}
 
-		return new ConsoleSpanExporter();
+		return DISABLE_TELEMETRY_LOGS ? undefined : new ConsoleSpanExporter();
 	};
 
 	const getMetricExporter = () => {
@@ -42,9 +43,11 @@ export default function initializeInstrumentation() {
 		if (process.env.NODE_ENV === 'test') {
 			return undefined;
 		}
-		return new PeriodicExportingMetricReader({
-			exporter: new ConsoleMetricExporter(),
-		});
+		return DISABLE_TELEMETRY_LOGS
+			? undefined
+			: new PeriodicExportingMetricReader({
+					exporter: new ConsoleMetricExporter(),
+				});
 	};
 	const sdk = new NodeSDK({
 		resource: new Resource({
