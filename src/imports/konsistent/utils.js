@@ -1,8 +1,8 @@
-import isArray from 'lodash/isArray';
-import isObject from 'lodash/isObject';
 import each from 'lodash/each';
 import get from 'lodash/get';
 import has from 'lodash/has';
+import isArray from 'lodash/isArray';
+import isObject from 'lodash/isObject';
 
 import { MetaObject } from '@imports/model/MetaObject';
 
@@ -40,6 +40,8 @@ export function getFirstPartOfArrayOfPaths(paths) {
 
 	return paths.map(i => i.split('.')[0]);
 }
+
+export const getFieldNamesOfPaths = (fieldConf) => (fieldConf.fieldName ?? fieldConf).split('.')[0];
 
 export function formatValue(value, field, ignoreIsList) {
 	if (!value) {

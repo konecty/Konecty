@@ -11,3 +11,6 @@ export const DEFAULT_JPEG_MAX_SIZE = 3840;
 export const DEFAULT_THUMBNAIL_SIZE = 200;
 export const DEFAULT_EXPIRATION = 31536000;
 export const ALLOWED_CORS_FILE_TYPES = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
+
+export const WRITE_TIMEOUT = 3e4; // 30 seconds
+export const TRANSACTION_OPTIONS = { readConcern: { level: 'majority' }, writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } };
