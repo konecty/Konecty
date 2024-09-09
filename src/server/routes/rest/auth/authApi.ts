@@ -23,7 +23,7 @@ function getDomain(host: string | undefined) {
 		return '';
 	} else {
 		const server = host.split('.').slice(1).join('.');
-		return `domain=${server}`;
+		return `domain=.${server}`;
 	}
 }
 
