@@ -1,6 +1,7 @@
 import { MetaObject } from "@imports/model/MetaObject";
 import { logger } from "@imports/utils/logger";
 import get from "lodash/get";
+import omit from "lodash/omit";
 import { v4 as uuidV4 } from 'uuid';
 
 export default async function createHistory(metaName, action, id, data, updatedBy, updatedAt, changed) {
@@ -9,6 +10,7 @@ export default async function createHistory(metaName, action, id, data, updatedB
         return;
     }
 
+    const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
     const startTime = process.hrtime();
     const changeId = uuidV4();
 
@@ -17,7 +19,7 @@ export default async function createHistory(metaName, action, id, data, updatedB
     const meta = MetaObject.Meta[metaName];
 
     // Remove fields that is marked to ignore history
-    for (let key in changed) {
+    for (let key in omit(changed, keysToIgnore)) {
         const value = data[key];
         const field = meta.fields[key];
         if (get(field, 'ignoreHistory', false) !== true) {

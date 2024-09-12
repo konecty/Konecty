@@ -4,7 +4,6 @@ import processReverseLookups from './processReverseLookups';
 import * as References from './updateReferences';
 
 import { DataDocument } from '@imports/types/data';
-import omit from 'lodash/omit';
 
 type Action = 'create' | 'update' | 'delete';
 
@@ -15,7 +14,6 @@ const logTimeSpent = (startTime: [number, number], message: string) => {
 
 export default async function processIncomingChange(metaName: string, incomingChange: DataDocument, action: Action, user: object, changedProps: Record<string, any>) {
 	try {
-		const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
 		let startTime = process.hrtime();
 
 		if (action === 'update') {
@@ -29,7 +27,7 @@ export default async function processIncomingChange(metaName: string, incomingCh
 		await References.updateRelations(metaName, action, incomingChange._id, incomingChange);
 		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
 
-		await createHistory(metaName, action, incomingChange._id, omit(incomingChange, keysToIgnore), user, new Date(), changedProps);
+		await createHistory(metaName, action, incomingChange._id, incomingChange, user, new Date(), changedProps);
 		logTimeSpent(startTime, `Created history for ${metaName}`);
 	} catch (err) {
 		const error = err as Error;
