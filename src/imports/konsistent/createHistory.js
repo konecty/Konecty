@@ -2,6 +2,7 @@ import { MetaObject } from "@imports/model/MetaObject";
 import { logger } from "@imports/utils/logger";
 import get from "lodash/get";
 import omit from "lodash/omit";
+import pick from "lodash/pick";
 import { v4 as uuidV4 } from 'uuid';
 
 export default async function createHistory(metaName, action, id, data, updatedBy, updatedAt, changed) {
@@ -37,13 +38,13 @@ export default async function createHistory(metaName, action, id, data, updatedB
 
     const historyQuery = { _id: changeId };
 
-    const userDetailFields = ["_id"].concat(get(meta, "fields._user.detailFields", ["name", "active"]));
+    const userDescriptionFields = ["_id"].concat(get(meta, "fields._user.descriptionFields", ["name", "active"]));
 
     // Define base data to history
     const historyItem = {
         dataId: id,
         createdAt: updatedAt,
-        createdBy: get(updatedBy, userDetailFields),
+        createdBy: pick(updatedBy, userDescriptionFields),
         data: historyData,
         type: action,
     };
