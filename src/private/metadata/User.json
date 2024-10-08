@@ -578,21 +578,8 @@
 			},
 			"phone": {
 				"READ": {
-					"allow": true,
-					"condition": {
-						"term": "canViewPhone",
-						"value": true,
-						"operator": "equals"
-					}
+					"allow": true
 				}
-			},
-			"canViewPhone": {
-				"name": "canViewPhone",
-				"label": {
-					"en": "Can View Phone",
-					"pt_BR": "Pode Visualizar Telefone"
-				},
-				"type": "boolean"
 			},
 			"pictures": {
 				"READ": {
@@ -817,12 +804,7 @@
 			},
 			"phone": {
 				"READ": {
-					"allow": true,
-					"condition": {
-						"term": "canViewPhone",
-						"value": true,
-						"operator": "equals"
-					}
+					"allow": true
 				},
 				"UPDATE": {
 					"allow": true,
@@ -1786,10 +1768,6 @@
 							{
 								"type": "visualSymlink",
 								"fieldName": "deactivationDate"
-							},
-							{
-								"type": "visualSymlink",
-								"fieldName": "canViewPhone"
 							}
 						],
 						"type": "visualGroup",
