@@ -17,7 +17,7 @@ export default async function processReverseLookups(metaName, id, data, action, 
     let reverseLookupCount = 0;
     for (var fieldName in meta.fields) {
         field = meta.fields[fieldName];
-        if (field.type === 'lookup' && !field.reverseLookup && data[field.name] !== undefined) {
+        if (field.type === 'lookup' && field.reverseLookup && data[field.name] !== undefined) {
             reverseLookupCount++;
         }
     }
