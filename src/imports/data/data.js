@@ -1204,7 +1204,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 							value: data.data[fieldName],
 							actionType: 'update',
 							objectOriginalValues: record,
-							objectNewValues: data.data,
+							objectNewValues: bodyData,
 							idsToUpdate: query._id.$in,
 						}, dbSession);
 						if (result.success === false) {
@@ -1228,7 +1228,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 				if (metaObject.validationScript != null) {
 					tracingSpan?.addEvent('Running validation script');
-					const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, data.data), user });
+					const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, bodyData), user });
 					if (validationScriptResult.success === false) {
 						logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
 						return validationScriptResult;
