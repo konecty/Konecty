@@ -1234,13 +1234,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						return validationScriptResult;
 					}
 				}
-
-				const updateOperation = Object.keys(bodyData).reduce((acc, key) => {
-					if (bodyData[key] !== undefined) {
-						if (bodyData[key] === null) {
+				const bodyDataWithInherits = Object.assign(bodyData, data.data);
+				const updateOperation = Object.keys(bodyDataWithInherits).reduce((acc, key) => {
+					if (bodyDataWithInherits[key] !== undefined) {
+						if (bodyDataWithInherits[key] === null) {
 							set(acc, `$unset.${key}`, 1);
 						} else {
-							set(acc, `$set.${key}`, bodyData[key]);
+							set(acc, `$set.${key}`, bodyDataWithInherits[key]);
 						}
 					}
 					return acc;
