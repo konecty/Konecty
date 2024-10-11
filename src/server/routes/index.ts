@@ -13,6 +13,7 @@ import formApi from './api/form';
 import listViewApi from './api/list-view';
 import mainMenuApi from './api/menu/main';
 import metasByDocumentApi from './api/metas-by-document';
+import noAuth from './api/no-auth';
 import translatioApi from './api/translation';
 import authApi from './rest/auth/authApi';
 import changeUserApi from './rest/changeUser/changeUserApi';
@@ -68,6 +69,7 @@ fastify.register(file2Api);
 fastify.register(menuApi);
 fastify.register(processApi);
 fastify.register(rocketchatApi);
+fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {
 		upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
