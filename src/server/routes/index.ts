@@ -75,6 +75,14 @@ if (process.env.UI_PROXY === 'true') {
 	});
 } else {
 	fastify.register(viewPaths);
+	if (process.env.UI_PROXY_PATH) {
+		fastify.register(proxy, {
+			upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
+			httpMethods: ['GET'],
+			prefix: process.env.UI_PROXY_PATH,
+			rewritePrefix: process.env.UI_PROXY_PATH,
+		});
+	}
 }
 fastify.register(healthApi);
 
