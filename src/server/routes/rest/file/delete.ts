@@ -1,14 +1,12 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
-
-import { unlink } from 'fs/promises';
 import path from 'path';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { fileRemove } from '@imports/file/file';
 import { MetaObject } from '@imports/model/MetaObject';
+import FileStorage from '@imports/storage/FileStorage';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
@@ -45,67 +43,11 @@ const fileDeleteApi: FastifyPluginCallback = (fastify, _, done) => {
 				logger.trace(coreResponse.errors, 'Error deleting file');
 				return reply.send(coreResponse);
 			}
-			if (MetaObject.Namespace.storage?.type === 's3') {
-				const s3 = new S3Client(MetaObject.Namespace.storage?.config ?? {});
 
-				try {
-					await s3.send(
-						new DeleteObjectCommand({
-							Bucket: MetaObject.Namespace.storage.bucket,
-							Key: `${document}/${recordId}/${fieldName}/${fileName}`,
-						}),
-					);
-				} catch (e) {
-					logger.error(e, `Error deleting file ${fileName} from S3`);
-				}
+			const directory = path.join(document, recordId, fieldName);
+			const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
+			await fileStorage.delete(directory, fileName);
 
-				try {
-					await s3.send(
-						new DeleteObjectCommand({
-							Bucket: MetaObject.Namespace.storage.bucket,
-							Key: `${document}/${recordId}/${fieldName}/thumbnail/${fileName}`,
-						}),
-					);
-				} catch (e) {
-					logger.error(e, `Error deleting thumbnail file ${fileName} from S3`);
-				}
-
-				if (MetaObject.Namespace.storage?.wm != null) {
-					try {
-						await s3.send(
-							new DeleteObjectCommand({
-								Bucket: MetaObject.Namespace.storage.bucket,
-								Key: `${document}/${recordId}/${fieldName}/watermark/${fileName}`,
-							}),
-						);
-					} catch (e) {
-						logger.error(e, `Error deleting watermark file ${fileName} from S3`);
-					}
-				}
-			} else {
-				const fullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, decodeURIComponent(fileName));
-				const thumbnailFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, 'thumbnail', decodeURIComponent(fileName));
-				const watermarkFullPath = path.join(MetaObject.Namespace.storage?.directory ?? '/tmp', document, recordId, fieldName, 'watermark', decodeURIComponent(fileName));
-				try {
-					unlink(fullPath);
-				} catch (error) {
-					logger.error(error, `Error deleting file ${fileName} from FS`);
-				}
-
-				try {
-					unlink(thumbnailFullPath);
-				} catch (error) {
-					logger.error(error, `Error deleting thumbnail file ${fileName} from FS`);
-				}
-
-				if (MetaObject.Namespace.storage?.wm != null) {
-					try {
-						unlink(watermarkFullPath);
-					} catch (error) {
-						logger.error(error, `Error deleting watermark file ${fileName} from FS`);
-					}
-				}
-			}
 			reply.send(coreResponse);
 		},
 	);

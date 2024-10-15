@@ -3,10 +3,10 @@ import fp from 'fastify-plugin';
 
 import { fileRemove, fileUpload } from '@imports/file/file';
 
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
-import { errorReturn } from '@imports/utils/return';
 import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
+import { errorReturn } from '@imports/utils/return';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 const file2Api: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.post<{
@@ -40,7 +40,7 @@ const file2Api: FastifyPluginCallback = (fastify, _, done) => {
 			document,
 			fieldName,
 			recordCode,
-			body,
+			body: body as object,
 			contextUser: user,
 		});
 		reply.send(coreResponse);
