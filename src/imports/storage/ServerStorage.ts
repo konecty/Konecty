@@ -7,7 +7,7 @@ import { logger } from '@imports/utils/logger';
 import { Readable } from 'stream';
 
 export default class ServerStorage implements FileStorage {
-	declare storageCfg: FileStorage['storageCfg'];
+	storageCfg: FileStorage['storageCfg'];
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
 		this.storageCfg = storageCfg;

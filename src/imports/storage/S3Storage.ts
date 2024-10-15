@@ -13,7 +13,7 @@ import { request } from 'undici';
 import { z } from 'zod';
 
 export default class S3Storage implements FileStorage {
-	declare storageCfg: FileStorage['storageCfg'];
+	storageCfg: FileStorage['storageCfg'];
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
 		this.storageCfg = storageCfg;

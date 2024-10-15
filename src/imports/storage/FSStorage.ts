@@ -15,7 +15,7 @@ import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
 export default class FSStorage implements FileStorage {
-	declare storageCfg: FileStorage['storageCfg'];
+	storageCfg: FileStorage['storageCfg'];
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
 		this.storageCfg = storageCfg;
