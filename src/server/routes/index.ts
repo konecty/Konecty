@@ -80,9 +80,9 @@ if (process.env.UI_PROXY === 'true') {
 	if (process.env.UI_PROXY_PATH) {
 		fastify.register(proxy, {
 			upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
-			httpMethods: ['GET'],
+			httpMethods: ['GET', 'HEAD'],
 			prefix: process.env.UI_PROXY_PATH,
-			rewritePrefix: process.env.UI_PROXY_PATH,
+			rewritePrefix: '',
 		});
 	}
 }
@@ -102,6 +102,9 @@ export async function serverStart() {
 
 function getCorsConfig() {
 	const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
+	if (process.env.UI_PROXY_URL) {
+		ALLOWED_ORIGINS.push(process.env.UI_PROXY_URL);
+	}
 	const corsOptions: FastifyCorsOptions = {
 		origin: function (origin, callback) {
 			if (origin) {
