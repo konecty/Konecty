@@ -32,6 +32,7 @@ export const ServerStorageCfg = CommonStorageProps.extend({
 	config: z.object({
 		upload: z.string(),
 		preview: z.string(),
+		headers: z.record(z.string()).optional(),
 	}),
 });
 

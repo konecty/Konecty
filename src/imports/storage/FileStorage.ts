@@ -1,5 +1,6 @@
 import { Namespace } from '@imports/model/Namespace';
 import { User } from '@imports/model/User';
+import { IncomingHttpHeaders } from 'undici/types/header';
 import FSStorage from './FSStorage';
 import S3Storage from './S3Storage';
 import ServerStorage from './ServerStorage';
@@ -45,4 +46,6 @@ export type FileContext = {
 	fieldName: string;
 	fileName: string;
 	user: User;
+	authTokenId?: string;
+	headers: IncomingHttpHeaders;
 };

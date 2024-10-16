@@ -4,6 +4,7 @@ import FileStorage, { FileContext, FileData } from './FileStorage';
 import { MetaObject } from '@imports/model/MetaObject';
 import { ServerStorageCfg } from '@imports/model/Namespace';
 import { logger } from '@imports/utils/logger';
+import { errorReturn } from '@imports/utils/return';
 import { Readable } from 'stream';
 
 export default class ServerStorage implements FileStorage {
@@ -27,7 +28,7 @@ export default class ServerStorage implements FileStorage {
 		if (urlCfgParts.length === 0) {
 			fullUrl = fullUrl.replace(filePath, `inner/1024/768/${MetaObject.Namespace.ns}/${filePath}`);
 		} else if (urlCfgParts.length === 1) {
-			fullUrl = fullUrl.replace(filePath, `${MetaObject.Namespace.ns}/${filePath}`);
+			fullUrl = fullUrl.replace(filePath, `${MetaObject.Namespace.ns}/${filePath}`).replace(`${urlCfgParts[0]}/`, '');
 		}
 
 		fullUrl = fullUrl.replace(/\/\//g, '');
@@ -40,7 +41,32 @@ export default class ServerStorage implements FileStorage {
 
 	async upload(fileData: FileData, filesToSave: { name: string; content: Buffer }[], context: FileContext) {
 		const storageCfg = this.storageCfg as z.infer<typeof ServerStorageCfg>;
-		return {};
+		const uploadPath = `/rest/file/upload/${MetaObject.Namespace.ns}/${context.accessId ?? 'konecty'}/${context.document}/${context.recordId}/${context.fieldName}`;
+
+		const file = filesToSave[0];
+		const fd = new FormData();
+		fd.append('file', new Blob([file.content]), file.name);
+
+		const response = await fetch(`${storageCfg.config.upload}${uploadPath}`, {
+			method: 'POST',
+			body: fd,
+			headers: {
+				Authorization: context.authTokenId ?? '',
+				Cookie: `_authTokenId=${context.authTokenId ?? ''}`,
+				origin: context.headers.host ?? '',
+				...(storageCfg.config.headers ?? {}),
+			},
+		});
+
+		try {
+			if (response.status > 399) {
+				return errorReturn(await response.text());
+			}
+
+			return (await response.json()) as ReturnType<FileStorage['upload']>;
+		} catch (e) {
+			return errorReturn((e as Error).toString());
+		}
 	}
 
 	async delete(directory: string, fileName: string) {
