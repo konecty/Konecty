@@ -81,8 +81,8 @@ if (process.env.UI_PROXY === 'true') {
 		fastify.register(proxy, {
 			upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
 			httpMethods: ['GET', 'HEAD'],
-			prefix: process.env.UI_PROXY_PATH,
-			rewritePrefix: '',
+			prefix: `${process.env.UI_PROXY_PATH}/:path*`,
+			rewritePrefix: '/:path*',
 		});
 	}
 }
