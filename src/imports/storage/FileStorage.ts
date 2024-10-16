@@ -26,7 +26,7 @@ export default abstract class FileStorage {
 
 	abstract sendFile(fullUrl: string, filePath: string, reply: any): Promise<void>;
 	abstract upload(fileData: FileData, filesToSave: { name: string; content: Buffer }[], context: FileContext): Promise<Record<string, unknown>>;
-	abstract delete(directory: string, fileName: string): Promise<void>;
+	abstract delete(directory: string, fileName: string, context: FileContext): Promise<void>;
 }
 
 export type FileData = {
@@ -39,8 +39,8 @@ export type FileData = {
 };
 
 export type FileContext = {
-	namespace: string;
-	accessId: string;
+	namespace?: string;
+	accessId?: string;
 	document: string;
 	recordId: string;
 	fieldName: string;

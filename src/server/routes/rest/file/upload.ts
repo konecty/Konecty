@@ -37,6 +37,7 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 
 	fastify.post('/rest/file/upload/:namespace/:accessId/:document/:recordId/:fieldName', uploadRoute);
 	fastify.post('/rest/file/upload/:accessId/:document/:recordId/:fieldName', uploadRoute);
+	fastify.post('/rest/file/upload/:document/:recordId/:fieldName', uploadRoute);
 
 	done();
 };

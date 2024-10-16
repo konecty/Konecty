@@ -69,7 +69,26 @@ export default class ServerStorage implements FileStorage {
 		}
 	}
 
-	async delete(directory: string, fileName: string) {
+	async delete(directory: string, fileName: string, context: FileContext) {
 		const storageCfg = this.storageCfg as z.infer<typeof ServerStorageCfg>;
+		const uploadPath = `/rest/file/delete/${MetaObject.Namespace.ns}/konecty/${directory}/${fileName}`;
+
+		const response = await fetch(`${storageCfg.config.upload}${uploadPath}`, {
+			method: 'DELETE',
+			headers: {
+				Authorization: context.authTokenId ?? '',
+				Cookie: `_authTokenId=${context.authTokenId ?? ''}`,
+				origin: context.headers.host ?? '',
+				...(storageCfg.config.headers ?? {}),
+			},
+		});
+
+		try {
+			if (response.status > 399) {
+				logger.error(await response.text(), `Error deleting file ${fileName} from server`);
+			}
+		} catch (e) {
+			logger.error(e, `Error deleting file ${fileName} from server`);
+		}
 	}
 }
