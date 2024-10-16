@@ -36,7 +36,7 @@ async function fileDownloadFn(
 		const [, document, code, fieldName, fileName] = downloadUrlRegex.exec(incomingPath) ?? [];
 
 		const destination = path.join(document, code, fieldName, fileName);
-		return sendFile(reply, incomingPath, destination);
+		return sendFile(reply, req.url, destination);
 	}
 
 	if (legacyDownloadUrlRegex.test(incomingPath)) {
@@ -44,7 +44,7 @@ async function fileDownloadFn(
 		const [, , , document, code, fieldName, fileName] = legacyDownloadUrlRegex.exec(incomingPath) ?? [];
 
 		const destination = path.join(document, code, fieldName, fileName);
-		return sendFile(reply, incomingPath, destination);
+		return sendFile(reply, req.url, destination);
 	}
 
 	logger.trace(`File not found ${incomingPath}`);

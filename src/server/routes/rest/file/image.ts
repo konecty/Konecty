@@ -11,7 +11,7 @@ import { sendFile } from './sendFile';
 
 import { DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
 
-const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
+const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace?/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const LEGACY_FULL_FILE_URL_PATTERN = ':namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const GET_FULL_PATTERN = ':document/:recordId/:fieldName/:fileName';
 const GET_STYLE_PATTERN = ':style/:document/:recordId/:fieldName/:fileName';

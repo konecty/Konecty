@@ -18,23 +18,10 @@ export default class ServerStorage implements FileStorage {
 		const storageCfg = this.storageCfg as z.infer<typeof ServerStorageCfg>;
 		logger.trace(`Proxying file ${filePath} from server ${storageCfg.config.preview}`);
 
-		const urlCfgParts = fullUrl
-			.replace(filePath, '')
-			.replace(/\?.*/, '')
-			.replace(/\/rest\/(image|file)\/(preview\/)?/, '')
-			.split('/')
-			.filter(e => e?.length);
+		const proxyPath = this.formatProxyUrl(fullUrl, encodeURI(filePath));
+		logger.trace({ originalUrl: fullUrl, proxyUrl: `${storageCfg.config.preview}${proxyPath}` });
 
-		if (urlCfgParts.length === 0) {
-			fullUrl = fullUrl.replace(filePath, `inner/1024/768/${MetaObject.Namespace.ns}/${filePath}`);
-		} else if (urlCfgParts.length === 1) {
-			fullUrl = fullUrl.replace(filePath, `${MetaObject.Namespace.ns}/${filePath}`).replace(`${urlCfgParts[0]}/`, '');
-		}
-
-		fullUrl = fullUrl.replace(/\/\//g, '');
-		logger.info({ fullUrl, urlCfgParts });
-
-		const response = await fetch(`${storageCfg.config.preview}${fullUrl}`);
+		const response = await fetch(`${storageCfg.config.preview}${proxyPath}`);
 		const stream = Readable.fromWeb(response.body!);
 		return reply.send(stream);
 	}
@@ -90,5 +77,31 @@ export default class ServerStorage implements FileStorage {
 		} catch (e) {
 			logger.error(e, `Error deleting file ${fileName} from server`);
 		}
+	}
+
+	formatProxyUrl(fullUrl: string, filePath: string): string {
+		// Get the url parts unrelated with namespace, file key or routing
+		// ex: /rest/image/inner/1024/768/client-ns/WebElement/123/file/mamma-mia.png
+		// would resolve to ["inner", "1024", "768"]
+		const urlCfgParts = fullUrl
+			.replace(filePath, '')
+			.replace(/\?.*/, '')
+			.replace(/\/rest\/(image|file)/, '')
+			.split('/')
+			.filter(e => e?.length);
+
+		if (/rest\/file/.test(fullUrl)) {
+			if (urlCfgParts.length === 0) {
+				fullUrl = fullUrl.replace(filePath, `preview/${filePath}`);
+			}
+		}
+
+		if (fullUrl.includes(`${MetaObject.Namespace.ns}/`) === false) {
+			fullUrl = fullUrl.replace(filePath, `${MetaObject.Namespace.ns}/${filePath}`);
+		}
+
+		fullUrl = fullUrl.replace(/\/\//g, '');
+
+		return fullUrl;
 	}
 }
