@@ -86,14 +86,18 @@ export default class ServerStorage implements FileStorage {
 		const urlCfgParts = fullUrl
 			.replace(filePath, '')
 			.replace(/\?.*/, '')
-			.replace(/\/rest\/(image|file)/, '')
+			.replace(/(\/rest)?(\/(image|file))?/, '')
 			.split('/')
 			.filter(e => e?.length);
 
-		if (/rest\/file/.test(fullUrl)) {
+		if (/\/file\//.test(fullUrl)) {
 			if (urlCfgParts.length === 0) {
 				fullUrl = fullUrl.replace(filePath, `preview/${filePath}`);
 			}
+		}
+
+		if (fullUrl.startsWith('/rest') === false) {
+			fullUrl = `/rest${fullUrl}`;
 		}
 
 		if (fullUrl.includes(`${MetaObject.Namespace.ns}/`) === false) {
