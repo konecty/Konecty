@@ -1,11 +1,11 @@
 import get from 'lodash/get';
 import set from 'lodash/set';
 
-import { MetaObjectType } from '../../types/metadata';
+import { Label } from '@imports/model/Label';
 import { MetaObject } from '../../model/MetaObject';
 import { User } from '../../model/User';
+import { MetaObjectType } from '../../types/metadata';
 import { getAccessFor } from '../../utils/accessUtils';
-import { Label } from '@imports/model/Label';
 const negative: Label = {
 	en: 'Not',
 	de: 'Nicht',
@@ -88,7 +88,6 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 							Object.entries(label).forEach(([lang, value]) => {
 								set(acc, [fixISO(lang), ...keyPath, metaProp, field], value as string);
 								if (metaProp === 'fields' && type === 'boolean') {
-									console.log('field', fieldLabel);
 									const boolLabels = {
 										true: value as string,
 										false: get(fieldLabel, 'labelOpposite', `${negative[lang] ?? 'not'} ${value}`),
