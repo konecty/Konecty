@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
+import { Readable } from 'node:stream';
 
 const translationApi: FastifyPluginCallback = async fastify => {
 	fastify.get<{ Querystring: { asImage?: string } }>('/api/info/logo', async (req, reply) => {
@@ -16,7 +17,12 @@ const translationApi: FastifyPluginCallback = async fastify => {
 
 			if (asImage) {
 				const response = await fetch(logoURL);
-				return reply.send(response.body);
+				const contentType = response.headers.get('Content-Type');
+				if (contentType != null) {
+					reply.header('Content-Type', contentType);
+				}
+
+				return reply.send(Readable.fromWeb(response.body!));
 			}
 
 			return reply.send({ success: true, data: logoURL });
