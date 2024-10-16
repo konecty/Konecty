@@ -78,11 +78,27 @@ if (process.env.UI_PROXY === 'true') {
 } else {
 	fastify.register(viewPaths);
 	if (process.env.UI_PROXY_PATH) {
+		// fastify.register(replyFrom, {
+		// 	base: 'http://localhost:3003',
+		// });
+
+		// fastify.get('/ui/*', async (request, reply) => {
+		// 	const upstreamUrl = process.env.UI_PROXY_URL; // The Vite app URL in production
+		// 	console.log('upstreamUrl', upstreamUrl, request.raw?.url);
+		// 	await reply.from(`${upstreamUrl}${request.raw?.url?.replace('/ui', '')}`);
+		// });
+
 		fastify.register(proxy, {
 			upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
 			httpMethods: ['GET', 'HEAD'],
-			prefix: `${process.env.UI_PROXY_PATH}/:path*`,
-			rewritePrefix: '/:path*',
+			prefix: `${process.env.UI_PROXY_PATH}:path`,
+			rewritePrefix: ':path',
+			replyOptions: {
+				onResponse: (request, reply) => {
+					const proxyUrl = `${process.env.UI_PROXY_URL}${request.url?.replace('/ui', '')}`;
+					reply.from(proxyUrl);
+				},
+			},
 		});
 	}
 }
