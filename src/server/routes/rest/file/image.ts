@@ -11,7 +11,7 @@ import { sendFile } from './sendFile';
 
 import { DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
 
-const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
+const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace?/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const LEGACY_FULL_FILE_URL_PATTERN = ':namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const GET_FULL_PATTERN = ':document/:recordId/:fieldName/:fileName';
 const GET_STYLE_PATTERN = ':style/:document/:recordId/:fieldName/:fileName';
@@ -40,7 +40,7 @@ async function imageApiFn(
 		const [, document, recordId, fieldName, fileName] = getFullRegex.exec(incomingPath) ?? [];
 
 		const destination = path.join(document, recordId, fieldName, fileName);
-		return sendFile(destination, reply);
+		return sendFile(reply, req.url, destination);
 	}
 
 	if (getStyleRegex.test(incomingPath)) {
@@ -55,7 +55,7 @@ async function imageApiFn(
 			};
 
 			const destination = path.join(...([document, recordId, fieldName, dirEnum[style], fileName].filter(Boolean) as string[]));
-			return sendFile(destination, reply);
+			return sendFile(reply, req.url, destination);
 		}
 	}
 
@@ -79,7 +79,7 @@ async function imageApiFn(
 		};
 
 		const destination = getImagePath();
-		return sendFile(destination, reply);
+		return sendFile(reply, req.url, destination);
 	}
 
 	if (legacyFullFileUrlRegex.test(incomingPath)) {
@@ -88,7 +88,7 @@ async function imageApiFn(
 
 		const destination = preprocess != null ? path.join(document, recordId, fieldName, 'watermark', fileName) : path.join(document, recordId, fieldName, fileName);
 
-		return sendFile(destination, reply);
+		return sendFile(reply, req.url, destination);
 	}
 
 	return reply.status(404).send('Not found');

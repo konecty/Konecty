@@ -15,16 +15,25 @@ const CommonStorageProps = z.object({
 		.optional(),
 });
 
-const S3Storage = CommonStorageProps.extend({
+export const S3StorageCfg = CommonStorageProps.extend({
 	type: z.literal('s3'),
 	config: z.record(z.any()).optional(),
 	bucket: z.string().optional(),
 	publicUrl: z.string().optional(),
 });
 
-const FSStorage = CommonStorageProps.extend({
+export const FSStorageCfg = CommonStorageProps.extend({
 	type: z.literal('fs'),
 	directory: z.string().optional(),
+});
+
+export const ServerStorageCfg = CommonStorageProps.extend({
+	type: z.literal('server'),
+	config: z.object({
+		upload: z.string(),
+		preview: z.string(),
+		headers: z.record(z.string()).optional(),
+	}),
 });
 
 export const NamespaceSchema = z
@@ -35,7 +44,7 @@ export const NamespaceSchema = z
 		dateFormat: z.string().optional(),
 		logoURL: z.string().optional(),
 
-		storage: z.discriminatedUnion('type', [S3Storage, FSStorage]).optional(),
+		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg]).optional(),
 		RocketChat: z
 			.object({
 				accessToken: z.string(),
