@@ -8,6 +8,7 @@ import proxy from '@fastify/http-proxy';
 import initializeInstrumentation from '@imports/telemetry';
 import { logger } from '@imports/utils/logger';
 
+import accessApi from '@server/routes/api/access';
 import documentApi from './api/document';
 import formApi from './api/form';
 import listViewApi from './api/list-view';
@@ -50,6 +51,7 @@ fastify.register(cookie, {
 
 fastify.register(cors, getCorsConfig());
 
+fastify.register(accessApi);
 fastify.register(metasByDocumentApi);
 fastify.register(documentApi);
 fastify.register(formApi);
