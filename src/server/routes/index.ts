@@ -78,9 +78,9 @@ if (process.env.UI_PROXY === 'true') {
 } else {
 	fastify.register(viewPaths);
 }
-if (process.env.UI_PROXY_PATH) {
+if (process.env.UI_PROXY_PATH && process.env.UI_PROXY_URL) {
 	fastify.register(proxy, {
-		upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
+		upstream: process.env.UI_PROXY_URL,
 		httpMethods: ['GET', 'HEAD'],
 		prefix: `${process.env.UI_PROXY_PATH}:path`,
 		rewritePrefix: ':path',
