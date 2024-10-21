@@ -12,6 +12,11 @@ export const FieldAccessSchema = z.record(
 export type FieldAccess = z.infer<typeof FieldAccessSchema>;
 
 export const MetaAccessSchema = z.object({
+	_id: z.string(),
+	document: z.string(),
+	name: z.string(),
+	type: z.literal('access'),
+
 	fields: z.record(FieldAccessSchema),
 	fieldDefaults: z.object({
 		isUpdatable: z.boolean().optional(),
@@ -24,8 +29,8 @@ export const MetaAccessSchema = z.object({
 	isReadable: z.boolean().optional(),
 	isDeletable: z.boolean().optional(),
 
-	readFilter: KonFilter.optional(),
-	updateFilter: KonFilter.optional(),
+	readFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
+	updateFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;

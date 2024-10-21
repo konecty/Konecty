@@ -17,6 +17,14 @@ export const UserModel = z.object({
 	access: z
 		.object({
 			defaults: z.string().optional(),
+
+			meta: z
+				.object({
+					readAccess: z.boolean().or(z.string()).optional(),
+					updateAccess: z.boolean().or(z.string()).optional(),
+					createAccess: z.boolean().optional(),
+				})
+				.optional(),
 		})
 		.catchall(z.any())
 		.optional(),
