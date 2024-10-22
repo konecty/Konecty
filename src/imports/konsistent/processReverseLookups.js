@@ -5,7 +5,7 @@ import { logger } from '@imports/utils/logger';
 
 import { MetaObject } from '@imports/model/MetaObject';
 
-export default async function processReverseLookups(metaName, id, data, action) {
+export default async function processReverseLookups(metaName, id, data, action, dbSession) {
     let field;
     if (action === 'delete') {
         return;
@@ -17,7 +17,7 @@ export default async function processReverseLookups(metaName, id, data, action) 
     let reverseLookupCount = 0;
     for (var fieldName in meta.fields) {
         field = meta.fields[fieldName];
-        if (field.type === 'lookup' && !field.reverseLookup && data[field.name] !== undefined) {
+        if (field.type === 'lookup' && field.reverseLookup && data[field.name] !== undefined) {
             reverseLookupCount++;
         }
     }
@@ -29,7 +29,7 @@ export default async function processReverseLookups(metaName, id, data, action) 
     // Get all data to copty into lookups
     const query = { _id: id };
 
-    const record = await collection.findOne(query);
+    const record = await collection.findOne(query, { session: dbSession });
 
     if (!record) {
         return logger.error(`Record not found with _id [${id.valueOf()}] on document [${metaName}]`);
@@ -74,7 +74,7 @@ export default async function processReverseLookups(metaName, id, data, action) 
                     reverseLookupUpdate.$pull[`${field.reverseLookup}`] = { _id: id };
                 }
 
-                const updateResult = await reverseLookupCollection.updateMany(reverseLookupQuery, reverseLookupUpdate);
+                const updateResult = await reverseLookupCollection.updateMany(reverseLookupQuery, reverseLookupUpdate, { session: dbSession });
 
                 if (updateResult.modifiedCount > 0) {
                     logger.info(`∞ ${field.document}.${field.reverseLookup} - ${metaName} (${updateResult.modifiedCount})`);
@@ -86,17 +86,15 @@ export default async function processReverseLookups(metaName, id, data, action) 
                 const value = {};
                 value[field.reverseLookup] = { _id: id };
 
-                await copyDescriptionAndInheritedFields(
-                    reverseLookupMeta.fields[field.reverseLookup],
-                    value[field.reverseLookup],
-                    record,
-                    reverseLookupMeta,
-                    action,
-                    reverseLookupCollection,
-                    value,
-                    value,
-                    [data[field.name]._id],
-                );
+                await copyDescriptionAndInheritedFields({
+                    field: reverseLookupMeta.fields[field.reverseLookup],
+                    record: record,
+                    meta: reverseLookupMeta,
+                    actionType: action,
+                    objectOriginalValues: value,
+                    objectNewValues: value,
+                    idsToUpdate: [data[field.name]._id],
+                }, dbSession);
 
                 // Mount query and update to create the reverse lookup
                 reverseLookupQuery = { _id: data[field.name]._id };
@@ -113,7 +111,7 @@ export default async function processReverseLookups(metaName, id, data, action) 
                     }
                 }
 
-                const reverseUpdateResult = await reverseLookupCollection.updateMany(reverseLookupQuery, reverseLookupUpdate);
+                const reverseUpdateResult = await reverseLookupCollection.updateMany(reverseLookupQuery, reverseLookupUpdate, { session: dbSession });
 
                 if (reverseUpdateResult.modifiedCount > 0) {
                     logger.info(`∞ ${field.document}.${field.reverseLookup} < ${metaName} (${reverseUpdateResult.modifiedCount})`);

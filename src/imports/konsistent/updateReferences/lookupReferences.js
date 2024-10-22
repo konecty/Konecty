@@ -9,55 +9,43 @@ import uniq from 'lodash/uniq';
 import updateLookupReference from '@imports/konsistent/updateReferences/lookupReference';
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
+import { getFieldNamesOfPaths } from '../utils';
 
-export default async function updateLookupReferences(metaName, id, data) {
-    // Get references from meta
-    let field, fieldName, fields;
+/**
+ * When some document changes, verify if it's a lookup in some other document.
+ * If it is, update description & inherited fields in all related documents.
+ * @param {string} metaName 
+ * @param {string | string[]} id 
+ * @param {object} data 
+ * @returns {Promise<void>}
+ */
+export default async function updateLookupReferences(metaName, id, data, dbSession) {
     const references = MetaObject.References[metaName];
 
-    // Verify if exists reverse relations
     if (!isObject(references) || size(keys(references.from)) === 0) {
+        logger.debug(`No references from ${metaName}`);
         return;
     }
 
-    // Get model
     const collection = MetaObject.Collections[metaName];
     if (collection == null) {
         throw new Error(`Collection ${metaName} not found`);
     }
 
-    // Define object to receive only references that have reference fields in changed data
     const referencesToUpdate = {};
-
-    // Get all keys that was updated
     const updatedKeys = Object.keys(data);
 
     // Iterate over all relations to verify if each relation have fields in changed keys
     for (var referenceDocumentName in references.from) {
-        fields = references.from[referenceDocumentName];
-        for (fieldName in fields) {
-            var key;
-            field = fields[fieldName];
-            let keysToUpdate = [];
-            // Split each key to get only first key of array of paths
-            if (size(field.descriptionFields) > 0) {
-                for (key of field.descriptionFields) {
-                    keysToUpdate.push(key.split('.')[0]);
-                }
-            }
+        const fields = references.from[referenceDocumentName];
+        for (const fieldName in fields) {
+            const field = fields[fieldName];
+            let keysToUpdate = [].concat(field.descriptionFields || [], field.inheritedFields || []).map(getFieldNamesOfPaths);
 
-            if (size(field.inheritedFields) > 0) {
-                for (key of field.inheritedFields) {
-                    keysToUpdate.push(key.fieldName.split('.')[0]);
-                }
-            }
-
-            // Remove duplicated fields, can exists because we splited paths to get only first part
+            // Remove duplicated fields & get only fields that were updated
             keysToUpdate = uniq(keysToUpdate);
-            // Get only keys that exists in references and list of updated keys
             keysToUpdate = intersection(keysToUpdate, updatedKeys);
 
-            // If there are common fields, add field to list of relations to be processed
             if (keysToUpdate.length > 0) {
                 if (!referencesToUpdate[referenceDocumentName]) {
                     referencesToUpdate[referenceDocumentName] = {};
@@ -67,27 +55,30 @@ export default async function updateLookupReferences(metaName, id, data) {
         }
     }
 
-    // If there are 0 relations to process then abort
     if (Object.keys(referencesToUpdate).length === 0) {
+        logger.debug(`No references to update for ${metaName}`);
         return;
     }
 
-    // Find record with all information, not only udpated data, to can copy all related fields
-    const record = await collection.findOne({ _id: id });
+    if (Array.isArray(id) && id.length > 1) {
+        const records = await collection.find({ _id: { $in: id } }, { session: dbSession }).toArray();
+        return await Promise.all(records.map(record => processReferences({ referencesToUpdate, metaName, record, dbSession })));
+    }
 
-    // If no record was found log error and abort
+    const record = await collection.findOne({ _id: [].concat(id)[0] }, { session: dbSession });
     if (!record) {
         return logger.error(`Can't find record ${id} from ${metaName}`);
     }
 
     logger.debug(`Updating references for ${metaName} - ${Object.keys(referencesToUpdate).join(", ")}`);
-
-    // Iterate over relations to process and iterate over each related field to execute a method to update relations
-    await BluebirdPromise.mapSeries(Object.keys(referencesToUpdate), async referenceDocumentName => {
-        fields = referencesToUpdate[referenceDocumentName];
-        await BluebirdPromise.mapSeries(Object.keys(fields), async fieldName => {
-            field = fields[fieldName];
-            return updateLookupReference(referenceDocumentName, fieldName, field, record, metaName);
-        });
-    });
+    return await processReferences({ referencesToUpdate, metaName, record, dbSession });
+}
+const processReferences = async ({ referencesToUpdate, metaName, record, dbSession }) => {
+    return await BluebirdPromise.map(Object.keys(referencesToUpdate), async referenceDocumentName => {
+        const fields = referencesToUpdate[referenceDocumentName];
+        await BluebirdPromise.map(Object.keys(fields), async fieldName => {
+            const field = fields[fieldName];
+            return updateLookupReference(referenceDocumentName, fieldName, field, record, metaName, dbSession);
+        }, { concurrency: 5 });
+    }, { concurrency: 5 });
 }
