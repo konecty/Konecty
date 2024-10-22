@@ -10,8 +10,7 @@ Create .env using the sample.
 
 Fill MONGO_URL with your database url, adding authentication and options
 
-MONGO_URL=mongodb+srv://login:password@konecty.mongodb.net/?appName=konecty 
-
+MONGO_URL=mongodb+srv://login:password@konecty.mongodb.net/?appName=konecty
 
 ```
 yarn
@@ -21,8 +20,6 @@ yarn start
 If this is a empty database, basic metadata and starting collections will be automatically created.
 
 The UI will be running at `localhost:3000`
-
-
 
 ## Konecty environment variables
 
@@ -75,6 +72,12 @@ docker run --name kondata -p 3000:3000 --link mongo --env MONGO_URL=mongodb://mo
 ## REST API
 
 Examples of REST usage can be found here: [REST](REST.md)
+
+## Namespace configuration
+
+The namespace is made of many parts, documented at:
+
+-   [Storage api](STORAGE.md)
 
 ## Logs
 

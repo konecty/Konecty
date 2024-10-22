@@ -4,7 +4,6 @@ import processReverseLookups from './processReverseLookups';
 import * as References from './updateReferences';
 
 import { DataDocument } from '@imports/types/data';
-import omit from 'lodash/omit';
 import { ClientSession, MongoServerError } from 'mongodb';
 
 type Action = 'create' | 'update' | 'delete';
@@ -22,7 +21,6 @@ export default async function processIncomingChange(
 	changedProps: Record<string, any>,
 	dbSession?: ClientSession,
 ) {
-	const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
 	let startTime = process.hrtime();
 
 	try {
@@ -37,7 +35,7 @@ export default async function processIncomingChange(
 		await References.updateRelations(metaName, action, incomingChange._id, incomingChange, dbSession);
 		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
 
-		await createHistory(metaName, action, incomingChange._id, user, new Date(), omit(changedProps, keysToIgnore), dbSession);
+		await createHistory(metaName, action, incomingChange._id, user, new Date(), changedProps, dbSession);
 		logTimeSpent(startTime, `Created history for ${metaName}`);
 	} catch (e) {
 		if ((e as MongoServerError).codeName === 'NoSuchTransaction') {

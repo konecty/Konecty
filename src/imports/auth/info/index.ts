@@ -19,7 +19,7 @@ interface UserInfoResponse {
 		name?: string;
 		namespace?: {
 			_id: string;
-			logoURL: string;
+			logoURL?: string;
 			siteURL: string;
 			title: string;
 		};

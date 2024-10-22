@@ -13,9 +13,10 @@ RUN yarn install --production --silent --non-interactive --frozen-lockfile
 
 
 RUN addgroup -g 1001 -S nodejs
-RUN adduser -S konecty -u 1001
+RUN adduser -S konecty -u 1001 --ingroup nodejs
 
-USER konecty
+USER konecty:nodejs 
+
 ENV PORT=3000
 ENV NODE_ENV production
 ENV NODE_ICU_DATA=/app/node_modules/full-icu

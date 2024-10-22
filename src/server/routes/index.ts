@@ -13,6 +13,7 @@ import formApi from './api/form';
 import listViewApi from './api/list-view';
 import mainMenuApi from './api/menu/main';
 import metasByDocumentApi from './api/metas-by-document';
+import noAuth from './api/no-auth';
 import translatioApi from './api/translation';
 import authApi from './rest/auth/authApi';
 import changeUserApi from './rest/changeUser/changeUserApi';
@@ -32,9 +33,12 @@ import viewPaths from './rest/view/view';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
+const DISABLE_REQUEST_LOGGING = process.env.LOG_REQUESTS !== 'true';
 
 const fastify = Fastify({
 	logger,
+	maxParamLength: 250,
+	disableRequestLogging: DISABLE_REQUEST_LOGGING,
 });
 
 fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });
@@ -65,6 +69,7 @@ fastify.register(file2Api);
 fastify.register(menuApi);
 fastify.register(processApi);
 fastify.register(rocketchatApi);
+fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {
 		upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',
@@ -72,6 +77,20 @@ if (process.env.UI_PROXY === 'true') {
 	});
 } else {
 	fastify.register(viewPaths);
+}
+if (process.env.UI_PROXY_PATH && process.env.UI_PROXY_URL) {
+	fastify.register(proxy, {
+		upstream: process.env.UI_PROXY_URL,
+		httpMethods: ['GET', 'HEAD'],
+		prefix: `${process.env.UI_PROXY_PATH}:path`,
+		rewritePrefix: ':path',
+		replyOptions: {
+			onResponse: (request, reply) => {
+				const proxyUrl = `${process.env.UI_PROXY_URL}${request.url?.replace('/ui', '')}`;
+				reply.from(proxyUrl);
+			},
+		},
+	});
 }
 fastify.register(healthApi);
 
@@ -89,6 +108,9 @@ export async function serverStart() {
 
 function getCorsConfig() {
 	const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split('|');
+	if (process.env.UI_PROXY_URL) {
+		ALLOWED_ORIGINS.push(process.env.UI_PROXY_URL);
+	}
 	const corsOptions: FastifyCorsOptions = {
 		origin: function (origin, callback) {
 			if (origin) {

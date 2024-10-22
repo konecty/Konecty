@@ -11,6 +11,7 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
         return;
     }
 
+    const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
     const changeId = uuidV4();
     const meta = MetaObject.Meta[metaName];
 
@@ -24,7 +25,7 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
         dataId: id,
         createdAt: updatedAt,
         createdBy: pick(updatedBy, userDetailFields),
-        data: omitBy(changed, (value, key) => meta.fields[key]?.ignoreHistory),
+        data: omitBy(changed, (value, key) => keysToIgnore.includes(key) || meta.fields[key]?.ignoreHistory),
         type: action,
     };
 
