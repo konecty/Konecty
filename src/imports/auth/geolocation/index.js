@@ -9,7 +9,7 @@ export async function saveGeoLocation({ authTokenId, longitude, latitude, userAg
 			return { success: false, errors: [{ message: 'Longitude or Latitude not defined' }] };
 		}
 
-		const user = getUser(authTokenId);
+		const user = await getUser(authTokenId);
 
 		const ua = new UAParser(userAgent ?? 'API Call').getResult();
 
@@ -30,6 +30,7 @@ export async function saveGeoLocation({ authTokenId, longitude, latitude, userAg
 					group: user.group,
 				},
 			],
+			__from: "setGeoLocation",
 		};
 
 		await MetaObject.Collections.AccessLog.insertOne(accessLog);
