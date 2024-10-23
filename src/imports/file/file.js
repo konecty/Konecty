@@ -1,13 +1,24 @@
 import findIndex from 'lodash/findIndex';
+import first from 'lodash/first';
 import get from 'lodash/get';
 import size from 'lodash/size';
-import first from 'lodash/first';
 
 import { MetaObject } from '@imports/model/MetaObject';
+import { getUserSafe } from '../auth/getUser';
 import { update } from '../data/data';
 import { logger } from '../utils/logger';
-import { getUserSafe } from '../auth/getUser';
 
+/**
+ * 
+ * @param {object} payload
+ * @param {string} payload.document
+ * @param {string} payload.fieldName
+ * @param {string} payload.recordCode
+ * @param {object} payload.body
+ * @param {string} [payload.authTokenId]
+ * @param {import('@imports/model/User').User} [payload.contextUser]
+ * @returns {Promise<Record<string, unknown>>}
+ */
 export async function fileUpload({ authTokenId = null, document, fieldName, recordCode, body, contextUser = null }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 

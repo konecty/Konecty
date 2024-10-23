@@ -71,7 +71,6 @@
 		"luxon": "^3.4.3",
 		"mime-types": "^2.1.35",
 		"mkdirp": "^3.0.1",
-		"mmmagic": "^0.5.3",
 		"moment": "^2.29.4",
 		"moment-timezone": "^0.5.43",
 		"mongodb": "^6.1.0",
