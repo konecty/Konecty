@@ -12,6 +12,8 @@ export const FormSchema = z.object({
 	icon: z.string().optional(),
 	visuals: z.array(VisualsSchema).optional(),
 	collection: z.string().optional(),
+	namespace: z.array(z.string()).optional(),
+	parent: z.string().optional(),
 });
 
 export type Form = z.infer<typeof FormSchema>;

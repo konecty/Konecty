@@ -95,18 +95,38 @@ async function dbLoad() {
 function dbWatch() {
 	MetaObject.MetaObject.watch().on('change', async (change: any) => {
 		if (change.operationType === 'delete') {
-			switch (change.fullDocumentBeforeChange.type) {
+			const id = change.documentKey._id as string;
+
+			let meta: any = null;
+
+			if (id in MetaObject.DisplayMeta) {
+				meta = MetaObject.DisplayMeta[id];
+			}
+
+			if (id in MetaObject.Meta) {
+				meta = MetaObject.Meta[id];
+			}
+
+			if (id in MetaObject.Access) {
+				meta = MetaObject.Access[id];
+			}
+
+			if (id in MetaObject.MetaByCollection) {
+				meta = MetaObject.MetaByCollection[id];
+			}
+
+			switch (meta?.type) {
 				case 'access':
-					unset(MetaObject.Access, change.fullDocumentBeforeChange._id);
+					unset(MetaObject.Access, id);
 					break;
 				case 'document':
 				case 'composite':
-					deregisterMeta(change.fullDocumentBeforeChange);
+					deregisterMeta(meta);
 					break;
 				case 'pivot':
 				case 'view':
 				case 'list':
-					unset(MetaObject.DisplayMeta, change.fullDocumentBeforeChange._id);
+					unset(MetaObject.DisplayMeta, id);
 					break;
 			}
 		} else if (change.operationType === 'insert') {
