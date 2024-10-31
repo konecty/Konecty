@@ -13,6 +13,7 @@ module.exports = {
 		'@typescript-eslint/no-unsafe-call': 'off',
 		'no-case-declarations': 'off',
 		'@typescript-eslint/no-explicit-any': 'warn',
+		'@typescript-eslint/ban-types': 'warn',
 	},
 	settings: {
 		'import/parsers': {
