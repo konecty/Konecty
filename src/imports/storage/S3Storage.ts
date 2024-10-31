@@ -99,7 +99,7 @@ export default class S3Storage implements FileStorage {
 
 		const s3 = new S3Client(storageCfg.config ?? {});
 		const bucket = storageCfg.bucket;
-		const fileDirectory = fileData.key.replace(fileData.name, '');
+		const fileDirectory = fileData.key.replace(fileData.name, '').replace(/\/$/, '');
 
 		await BluebirdPromise.each(filesToSave, async ({ name, content }, index) => {
 			const s3Result = await s3.send(
