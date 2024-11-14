@@ -29,7 +29,8 @@ import { copyDescriptionAndInheritedFields } from '../meta/copyDescriptionAndInh
 import { removeInheritedFields } from '../meta/removeInheritedFields';
 import { getNextCode } from './getNextCode';
 
-import { errorReturn } from '@imports/utils/return';
+import { errorReturn, successReturn } from '@imports/utils/return';
+import Bluebird from 'bluebird';
 import { BCRYPT_SALT_ROUNDS } from '../consts';
 
 const regexUtils = {
@@ -73,7 +74,7 @@ const VALID_OPERATORS = [
 
 const ALLOWED_CURRENCIES = ['BRL'];
 
-export async function validateAndProcessValueFor({ meta, fieldName, value, actionType, objectOriginalValues, objectNewValues, idsToUpdate }) {
+export async function validateAndProcessValueFor({ meta, fieldName, value, actionType, objectOriginalValues, objectNewValues, idsToUpdate }, dbSession) {
 	if (meta == null) {
 		return errorReturn(`MetaObject.Meta does not exists`);
 	}
@@ -123,7 +124,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 	}
 
 	if (actionType === 'update' && value == null && field.type === 'lookup') {
-		Object.assign(objectNewValues, removeInheritedFields(field));
+		Object.assign(objectNewValues, removeInheritedFields(field, objectNewValues));
 	}
 
 	if (value == null && field.type !== 'autoNumber') {
@@ -352,13 +353,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		switch (field.type) {
 			case 'boolean':
 				const booleanResult = mustBeBoolean(value);
-				if (booleanResult.success === false) {
-					return booleanResult;
-				}
-				return {
-					success: true,
-					data: value,
-				};
+				return booleanResult.success ? successReturn(value) : booleanResult;
 
 			case 'number':
 			case 'percentage':
@@ -368,31 +363,14 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				if (isNumber(field.maxValue) && value > field.maxValue) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Value for field ${fieldName} must be less than ${field.maxValue}`,
-							},
-						],
-					};
+					return errorReturn(`Value for field ${fieldName} must be less than ${field.maxValue}`)
 				}
 
 				if (isNumber(field.minValue) && value < field.minValue) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Value for field ${fieldName} must be greater than ${field.minValue}`,
-							},
-						],
-					};
+					return errorReturn(`Value for field ${fieldName} must be greater than ${field.minValue}`)
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'picklist':
 				if (isNumber(field.maxSelected) && field.maxSelected > 1) {
@@ -401,45 +379,21 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 						return pickListResult;
 					}
 					if (value.length > field.maxSelected) {
-						return {
-							success: false,
-							errors: [
-								{
-									message: `Value for field ${fieldName} must be an array with max of ${field.maxSelected} item(s)`,
-								},
-							],
-						};
+						return errorReturn(`Value for field ${fieldName} must be an array with max of ${field.maxSelected} item(s)`);
 					}
 				}
 
 				if (isNumber(field.minSelected) && field.minSelected > 0) {
 					if (value.length < field.minSelected) {
-						return {
-							success: false,
-							errors: [
-								{
-									message: `Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`,
-								},
-							],
-						};
+						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
 					}
 				}
 
 				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
-					return {
-						success: false,
-						errors: [
-							{
-								message: `Value ${value} for field ${fieldName} is invalid`,
-							},
-						],
-					};
+					return errorReturn(`Value ${value} for field ${fieldName} is invalid`)
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'text':
 			case 'richText':
@@ -778,10 +732,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					};
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'password':
 				const passwordStringResult = mustBeString(value);
@@ -793,10 +744,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 
 				const hashPassword = await bcryptHash(hashedPassword, BCRYPT_SALT_ROUNDS);
 
-				return {
-					success: true,
-					data: hashPassword,
-				};
+				return successReturn(hashPassword);
 
 			case 'encrypted':
 				const encryptedStringResult = mustBeString(value);
@@ -806,26 +754,20 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 
 				value = createHash('md5').update(value).digest('hex');
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'autoNumber':
 				if (actionType === 'update') {
 					value = undefined;
 				} else {
-					const nextCodeResult = await getNextCode(meta.name, fieldName);
+					const nextCodeResult = await getNextCode(meta.name, fieldName, dbSession);
 					if (nextCodeResult.success === false) {
 						return nextCodeResult;
 					}
 					value = nextCodeResult.data;
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'address':
 				const addressObjectResult = mustBeObject(value);
@@ -886,10 +828,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					};
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'filter':
 				const objectFilterResult = mustBeObject(value);
@@ -904,10 +843,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 
 				value = stringToDate(value);
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'composite':
 				const compositeObjectResult = mustBeObject(value);
@@ -919,14 +855,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					const referenceMeta = MetaObject.Meta[field.objectRefId];
 
 					if (referenceMeta == null) {
-						return {
-							success: false,
-							errors: [
-								{
-									message: `Document ${field.objectRefId} not found`,
-								},
-							],
-						};
+						return errorReturn(`Document ${field.objectRefId} not found`);
 					}
 
 					const referenceDataValidationResults = await Promise.all(
@@ -942,14 +871,11 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 								idsToUpdate
 							};
 
-							const validationResult = await validateAndProcessValueFor(params);
+							const validationResult = await validateAndProcessValueFor(params, dbSession);
 							if (validationResult.success === false) {
 								return validationResult;
 							}
-							return {
-								success: true,
-								data: { key, value: validationResult.data },
-							};
+							return successReturn({ key, value: validationResult.data });
 						}),
 					);
 
@@ -963,10 +889,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					}, {});
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(value);
 
 			case 'lookup':
 			case 'inheritLookup':
@@ -985,7 +908,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return errorReturn(`Collection ${field.document} not found`);
 				}
 
-				const record = await lookupCollection.findOne({ _id: value._id });
+				const record = await lookupCollection.findOne({ _id: value._id }, { session: dbSession });
 
 				if (record == null) {
 					return errorReturn(`Record not found for field ${fieldName} with _id [${value._id}] on document [${field.document}]`);
@@ -999,7 +922,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					objectOriginalValues,
 					objectNewValues,
 					idsToUpdate,
-				});
+				}, dbSession);
 
 				return inheritedFieldsResult;
 
@@ -1012,22 +935,12 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				const unauthorizedKeys = ['key', 'name', 'size', 'created', 'etag', 'headers', 'kind', 'last_modified', 'description', 'label', 'wildcard'];
-				return {
-					success: true,
-					data: removeUnauthorizedKeys(value, unauthorizedKeys),
-				};
+				return successReturn(removeUnauthorizedKeys(value, unauthorizedKeys));
 
 			default:
 				logger.error(`Field ${fieldName} of type ${field.type} can not be validated`);
 
-				return {
-					success: false,
-					errors: [
-						{
-							message: `Field ${fieldName} of type ${field.type} can not be validated`,
-						},
-					],
-				};
+				return errorReturn(`Field ${fieldName} of type ${field.type} can not be validated`);
 		}
 	};
 
@@ -1036,24 +949,14 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 	}
 
 	if (value == null) {
-		return {
-			success: false,
-			errors: [
-				{
-					message: `Value for field ${fieldName} must be array`,
-				},
-			],
-		};
+		return errorReturn(`Value for field ${fieldName} must be array`);
 	}
 
-	const arrayResult = await Promise.all([].concat(value).map(validate));
+	const arrayResult = await Bluebird.map([].concat(value), validate, { concurrency: 10 });
 
 	if (arrayResult.some(v => v.success === false)) {
 		return arrayResult.find(v => v.success === false);
 	}
 
-	return {
-		success: true,
-		data: arrayResult.map(v => v.data),
-	};
+	return successReturn(arrayResult.map(v => v.data));
 }

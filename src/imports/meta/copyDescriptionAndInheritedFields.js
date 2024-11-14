@@ -2,7 +2,7 @@ import isArray from 'lodash/isArray';
 import pick from 'lodash/pick';
 
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
-export async function copyDescriptionAndInheritedFields({ field, record, meta, actionType, objectOriginalValues, objectNewValues, idsToUpdate }) {
+export async function copyDescriptionAndInheritedFields({ field, record, meta, actionType, objectOriginalValues, objectNewValues, idsToUpdate }, dbSession) {
 	const value = {
 		_id: record._id,
 	};
@@ -42,7 +42,7 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 						objectOriginalValues,
 						objectNewValues,
 						idsToUpdate,
-					});
+					}, dbSession);
 					if (validateResult.success === true) {
 						Object.assign(objectNewValues, { [inheritedField.fieldName]: validateResult.data });
 					}
@@ -59,7 +59,7 @@ export async function copyDescriptionAndInheritedFields({ field, record, meta, a
 							objectOriginalValues,
 							objectNewValues,
 							idsToUpdate,
-						});
+						}, dbSession);
 						if (validateResult.success === true) {
 							Object.assign(objectNewValues, { [inheritedField.fieldName]: validateResult.data });
 						}

@@ -46,13 +46,11 @@ async function registerMeta(meta: MetaObjectType) {
 		};
 	}
 
-	if (MetaObject.Collections[meta.name] == null) {
-		MetaObject.Collections[meta.name] = db.collection(`${meta.collection ?? meta.name}`);
-		MetaObject.Collections[`${meta.name}.Comment`] = db.collection(`${meta.collection ?? meta.name}.Comment`);
-		MetaObject.Collections[`${meta.name}.History`] = db.collection(`${meta.collection ?? meta.name}.History`);
-		MetaObject.Collections[`${meta.name}.Trash`] = db.collection(`${meta.collection ?? meta.name}.Trash`);
-		MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection(`${meta.collection ?? meta.name}.AutoNumber`);
-	}
+	MetaObject.Collections[meta.name] = db.collection(`${meta.collection ?? meta.name}`);
+	MetaObject.Collections[`${meta.name}.Comment`] = db.collection(`${meta.collection ?? meta.name}.Comment`);
+	MetaObject.Collections[`${meta.name}.History`] = db.collection(`${meta.collection ?? meta.name}.History`);
+	MetaObject.Collections[`${meta.name}.Trash`] = db.collection(`${meta.collection ?? meta.name}.Trash`);
+	MetaObject.Collections[`${meta.name}.AutoNumber`] = db.collection(`${meta.collection ?? meta.name}.AutoNumber`);
 
 	await applyIndexes(meta);
 }
@@ -158,6 +156,9 @@ function dbWatch() {
 				case 'view':
 				case 'list':
 					MetaObject.DisplayMeta[fullDocument._id as unknown as string] = fullDocument as unknown as (typeof MetaObject.DisplayMeta)[string];
+					break;
+				case 'namespace':
+					Object.assign(MetaObject.Namespace, fullDocument);
 					break;
 			}
 		}

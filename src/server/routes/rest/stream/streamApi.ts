@@ -5,7 +5,7 @@ import isString from 'lodash/isString';
 
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-import { find } from '@imports/data/data';
+import { find } from '@imports/data/api';
 
 export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{
@@ -31,6 +31,7 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 			start: req.query.start,
 			withDetailFields: req.query.withDetailFields,
 			getTotal: true,
+			asStream: true,
 			tracingSpan,
 		} as any);
 

@@ -31,6 +31,7 @@ interface accessLog {
 	resolution?: { width: number; height: number };
 	reason?: string;
 	source?: string;
+	__from?: string;
 	_user?: [
 		{
 			_id: string;
@@ -53,7 +54,12 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		os: ua.os.name,
 		platform: ua.device.type,
 		source,
+		__from: 'login',
 	};
+
+	if (accessLog.source == null) {
+		delete accessLog.source;
+	}
 
 	if (resolution != null) {
 		if (typeof resolution === 'string') {
