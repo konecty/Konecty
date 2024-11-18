@@ -55,10 +55,11 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			resolution?: { width: number; height: number };
 			password_SHA256?: string;
 			source?: string;
+			fingerprint?: string;
 		};
 	}>('/rest/auth/login', async function (req, reply) {
 		// Map body parameters
-		const { user, password, ns, geolocation, resolution, password_SHA256, source } = req.body;
+		const { user, password, ns, geolocation, resolution, password_SHA256, source, fingerprint } = req.body;
 
 		// Verify if MetaObject.Namespace have a session expiration metadata config and set
 		const cookieMaxAge = get(MetaObject.Namespace, 'sessionExpirationInSeconds', 2592000);
@@ -81,6 +82,7 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 			resolution,
 			userAgent,
 			source,
+			fingerprint,
 		});
 
 		if (get(loginResult, 'success', false) === true) {

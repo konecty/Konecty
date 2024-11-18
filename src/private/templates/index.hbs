@@ -64,6 +64,10 @@
 			integrity="sha512-Kq3/MTxphzXJIRDWtrpLhhNnLDPiBXPMKkx/KogMYZO92Geor9j8sJguZ1OozBS+YVmVKo2HEx2gZfGOQBFM8A=="
 			crossorigin="anonymous"
 		></script>
+		{{#if collectFingerprint}}
+		<script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
+		<script src="/fp.js"></script>
+		{{/if}}
 		<script type="text/javascript">
 			window.BLOB_URL = '{{blobUrl}}';
 			window.PREVIEW_URL = '{{previewUrl}}';

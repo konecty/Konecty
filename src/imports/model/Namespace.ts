@@ -40,6 +40,7 @@ export const NamespaceSchema = z
 	.object({
 		type: z.literal('Namespace'),
 		trackUserGeolocation: z.boolean().optional(),
+		trackUserFingerprint: z.boolean().optional(),
 		loginExpiration: z.number().optional(),
 		dateFormat: z.string().optional(),
 		logoURL: z.string().optional(),

@@ -16,9 +16,10 @@ interface LoginParams {
 	resolution?: { width: number; height: number } | string;
 	userAgent?: string;
 	source?: string;
+	fingerprint?: string;
 }
 
-interface accessLog {
+interface AccessLog {
 	_createdAt: Date;
 	_updatedAt: Date;
 	ip?: string | string[];
@@ -31,6 +32,7 @@ interface accessLog {
 	resolution?: { width: number; height: number };
 	reason?: string;
 	source?: string;
+	fingerprint?: string;
 	__from?: string;
 	_user?: [
 		{
@@ -41,10 +43,10 @@ interface accessLog {
 	];
 }
 
-export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent, source }: LoginParams) {
+export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent, source, fingerprint }: LoginParams) {
 	const ua = new UAParser(userAgent ?? 'API Call').getResult();
 
-	const accessLog: accessLog = {
+	const accessLog: AccessLog = {
 		_createdAt: new Date(),
 		_updatedAt: new Date(),
 		ip,
@@ -54,6 +56,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		os: ua.os.name,
 		platform: ua.device.type,
 		source,
+		fingerprint,
 		__from: 'login',
 	};
 

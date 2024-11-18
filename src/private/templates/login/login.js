@@ -449,6 +449,8 @@ function clearCookie(cookie, clearMyKonecty) {
 					password_SHA256: SHA256($('#password').val().trim()),
 					ns: $('#namespace').val().replace(/[\s-]/g, ''),
 					geolocation: geolocation,
+					fingerprint: window.fingerprint,
+					source: 'interface',
 					resolution: JSON.stringify({
 						height: screen.height,
 						width: screen.width,
