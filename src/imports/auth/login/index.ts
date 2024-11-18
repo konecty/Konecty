@@ -97,7 +97,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		return {
 			success: false,
 			logged: false,
-			errors: [{ message: 'Wrong user or password' }],
+			errors: [{ message: 'Usuário ou senha inválidos' }],
 		};
 	}
 
@@ -121,7 +121,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		return {
 			success: false,
 			logged: false,
-			errors: [{ message: 'Wrong user or password' }],
+			errors: [{ message: 'Usuário ou senha inválidos' }],
 		};
 	}
 
