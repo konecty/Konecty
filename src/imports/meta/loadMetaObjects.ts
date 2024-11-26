@@ -1,6 +1,6 @@
 import chokidar from 'chokidar';
 import fs from 'fs';
-import glob from 'glob';
+import { globSync } from 'glob';
 
 import debounce from 'lodash/debounce';
 import unset from 'lodash/unset';
@@ -9,6 +9,7 @@ import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectType } from '@imports/types/metadata';
 import { Promise as BluebirdPromise } from 'bluebird';
+import path from 'path';
 import { checkInitialData } from '../data/initialData';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
@@ -151,7 +152,7 @@ function dbWatch() {
 const fsLoad = (metadataDir: string) => {
 	logger.info(`Loading MetaObject.Meta from directory ${metadataDir} ...`);
 
-	const watcher = chokidar.watch(metadataDir, {
+	const watcher = chokidar.watch(path.resolve(metadataDir), {
 		ignored: /(^|[/\\])\../, // ignore dotfiles
 		persistent: true,
 	});
@@ -191,7 +192,7 @@ const fsLoad = (metadataDir: string) => {
 			}
 			const hooksDir = path.replace(/document.json$/, 'hook');
 			if (fs.existsSync(hooksDir)) {
-				glob.sync(hooksDir + '/*.js').forEach(file => {
+				globSync(hooksDir + '/*.js').forEach(file => {
 					const hookName = file.split('/').pop()?.split('.').shift();
 					const hook = fs.readFileSync(file, 'utf8');
 
@@ -199,7 +200,7 @@ const fsLoad = (metadataDir: string) => {
 						meta[hookName] = hook;
 					}
 				});
-				glob.sync(hooksDir + '/*.json').forEach(file => {
+				globSync(hooksDir + '/*.json').forEach(file => {
 					const hookName = file.split('/').pop()?.split('.').shift();
 					const hook = JSON.parse(fs.readFileSync(file, 'utf8'));
 					if (hookName != null) {
@@ -247,20 +248,23 @@ const fsLoad = (metadataDir: string) => {
 		}
 	};
 
-	watcher
-		.on('add', changeHandler)
-		.on('change', changeHandler)
-		.on('unlink', path => removeHandler(path));
+	return new Promise(resolve => {
+		watcher
+			.on('add', changeHandler)
+			.on('change', changeHandler)
+			.on('unlink', path => removeHandler(path));
+		setTimeout(resolve, 8000);
+	});
 };
 
 export async function loadMetaObjects() {
-	await checkInitialData();
 	if (process.env.METADATA_DIR != null) {
 		logger.info('Loading MetaObject.Meta from directory');
-		return fsLoad(process.env.METADATA_DIR);
+		return await fsLoad(process.env.METADATA_DIR);
 	}
 	logger.info('Loading MetaObject.Meta from database');
 	await dbLoad();
+	await checkInitialData();
 
 	dbWatch();
 }
