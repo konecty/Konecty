@@ -25,7 +25,7 @@ const MetaObject: Data = {
 	DisplayMeta: {},
 	Access: {},
 	References: {},
-	Namespace: { type: 'Namespace' },
+	Namespace: { type: 'namespace' },
 	MetaByCollection: {},
 	Collections: {},
 };

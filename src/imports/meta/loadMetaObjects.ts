@@ -84,13 +84,14 @@ async function dbLoad() {
 				case 'list':
 					MetaObject.DisplayMeta[meta._id] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
 					break;
+				case 'namespace':
+					Object.assign(MetaObject.Namespace, meta);
+					break;
 			}
 		}),
 	);
 
 	rebuildReferences();
-	const namespace = await MetaObject.MetaObject.findOne({ type: 'namespace' });
-	Object.assign(MetaObject.Namespace, namespace);
 }
 
 function dbWatch() {
@@ -150,6 +151,7 @@ function dbWatch() {
 }
 
 const fsLoad = (metadataDir: string) => {
+	let started = false;
 	logger.info(`Loading MetaObject.Meta from directory ${metadataDir} ...`);
 
 	const watcher = chokidar.watch(path.resolve(metadataDir), {
@@ -164,15 +166,17 @@ const fsLoad = (metadataDir: string) => {
 			.split('/')
 			.shift();
 	const fileType = (path: string) => {
+		if (path.includes('Namespace')) {
+			return 'namespace';
+		}
 		if (/.+document.json$/.test(path)) {
 			return 'document';
 		}
 		return path.split('/').slice(-2).shift();
 	};
 
-	const getDocumentData = (path: string) => {
-		const type = fileType(path);
-		if (type === 'document') {
+	const getDocumentData = (path: string, fileType: string) => {
+		if (['document', 'namespace'].includes(fileType)) {
 			return JSON.parse(fs.readFileSync(path, 'utf8'));
 		}
 		const documentFile = `${metadataDir}/${documentName(path)}/document.json`;
@@ -184,9 +188,18 @@ const fsLoad = (metadataDir: string) => {
 
 	const changeHandler = async (path: string) => {
 		const type = fileType(path);
+		if (started) {
+			logger.info(`File changed: ${path}`);
+		}
+
+		if (type === 'namespace') {
+			const meta = getDocumentData(path, type);
+			Object.assign(MetaObject.Namespace, meta);
+			return;
+		}
 
 		if (type != null && ['document', 'hook'].includes(type)) {
-			const meta = getDocumentData(path);
+			const meta = getDocumentData(path, type);
 			if (meta == null) {
 				return;
 			}
@@ -228,6 +241,7 @@ const fsLoad = (metadataDir: string) => {
 	const removeHandler = async (path: string) => {
 		const type = fileType(path);
 		const name = documentName(path);
+		logger.info(`File removed: ${path}`);
 		if (type != null && ['document'].includes(type)) {
 			deregisterMeta({ name });
 			return rebuildReferences();
@@ -248,23 +262,24 @@ const fsLoad = (metadataDir: string) => {
 		}
 	};
 
+	watcher.on('add', changeHandler).on('change', changeHandler).on('unlink', removeHandler);
 	return new Promise(resolve => {
-		watcher
-			.on('add', changeHandler)
-			.on('change', changeHandler)
-			.on('unlink', path => removeHandler(path));
-		setTimeout(resolve, 8000);
+		setTimeout(() => {
+			started = true;
+			resolve(true);
+		}, 8000);
 	});
 };
 
 export async function loadMetaObjects() {
+	await checkInitialData();
+
 	if (process.env.METADATA_DIR != null) {
 		logger.info('Loading MetaObject.Meta from directory');
 		return await fsLoad(process.env.METADATA_DIR);
 	}
 	logger.info('Loading MetaObject.Meta from database');
 	await dbLoad();
-	await checkInitialData();
 
 	dbWatch();
 }

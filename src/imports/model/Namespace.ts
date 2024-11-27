@@ -38,7 +38,7 @@ export const ServerStorageCfg = CommonStorageProps.extend({
 
 export const NamespaceSchema = z
 	.object({
-		type: z.literal('Namespace'),
+		type: z.literal('namespace'),
 		trackUserGeolocation: z.boolean().optional(),
 		loginExpiration: z.number().optional(),
 		dateFormat: z.string().optional(),
