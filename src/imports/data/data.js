@@ -1286,6 +1286,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			});
 
 			if (updateResults.some(result => result.success === false)) {
+				await dbSession.abortTransaction();
 				return errorReturn(
 					updateResults
 						.filter(result => result.success === false)
