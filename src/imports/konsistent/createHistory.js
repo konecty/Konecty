@@ -6,13 +6,11 @@ import pick from "lodash/pick";
 import { v4 as uuidV4 } from 'uuid';
 
 export default async function createHistory(metaName, action, id, updatedBy, updatedAt, changed, dbSession) {
-    // If data is empty or no update data is avaible then abort
     if (Object.keys(changed).length === 0 || updatedAt == null || updatedBy == null) {
         return;
     }
 
     const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
-    const changeId = uuidV4();
     const meta = MetaObject.Meta[metaName];
 
     const history = MetaObject.Collections[`${metaName}.History`];
@@ -20,19 +18,26 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
         return logger.error(`Can't get History collection from ${metaName}`);
     }
 
-    const userDetailFields = ["_id"].concat(get(meta, "fields._user.descriptionFields", ["name", "active"]));
+    const historyData = omitBy(changed, (value, key) => keysToIgnore.includes(key) || meta.fields[key]?.ignoreHistory);
+    if (Object.keys(historyData).length === 0) {
+        logger.trace(`No history data for ${metaName}`);
+        return;
+    }
+
+    const userDescriptionFields = ["_id"].concat(get(meta, "fields._user.descriptionFields", ["name", "active"]));
     const historyItem = {
+        _id: uuidV4(),
         dataId: id,
         createdAt: updatedAt,
-        createdBy: pick(updatedBy, userDetailFields),
-        data: omitBy(changed, (value, key) => keysToIgnore.includes(key) || meta.fields[key]?.ignoreHistory),
+        createdBy: pick(updatedBy, userDescriptionFields),
+        data: historyData,
         type: action,
     };
 
     try {
-        const historyQuery = { _id: changeId };
-        await history.updateOne(historyQuery, { $set: historyItem, $setOnInsert: historyQuery }, { upsert: true, session: dbSession });
+        await history.insertOne(historyItem, { session: dbSession });
     } catch (e) {
         logger.error(e, 'Error on create history');
+        await dbSession?.abortTransaction();
     }
 }
