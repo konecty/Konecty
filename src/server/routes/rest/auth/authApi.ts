@@ -60,10 +60,8 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 		// Map body parameters
 		const { user, password, ns, geolocation, resolution, password_SHA256, source } = req.body;
 
-		const namespace = await MetaObject.MetaObject.findOne({ _id: 'MetaObject.Namespace' } as unknown as any);
-
 		// Verify if MetaObject.Namespace have a session expiration metadata config and set
-		const cookieMaxAge = get(namespace, 'sessionExpirationInSeconds', 2592000);
+		const cookieMaxAge = get(MetaObject.Namespace, 'sessionExpirationInSeconds', 2592000);
 
 		const userAgent = req.headers['user-agent'];
 

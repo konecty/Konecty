@@ -86,6 +86,7 @@ if (process.env.UI_PROXY_PATH && process.env.UI_PROXY_URL) {
 		httpMethods: ['GET', 'HEAD'],
 		prefix: `${process.env.UI_PROXY_PATH}:path`,
 		rewritePrefix: ':path',
+		disableRequestLogging: true,
 		replyOptions: {
 			onResponse: (request, reply) => {
 				const proxyUrl = `${process.env.UI_PROXY_URL}${request.url?.replace('/ui', '')}`;
