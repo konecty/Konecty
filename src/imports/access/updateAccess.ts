@@ -91,8 +91,8 @@ export default async function updateAccess({ document, accessName, data, authTok
 	}
 
 	if (Object.keys(updateObj.$set).length === 0) {
-		tracingSpan?.setAttribute('error', 'Nothing changed');
-		return errorReturn('Nothing changed');
+		tracingSpan?.addEvent('Nothing changed');
+		return successReturn(access);
 	}
 
 	tracingSpan?.addEvent('Update Access');
