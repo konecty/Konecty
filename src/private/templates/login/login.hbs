@@ -65,6 +65,10 @@
 		<!--[if IE]>
 			<link href="/stylesheets/ie.css" media="screen, projection" rel="stylesheet" type="text/css" />
 		<![endif]-->
+		{{#if collectFingerprint}}
+		<script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
+		<script src="/fp.js"></script>
+		{{/if}}
 	</head>
 	<body>
 		<script>
