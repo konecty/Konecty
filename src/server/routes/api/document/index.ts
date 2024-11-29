@@ -3,11 +3,12 @@ import fp from 'fastify-plugin';
 
 import { getUserFromRequest } from '@imports/auth/getUser';
 import { getDocument } from '@imports/document';
-import { logger } from '@imports/utils/logger';
-import { WithoutId } from 'mongodb';
 import { loadMetaObjects } from '@imports/meta/loadMetaObjects';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectSchema, MetaObjectType } from '@imports/types/metadata';
+import { checkMetaOperation } from '@imports/utils/accessUtils';
+import { logger } from '@imports/utils/logger';
+import { WithoutId } from 'mongodb';
 
 const documentAPi: FastifyPluginCallback = async fastify => {
 	fastify.get<{ Params: { name: string } }>('/api/document/:name', async (req, reply) => {
@@ -58,9 +59,13 @@ const documentAPi: FastifyPluginCallback = async fastify => {
 
 		try {
 			const user = await getUserFromRequest(req);
-
-			if (user == null || user.admin !== true) {
+			if (user == null) {
 				return reply.status(401).send('Unauthorized');
+			}
+
+			const metaOperationAccess = checkMetaOperation({ user, operation: 'updateDocument', document: id });
+			if (metaOperationAccess === false) {
+				return reply.status(403).send('Forbidden');
 			}
 
 			const document = req.body as MetaObjectType;
@@ -112,9 +117,13 @@ const documentAPi: FastifyPluginCallback = async fastify => {
 
 		try {
 			const user = await getUserFromRequest(req);
-
-			if (user == null || user.admin !== true) {
+			if (user == null) {
 				return reply.status(401).send('Unauthorized');
+			}
+
+			const metaOperationAccess = checkMetaOperation({ user, operation: 'deleteDocument', document: id });
+			if (metaOperationAccess === false) {
+				return reply.status(403).send('Forbidden');
 			}
 
 			const result = await MetaObject.MetaObject.deleteOne({ _id: id });
