@@ -3,14 +3,14 @@ import fp from 'fastify-plugin';
 
 import { getUserFromRequest } from '@imports/auth/getUser';
 import { getDocument } from '@imports/document';
-import { logger } from '@imports/utils/logger';
-import { WithoutId } from 'mongodb';
 import { loadMetaObjects } from '@imports/meta/loadMetaObjects';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectSchema, MetaObjectType } from '@imports/types/metadata';
+import { logger } from '@imports/utils/logger';
+import { WithoutId } from 'mongodb';
 
 const documentAPi: FastifyPluginCallback = async fastify => {
-	fastify.get<{ Params: { name: string } }>('/api/document/:name', async (req, reply) => {
+	fastify.get<{ Params: { name: string }; Querystring: { type?: keyof typeof MetaObject } }>('/api/document/:name', async (req, reply) => {
 		if (req.originalUrl == null || req.params == null) {
 			return reply.status(404).send('Not found');
 		}
@@ -28,7 +28,7 @@ const documentAPi: FastifyPluginCallback = async fastify => {
 				return reply.status(401).send('Unauthorized');
 			}
 
-			const result = await getDocument(name);
+			const result = await getDocument(name, req.query.type);
 
 			if (result == null) {
 				return reply.status(404).send('Invalid meta object');
