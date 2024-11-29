@@ -152,3 +152,27 @@ export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Reco
 
 	return newData;
 }
+
+type CheckMetaOpParams = {
+	user: User;
+	operation: keyof Required<Required<User>['access']>['meta'];
+	document: string;
+};
+
+export function checkMetaOperation({ user, operation, document }: CheckMetaOpParams) {
+	const meta = user.access?.meta;
+	if (!meta) {
+		return false;
+	}
+
+	const operationValue = meta[operation];
+	if (operationValue == null) {
+		return false;
+	}
+
+	if (typeof operationValue === 'string') {
+		return operationValue.split(',').find(doc => doc.trim() === document) != null;
+	}
+
+	return operationValue === true;
+}
