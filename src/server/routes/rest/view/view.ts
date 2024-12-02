@@ -3,19 +3,20 @@ import fp from 'fastify-plugin';
 
 import Handlebars from 'handlebars';
 
-import path from 'path';
-import fsPromises from 'fs/promises';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
+import path from 'path';
 
-import isDate from 'lodash/isDate';
 import get from 'lodash/get';
+import isDate from 'lodash/isDate';
 
 import getServer from '@imports/utils/getServer';
 
-import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
-import { logout } from '@imports/auth/logout';
 import { getUser } from '@imports/auth/getUser';
+import { logout } from '@imports/auth/logout';
+import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '@imports/utils/logger';
+import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import { templatePath } from '@imports/utils/templatesPath';
 
 const getEnv = () => {
@@ -52,6 +53,7 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 			lbl_browser_incompatible: 'Seu navegador não é compatível com o sistema.',
 			lbl_browser_install: 'Para acessar o sistema você deve instalar um dos navegadores abaixo.',
 			uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
+			collectFingerprint: MetaObject.Namespace.trackUserFingerprint,
 		});
 
 		reply.header('Content-Type', 'text/html');
@@ -64,7 +66,13 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 		const fileStream = fs.createReadStream(loginJsFilePath);
 		reply.header('Content-Type', 'application/javascript');
 		reply.send(fileStream);
-		// fileStream.pipe(reply.raw);
+	});
+
+	fastify.get('/fp.js', function (_, reply) {
+		const fpJsFilePath = path.join(templatePath(), 'fingerprint.js');
+		const fileStream = fs.createReadStream(fpJsFilePath);
+		reply.header('Content-Type', 'application/javascript');
+		reply.send(fileStream);
 	});
 
 	fastify.get('/', async function (req, reply) {
@@ -89,6 +97,7 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 				uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
 				blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
 				previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
+				collectFingerprint: MetaObject.Namespace.trackUserFingerprint,
 			};
 
 			const indexTemplatePath = path.join(templatePath(), 'index.hbs');

@@ -1,189 +1,98 @@
 
-import compact from 'lodash/compact';
-import get from 'lodash/get';
-import has from 'lodash/has';
+import groupBy from 'lodash/groupBy';
 import isArray from 'lodash/isArray';
 import merge from 'lodash/merge';
+import mergeWith from 'lodash/mergeWith';
 import pick from 'lodash/pick';
-import uniq from 'lodash/uniq';
 
 import { MetaObject } from '@imports/model/MetaObject';
+import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { logger } from '@imports/utils/logger';
+import { getFieldNamesOfPaths } from '../utils';
+import updateLookupReferences from './lookupReferences';
 
-export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName) {
-    // Try to get related meta
+async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, meta, dbSession }) {
+    const fieldsToUpdate = {}
+
+    if (isArray(metaField.descriptionFields) && metaField.descriptionFields.length > 0) {
+        const updateKey = metaField.isList ? `${metaField.name}.$` : `${metaField.name}`;
+        const descriptionFieldsValue = pick(record, Array.from(new Set(['_id'].concat(metaField.descriptionFields))));
+
+        fieldsToUpdate[updateKey] = descriptionFieldsValue;
+    }
+
+    if (isArray(metaField.inheritedFields) && metaField.inheritedFields.length > 0) {
+        const inheritedFields = metaField.inheritedFields.filter(inheritedField => ['always', 'hierarchy_always'].includes(inheritedField.inherit));
+        const fieldsToInherit = inheritedFields.map(inheritedField => meta.fields[inheritedField.fieldName]).filter(Boolean);
+
+        const { true: lookupFields = [], false: nonLookupFields = [] } = groupBy(fieldsToInherit, field => field.type === 'lookup');
+
+        for (const field of nonLookupFields) {
+            fieldsToUpdate[field.name] = record[field.name];
+        }
+
+        // For inherited lookup fields we need to inherit recursively and merge all results
+        for await (const lookupField of lookupFields) {
+            const keysToFind = [].concat(lookupField.descriptionFields || [], lookupField.inheritedFields || []).map(getFieldNamesOfPaths).join();
+            const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(keysToFind);
+
+            const Collection = MetaObject.Collections[lookupField.document];
+            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v._id) } }, { projection, session: dbSession }).toArray();
+
+            for await (const lookupRec of lookupRecord) {
+                const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRec, metaField: lookupField, meta, dbSession });
+                if (lookupField.isList) {
+                    mergeWith(fieldsToUpdate, result, (objValue = [], srcValue = [], key) => /\$$/.test(key) ? [].concat(objValue, srcValue) : undefined);
+                } else {
+                    merge(fieldsToUpdate, result);
+                }
+            }
+
+            if (fieldsToUpdate[`${lookupField.name}.$`]) {
+                fieldsToUpdate[lookupField.name] = fieldsToUpdate[`${lookupField.name}.$`];
+                delete fieldsToUpdate[`${lookupField.name}.$`];
+            }
+        }
+    }
+
+    return fieldsToUpdate;
+}
+
+export default async function updateLookupReference(metaName, fieldName, field, record, relatedMetaName, dbSession) {
+    if (dbSession?.hasEnded) {
+        return;
+    }
+
     const meta = MetaObject.Meta[metaName];
     if (!meta) {
         return logger.error(`MetaObject.Meta ${metaName} does not exists`);
     }
 
-    // Try to get related model
     const collection = MetaObject.Collections[metaName];
     if (collection == null) {
         return logger.error(`Model ${metaName} does not exists`);
     }
 
-    // Define field to query and field to update
-    const fieldToQuery = `${fieldName}._id`;
-    let fieldToUpdate = fieldName;
-
-    // If field is isList then use .$ into field to update
-    // to find in arrays and update only one item from array
-    if (field.isList === true) {
-        fieldToUpdate = `${fieldName}.$`;
-    }
-
-    // Define query with record id
-    const query = {};
-    query[fieldToQuery] = record._id;
-
-    // Init object of data to set
-    const updateData = { $set: {} };
-
-    // Add dynamic field name to update into object to update
-    updateData.$set[fieldToUpdate] = {};
-
-    // If there are description fields
-    if (isArray(field.descriptionFields) && field.descriptionFields.length > 0) {
-        // Execute method to copy fields and values using an array of paths
-
-        const descriptionFieldsValue = pick(record, Array.from(new Set(['_id'].concat(field.descriptionFields))));
-        merge(updateData.$set[fieldToUpdate], descriptionFieldsValue);
-    }
-
-    // If there are inherit fields
-    if (isArray(field.inheritedFields) && field.inheritedFields.length > 0) {
-        // For each inherited field
-        for (var inheritedField of field.inheritedFields) {
-            if (['always', 'hierarchy_always'].includes(inheritedField.inherit)) {
-                // Get field meta
-                var inheritedMetaField = meta.fields[inheritedField.fieldName];
-
-                if (inheritedField.inherit === 'hierarchy_always') {
-                    if (get(inheritedMetaField, 'type') !== 'lookup' || inheritedMetaField.isList !== true) {
-                        logger.error(`Not lookup or not isList field ${inheritedField.fieldName} in ${metaName}`);
-                        continue;
-                    }
-                    if (!record[inheritedField.fieldName]) {
-                        record[inheritedField.fieldName] = [];
-                    }
-                    record[inheritedField.fieldName].push({
-                        _id: record._id,
-                    });
-                }
-
-                // If field is lookup
-                if (get(inheritedMetaField, 'type') === 'lookup') {
-                    // Get model to find record
-                    const lookupCollection = MetaObject.Collections[inheritedMetaField.document];
-
-                    if (!lookupCollection) {
-                        logger.error(`Document ${inheritedMetaField.document} not found`);
-                        continue;
-                    }
-
-                    if (has(record, `${inheritedField.fieldName}._id`) || (inheritedMetaField.isList === true && get(record, `${inheritedField.fieldName}.length`) > 0)) {
-                        var lookupRecord, subQuery;
-                        if (inheritedMetaField.isList !== true) {
-                            subQuery = { _id: record[inheritedField.fieldName]._id.valueOf() };
-
-                            // Find records
-                            lookupRecord = await lookupCollection.findOne(subQuery);
-
-                            // If no record found log error
-                            if (!lookupRecord) {
-                                logger.error(
-                                    `Record not found for field ${inheritedField.fieldName} with _id [${subQuery._id}] on document [${inheritedMetaField.document}] not found`,
-                                );
-                                continue;
-                            }
-
-                            // Else copy description fields
-                            if (isArray(inheritedMetaField.descriptionFields)) {
-                                if (!updateData.$set[inheritedField.fieldName]) {
-                                    updateData.$set[inheritedField.fieldName] = {};
-                                }
-
-                                const descriptionFieldsValue = pick(lookupRecord, Array.from(new Set(['_id'].concat(inheritedMetaField.descriptionFields))));
-                                merge(updateData.$set[inheritedField.fieldName], descriptionFieldsValue);
-                            }
-
-                            // End copy inherited values
-                            if (isArray(inheritedMetaField.inheritedFields)) {
-                                for (let inheritedMetaFieldItem of inheritedMetaField.inheritedFields) {
-                                    if (inheritedMetaFieldItem.inherit === 'always') {
-                                        updateData.$set[inheritedMetaFieldItem.fieldName] = lookupRecord[inheritedMetaFieldItem.fieldName];
-                                    }
-                                }
-                            }
-                        } else if (get(record, `${inheritedField.fieldName}.length`, 0) > 0) {
-                            let ids = record[inheritedField.fieldName].map(item => item._id);
-                            ids = compact(uniq(ids));
-                            subQuery = {
-                                _id: {
-                                    $in: ids,
-                                },
-                            };
-
-                            const subOptions = {};
-                            if (isArray(inheritedMetaField.descriptionFields)) {
-                                subOptions.projection = inheritedMetaField.descriptionFields.reduce((obj, item) => {
-                                    const key = item.split('.')[0];
-                                    if (obj[key] == null) {
-                                        obj[key] = 1;
-                                    }
-                                    return obj;
-                                }, {});
-                            }
-
-                            // Find records
-                            const lookupRecords = await lookupCollection.find(subQuery, subOptions).toArray();
-                            const lookupRecordsById = lookupRecords.reduce((obj, item) => {
-                                obj[item._id] = item;
-                                return obj;
-                            }, {});
-
-                            record[inheritedField.fieldName].forEach(function (item) {
-                                lookupRecord = lookupRecordsById[item._id];
-
-                                // If no record found log error
-                                if (!lookupRecord) {
-                                    logger.error(
-                                        `Record not found for field ${inheritedField.fieldName} with _id [${item._id}] on document [${inheritedMetaField.document}] not found`,
-                                    );
-                                    return;
-                                }
-
-                                // Else copy description fields
-                                if (isArray(inheritedMetaField.descriptionFields)) {
-                                    const tempValue = pick(lookupRecord, Array.from(new Set(['_id'].concat(inheritedMetaField.descriptionFields))));
-                                    if (updateData.$set[inheritedField.fieldName] == null) {
-                                        updateData.$set[inheritedField.fieldName] = [];
-                                    }
-                                    return updateData.$set[inheritedField.fieldName].push(tempValue);
-                                }
-                            });
-                        }
-                    }
-                } else {
-                    // Copy data into object to update if inherit method is 'always'
-                    updateData.$set[inheritedField.fieldName] = record[inheritedField.fieldName];
-                }
-            }
-        }
-    }
-
     try {
-        // Execute update and get affected records
-        const updateResult = await collection.updateMany(query, updateData);
+        const updateData = await getDescriptionAndInheritedFieldsToUpdate({ record, metaField: field, meta });
+        if (Object.keys(updateData).length === 0) {
+            return;
+        }
 
-        // If there are affected records then log
+        const query = { [`${fieldName}._id`]: record._id };
+        const updateResult = await collection.updateMany(query, { $set: updateData }, { session: dbSession });
+
         if (updateResult.modifiedCount > 0) {
             logger.debug(`🔗 ${relatedMetaName} > ${metaName}.${fieldName} (${updateResult.modifiedCount})`);
+            const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(Object.keys(updateData).join());
+
+            const modified = await collection.find(query, { projection }).toArray();
+            await updateLookupReferences(metaName, modified.map(m => m._id), updateData, dbSession);
         }
 
         return updateResult.modifiedCount;
     } catch (e) {
         logger.error(e, 'Error updating lookup reference');
+        logger.error({ metaName, fieldName, field, relatedMetaName })
     }
 }

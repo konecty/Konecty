@@ -13,12 +13,13 @@ import { MetaObject } from '@imports/model/MetaObject';
 import type { Relation } from '@imports/model/Relation';
 import { DataDocument, HistoryDocument } from '@imports/types/data';
 import { logger } from '@imports/utils/logger';
-import { Collection, FindOptions } from 'mongodb';
+import { ClientSession, Collection, FindOptions } from 'mongodb';
 import updateRelationReference from './relationReference';
 
 type Action = 'update' | 'create' | 'delete';
+const CONCURRENCY = 5;
 
-export default async function updateRelationReferences(metaName: string, action: Action, id: string, data: Record<string, any>) {
+export default async function updateRelationReferences(metaName: string, action: Action, id: string, data: Record<string, any>, dbSession?: ClientSession) {
 	// Get references from meta
 	let relation, relations, relationsFromDocumentName;
 	const references = MetaObject.References[metaName];
@@ -90,7 +91,7 @@ export default async function updateRelationReferences(metaName: string, action:
 	}
 
 	// Find record with all information, not only udpated data, to calc aggregations
-	const record = await (collection as unknown as Collection<DataDocument>).findOne({ _id: id });
+	const record = await (collection as unknown as Collection<DataDocument>).findOne({ _id: id }, { session: dbSession });
 
 	// If no record was found log error and abort
 	if (!record) {
@@ -98,63 +99,76 @@ export default async function updateRelationReferences(metaName: string, action:
 	}
 
 	// # Iterate over relations to process
-	await BluebirdPromise.mapSeries(Object.keys(referencesToUpdate), async referenceDocumentName => {
-		relations = referencesToUpdate[referenceDocumentName];
-		await BluebirdPromise.mapSeries(relations, async relation => {
-			var value;
-			const relationLookupMeta = MetaObject.Meta[relation.document];
-			// Get lookup id from record
-			const lookupId: string[] = [];
-			if (has(record, `${relation.lookup}._id`)) {
-				lookupId.push(get(record, `${relation.lookup}._id`, '') as string);
-			} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && Array.isArray(record[relation.lookup])) {
-				for (value of record[relation.lookup] as Array<Record<string, string>>) {
-					if (value != null && value._id != null) {
-						lookupId.push(value._id);
-					}
-				}
-			}
-
-			// If action is update and the lookup field of relation was updated go to hitory to update old relation
-			if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
-				// Try to get history model
-				const historyCollection = MetaObject.Collections[`${metaName}.History`];
-
-				if (historyCollection == null) {
-					logger.error(`Can't get model for document ${metaName}.History`);
-				}
-
-				// Define query of history with data id
-				const historyQuery: Record<string, unknown> = { dataId: id.toString() };
-
-				// Add condition to get aonly data with changes on lookup field
-				historyQuery[`data.${relation.lookup}`] = { $exists: true };
-
-				// And sort DESC to get only last data
-				const historyOptions: FindOptions<HistoryDocument> = { sort: { createdAt: -1 } };
-
-				// User findOne to get only one data
-				const historyRecord = await historyCollection.findOne<HistoryDocument>(historyQuery, historyOptions);
-
-				// If there are record
-				if (historyRecord) {
-					// Then get lookupid to execute update on old relation
-					let historyLookupId: string[] = new Array().concat(get(historyRecord, `data.${relation.lookup}._id`, []));
-					if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && isArray(historyRecord.data[relation.lookup])) {
-						historyLookupId = [];
-						for (value of historyRecord.data[relation.lookup] as Array<Record<string, string>>) {
-							value._id != null && historyLookupId.push(value._id);
+	await BluebirdPromise.map(
+		Object.keys(referencesToUpdate),
+		async referenceDocumentName => {
+			relations = referencesToUpdate[referenceDocumentName];
+			await BluebirdPromise.map(
+				relations,
+				async relation => {
+					var value;
+					const relationLookupMeta = MetaObject.Meta[relation.document];
+					// Get lookup id from record
+					const lookupId: string[] = [];
+					if (has(record, `${relation.lookup}._id`)) {
+						lookupId.push(get(record, `${relation.lookup}._id`, '') as string);
+					} else if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && Array.isArray(record[relation.lookup])) {
+						for (value of record[relation.lookup] as Array<Record<string, string>>) {
+							if (value != null && value._id != null) {
+								lookupId.push(value._id);
+							}
 						}
 					}
 
-					await BluebirdPromise.mapSeries(historyLookupId, async historyLookupIdItem => {
-						return updateRelationReference(metaName, relation, historyLookupIdItem, referenceDocumentName);
-					});
-				}
-			}
+					// If action is update and the lookup field of relation was updated go to hitory to update old relation
+					if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
+						// Try to get history model
+						const historyCollection = MetaObject.Collections[`${metaName}.History`];
 
-			// Execute update of relations into new value
-			await BluebirdPromise.mapSeries(lookupId, lookupIdItem => updateRelationReference(metaName, relation, lookupIdItem, referenceDocumentName));
-		});
-	});
+						if (historyCollection == null) {
+							logger.error(`Can't get model for document ${metaName}.History`);
+						}
+
+						// Define query of history with data id
+						const historyQuery: Record<string, unknown> = { dataId: id.toString() };
+
+						// Add condition to get aonly data with changes on lookup field
+						historyQuery[`data.${relation.lookup}`] = { $exists: true };
+
+						// And sort DESC to get only last data
+						const historyOptions: FindOptions<HistoryDocument> = { sort: { createdAt: -1 }, session: dbSession };
+
+						const historyRecord = await historyCollection.findOne<HistoryDocument>(historyQuery, historyOptions);
+
+						// If there are record
+						if (historyRecord) {
+							// Then get lookupid to execute update on old relation
+							let historyLookupId: string[] = new Array().concat(get(historyRecord, `data.${relation.lookup}._id`, []));
+							if (get(relationLookupMeta, `fields.${relation.lookup}.isList`) === true && isArray(historyRecord.data[relation.lookup])) {
+								historyLookupId = [];
+								for (value of historyRecord.data[relation.lookup] as Array<Record<string, string>>) {
+									value._id != null && historyLookupId.push(value._id);
+								}
+							}
+
+							await BluebirdPromise.map(
+								historyLookupId,
+								async historyLookupIdItem => {
+									return updateRelationReference(metaName, relation, historyLookupIdItem, referenceDocumentName, dbSession);
+								},
+								{ concurrency: CONCURRENCY },
+							);
+						}
+					}
+
+					// Execute update of relations into new value
+					await BluebirdPromise.map(lookupId, lookupIdItem => updateRelationReference(metaName, relation, lookupIdItem, referenceDocumentName, dbSession), {
+						concurrency: CONCURRENCY,
+					});
+				},
+				{ concurrency: CONCURRENCY },
+			);
+		},
+		{ concurrency: CONCURRENCY },
+	);
 }

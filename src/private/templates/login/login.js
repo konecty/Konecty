@@ -449,6 +449,8 @@ function clearCookie(cookie, clearMyKonecty) {
 					password_SHA256: SHA256($('#password').val().trim()),
 					ns: $('#namespace').val().replace(/[\s-]/g, ''),
 					geolocation: geolocation,
+					fingerprint: window.fingerprint,
+					source: 'interface',
 					resolution: JSON.stringify({
 						height: screen.height,
 						width: screen.width,
@@ -468,7 +470,7 @@ function clearCookie(cookie, clearMyKonecty) {
 						$('.login-panel').show();
 						$('.login-panel').find('input:first').focus();
 						var json = JSON.parse(r.responseText);
-						$('.login-panel .alert-danger').html(json.errors[0].errors[0].msg);
+						$('.login-panel .alert-danger').html(json.errors[0].message);
 						$('.login-panel .alert-danger').removeClass('hidden');
 					}
 				},
@@ -480,20 +482,8 @@ function clearCookie(cookie, clearMyKonecty) {
 		}, 8000);
 
 		window.navigator.geolocation.getCurrentPosition(continueLogin, function () {
-			// $( '.loading-panel' ).hide();
-
 			clearTimeout(timeout);
 			continueLogin();
-
-			// if ( $.browser.chrome === true ) {
-			// 	$( '.geolocation-denied-chrome-panel' ).show();
-			// }
-			// else if ( $.browser.safari === true ) {
-			// 	$( '.geolocation-denied-safari-panel' ).show();
-			// }
-			// else if ( $.browser.mozilla === true ) {
-			// 	$( '.geolocation-denied-mozilla-panel' ).show();
-			// }
 		});
 
 		return false;
@@ -521,11 +511,11 @@ function clearCookie(cookie, clearMyKonecty) {
 			complete: function (r) {
 				var json = JSON.parse(r.responseText);
 
-				if (json && json.errors && json.errors.length > 0 && json.errors[0].errors && json.errors[0].errors.length > 0 && json.errors[0].errors[0].msg) {
+				if (json && json.errors && json.errors.length > 0 && json.errors[0].message) {
 					$('.loading-panel').hide();
 					$('.reset-panel').show();
 					$('.reset-panel').find('input:first').focus();
-					$('.reset-panel .alert-danger').html(json.errors[0].errors[0].msg);
+					$('.reset-panel .alert-danger').html(json.errors[0].message);
 					$('.reset-panel .alert-danger').removeClass('hidden');
 					return;
 				}

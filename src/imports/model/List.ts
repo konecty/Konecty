@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { KonFilter } from './Filter';
 import { LabelSchema } from './Label';
+import { KonFilter } from './Filter';
 
 export const ListSchema = z.object({
 	type: z.literal('list'),
@@ -11,6 +11,8 @@ export const ListSchema = z.object({
 	name: z.string(),
 	label: LabelSchema,
 	plurals: LabelSchema,
+	loadDataAtOpen: z.boolean().optional(),
+	namespace: z.array(z.string()).optional(),
 	icon: z.string().optional(),
 	refreshRate: z.object({
 		options: z.array(z.number()),
