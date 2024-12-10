@@ -236,7 +236,7 @@ Search for contacts from California OR New York:
     "conditions": [
         {
             "operator": "greater_than",
-            "term": "createdAt",
+            "term": "_createdAt",
             "value": {
                 "$date": "2024-01-01T00:00:00.000Z"
             }
@@ -383,7 +383,7 @@ Search for records that belong to the current user's group and were created toda
         },
         {
             "operator": "greater_or_equals",
-            "term": "_createdAt",
+            "term": "deliveryDate",
             "value": "$now"
         }
     ]

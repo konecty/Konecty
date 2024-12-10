@@ -236,7 +236,7 @@ Buscar contatos que são do Rio de Janeiro OU São Paulo:
     "conditions": [
         {
             "operator": "greater_than",
-            "term": "createdAt",
+            "term": "_createdAt",
             "value": {
                 "$date": "2024-01-01T00:00:00.000Z"
             }
@@ -484,7 +484,7 @@ Buscar registros que pertencem ao grupo do usuário atual e foram criados hoje:
         },
         {
             "operator": "greater_or_equals",
-            "term": "_createdAt",
+            "term": "deliveryDate",
             "value": "$now"
         }
     ]
