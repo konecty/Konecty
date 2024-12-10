@@ -1,0 +1,19 @@
+- Use 'const' for all declarations that will not be reassigned
+- Avoid magic numbers, define constants with meaningful names
+- Use ES Modules (import/export) instead of CommonJS (require)
+- Prefer asynchronous methods with async/await instead of callbacks
+- Use try/catch for error handling in asynchronous operations
+- Implement structured logging using the pino library
+- Use package.json for development, testing, and production scripts
+- Keep dependencies updated
+- Implement input validation using the Zod library
+- Use environment variables for sensitive configurations (.env)
+- Implement rate limiting for public APIs
+- Use middleware for centralized error handling
+- Implement health checks for application monitoring
+- Use compression middleware for HTTP responses
+- Configure CORS properly for security
+- Use helmet for HTTP security headers
+- Implement JWT authentication when necessary
+- Use connection pooling for the database
+- Implement graceful shutdown for connections and services 
