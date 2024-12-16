@@ -106,7 +106,9 @@ describe('Update Product', () => {
 				ids: [
 					{
 						_id: product?._id,
-						_updatedAt: product?._updatedAt,
+						_updatedAt: {
+							$date: product?._updatedAt,
+						},
 					},
 				],
 			};
@@ -230,7 +232,9 @@ describe('Update Product', () => {
 				ids: [
 					{
 						_id: product?._id,
-						_updatedAt: new Date(product?._updatedAt as string),
+						_updatedAt: {
+							$date: new Date(product?._updatedAt as string),
+						},
 					},
 				],
 			};
