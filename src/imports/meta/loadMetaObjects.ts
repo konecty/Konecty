@@ -8,6 +8,7 @@ import unset from 'lodash/unset';
 import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import { MetaObjectType } from '@imports/types/metadata';
+import { isReplicaSet } from '@imports/utils/mongo';
 import { Promise as BluebirdPromise } from 'bluebird';
 import path from 'path';
 import { checkInitialData } from '../data/initialData';
@@ -299,5 +300,8 @@ export async function loadMetaObjects() {
 	logger.info('Loading MetaObject.Meta from database');
 	await dbLoad();
 
-	dbWatch();
+	if (await isReplicaSet()) {
+		logger.info('[kondata] Starting watch for changes in the database');
+		dbWatch();
+	}
 }
