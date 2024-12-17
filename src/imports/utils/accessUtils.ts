@@ -129,7 +129,7 @@ export function removeUnauthorizedDataForRead(metaAccess: MetaAccess, data: Reco
 	if (!isObject(data)) {
 		return data;
 	}
-	const newData: typeof data = {};
+	const newData: typeof data = { _id: data._id };
 
 	for (const fieldName in data) {
 		const access = getFieldPermissions(metaAccess, fieldName);

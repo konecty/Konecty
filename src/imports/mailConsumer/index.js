@@ -98,7 +98,7 @@ async function sendEmail(record) {
 		if (process.env.KONECTY_MODE !== 'production') {
 			mail.subject = `[DEV] [${mail.to}] ${mail.subject}`;
 			// mail.to = null; // 'team@konecty.com'
-			mail.to = 'derotino.silveira@konecty.com';
+			mail.to = 'support@konecty.com';
 			mail.cc = null;
 			mail.bcc = null;
 		}
@@ -118,7 +118,7 @@ async function sendEmail(record) {
 						logger.info(`📧 Email sent to ${response.accepted.join(', ')} via [${serverHost || record.server}]`);
 					}
 				} catch (err) {
-					logger.error(err, `📧 Email error: ${err.message}`);
+					logger.error(`📧 Email error: ${err.message}`);
 					err.host = serverHost || record.server;
 					await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
 
@@ -199,11 +199,11 @@ async function consume() {
 	await BluebirdPromise.each(range(0, mailCount), async () => {
 		const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
 
-		if (updatedRecords == null || updatedRecords.value == null) {
+		if (updatedRecords == null || updatedRecords._id == null) {
 			return;
 		}
 
-		return send(updatedRecords.value);
+		return send(updatedRecords);
 	});
 
 	return consumeCronJob.start();
