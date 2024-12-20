@@ -1,12 +1,11 @@
-import { MetaObject } from '@imports/model/MetaObject';
-import { MetaObjectSchema, MetaObjectType } from '@imports/types/metadata';
-import { logger } from '@imports/utils/logger';
-import metaFormatter from './metaFormatter';
-import { getAccessFor } from '@imports/utils/accessUtils';
 import { getUserSafe } from '@imports/auth/getUser';
 import { MetaAccess } from '@imports/model/MetaAccess';
+import { MetaObject } from '@imports/model/MetaObject';
+import { MetaObjectSchema, MetaObjectType } from '@imports/types/metadata';
+import { getAccessFor } from '@imports/utils/accessUtils';
+import { logger } from '@imports/utils/logger';
 import isObject from 'lodash/isObject';
-import { ObjectId } from 'mongodb';
+import metaFormatter from './metaFormatter';
 
 type Params = {
 	authTokenId: string;
@@ -42,7 +41,7 @@ export async function getMetasByDocument({ document, authTokenId }: Params) {
 		return accessCache[documentName];
 	};
 
-	const accesses: ObjectId[] = [];
+	const accesses: string[] = [];
 
 	const accessVerifiedMetas = metas.flatMap(meta => {
 		const access = getAccess(meta.document || meta.name);
