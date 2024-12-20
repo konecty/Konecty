@@ -36,6 +36,7 @@ import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
+import { QueueManager } from '@imports/queue/QueueManager';
 import objectsDiff from '@imports/utils/objectsDiff';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -881,6 +882,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 
 				if (resultRecord != null) {
+					await QueueManager.sendEvent({ operation: 'create', data: resultRecord });
+
 					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 						try {
 							tracingSpan?.addEvent('Processing sync Konsistent');
@@ -1370,6 +1373,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					}
 				}
 
+				await Promise.all(updatedRecords.map(record => QueueManager.sendEvent({ operation: 'update', data: record })));
 				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
 				if (emailsToSend.length > 0) {
