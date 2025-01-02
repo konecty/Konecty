@@ -13,14 +13,14 @@ export class RabbitMQResource extends QueueResource {
 
 			// Handle connection events
 			this.connection.on('error', err => {
-				this.logger.error(err, '[kueue] RabbitMQ connection error');
+				this.logger.error(err, '[KonQueue] RabbitMQ connection error');
 			});
 
 			this.connection.on('close', () => {
-				this.logger.warn('[kueue] RabbitMQ connection closed');
+				this.logger.warn('[KonQueue] RabbitMQ connection closed');
 			});
 
-			this.logger.info('[kueue] Connected to RabbitMQ');
+			this.logger.info('[KonQueue] Connected to RabbitMQ');
 		} catch (error) {
 			await this.handleError(error as Error, 'connect');
 		}
@@ -32,7 +32,7 @@ export class RabbitMQResource extends QueueResource {
 			await this.connection?.close();
 			this.channel = null;
 			this.connection = null;
-			this.logger.info('[kueue] Disconnected from RabbitMQ');
+			this.logger.info('[KonQueue] Disconnected from RabbitMQ');
 		} catch (error) {
 			await this.handleError(error as Error, 'disconnect');
 		}

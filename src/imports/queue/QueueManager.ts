@@ -73,7 +73,7 @@ class QueueManagerClass {
 	}
 }
 
-function createResourcefromType(type: QueueResourceConfig['type']) {
+function createResourcefromType(type: QueueResourceConfig['type']): QueueResource {
 	switch (type) {
 		case 'rabbitmq':
 			return new RabbitMQResource();
