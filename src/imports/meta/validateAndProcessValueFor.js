@@ -11,6 +11,7 @@ import isFunction from 'lodash/isFunction';
 import isNumber from 'lodash/isNumber';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
+import kebabCase from 'lodash/kebabCase';
 import omit from 'lodash/omit';
 import size from 'lodash/size';
 
@@ -50,6 +51,7 @@ const CaseFunctions = {
 	pathCase,
 	sentenceCase,
 	snakeCase,
+	kebabCase,
 	titleCase,
 	upperCase,
 	lowerCase,
