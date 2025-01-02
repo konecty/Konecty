@@ -1,5 +1,4 @@
 import { logger } from '@imports/utils/logger';
-import createHistory from './createHistory';
 import processReverseLookups from './processReverseLookups';
 import * as References from './updateReferences';
 
@@ -34,9 +33,6 @@ export default async function processIncomingChange(
 
 		await References.updateRelations(metaName, action, incomingChange._id, incomingChange, dbSession);
 		logTimeSpent(startTime, `Updated relation references for ${metaName}`);
-
-		await createHistory(metaName, action, incomingChange._id, user, new Date(), changedProps, dbSession);
-		logTimeSpent(startTime, `Created history for ${metaName}`);
 	} catch (e) {
 		if ((e as MongoServerError).codeName === 'NoSuchTransaction') {
 			logger.trace('Transaction was already closed');

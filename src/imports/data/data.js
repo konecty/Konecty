@@ -35,6 +35,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
+import createHistory from '@imports/konsistent/createHistory';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
 import objectsDiff from '@imports/utils/objectsDiff';
 import { dateToString, stringToDate } from '../data/dateParser';
@@ -48,7 +49,6 @@ import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
 import populateDetailFields from './populateDetailFields/fromArray';
-
 
 
 export async function getNextUserFromQueue({ authTokenId, document, queueId, contextUser }) {
@@ -881,6 +881,12 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 
 				if (resultRecord != null) {
+					const historyResult = await createHistory(document, 'create', resultRecord._id, user, new Date(), resultRecord, dbSession);
+					if (historyResult === false) {
+						await dbSession.abortTransaction();
+						return errorReturn(`[${document}] Error creating history`);
+					}
+
 					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 						try {
 							tracingSpan?.addEvent('Processing sync Konsistent');
@@ -1349,24 +1355,30 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 				}
 
-				if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
-					try {
+				for await (const record of updatedRecords) {
+					const original = existsRecords.find(r => r._id === record._id);
+					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
+
+					const changedProps = objectsDiff(original, newRecord);
+
+					const historyResult = await createHistory(document, 'update', record._id, user, new Date(), changedProps, dbSession);
+					if (historyResult === false) {
+						await dbSession.abortTransaction();
+						return errorReturn(`[${document}] Error creating history`);
+					}
+
+					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 						logger.debug('Processing Konsistent');
 						tracingSpan?.addEvent('Processing sync Konsistent');
-
-						for await (const record of updatedRecords) {
-							const original = existsRecords.find(r => r._id === record._id);
-							const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
-
-							const changedProps = objectsDiff(original, newRecord);
+						try {
 							await processIncomingChange(document, record, 'update', user, changedProps, dbSession);
-						}
-					} catch (e) {
-						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
-						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
-						await dbSession.abortTransaction();
+						} catch (e) {
+							logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+							tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
+							await dbSession.abortTransaction();
 
-						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
+							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
+						}
 					}
 				}
 
