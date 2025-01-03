@@ -12,9 +12,11 @@ class QueueManager {
 	public async restartResources() {
 		const resources = MetaObject.Namespace.QueueConfig?.resources;
 		if (resources == null) return;
-		if (this.resourcesCfg === JSON.stringify(resources)) return;
 
-		this.resourcesCfg = JSON.stringify(resources);
+		const resourcesCfg = JSON.stringify(resources);
+		if (this.resourcesCfg === resourcesCfg) return;
+
+		this.resourcesCfg = resourcesCfg;
 
 		logger.info('[QueueManager] (Re)Starting resources');
 
