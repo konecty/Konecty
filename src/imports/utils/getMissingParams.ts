@@ -1,3 +1,5 @@
-export default function getMissingParams(object: object, params: string[]) {
-	return params.filter(param => object[param as keyof typeof object] == null);
+import get from 'lodash/get';
+
+export default function getMissingParams(object: object | null | undefined, params: string[]) {
+	return params.filter(param => get(object, param) == null);
 }

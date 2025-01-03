@@ -882,7 +882,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 
 				if (resultRecord != null) {
-					if (MetaObject.Namespace.plan?.useExternalKonsistent === true) {
+					if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 						tracingSpan?.addEvent('Sending Konsistent message');
 						await queueManager.sendMessage(Konsistent.queue.resource, Konsistent.queue.name, { metaName: document, operation: 'create', data: resultRecord });
 					} else {
@@ -1362,7 +1362,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
 
 					const changedProps = objectsDiff(original, newRecord);
-					if (MetaObject.Namespace.plan?.useExternalKonsistent === true) {
+					if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 						tracingSpan?.addEvent('Sending Konsistent message');
 						await queueManager.sendMessage(Konsistent.queue.resource, Konsistent.queue.name, { metaName: document, operation: 'update', data: changedProps });
 					} else {

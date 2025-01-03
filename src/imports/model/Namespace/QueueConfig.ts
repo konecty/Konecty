@@ -13,6 +13,7 @@ const ResourceSchema = z.object({
 
 export const QueueConfigSchema = z.object({
 	resources: z.record(ResourceSchema),
+	konsistent: z.tuple([z.string().describe('resourceName'), z.string().describe('queueName')]).optional(),
 });
 
 export type QueueConfig = z.infer<typeof QueueConfigSchema>;
