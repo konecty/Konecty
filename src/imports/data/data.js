@@ -36,7 +36,7 @@ import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
-import { QueueManager } from '@imports/queue/QueueManager';
+import eventManager from '@imports/lib/EventManager';
 import objectsDiff from '@imports/utils/objectsDiff';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -49,8 +49,6 @@ import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
 import populateDetailFields from './populateDetailFields/fromArray';
-
-
 
 export async function getNextUserFromQueue({ authTokenId, document, queueId, contextUser }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
@@ -882,8 +880,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 
 				if (resultRecord != null) {
-					await QueueManager.sendEvent({ operation: 'create', data: resultRecord });
-
 					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 						try {
 							tracingSpan?.addEvent('Processing sync Konsistent');
@@ -895,6 +891,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 						}
 					}
+
+					await eventManager.sendEvent(document, 'create', resultRecord);
 					return successReturn([dateToString(resultRecord)]);
 				}
 			}
@@ -1275,7 +1273,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				try {
 					tracingSpan?.addEvent('Updating record', { filter, updateOperation });
 					await collection.updateOne(filter, updateOperation, { session: dbSession });
-					return successReturn(record._id);
+					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
 					logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on update', { error: e.message });
@@ -1298,7 +1296,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				);
 			}
 
-			const updatedIs = updateResults.map(result => result.data);
+			const updatedIs = updateResults.map(result => result.data._id);
 
 			if (updatedIs.length > 0) {
 				if (MetaObject.Namespace.onUpdate != null) {
@@ -1373,7 +1371,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					}
 				}
 
-				await Promise.all(updatedRecords.map(record => QueueManager.sendEvent({ operation: 'update', data: record })));
+				await Promise.all(updateResults.map(({ data }) => eventManager.sendEvent(document, 'update', data)));
 				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
 				if (emailsToSend.length > 0) {

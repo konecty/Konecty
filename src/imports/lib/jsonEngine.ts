@@ -1,13 +1,13 @@
-import { QueueRuleConfig } from '@imports/model/Namespace/QueueConfig';
+import { DocumentEvent } from '@imports/model/Document/DocumentEvents';
 import { Engine, TopLevelCondition } from 'json-rules-engine';
 import get from 'lodash/get';
 
-export function createEngine(rules: QueueRuleConfig[]) {
+export function createEngine(rules: DocumentEvent[]) {
 	const engine = new Engine(
 		rules.map(rule => ({
-			event: { type: 'publish', params: { queue: rule.queue, resource: rule.resource } },
+			event: { type: rule.event.type, params: rule.event },
 			conditions: rule.conditions as TopLevelCondition,
-			name: `${rule.resource}:${rule.queue}`,
+			name: rule.name,
 		})),
 		{ allowUndefinedFacts: true },
 	);

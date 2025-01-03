@@ -4,7 +4,6 @@ import { db } from '@imports/database';
 import startDatabaseVersioning from '@imports/database/versioning';
 import { setupKonsistent } from '@imports/konsistent';
 import { start as startSendMail } from '@imports/mailConsumer';
-import { QueueManager } from '@imports/queue/QueueManager';
 import { logger } from '@imports/utils/logger';
 import { serverStart } from './routes';
 
@@ -28,8 +27,6 @@ const app = async () => {
 
 		await startDatabaseVersioning();
 		await serverStart();
-
-		await QueueManager.init();
 	} catch (error) {
 		logger.error(error, 'Error while starting up');
 	}

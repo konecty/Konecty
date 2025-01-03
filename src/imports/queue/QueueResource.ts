@@ -9,7 +9,7 @@ export abstract class QueueResource {
 
 	abstract createQueue(name: string, driverParams?: Record<string, any>): Promise<void>;
 
-	abstract sendMessage(queue: string, message: string): Promise<KonectyResult>;
+	abstract sendMessage(queue: string, message: unknown): Promise<KonectyResult>;
 
 	protected async handleError(error: Error, context: string): Promise<never> {
 		this.logger.error(error, `Queue error in ${context}`);
