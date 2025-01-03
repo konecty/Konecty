@@ -22,8 +22,7 @@ class QueueManager {
 		logger.info('[QueueManager] (Re)Starting resources');
 
 		if (Object.keys(this.resources).length > 0) {
-			await Promise.all(Object.values(this.resources).map(resource => resource.disconnect()));
-			this.resources = {};
+			await this.disconnectAllResources();
 		}
 
 		await Promise.all(
