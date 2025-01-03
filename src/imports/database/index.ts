@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import querystring from 'node:querystring';
 
+import ShutdownManager from '@imports/lib/ShutdownManager';
 import { logger } from '../utils/logger';
 
 const MONGODB_URL_REGEX = /^(mongodb|mongodb\+srv):\/\/(?:([^:]+):([^@]+)@)?([^/:]+)(?::(\d+))?\/([^?]+)(?:\?(.+))?$/;
@@ -31,6 +32,8 @@ export const client = new MongoClient(MONGO_URL, options);
 export const db = client.db(database);
 
 export const dneDB = client.db('utils');
+
+ShutdownManager.addHandler(async () => client.close());
 
 client.on('error', err => {
 	logger.error(err, `MongoDB connection error: ${err.message}`);

@@ -1,3 +1,4 @@
+import ShutdownManager from '@imports/lib/ShutdownManager';
 import { MetaObject } from '@imports/model/MetaObject';
 import { QueueResourceConfig } from '@imports/model/Namespace/QueueConfig';
 import { logger } from '@imports/utils/logger';
@@ -50,6 +51,11 @@ class QueueManager {
 
 		return await resource.sendMessage(queueName, message);
 	}
+
+	public async disconnectAllResources() {
+		await Promise.all(Object.values(this.resources).map(resource => resource.disconnect()));
+		this.resources = {};
+	}
 }
 
 function createResourcefromType(type: QueueResourceConfig['type']): QueueResource {
@@ -62,4 +68,7 @@ function createResourcefromType(type: QueueResourceConfig['type']): QueueResourc
 }
 
 const queueManager = new QueueManager();
+
+ShutdownManager.addHandler(async () => queueManager.disconnectAllResources());
+
 export default queueManager;
