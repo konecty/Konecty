@@ -25,13 +25,13 @@ class EventManager {
 	}
 
 	async sendEvent(metaName: string, operation: string, data: object): Promise<void> {
-		const result = await this.jsonEngine.run({ metaName, operation, data });
-		if (result.events.length === 0) return;
-
 		const eventData = { metaName, operation, data };
 
+		const { events } = await this.jsonEngine.run(eventData);
+		if (events.length === 0) return;
+
 		await Promise.all(
-			result.events.map(async event => {
+			events.map(async event => {
 				switch (event.type) {
 					case 'queue':
 						return await this._sendQueueEvent(event, eventData);
