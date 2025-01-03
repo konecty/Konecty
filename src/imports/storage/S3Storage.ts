@@ -4,7 +4,7 @@ import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3C
 
 import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
-import { S3StorageCfg } from '@imports/model/Namespace';
+import { S3StorageCfg } from '@imports/model/Namespace/Storage';
 import FileStorage, { FileContext, FileData } from '@imports/storage/FileStorage';
 import { logger } from '@imports/utils/logger';
 

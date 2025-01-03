@@ -2,7 +2,7 @@ import { z } from 'zod';
 import FileStorage, { FileContext, FileData } from './FileStorage';
 
 import { MetaObject } from '@imports/model/MetaObject';
-import { ServerStorageCfg } from '@imports/model/Namespace';
+import { ServerStorageCfg } from '@imports/model/Namespace/Storage';
 import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
 import { Readable } from 'stream';

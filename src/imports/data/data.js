@@ -35,7 +35,10 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
+import { Konsistent } from '@imports/konsistent';
 import processIncomingChange from '@imports/konsistent/processIncomingChange';
+import eventManager from '@imports/lib/EventManager';
+import queueManager from '@imports/queue/QueueManager';
 import objectsDiff from '@imports/utils/objectsDiff';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
@@ -48,8 +51,6 @@ import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
 import populateDetailFields from './populateDetailFields/fromArray';
-
-
 
 export async function getNextUserFromQueue({ authTokenId, document, queueId, contextUser }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
@@ -881,7 +882,10 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				}
 
 				if (resultRecord != null) {
-					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
+					if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
+						tracingSpan?.addEvent('Sending Konsistent message');
+						await queueManager.sendMessage(Konsistent.queue.resource, Konsistent.queue.name, { metaName: document, operation: 'create', data: resultRecord });
+					} else {
 						try {
 							tracingSpan?.addEvent('Processing sync Konsistent');
 							await processIncomingChange(document, resultRecord, 'create', user, resultRecord, dbSession);
@@ -892,6 +896,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 						}
 					}
+
+					await eventManager.sendEvent(document, 'create', resultRecord);
 					return successReturn([dateToString(resultRecord)]);
 				}
 			}
@@ -1272,7 +1278,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				try {
 					tracingSpan?.addEvent('Updating record', { filter, updateOperation });
 					await collection.updateOne(filter, updateOperation, { session: dbSession });
-					return successReturn(record._id);
+					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
 					logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on update', { error: e.message });
@@ -1295,7 +1301,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				);
 			}
 
-			const updatedIs = updateResults.map(result => result.data);
+			const updatedIs = updateResults.map(result => result.data._id);
 
 			if (updatedIs.length > 0) {
 				if (MetaObject.Namespace.onUpdate != null) {
@@ -1349,27 +1355,31 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 				}
 
-				if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
-					try {
-						logger.debug('Processing Konsistent');
-						tracingSpan?.addEvent('Processing sync Konsistent');
+				logger.debug('Processing Konsistent');
 
-						for await (const record of updatedRecords) {
-							const original = existsRecords.find(r => r._id === record._id);
-							const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
+				for await (const record of updatedRecords) {
+					const original = existsRecords.find(r => r._id === record._id);
+					const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
 
-							const changedProps = objectsDiff(original, newRecord);
+					const changedProps = objectsDiff(original, newRecord);
+					if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
+						tracingSpan?.addEvent('Sending Konsistent message');
+						await queueManager.sendMessage(Konsistent.queue.resource, Konsistent.queue.name, { metaName: document, operation: 'update', data: changedProps });
+					} else {
+						try {
+							tracingSpan?.addEvent('Processing sync Konsistent');
 							await processIncomingChange(document, record, 'update', user, changedProps, dbSession);
-						}
-					} catch (e) {
-						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
-						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
-						await dbSession.abortTransaction();
+						} catch (e) {
+							logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+							tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
+							await dbSession.abortTransaction();
 
-						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
+							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
+						}
 					}
 				}
 
+				await Promise.all(updateResults.map(({ data }) => eventManager.sendEvent(document, 'update', data)));
 				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
 				if (emailsToSend.length > 0) {

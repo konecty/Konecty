@@ -5,7 +5,7 @@ import { Collection } from 'mongodb';
 import { db } from '../database';
 import type { Document } from './Document';
 import { List } from './List';
-import { Namespace } from './Namespace';
+import type { Namespace } from './Namespace';
 import { Pivot } from './Pivot';
 
 interface Data {
@@ -25,7 +25,7 @@ const MetaObject: Data = {
 	DisplayMeta: {},
 	Access: {},
 	References: {},
-	Namespace: { type: 'namespace' },
+	Namespace: { _id: 'Namespace', type: 'namespace' },
 	MetaByCollection: {},
 	Collections: {},
 };

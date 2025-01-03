@@ -5,8 +5,10 @@ import { globSync } from 'glob';
 import debounce from 'lodash/debounce';
 import unset from 'lodash/unset';
 
+import eventManager from '@imports/lib/EventManager';
 import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
+import queueManager from '@imports/queue/QueueManager';
 import { MetaObjectType } from '@imports/types/metadata';
 import { isReplicaSet } from '@imports/utils/mongo';
 import { Promise as BluebirdPromise } from 'bluebird';
@@ -24,6 +26,7 @@ const rebuildReferences = debounce(function () {
 	logger.info('[kondata] Rebuilding references');
 
 	MetaObject.References = buildReferences(MetaObject.Meta);
+	eventManager.rebuildEvents();
 }, rebuildReferencesDelay);
 
 async function registerMeta(meta: MetaObjectType) {
@@ -85,6 +88,7 @@ async function dbLoad() {
 					break;
 				case 'namespace':
 					Object.assign(MetaObject.Namespace, meta);
+					await queueManager.restartResources();
 					break;
 			}
 		}),
@@ -145,7 +149,7 @@ function dbWatch() {
 					MetaObject.DisplayMeta[change.fullDocument._id] = change.fullDocument;
 					break;
 			}
-		} else if (change.operationType === 'update') {
+		} else if (change.operationType === 'update' || change.operationType === 'replace') {
 			const fullDocument = await MetaObject.MetaObject.findOne({ _id: change.documentKey._id });
 			switch (fullDocument?.type) {
 				case 'access':
@@ -162,6 +166,7 @@ function dbWatch() {
 					break;
 				case 'namespace':
 					Object.assign(MetaObject.Namespace, fullDocument);
+					await queueManager.restartResources();
 					break;
 			}
 		}
@@ -214,6 +219,7 @@ const fsLoad = (metadataDir: string) => {
 		if (type === 'namespace') {
 			const meta = getDocumentData(path, type);
 			Object.assign(MetaObject.Namespace, meta);
+			await queueManager.restartResources();
 			return;
 		}
 

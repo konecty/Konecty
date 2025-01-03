@@ -10,7 +10,7 @@ import mime from 'mime-types';
 import { mkdirp } from 'mkdirp';
 import path from 'path';
 
-import { FSStorageCfg } from '@imports/model/Namespace';
+import { FSStorageCfg } from '@imports/model/Namespace/Storage';
 import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
