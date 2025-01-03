@@ -49,6 +49,7 @@ class QueueManager {
 			return;
 		}
 
+		logger.debug(`Sending queue message to ${resourceName} - ${queueName}`);
 		return await resource.sendMessage(queueName, message);
 	}
 

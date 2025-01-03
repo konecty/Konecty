@@ -13,7 +13,7 @@ export class RabbitMQResource extends QueueResource {
 
 			// Handle connection events
 			this.connection.on('error', err => {
-				this.logger.error(err, 'RabbitMQ connection error');
+				this.handleConnectionError(err, () => this.connect(url));
 			});
 
 			this.logger.info('Connected to RabbitMQ');
