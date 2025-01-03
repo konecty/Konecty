@@ -2,10 +2,8 @@ import { z } from 'zod';
 
 const QueueEventSchema = z.object({
 	type: z.literal('queue'),
-	params: z.object({
-		queue: z.string(),
-		resource: z.string(),
-	}),
+	queue: z.string(),
+	resource: z.string(),
 });
 
 // The rules use json-rules-engine to evaluate the conditions
