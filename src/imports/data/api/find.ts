@@ -166,7 +166,7 @@ export default async function find<AsStream extends boolean = false>({
 			}, {});
 		}
 
-		if ((queryOptions.sort && Object.keys(queryOptions.sort).length === 0) || (queryOptions.limit ?? DEFAULT_PAGE_SIZE) > 1000) {
+		if ((queryOptions.limit ?? DEFAULT_PAGE_SIZE) > 1000) {
 			queryOptions.sort = { _id: 1 };
 		}
 
@@ -235,7 +235,7 @@ export default async function find<AsStream extends boolean = false>({
 
 		tracingSpan?.addEvent('Executing find query', { queryOptions: JSON.stringify(queryOptions) });
 		const aggregateStages: AggregatePipeline = [{ $match: query }];
-		if (queryOptions.sort) {
+		if (queryOptions.sort && Object.keys(queryOptions.sort).length > 0) {
 			aggregateStages.push({ $sort: queryOptions.sort });
 		}
 		if (queryOptions.skip) {
