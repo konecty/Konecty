@@ -166,7 +166,7 @@ export default async function find<AsStream extends boolean = false>({
 			}, {});
 		}
 
-		if ((queryOptions.limit ?? DEFAULT_PAGE_SIZE) > 1000) {
+		if ((queryOptions.sort && Object.keys(queryOptions.sort).length === 0) || (queryOptions.limit ?? DEFAULT_PAGE_SIZE) > 1000) {
 			queryOptions.sort = { _id: 1 };
 		}
 
