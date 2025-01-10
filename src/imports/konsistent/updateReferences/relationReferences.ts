@@ -16,10 +16,9 @@ import { logger } from '@imports/utils/logger';
 import { ClientSession, Collection, FindOptions } from 'mongodb';
 import updateRelationReference from './relationReference';
 
-type Action = 'update' | 'create' | 'delete';
 const CONCURRENCY = 5;
 
-export default async function updateRelationReferences(metaName: string, action: Action, id: string, data: Record<string, any>, dbSession?: ClientSession) {
+export default async function updateRelationReferences(metaName: string, operation: string, id: string, data: Record<string, any>, dbSession?: ClientSession) {
 	// Get references from meta
 	let relation, relations, relationsFromDocumentName;
 	const references = MetaObject.References[metaName];
@@ -33,14 +32,14 @@ export default async function updateRelationReferences(metaName: string, action:
 	let collection = MetaObject.Collections[metaName];
 
 	// If action is delete then get collection trash
-	if (action === 'delete') {
+	if (operation === 'delete') {
 		collection = MetaObject.Collections[`${metaName}.Trash`];
 	}
 
 	const referencesToUpdate: Record<string, Relation[]> = {};
 
 	// If action is create or delete then update all records with data related in this record
-	if (action !== 'update') {
+	if (operation !== 'update') {
 		for (relationsFromDocumentName in references.relationsFrom) {
 			relations = references.relationsFrom[relationsFromDocumentName];
 			referencesToUpdate[relationsFromDocumentName] = relations;
@@ -121,7 +120,7 @@ export default async function updateRelationReferences(metaName: string, action:
 					}
 
 					// If action is update and the lookup field of relation was updated go to hitory to update old relation
-					if (lookupId.length > 0 && action === 'update' && has(data, `${relation.lookup}._id`)) {
+					if (lookupId.length > 0 && operation === 'update' && has(data, `${relation.lookup}._id`)) {
 						// Try to get history model
 						const historyCollection = MetaObject.Collections[`${metaName}.History`];
 
