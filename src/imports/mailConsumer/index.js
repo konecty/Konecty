@@ -72,7 +72,7 @@ async function sendEmail(record) {
 	if (!record.to) {
 		const err = { message: 'No address to send e-mail to.' };
 		err.host = serverHost || record.server;
-		await MetaObject.Collections['Message'].update({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+		await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
 		logger.error(`📧 Email error: ${JSON.stringify(err, null, ' ')}`);
 		return errorReturn('No address to send e-mail to.');
 	} else {
