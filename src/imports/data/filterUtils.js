@@ -592,8 +592,8 @@ export function filterConditionToFn(condition, metaObject, req) {
 			return [];
 		}
 
-		// Here the fieldValue is guaranteed an array
-		return fieldValue.map(value => {
+		// The field here has isList, it should be an array (altough it may not)
+		return [].concat(fieldValue).map(value => {
 			if (value == null) {
 				return value;
 			}
