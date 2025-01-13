@@ -713,7 +713,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				const validation = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, data, cleanedData), user });
 				if (validation.success === false) {
 					await dbSession.abortTransaction();
-					logger.error(validation, `Create - Script Validation Error - ${validation.reason}`);
+					logger.debug(`Create - Script Validation Error - ${validation.reason}`);
 					return errorReturn(`[${document}] ${validation.reason}`);
 				}
 			}
@@ -1253,7 +1253,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					tracingSpan?.addEvent('Running validation script');
 					const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, bodyData), user });
 					if (validationScriptResult.success === false) {
-						logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
+						logger.debug(`Update - Script Validation Error - ${validationScriptResult.reason}`);
 						return validationScriptResult;
 					}
 				}
