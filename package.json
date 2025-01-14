@@ -4,7 +4,7 @@
 	"description": "Konecty",
 	"main": "./src/server/main.ts",
 	"scripts": {
-		"start": "env-cmd nodemon --watch src  --exec 'ts-node ./src/server/main.ts' -e ts,js,mjs,cjs,json,hbs | pino-pretty --colorize",
+		"start": "env-cmd nodemon --watch src --ext ts,js,mjs,cjs,json,hbs --exec ts-node ./src/server/main.ts",
 		"prebuild": "rimraf dist",
 		"build": "babel src --out-dir dist --no-copy-ignored --extensions '.ts,.js'",
 		"lint": "eslint src/**/*.ts src/**/*.js --fix",

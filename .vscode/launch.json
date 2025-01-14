@@ -15,6 +15,19 @@
 			"skipFiles": ["<node_internals>/**"],
 			"console": "integratedTerminal",
 			"type": "node"
+		},
+		{
+			"name": "Debug with Nodemon",
+			"request": "launch",
+
+			"envFile": "${workspaceFolder}/.env",
+			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
+			"runtimeArgs": ["--watch", "src", "--ext", "ts,js,mjs,cjs,json,hbs", "--exec", "ts-node", "${workspaceFolder}/src/server/main.ts"],
+
+			"skipFiles": ["<node_internals>/**"],
+			"console": "integratedTerminal",
+			"restart": true,
+			"type": "node"
 		}
 	]
 }
