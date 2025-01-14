@@ -10,7 +10,7 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
         return true;
     }
 
-    const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy'];
+    const keysToIgnore = ['_updatedAt', '_createdAt', '_deletedAt', '_updatedBy', '_createdBy', '_deletedBy', '_id'];
     const meta = MetaObject.Meta[metaName];
 
     const history = MetaObject.Collections[`${metaName}.History`];

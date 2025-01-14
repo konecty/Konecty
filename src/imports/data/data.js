@@ -1401,73 +1401,73 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 					}
 				}
-			}
 
-			const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
-			if (emailsToSend.length > 0) {
-				tracingSpan?.addEvent('Sending emails');
+				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
-				const messagesCollection = MetaObject.Collections['Message'];
-				const now = DateTime.local().toJSDate();
-				await messagesCollection.insertMany(
-					emailsToSend.map(email =>
-						Object.assign(
-							{},
-							{
-								_id: randomId(),
-								_createdAt: now,
-								_createdBy: pick(user, ['_id', 'name', 'group']),
-								_updatedAt: now,
-								_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
-							},
-							email,
+				if (emailsToSend.length > 0) {
+					tracingSpan?.addEvent('Sending emails');
+
+					const messagesCollection = MetaObject.Collections['Message'];
+					const now = DateTime.local().toJSDate();
+					await messagesCollection.insertMany(
+						emailsToSend.map(email =>
+							Object.assign(
+								{},
+								{
+									_id: randomId(),
+									_createdAt: now,
+									_createdBy: pick(user, ['_id', 'name', 'group']),
+									_updatedAt: now,
+									_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
+								},
+								email,
+							),
 						),
-					),
-					{ session: dbSession }
-				);
-			}
+						{ session: dbSession }
+					);
+				}
 
-			return successReturn(responseData);
-		}
+				return successReturn(responseData);
+			}
 		});
 
-	if (transactionResult != null && transactionResult.success != null) {
-		tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+		if (transactionResult != null && transactionResult.success != null) {
+			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
 
-		// Process events and messages after transaction completes successfully
-		if (transactionResult.success === true && transactionResult.data?.length > 0) {
-			const updatedRecords = transactionResult.data;
+			// Process events and messages after transaction completes successfully
+			if (transactionResult.success === true && transactionResult.data?.length > 0) {
+				const updatedRecords = transactionResult.data;
 
-			for (const record of updatedRecords) {
+				for (const record of updatedRecords) {
+					try {
+						await Konsistent.processChangeAsync(record);
+					} catch (e) {
+						logger.error(e, `Error sending Konsistent message: ${e.message}`);
+					}
+				}
+
+				// Send events
 				try {
-					await Konsistent.processChangeAsync(record);
+					await Promise.all(updatedRecords.map(record => eventManager.sendEvent(document, 'update', record)));
 				} catch (e) {
-					logger.error(e, `Error sending Konsistent message: ${e.message}`);
+					logger.error(e, `Error sending events: ${e.message}`);
 				}
 			}
 
-			// Send events
-			try {
-				await Promise.all(updatedRecords.map(record => eventManager.sendEvent(document, 'update', record)));
-			} catch (e) {
-				logger.error(e, `Error sending events: ${e.message}`);
-			}
+			return transactionResult;
 		}
-
-		return transactionResult;
+	} catch (e) {
+		tracingSpan?.addEvent('Error on transaction', { error: e.message });
+		tracingSpan?.setAttribute({ error: e.message });
+		logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 	}
-} catch (e) {
-	tracingSpan?.addEvent('Error on transaction', { error: e.message });
-	tracingSpan?.setAttribute({ error: e.message });
-	logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-}
-finally {
-	tracingSpan?.addEvent('Ending session');
-	dbSession.endSession();
-}
+	finally {
+		tracingSpan?.addEvent('Ending session');
+		dbSession.endSession();
+	}
 
-return errorReturn(`[${document}] Error on update, there is no affected record`);
+	return errorReturn(`[${document}] Error on update, there is no affected record`);
 }
 
 /* Delete records
