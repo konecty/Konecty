@@ -10,7 +10,7 @@ import reduce from 'lodash/reduce';
 
 type RecordObject = {
 	toHexString?: () => string;
-};
+} & Record<string, unknown>;
 
 type TransformFn = (date: DateTime) => string;
 

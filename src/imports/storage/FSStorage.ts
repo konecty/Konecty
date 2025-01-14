@@ -10,7 +10,7 @@ import mime from 'mime-types';
 import { mkdirp } from 'mkdirp';
 import path from 'path';
 
-import { FSStorageCfg } from '@imports/model/Namespace';
+import { FSStorageCfg } from '@imports/model/Namespace/Storage';
 import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
@@ -52,12 +52,12 @@ export default class FSStorage implements FileStorage {
 		fileData.etag = crypto.createHash('md5').update(filesToSave[0].content).digest('hex');
 		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
 		const storageDirectory = storageCfg.directory ?? '/tmp';
-		const fileDirectory = path.join(storageDirectory, fileData.key.replace(fileData.name, ''));
-
-		await mkdirp(fileDirectory);
+		const rootDirectory = path.join(storageDirectory, fileData.key.replace(fileData.name, ''));
 
 		await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
-			const filePath = path.join(fileDirectory, name);
+			const filePath = path.join(rootDirectory, name);
+			const directory = path.dirname(filePath);
+			await mkdirp(directory);
 			await writeFile(filePath, content);
 		});
 
@@ -71,7 +71,7 @@ export default class FSStorage implements FileStorage {
 
 		if (coreResponse.success === false) {
 			await BluebirdPromise.each(filesToSave, async ({ name }) => {
-				await unlink(path.join(fileDirectory, name));
+				await unlink(path.join(rootDirectory, name));
 			});
 		}
 

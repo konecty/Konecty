@@ -16,7 +16,7 @@ const translationApi: FastifyPluginCallback = async fastify => {
 			}
 
 			if (asImage) {
-				const response = await fetch(logoURL);
+				const response = await fetch(logoURL.startsWith('http') ? logoURL : `https://${logoURL}`);
 				const contentType = response.headers.get('Content-Type');
 				if (contentType != null) {
 					reply.header('Content-Type', contentType);

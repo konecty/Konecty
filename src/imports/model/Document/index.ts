@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { FieldSchema } from './Field';
-import { LabelSchema } from './Label';
-import { RelationSchema } from './Relation';
+import { FieldSchema } from '../Field';
+import { LabelSchema } from '../Label';
+import { RelationSchema } from '../Relation';
+import { DocumentEventSchema } from './DocumentEvents';
 
 export const DocumentSchema = z
 	.object({
@@ -35,6 +36,8 @@ export const DocumentSchema = z
 		description: LabelSchema.optional(),
 		relations: z.array(RelationSchema).optional(),
 		collection: z.string().optional(),
+
+		events: z.array(DocumentEventSchema).optional(),
 	})
 	.passthrough();
 

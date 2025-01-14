@@ -11,6 +11,7 @@ import isFunction from 'lodash/isFunction';
 import isNumber from 'lodash/isNumber';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
+import kebabCase from 'lodash/kebabCase';
 import omit from 'lodash/omit';
 import size from 'lodash/size';
 
@@ -50,6 +51,7 @@ const CaseFunctions = {
 	pathCase,
 	sentenceCase,
 	snakeCase,
+	kebabCase,
 	titleCase,
 	upperCase,
 	lowerCase,
@@ -896,6 +898,10 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				const inheritLookupObjectResult = mustBeObject(value);
 				if (inheritLookupObjectResult.success === false) {
 					return inheritLookupObjectResult;
+				}
+
+				if (Object.keys(value).length === 0) {
+					return successReturn(null);
 				}
 
 				const idResult = mustBeString(value._id, `${fieldName}._id`);
