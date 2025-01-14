@@ -235,7 +235,7 @@ export default async function find<AsStream extends boolean = false>({
 
 		tracingSpan?.addEvent('Executing find query', { queryOptions: JSON.stringify(queryOptions) });
 		const aggregateStages: AggregatePipeline = [{ $match: query }];
-		if (queryOptions.sort) {
+		if (queryOptions.sort && Object.keys(queryOptions.sort).length > 0) {
 			aggregateStages.push({ $sort: queryOptions.sort });
 		}
 		if (queryOptions.skip) {

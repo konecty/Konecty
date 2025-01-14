@@ -303,10 +303,10 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 			queryCondition[condition.term] = { $regex: conditionValue + '$', $options: 'i' };
 			break;
 		case 'in':
-			queryCondition[condition.term] = { $in: conditionValue };
+			queryCondition[condition.term] = { $in: [].concat(conditionValue) };
 			break;
 		case 'not_in':
-			queryCondition[condition.term] = { $nin: conditionValue };
+			queryCondition[condition.term] = { $nin: [].concat(conditionValue) };
 			break;
 		case 'greater_than':
 			queryCondition[condition.term] = { $gt: conditionValue };
