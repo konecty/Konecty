@@ -11,6 +11,7 @@ import { errorReturn, successReturn } from '@imports/utils/return';
 import omit from 'lodash/omit';
 import { ClientSession, Collection } from 'mongodb';
 import { logger } from '../utils/logger';
+import createHistory from './createHistory';
 import processIncomingChange from './processIncomingChange';
 
 type RunningKonsistent = {
@@ -61,12 +62,18 @@ async function processChangeAsync(data: DataDocument) {
 }
 
 async function processChangeSync(metaName: string, operation: string, user: object, data: { originalRecord?: DataDocument; newRecord: DataDocument }, dbSession?: ClientSession) {
+	const changedProps = data.originalRecord
+		? objectsDiff(data.originalRecord, omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']))
+		: omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
+
+	const historyResult = await createHistory(metaName, operation, data.newRecord._id, user, new Date(), changedProps, dbSession);
+	if (historyResult === false) {
+		throw new Error(`[${metaName}] Error creating history`);
+	}
+
 	if (MetaObject.Namespace.plan?.useExternalKonsistent !== true || Konsistent.isQueueEnabled === false) {
 		logger.debug('Processing sync Konsistent');
 
-		const changedProps = data.originalRecord
-			? objectsDiff(data.originalRecord, omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']))
-			: omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
 		return processIncomingChange(metaName, data.newRecord, operation, user, changedProps, dbSession);
 	}
 }
