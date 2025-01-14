@@ -900,6 +900,10 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return inheritLookupObjectResult;
 				}
 
+				if (Object.keys(value).length === 0) {
+					return successReturn(null);
+				}
+
 				const idResult = mustBeString(value._id, `${fieldName}._id`);
 				if (idResult.success === false) {
 					return idResult;

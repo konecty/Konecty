@@ -35,8 +35,8 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from "@imports/data/api";
 import { client } from '@imports/database';
-import processIncomingChange from '@imports/konsistent/processIncomingChange';
-import objectsDiff from '@imports/utils/objectsDiff';
+import { Konsistent } from '@imports/konsistent';
+import eventManager from '@imports/lib/EventManager';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
 import { processCollectionLogin } from '../data/processCollectionLogin';
@@ -48,8 +48,6 @@ import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
 import populateDetailFields from './populateDetailFields/fromArray';
-
-
 
 export async function getNextUserFromQueue({ authTokenId, document, queueId, contextUser }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
@@ -715,7 +713,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				const validation = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, data, cleanedData), user });
 				if (validation.success === false) {
 					await dbSession.abortTransaction();
-					logger.error(validation, `Create - Script Validation Error - ${validation.reason}`);
+					logger.debug(`Create - Script Validation Error - ${validation.reason}`);
 					return errorReturn(`[${document}] ${validation.reason}`);
 				}
 			}
@@ -750,11 +748,19 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						}, dbSession);
 
 						if (loginFieldResult.success === false) {
+							await dbSession.abortTransaction();
 							return loginFieldResult;
 						}
 
 						set(newRecord, get(metaObject, 'login.field', 'login'), loginFieldResult.data);
 					}
+
+					const walResult = await Konsistent.writeAheadLog(document, 'create', newRecord, user, dbSession);
+					if (walResult.success === false) {
+						await dbSession.abortTransaction();
+						return walResult;
+					}
+
 					if (upsert != null && isObject(upsert)) {
 						const updateOperation = {
 							$setOnInsert: {},
@@ -880,25 +886,42 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					);
 				}
 
-				if (resultRecord != null) {
-					if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
-						try {
-							tracingSpan?.addEvent('Processing sync Konsistent');
-							await processIncomingChange(document, resultRecord, 'create', user, resultRecord, dbSession);
-						} catch (e) {
-							tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
-							logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
-							await dbSession.abortTransaction();
-							return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
-						}
-					}
-					return successReturn([dateToString(resultRecord)]);
+				try {
+					await Konsistent.processChangeSync(document, 'create', user, { newRecord: resultRecord }, dbSession);
+				} catch (e) {
+					tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
+					logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
+					await dbSession.abortTransaction();
+					return errorReturn(`[${document}] Error on sync Konsistent: ${e.message}`);
 				}
+
+				return successReturn([dateToString(resultRecord)]);
 			}
+
+			return errorReturn(`[${document}] Error on insert, there is no affected record`);
 		});
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+
+			// Process events and messages after transaction completes successfully
+			if (transactionResult.success === true && transactionResult.data?.[0] != null) {
+				const record = transactionResult.data[0];
+
+				try {
+					await Konsistent.processChangeAsync(record);
+				} catch (e) {
+					logger.error(e, `Error sending Konsistent message: ${e.message}`);
+				}
+
+				// Send events
+				try {
+					await eventManager.sendEvent(document, 'create', record);
+				} catch (e) {
+					logger.error(e, `Error sending event: ${e.message}`);
+				}
+			}
+
 			return transactionResult;
 		}
 	} catch (e) {
@@ -1230,7 +1253,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					tracingSpan?.addEvent('Running validation script');
 					const validationScriptResult = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, record, bodyData), user });
 					if (validationScriptResult.success === false) {
-						logger.error(validationScriptResult, `Update - Script Validation Error - ${validationScriptResult.reason}`);
+						logger.debug(`Update - Script Validation Error - ${validationScriptResult.reason}`);
 						return validationScriptResult;
 					}
 				}
@@ -1272,7 +1295,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				try {
 					tracingSpan?.addEvent('Updating record', { filter, updateOperation });
 					await collection.updateOne(filter, updateOperation, { session: dbSession });
-					return successReturn(record._id);
+					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
 					logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on update', { error: e.message });
@@ -1295,7 +1318,22 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				);
 			}
 
-			const updatedIs = updateResults.map(result => result.data);
+			const walResults = await BluebirdPromise.map(
+				updateResults,
+				async result => await Konsistent.writeAheadLog(document, 'update', result.data, user, dbSession),
+				{ concurrency: 5 },
+			);
+
+			if (walResults.some(result => result.success === false)) {
+				await dbSession.abortTransaction();
+				return errorReturn(
+					walResults
+						.filter(result => result.success === false)
+						.map(result => result.errors)
+						.flat(),
+				);
+			}
+			const updatedIs = updateResults.map(result => result.data._id);
 
 			if (updatedIs.length > 0) {
 				if (MetaObject.Namespace.onUpdate != null) {
@@ -1349,18 +1387,12 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 				}
 
-				if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
+				// Process sync Konsistent
+				for await (const newRecord of updatedRecords) {
+					const originalRecord = existsRecords.find(r => r._id === newRecord._id);
+
 					try {
-						logger.debug('Processing Konsistent');
-						tracingSpan?.addEvent('Processing sync Konsistent');
-
-						for await (const record of updatedRecords) {
-							const original = existsRecords.find(r => r._id === record._id);
-							const newRecord = omit(record, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
-
-							const changedProps = objectsDiff(original, newRecord);
-							await processIncomingChange(document, record, 'update', user, changedProps, dbSession);
-						}
+						await Konsistent.processChangeSync(document, 'update', user, { originalRecord, newRecord }, dbSession);
 					} catch (e) {
 						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
@@ -1369,6 +1401,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 					}
 				}
+
 
 				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
@@ -1401,6 +1434,27 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+
+			// Process events and messages after transaction completes successfully
+			if (transactionResult.success === true && transactionResult.data?.length > 0) {
+				const updatedRecords = transactionResult.data;
+
+				for (const record of updatedRecords) {
+					try {
+						await Konsistent.processChangeAsync(record);
+					} catch (e) {
+						logger.error(e, `Error sending Konsistent message: ${e.message}`);
+					}
+				}
+
+				// Send events
+				try {
+					await Promise.all(updatedRecords.map(record => eventManager.sendEvent(document, 'update', record)));
+				} catch (e) {
+					logger.error(e, `Error sending events: ${e.message}`);
+				}
+			}
+
 			return transactionResult;
 		}
 	} catch (e) {
