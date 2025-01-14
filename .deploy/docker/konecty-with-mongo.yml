@@ -51,3 +51,23 @@ services:
             timeout: 10s
             retries: 3
             start_period: 20s
+
+    rabbitmq:
+        image: rabbitmq:4.0-management
+        container_name: rabbitmq
+        hostname: konecty-rabbitmq
+        ports:
+            - '5672:5672' # AMQP protocol
+            - '15672:15672' # Management interface
+        environment:
+            - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
+            - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-admin}
+        volumes:
+            - ${PWD}/.dev-data/rabbitmq:/var/lib/rabbitmq
+        healthcheck:
+        test: rabbitmq-diagnostics check_port_connectivity
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 5s
+        restart: always
