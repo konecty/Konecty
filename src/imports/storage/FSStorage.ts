@@ -14,6 +14,8 @@ import { FSStorageCfg } from '@imports/model/Namespace/Storage';
 import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
+const DEFAULT_DIRECTORY = '/data/uploads';
+
 export default class FSStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
@@ -25,7 +27,7 @@ export default class FSStorage implements FileStorage {
 		logger.trace(`Proxying file ${filePath} from FS`);
 		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
 		const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-		const directory = storageCfg.directory ?? '/tmp';
+		const directory = storageCfg.directory ?? DEFAULT_DIRECTORY;
 		const fullPath = path.join(directory, filePath);
 
 		try {
@@ -51,7 +53,7 @@ export default class FSStorage implements FileStorage {
 	async upload(fileData: FileData, filesToSave: { name: string; content: Buffer }[], context: FileContext) {
 		fileData.etag = crypto.createHash('md5').update(filesToSave[0].content).digest('hex');
 		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
-		const storageDirectory = storageCfg.directory ?? '/tmp';
+		const storageDirectory = storageCfg.directory ?? DEFAULT_DIRECTORY;
 		const rootDirectory = path.join(storageDirectory, fileData.key.replace(fileData.name, ''));
 
 		await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
@@ -71,7 +73,13 @@ export default class FSStorage implements FileStorage {
 
 		if (coreResponse.success === false) {
 			await BluebirdPromise.each(filesToSave, async ({ name }) => {
-				await unlink(path.join(rootDirectory, name));
+				try {
+					const filePath = path.join(rootDirectory, name);
+					const directory = path.dirname(filePath);
+					await unlink(path.join(directory, name));
+				} catch (error) {
+					logger.error(error, `Error deleting file ${name} from FS`);
+				}
 			});
 		}
 
@@ -80,7 +88,7 @@ export default class FSStorage implements FileStorage {
 
 	async delete(directory: string, fileName: string) {
 		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
-		directory = `${storageCfg.directory ?? '/tmp'}/${directory}`;
+		directory = `${storageCfg.directory ?? DEFAULT_DIRECTORY}/${directory}`;
 
 		const fullPath = path.join(directory, decodeURIComponent(fileName));
 		const thumbnailFullPath = path.join(directory, 'thumbnail', decodeURIComponent(fileName));
