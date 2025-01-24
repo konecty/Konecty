@@ -4,6 +4,7 @@ import queueManager from '@imports/queue/QueueManager';
 import getMissingParams from '@imports/utils/getMissingParams';
 import { logger } from '@imports/utils/logger';
 import { Engine } from 'json-rules-engine';
+import get from 'lodash/get';
 import { createEngine } from './jsonEngine';
 
 type CustomRuleEvent = {
@@ -31,18 +32,21 @@ class EventManager {
 	}
 
 	async sendEvent(metaName: string, operation: string, { data, original }: { data: object; original?: object }): Promise<void> {
-		const eventData = { metaName, operation, data };
+		const commonEventData = { metaName, operation, data };
 
-		const { events } = await this.jsonEngine.run(eventData);
+		const { events } = await this.jsonEngine.run(commonEventData);
 		if (events.length === 0) return;
 
 		await Promise.all(
 			(events as CustomRuleEvent[]).map(async event => {
 				logger.debug(`Triggered event ${event.name}`);
+				const eventData = Object.assign({}, commonEventData, event.params.sendOriginal ? { original } : {});
 
 				switch (event.type) {
 					case 'queue':
-						return await this._sendQueueEvent(event, Object.assign({}, eventData, event.params.sendOriginal ? { original } : {}));
+						return await this._sendQueueEvent(event, eventData);
+					case 'webhook':
+						return await this._sendWebhookEvent(event, eventData);
 					default:
 						logger.warn(`Unknown event type: ${event.type}`);
 				}
@@ -51,7 +55,7 @@ class EventManager {
 	}
 
 	private async _sendQueueEvent(event: CustomRuleEvent, eventData: object) {
-		if (event.params == null) return;
+		if (event.params == null || event.params.type !== 'queue') return;
 
 		const missingParams = getMissingParams(event.params, ['resource', 'queue']);
 		if (missingParams.length > 0) {
@@ -63,8 +67,29 @@ class EventManager {
 		await Promise.all(
 			Array()
 				.concat(event.params.queue)
-				.map(queueName => queueManager.sendMessage(event.params.resource, queueName, eventData)),
+				.map(queueName => queueManager.sendMessage(get(event.params, 'resource', ''), queueName, eventData)),
 		);
+	}
+
+	private async _sendWebhookEvent(event: CustomRuleEvent, eventData: object) {
+		if (event.params == null || event.params.type !== 'webhook') return;
+
+		const missingParams = getMissingParams(event.params, ['url']);
+		if (missingParams.length > 0) {
+			logger.warn(`Missing params for webhook event: ${missingParams.join(', ')}`);
+			return;
+		}
+
+		try {
+			const hasBody = ['GET', 'HEAD'].includes(event.params.method ?? 'GET') === false;
+			await fetch(event.params.url, {
+				method: event.params.method ?? 'GET',
+				headers: event.params.headers ?? {},
+				body: hasBody ? JSON.stringify(eventData) : undefined,
+			});
+		} catch (e) {
+			logger.error(e, `Error sending webhook event: ${(e as Error).message}`);
+		}
 	}
 }
 
