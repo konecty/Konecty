@@ -5,18 +5,6 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Launch via NPM",
-			"request": "launch",
-
-			"envFile": "${workspaceFolder}/.env",
-			"runtimeExecutable": "${workspaceFolder}/node_modules/.bin/ts-node",
-			"runtimeArgs": ["${workspaceFolder}/src/server/main.ts"],
-
-			"skipFiles": ["<node_internals>/**"],
-			"console": "integratedTerminal",
-			"type": "node"
-		},
-		{
 			"name": "Debug with Nodemon",
 			"request": "launch",
 

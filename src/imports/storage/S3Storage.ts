@@ -1,6 +1,5 @@
-import BluebirdPromise from 'bluebird';
-
 import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import BluebirdPromise from 'bluebird';
 
 import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
@@ -9,6 +8,7 @@ import FileStorage, { FileContext, FileData } from '@imports/storage/FileStorage
 import { logger } from '@imports/utils/logger';
 
 import crypto from 'crypto';
+import path from 'path';
 import { request } from 'undici';
 import { z } from 'zod';
 
@@ -98,8 +98,9 @@ export default class S3Storage implements FileStorage {
 		const storageCfg = this.storageCfg as z.infer<typeof S3StorageCfg>;
 
 		const s3 = new S3Client(storageCfg.config ?? {});
+
 		const bucket = storageCfg.bucket;
-		const fileDirectory = fileData.key.replace(fileData.name, '').replace(/\/$/, '');
+		const fileDirectory = path.dirname(fileData.key);
 
 		await BluebirdPromise.each(filesToSave, async ({ name, content }, index) => {
 			const s3Result = await s3.send(

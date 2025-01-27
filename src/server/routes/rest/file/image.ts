@@ -84,9 +84,15 @@ async function imageApiFn(
 
 	if (legacyFullFileUrlRegex.test(incomingPath)) {
 		logger.trace(`LEGACY_FULL_FILE_URL_PATTERN ${incomingPath}`);
-		const [, , preprocess, document, recordId, fieldName, fileName] = legacyFullFileUrlRegex.exec(incomingPath) ?? [];
+		const imagePath = incomingPath
+			.replace(new RegExp(`/?${MetaObject.Namespace.ns}`), '')
+			.replace(/\/rest/, '')
+			.replace(/\/image/, '');
+		const res = legacyFullFileUrlRegex.exec(imagePath) ?? [];
+		const [, maybeDocument, preprocess, document, recordId, fieldName, fileName] = res;
 
-		const destination = preprocess != null ? path.join(document, recordId, fieldName, 'watermark', fileName) : path.join(document, recordId, fieldName, fileName);
+		const destination =
+			preprocess != null ? path.join(document, recordId, fieldName, 'watermark', fileName) : path.join(maybeDocument ?? '', document, recordId, fieldName, fileName);
 
 		return sendFile(reply, req.url, destination);
 	}

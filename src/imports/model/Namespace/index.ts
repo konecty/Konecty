@@ -12,6 +12,7 @@ export const NamespaceSchema = z
 		dateFormat: z.string().optional(),
 		logoURL: z.string().optional(),
 		sessionExpirationInSeconds: z.number().nonnegative().finite().optional(),
+		ns: z.string(),
 
 		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg]).optional(),
 		RocketChat: z

@@ -8,7 +8,7 @@ import { KonectyResult } from '@imports/types/result';
 import { WatermarkConfigSchema } from '@imports/types/watermark';
 import { errorReturn, successReturn } from '@imports/utils/return';
 
-async function getWatermark(): Promise<KonectyResult<Buffer>> {
+async function getWatermark({ maxWidth, maxHeight }: { maxWidth: number; maxHeight: number }): Promise<KonectyResult<Buffer>> {
 	const wmConfigResult = WatermarkConfigSchema.safeParse(MetaObject.Namespace.storage?.wm);
 
 	if (wmConfigResult.success === false) {
@@ -27,7 +27,7 @@ async function getWatermark(): Promise<KonectyResult<Buffer>> {
 			}),
 		);
 
-		return successReturn(s3Result.Body) as KonectyResult<Buffer>;
+		return successReturn(await s3Result.Body?.transformToByteArray()) as KonectyResult<Buffer>;
 	}
 
 	if (wmConfig.type === 'fs') {
@@ -48,20 +48,19 @@ async function getWatermark(): Promise<KonectyResult<Buffer>> {
 
 	if (wmConfig.type === 'text') {
 		const svg = `
-		<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
-            <rect width="100%" height="100%" fill="transparent" />
-            <text x="50%" y="50%" text-anchor="middle" alignment-baseline="middle" font-size="300" fill="rgba(255, 255, 255, 0.4)">${wmConfig.text}</text>
+		<svg xmlns="http://www.w3.org/2000/svg" width="${maxWidth}" height="${maxHeight}" viewBox="0 0 ${maxWidth} ${maxHeight}">
+            <rect width="100%" height="100%" fill="none" />
+            <text x="50%" y="50%" text-anchor="middle" alignment-baseline="middle" font-size="${maxHeight * 0.15}px" stroke="rgba(0, 0, 0, 0.2)" stroke-width="1" fill="rgba(255, 255, 255, 0.4)">${wmConfig.text}</text>
         </svg>`;
 
 		const fileContent = await sharp(Buffer.from(svg))
 			.resize({
-				width: 2048,
-				height: 2048,
+				width: maxWidth,
+				height: maxHeight,
 				fit: sharp.fit.contain,
-				position: sharp.gravity.center,
-				background: '#cccccc',
+				withoutEnlargement: true,
 			})
-			.png({ force: true })
+			.png({ quality: 60, force: true })
 			.toBuffer();
 
 		return successReturn(fileContent) as KonectyResult<Buffer>;
@@ -71,29 +70,37 @@ async function getWatermark(): Promise<KonectyResult<Buffer>> {
 }
 
 export async function applyWatermark(image: Sharp): Promise<KonectyResult<Buffer>> {
-	const wmResult = await getWatermark();
+	const metadata = await image.metadata();
+	const { width = 1024, height = 1024 } = metadata;
 
+	const wmResult = await getWatermark({ maxWidth: width, maxHeight: height });
 	if (wmResult.success === false) {
 		return wmResult;
 	}
 
-	const { width = 1024, height = 1024 } = await image.metadata();
-
-	const wmBuffer = await sharp(wmResult.data)
+	// First resize watermark to desired size (80% of original)
+	const resizedWatermark = sharp(wmResult.data)
 		.resize({
 			width: Math.floor(width * 0.8),
 			height: Math.floor(height * 0.8),
 			fit: sharp.fit.inside,
-			position: sharp.gravity.center,
+			withoutEnlargement: true,
 		})
-		.toBuffer();
+		.png({ quality: 60, force: true });
 
-	const composite = image.composite([
-		{
-			input: wmBuffer,
-			gravity: sharp.gravity.center,
-		},
-	]);
+	// Now composite the properly sized watermark canvas onto the original image
+	const composite = image
+		.resize({
+			width,
+			height,
+			fit: sharp.fit.cover,
+		})
+		.composite([
+			{
+				input: await resizedWatermark.toBuffer(),
+				gravity: sharp.gravity.center,
+			},
+		]);
 
 	const result = await composite.toBuffer();
 

@@ -1,6 +1,14 @@
 import { WatermarkConfigSchema } from '@imports/types/watermark';
 import { z } from 'zod';
 
+export const StorageFileVersionCfg = z.object({
+	width: z.number(),
+	height: z.number(),
+	name: z.string(),
+	wm: z.boolean().optional(),
+});
+export type StorageFileVersionCfg = z.infer<typeof StorageFileVersionCfg>;
+
 const CommonStorageProps = z.object({
 	wm: WatermarkConfigSchema.optional(),
 	thumbnail: z.object({ size: z.number().optional() }).optional(),
@@ -13,6 +21,8 @@ const CommonStorageProps = z.object({
 			maxHeight: z.number().optional(),
 		})
 		.optional(),
+
+	versions: z.array(StorageFileVersionCfg).optional(),
 });
 
 export const S3StorageCfg = CommonStorageProps.extend({
