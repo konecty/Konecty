@@ -1,5 +1,6 @@
 import buildReferences from '@imports/meta/buildReferences';
 import { MetaAccess } from '@imports/model/MetaAccess';
+import { DataDocument } from '@imports/types/data';
 import { MetaObjectType } from '@imports/types/metadata';
 import { Collection } from 'mongodb';
 import { db } from '../database';
@@ -16,7 +17,7 @@ interface Data {
 	References: ReturnType<typeof buildReferences>;
 	Namespace: Namespace;
 	MetaByCollection: Record<string, any>;
-	Collections: Record<string, Collection>;
+	Collections: Record<string, Collection<DataDocument>>;
 }
 
 const MetaObject: Data = {
