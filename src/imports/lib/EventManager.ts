@@ -8,9 +8,14 @@ import get from 'lodash/get';
 import { createEngine } from './jsonEngine';
 
 type CustomRuleEvent = {
-	name: string;
 	type: string;
-	params: DocumentEvent['event'];
+	params: DocumentEvent['event'] & { name: string };
+};
+
+type SendEventParams = {
+	data: object;
+	original?: object;
+	full?: object;
 };
 
 class EventManager {
@@ -31,7 +36,7 @@ class EventManager {
 		this.jsonEngine = createEngine(allEvents);
 	}
 
-	async sendEvent(metaName: string, operation: string, { data, original }: { data: object; original?: object }): Promise<void> {
+	async sendEvent(metaName: string, operation: string, { data, original, full }: SendEventParams): Promise<void> {
 		const commonEventData = { metaName, operation, data };
 
 		const { events } = await this.jsonEngine.run(commonEventData);
@@ -39,8 +44,8 @@ class EventManager {
 
 		await Promise.all(
 			(events as CustomRuleEvent[]).map(async event => {
-				logger.debug(`Triggered event ${event.name}`);
-				const eventData = Object.assign({}, commonEventData, event.params.sendOriginal ? { original } : {});
+				logger.debug(`Triggered event ${event.params.name}`);
+				const eventData = Object.assign({}, commonEventData, event.params.sendOriginal ? { original } : null, event.params.sendFull ? { full } : null);
 
 				switch (event.type) {
 					case 'queue':

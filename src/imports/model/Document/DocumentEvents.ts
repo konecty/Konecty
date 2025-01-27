@@ -6,6 +6,7 @@ const QueueEventSchema = z.object({
 	resource: z.string(),
 
 	sendOriginal: z.boolean().optional(),
+	sendFull: z.boolean().optional(),
 });
 
 const WebhookEventSchema = z.object({
@@ -15,6 +16,7 @@ const WebhookEventSchema = z.object({
 	method: z.string().optional(),
 
 	sendOriginal: z.boolean().optional(),
+	sendFull: z.boolean().optional(),
 });
 
 // The rules use json-rules-engine to evaluate the conditions

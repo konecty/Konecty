@@ -5,7 +5,7 @@ import get from 'lodash/get';
 export function createEngine(rules: DocumentEvent[]) {
 	const engine = new Engine(
 		rules.map(rule => ({
-			event: { type: rule.event.type, params: rule.event },
+			event: { type: rule.event.type, params: { ...rule.event, name: rule.name } },
 			conditions: rule.conditions as TopLevelCondition,
 			name: rule.name,
 		})),

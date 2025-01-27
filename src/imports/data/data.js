@@ -916,7 +916,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 				// Send events
 				try {
-					await eventManager.sendEvent(document, 'create', { data: record, original: undefined });
+					await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
 				} catch (e) {
 					logger.error(e, `Error sending event: ${e.message}`);
 				}
@@ -1324,7 +1324,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			const walResults = await BluebirdPromise.map(
 				updateResults,
-				async result => await Konsistent.writeAheadLog(document, 'update', result.data, user, dbSession),
+				async data => await Konsistent.writeAheadLog(document, 'update', data, user, dbSession),
 				{ concurrency: 5 },
 			);
 
@@ -1431,20 +1431,29 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					);
 				}
 
-				return successReturn(responseData);
+				// Full is the full affected documents,    Changed are the changed props only
+				return successReturn({ full: responseData, changed: updateResults.map(r => r.data) });
 			}
 		});
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
 
-			// Process events and messages after transaction completes successfully
-			if (transactionResult.success === true && transactionResult.data?.length > 0) {
-				const updatedRecords = transactionResult.data;
+			if (transactionResult.success === false) {
+				return transactionResult;
+			}
 
-				for (const record of updatedRecords) {
+			// Process events and messages after transaction completes successfully
+			const fullDocs = transactionResult.data?.full;
+			if (fullDocs && fullDocs?.length > 0) {
+				const changedDocs = fullDocs.reduce((acc, doc) => ({
+					...acc,
+					[doc._id]: transactionResult.data.changed.find(changed => changed._id === doc._id),
+				}), {});
+
+				for (const _id in changedDocs) {
 					try {
-						await Konsistent.processChangeAsync(record);
+						await Konsistent.processChangeAsync(changedDocs[_id]);
 					} catch (e) {
 						logger.error(e, `Error sending Konsistent message: ${e.message}`);
 					}
@@ -1452,13 +1461,17 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 				// Send events
 				try {
-					await Promise.all(updatedRecords.map(record => eventManager.sendEvent(document, 'update', { data: record, original: originals[record._id] })));
+					await Promise.all(fullDocs.map(record => eventManager.sendEvent(document, 'update', {
+						data: changedDocs[record._id],
+						original: originals[record._id],
+						full: record
+					})));
 				} catch (e) {
 					logger.error(e, `Error sending events: ${e.message}`);
 				}
 			}
 
-			return transactionResult;
+			return successReturn(transactionResult.data.full);
 		}
 	} catch (e) {
 		tracingSpan?.addEvent('Error on transaction', { error: e.message });
