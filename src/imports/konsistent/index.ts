@@ -37,7 +37,7 @@ export const Konsistent: RunningKonsistent = {
 };
 
 export async function setupKonsistent() {
-	const usingExternalKonsistent = MetaObject.Namespace.plan?.useExternalKonsistent;
+	const usingExternalKonsistent = Boolean(MetaObject.Namespace.plan?.useExternalKonsistent);
 	logger.info(`Using external Konsistent? ${usingExternalKonsistent}`);
 
 	if (usingExternalKonsistent) {

@@ -37,7 +37,7 @@ The UI will be running at `localhost:3000`
 -   `DEFAULT_SMTP_TLS`: SMTP tls flag for default email sender
 -   `DEFAULT_SMTP_IGNORE_TLS`: SMTP config `ignoreTLS` for nodemailer, if this is true and secure is false then TLS is not used even if the server supports STARTTLS extension
 -   `DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED`: SMTP config `tls.rejectUnauthorized` for nodemailer, config would open a connection to TLS server with self-signed or invalid TLS certificate
--   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to ‘PLAIN’
+-   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to 'PLAIN'
 -   `DEFAULT_SMTP_DEBUG`: SMTP config `debug` for nodemailer, if set to true, then logs SMTP traffic, otherwise logs only transaction events
 -   `UI_URL`: host for ui
 -   `LOG_LEVEL`: [Pino log levels](https://github.com/pinojs/pino/blob/HEAD/docs/api.md#level-string)
@@ -54,7 +54,7 @@ The UI will be running at `localhost:3000`
 -   `S3_DOMAIN`: required if different of AWS eg: `digitaloceanspaces.com`
 -   `S3_REGION`: S3 region
 -   `S3_BUCKET`: S3 bucket
--   `S3_ACCESSKEY`: Generated for your aws account. Follow this instructions: [Where’s My Secret Access Key?](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/).
+-   `S3_ACCESSKEY`: Generated for your aws account. Follow this instructions: [Where's My Secret Access Key?](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/).
 -   `S3_SECREDKEY`: Generate with instructions above (👆).
 -   `S3_PUBLIC_URL`: Bucket public url
 
@@ -77,7 +77,8 @@ Examples of REST usage can be found here: [REST](REST.md)
 
 The namespace is made of many parts, documented at:
 
--   [Storage api](STORAGE.md)
+-   [Storage api](docs/en/STORAGE.md)
+-   [Resources and Events](docs/en/RESOURCES_AND_EVENTS.md)
 
 ## Logs
 

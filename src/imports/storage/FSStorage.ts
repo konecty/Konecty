@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 const CFG_DEFAULTS: FileStorage['storageCfg'] = {
 	type: 'fs',
-	directory: '/tmp',
+	directory: '/data/uploads',
 	wm: undefined,
 };
 
@@ -75,7 +75,13 @@ export default class FSStorage implements FileStorage {
 
 		if (coreResponse.success === false) {
 			await BluebirdPromise.each(filesToSave, async ({ name }) => {
-				await unlink(path.join(rootDirectory, name));
+				try {
+					const filePath = path.join(rootDirectory, name);
+					const directory = path.dirname(filePath);
+					await unlink(path.join(directory, name));
+				} catch (error) {
+					logger.error(error, `Error deleting file ${name} from FS`);
+				}
 			});
 		}
 
