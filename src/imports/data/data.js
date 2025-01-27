@@ -1324,7 +1324,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			const walResults = await BluebirdPromise.map(
 				updateResults,
-				async data => await Konsistent.writeAheadLog(document, 'update', data, user, dbSession),
+				async result => await Konsistent.writeAheadLog(document, 'update', result.data, user, dbSession),
 				{ concurrency: 5 },
 			);
 
