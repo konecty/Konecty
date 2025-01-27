@@ -5,7 +5,7 @@ services:
         container_name: mongodb
         restart: always
         volumes:
-            - ~/Documents/data:/data
+            - ${PWD}/.dev-data/mongodb:/data
         env_file:
             - .env
         ports:
@@ -67,6 +67,8 @@ services:
         environment:
             - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
             - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-admin}
+        volumes:
+            - ${PWD}/.dev-data/rabbitmq:/var/lib/rabbitmq
         healthcheck:
             test: ['CMD', 'rabbitmq-diagnostics', 'check_port_connectivity']
             interval: 6s
