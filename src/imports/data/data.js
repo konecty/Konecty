@@ -916,7 +916,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 				// Send events
 				try {
-					await eventManager.sendEvent(document, 'create', record);
+					await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
 				} catch (e) {
 					logger.error(e, `Error sending event: ${e.message}`);
 				}
@@ -1035,6 +1035,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 	}
 
+	const originals = {};
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 	try {
 		const transactionResult = await dbSession.withTransaction(async function updateTransaction() {
@@ -1086,10 +1087,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			tracingSpan?.addEvent('Finding records to update', { query, options });
 			const existsRecords = await collection.find(query, options).toArray();
+			for (const record of existsRecords) {
+				originals[record._id] = record;
+			}
 
 			// Validate if user have permission to update each record that he are trying
 			const forbiddenRecords = data.ids.filter(id => {
-				const record = existsRecords.find(record => record._id === id._id);
+				const record = originals[id._id];
 				if (record == null) {
 					return true;
 				}
@@ -1103,7 +1107,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			// outdateRecords are records that user are trying to update but they are out of date
 			if (metaObject.ignoreUpdatedAt !== true) {
 				const outdateRecords = data.ids.filter(id => {
-					const record = existsRecords.find(record => record._id === id._id);
+					const record = originals[id._id];
 					if (record == null) {
 						return true;
 					}
@@ -1194,7 +1198,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 					tracingSpan?.addEvent('Running scriptBeforeValidation');
 					const extraData = {
-						original: existsRecords.find(r => r._id === record._id),
+						original: originals[record._id],
 						request: data.data,
 						validated: lookupValues,
 					};
@@ -1389,7 +1393,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 				// Process sync Konsistent
 				for await (const newRecord of updatedRecords) {
-					const originalRecord = existsRecords.find(r => r._id === newRecord._id);
+					const originalRecord = originals[newRecord._id];
 
 					try {
 						await Konsistent.processChangeSync(document, 'update', user, { originalRecord, newRecord }, dbSession);
@@ -1401,7 +1405,6 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 					}
 				}
-
 
 				const responseData = updatedRecords.map(record => removeUnauthorizedDataForRead(access, record, user, metaObject)).map(record => dateToString(record));
 
@@ -1428,20 +1431,29 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					);
 				}
 
-				return successReturn(responseData);
+				// Full is the full affected documents,    Changed are the changed props only
+				return successReturn({ full: responseData, changed: updateResults.map(r => r.data) });
 			}
 		});
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
 
-			// Process events and messages after transaction completes successfully
-			if (transactionResult.success === true && transactionResult.data?.length > 0) {
-				const updatedRecords = transactionResult.data;
+			if (transactionResult.success === false) {
+				return transactionResult;
+			}
 
-				for (const record of updatedRecords) {
+			// Process events and messages after transaction completes successfully
+			const fullDocs = transactionResult.data?.full;
+			if (fullDocs && fullDocs?.length > 0) {
+				const changedDocs = fullDocs.reduce((acc, doc) => ({
+					...acc,
+					[doc._id]: transactionResult.data.changed.find(changed => changed._id === doc._id),
+				}), {});
+
+				for (const _id in changedDocs) {
 					try {
-						await Konsistent.processChangeAsync(record);
+						await Konsistent.processChangeAsync(changedDocs[_id]);
 					} catch (e) {
 						logger.error(e, `Error sending Konsistent message: ${e.message}`);
 					}
@@ -1449,13 +1461,17 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 				// Send events
 				try {
-					await Promise.all(updatedRecords.map(record => eventManager.sendEvent(document, 'update', record)));
+					await Promise.all(fullDocs.map(record => eventManager.sendEvent(document, 'update', {
+						data: changedDocs[record._id],
+						original: originals[record._id],
+						full: record
+					})));
 				} catch (e) {
 					logger.error(e, `Error sending events: ${e.message}`);
 				}
 			}
 
-			return transactionResult;
+			return successReturn(transactionResult.data.full);
 		}
 	} catch (e) {
 		tracingSpan?.addEvent('Error on transaction', { error: e.message });
@@ -1637,6 +1653,10 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 		);
 
 		await collection.deleteMany({ _id: { $in: idsToDelete } });
+
+		await BluebirdPromise.map(recordsToDelete, async recordId =>
+			eventManager.sendEvent(document, 'delete', { data: { _id: recordId }, full: { _id: recordId } })
+		);
 	} catch (e) {
 		logger.error(e, `Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 		return errorReturn(`[${document}] Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
