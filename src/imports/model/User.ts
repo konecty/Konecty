@@ -5,6 +5,11 @@ export const UserModel = z.object({
 	active: z.boolean(),
 	lastLogin: z.date().optional(),
 	services: z.object({
+		password: z
+			.object({
+				bcrypt: z.string(),
+			})
+			.optional(),
 		resume: z.object({
 			loginTokens: z.array(
 				z.object({
@@ -52,6 +57,7 @@ export const UserModel = z.object({
 			name: z.string(),
 		})
 		.optional(),
+	namespace: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserModel>;
