@@ -1653,6 +1653,10 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 		);
 
 		await collection.deleteMany({ _id: { $in: idsToDelete } });
+
+		await BluebirdPromise.map(recordsToDelete, async recordId =>
+			eventManager.sendEvent(document, 'delete', { data: { _id: recordId }, full: { _id: recordId } })
+		);
 	} catch (e) {
 		logger.error(e, `Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 		return errorReturn(`[${document}] Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
