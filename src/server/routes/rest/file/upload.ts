@@ -9,7 +9,7 @@ import sharp from 'sharp';
 import { getUserSafe } from '@imports/auth/getUser';
 import { DEFAULT_JPEG_MAX_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_THUMBNAIL_SIZE, FILE_UPLOAD_MAX_FILE_SIZE } from '@imports/consts';
 import { MetaObject } from '@imports/model/MetaObject';
-import { StorageFileVersionCfg } from '@imports/model/Namespace/Storage';
+import { StorageImageSizeCfg } from '@imports/model/Namespace/Storage';
 import FileStorage, { FileData } from '@imports/storage/FileStorage';
 import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
 import getMissingParams from '@imports/utils/getMissingParams';
@@ -46,11 +46,10 @@ const fileUploadApi: FastifyPluginCallback = (fastify, _, done) => {
 	done();
 };
 
-const THUMBNAIL_CONFIG: StorageFileVersionCfg = {
+const THUMBNAIL_CONFIG: StorageImageSizeCfg = {
 	width: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
 	height: MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE,
 	wm: false,
-	name: 'thumbnail',
 };
 
 const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
@@ -77,6 +76,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			return errorReturn(`[${document}] You don't have permission to update field ${fieldName}`);
 		}
 
+		const field = MetaObject.Meta[document].fields[fieldName];
 		const data = await req.file();
 
 		if (data == null) {
@@ -140,6 +140,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 				filename: fileName,
 				originalImage: image,
 				version: THUMBNAIL_CONFIG,
+				name: 'thumbnail',
 				extraParams: { fit: 'cover' },
 				forceJpeg: true,
 			});
@@ -148,12 +149,13 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			}
 		} else {
 			// Non-jpeg files
-			filesToSave.push({ name: fileName, content: fileContent });
+			filesToSave.push({ name: fileData.key.split('/').at(-1) ?? '', content: fileContent });
 
 			const thumbnailFile = await generateFileVersion({
 				filename: fileName,
 				originalImage: sharp(Buffer.from(generateFileThumbnailSvg(originalFileName))),
 				version: THUMBNAIL_CONFIG,
+				name: 'thumbnail',
 				extraParams: {
 					fit: sharp.fit.contain,
 					position: sharp.gravity.center,
@@ -179,13 +181,19 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			}
 
 			// Generate additional versions if needed
-			if (Array.isArray(MetaObject.Namespace.storage?.versions)) {
+			if (Array.isArray(field.sizes) && field.sizes.length > 0 && MetaObject.Namespace.storage?.imageSizes != null) {
 				const image = sharp(fileContent);
-				const versionFiles = await Bluebird.map(MetaObject.Namespace.storage.versions, async version => {
+				const versionFiles = await Bluebird.map(field.sizes, async size => {
+					const version = MetaObject.Namespace.storage?.imageSizes![size];
+					if (version == null) {
+						return null;
+					}
+
 					return generateFileVersion({
 						filename: fileName,
 						originalImage: image,
 						version,
+						name: size,
 						forceJpeg: true,
 					});
 				});
@@ -214,20 +222,21 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 type GenerateFileVersionParams = {
 	filename: string;
 	originalImage: sharp.Sharp;
-	version: StorageFileVersionCfg;
+	version: StorageImageSizeCfg;
+	name: string;
 	extraParams?: sharp.ResizeOptions;
 	forceJpeg?: boolean;
 };
 
-const generateFileVersion = async ({ filename, originalImage, version, extraParams, forceJpeg }: GenerateFileVersionParams) => {
-	const missingParams = getMissingParams(version, ['width', 'height', 'name']);
+const generateFileVersion = async ({ filename, originalImage, version, name, extraParams, forceJpeg }: GenerateFileVersionParams) => {
+	const missingParams = getMissingParams(version, ['width', 'height']);
 	if (missingParams.length > 0) {
 		logger.warn(`[generateFileVersion] Missing params: ${missingParams.join(', ')}`);
 		return null;
 	}
 
 	let imageBuffer: Buffer;
-	const { width, height, wm, name } = version;
+	const { width, height, wm } = version;
 
 	const image = originalImage.resize({
 		width,
@@ -252,10 +261,10 @@ const generateFileVersion = async ({ filename, originalImage, version, extraPara
 			.toBuffer();
 	}
 
-	const fileNameWithoutExtension = path.basename(filename, path.extname(filename));
 	const nameWithoutExtension = path.basename(name, path.extname(name));
+
 	return {
-		name: name === 'thumbnail' ? path.join('thumbnail', `${filename}.jpeg`) : path.join(fileNameWithoutExtension, forceJpeg ? `${nameWithoutExtension}.jpeg` : name),
+		name: name === 'thumbnail' ? path.join('thumbnail', `${filename}.jpeg`) : path.join(filename, forceJpeg ? `${nameWithoutExtension}.jpeg` : name),
 		content: imageBuffer,
 	};
 };

@@ -20,7 +20,6 @@ export default class S3Storage implements FileStorage {
 	}
 
 	async sendFile(fullUrl: string, filePath: string, reply: any) {
-		logger.trace(`Proxying file ${filePath} from S3`);
 		const storageCfg = this.storageCfg as z.infer<typeof S3StorageCfg>;
 		const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
 

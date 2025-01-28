@@ -10,6 +10,7 @@ import { logger } from '@imports/utils/logger';
 import { sendFile } from './sendFile';
 
 import { DEFAULT_THUMBNAIL_SIZE } from '@imports/consts';
+import { filePathWithoutExtension } from '@imports/utils/strUtils';
 
 const LEGACY_URL_PATTERN = ':type/:width/:height/:namespace?/:preprocess?/:document/:recordId/:fieldName/:fileName';
 const LEGACY_FULL_FILE_URL_PATTERN = ':namespace/:preprocess?/:document/:recordId/:fieldName/:fileName';
@@ -63,17 +64,15 @@ async function imageApiFn(
 		logger.trace(`LEGACY_URL_PATTERN ${incomingPath}`);
 
 		const [, , width, height, , preprocess, document, recordId, fieldName, fileName] = legacyUrlRegex.exec(incomingPath) ?? [];
-
 		const thumbnailSize = MetaObject.Namespace.storage?.thumbnail?.size ?? DEFAULT_THUMBNAIL_SIZE;
 
 		const getImagePath = () => {
 			const maxDimension = Math.max(parseInt(width, 10), parseInt(height, 10));
 			if (maxDimension <= thumbnailSize) {
-				const filePath = path.join(document, recordId, fieldName, 'thumbnail', fileName);
-				return /\.jpe?g$/.test(fileName) ? filePath : `${filePath}.jpeg`;
+				return path.join(document, recordId, fieldName, 'thumbnail', /\.jpe?g$/.test(fileName) ? fileName : `${filePathWithoutExtension(fileName)}.jpeg`);
 			}
 			if (preprocess != null) {
-				return path.join(document, recordId, fieldName, 'watermark', fileName);
+				return path.join(document, recordId, fieldName, 'watermark', /\.jpe?g$/.test(fileName) ? fileName : `${filePathWithoutExtension(fileName)}.jpeg`);
 			}
 			return path.join(document, recordId, fieldName, fileName);
 		};
@@ -88,6 +87,7 @@ async function imageApiFn(
 			.replace(new RegExp(`/?${MetaObject.Namespace.ns}`), '')
 			.replace(/\/rest/, '')
 			.replace(/\/image/, '');
+
 		const res = legacyFullFileUrlRegex.exec(imagePath) ?? [];
 		const [, maybeDocument, preprocess, document, recordId, fieldName, fileName] = res;
 
