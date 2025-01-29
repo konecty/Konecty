@@ -4,7 +4,8 @@ import { UAParser } from 'ua-parser-js';
 
 import { generateStampedLoginToken } from '@imports/auth/login/token';
 import { MetaObject } from '@imports/model/MetaObject';
-import { ObjectId } from 'mongodb';
+import { User } from '@imports/model/User';
+import { DataDocument } from '@imports/types/data';
 import { BCRYPT_SALT_ROUNDS, DEFAULT_LOGIN_EXPIRATION } from '../../consts';
 
 interface LoginParams {
@@ -19,7 +20,8 @@ interface LoginParams {
 	fingerprint?: string;
 }
 
-interface AccessLog {
+interface AccessLog extends Record<string, unknown> {
+	_id?: string;
 	_createdAt: Date;
 	_updatedAt: Date;
 	ip?: string | string[];
@@ -34,13 +36,7 @@ interface AccessLog {
 	source?: string;
 	fingerprint?: string;
 	__from?: string;
-	_user?: [
-		{
-			_id: string;
-			name: string;
-			group: string;
-		},
-	];
+	_user?: Partial<User>[];
 }
 
 export async function login({ ip, user, password, password_SHA256, geolocation, resolution, userAgent, source, fingerprint }: LoginParams) {
@@ -83,19 +79,19 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 		}
 	} else if (MetaObject.Namespace.trackUserGeolocation === true) {
 		accessLog.reason = 'Geolocation required';
-		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog);
+		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog as DataDocument);
 		throw new Error('Geolocation required');
 	}
 
-	const userRecord = await MetaObject.Collections.User.findOne({
+	const userRecord = (await MetaObject.Collections.User.findOne({
 		'services.password.bcrypt': { $exists: true },
 		active: true,
 		$or: [{ username: user }, { 'emails.address': user }],
-	});
+	})) as User;
 
 	if (userRecord == null) {
 		accessLog.reason = `Active User not found [${user}]`;
-		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog);
+		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog as DataDocument);
 
 		return {
 			success: false,
@@ -113,14 +109,17 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	];
 
 	const passwordText = password_SHA256 || password;
-	const hash = userRecord.services.password.bcrypt;
+	const hash = userRecord.services?.password?.bcrypt;
+	if (hash == null) {
+		throw new Error('Password hash not found');
+	}
 	const [, , hashRounds] = hash.split('$');
 
 	const logged = await bcryptCompare(passwordText, hash);
 
 	if (logged === false) {
 		accessLog.reason = `Active User not found [${user}]`;
-		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog);
+		await MetaObject.Collections.AccessFailedLog.insertOne(accessLog as DataDocument);
 		return {
 			success: false,
 			logged: false,
@@ -149,7 +148,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	);
 
 	if (MetaObject.Collections.AccessLog != null) {
-		await MetaObject.Collections.AccessLog.insertOne(accessLog);
+		await MetaObject.Collections.AccessLog.insertOne(accessLog as DataDocument);
 	}
 
 	// clean up old sessions
@@ -174,7 +173,7 @@ export async function login({ ip, user, password, password_SHA256, geolocation, 
 	};
 }
 
-export const cleanupSessions = async (userId: ObjectId, all = false) => {
+export const cleanupSessions = async (userId: string, all = false) => {
 	const oldestValidDate = new Date(Date.now() - (MetaObject.Namespace.loginExpiration ?? DEFAULT_LOGIN_EXPIRATION));
 
 	if (all === true) {

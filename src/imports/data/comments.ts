@@ -92,7 +92,7 @@ export async function createComment({ authTokenId, document, dataId, text }: Cre
 
 	try {
 		await commentCollection.insertOne(data);
-		await eventManager.sendEvent(document, 'comment', data);
+		await eventManager.sendEvent(document, 'comment', { data: pick(data, ['_id', 'text']), full: data });
 
 		return successReturn([data]);
 	} catch (e) {

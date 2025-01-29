@@ -14,21 +14,24 @@ import { FSStorageCfg } from '@imports/model/Namespace/Storage';
 import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
-const DEFAULT_DIRECTORY = '/data/uploads';
+const CFG_DEFAULTS: FileStorage['storageCfg'] = {
+	type: 'fs',
+	directory: '/data/uploads',
+	wm: undefined,
+};
 
 export default class FSStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
-		this.storageCfg = storageCfg;
+		this.storageCfg = Object.assign({}, CFG_DEFAULTS, storageCfg);
 	}
 
 	async sendFile(fullUrl: string, filePath: string, reply: any) {
 		logger.trace(`Proxying file ${filePath} from FS`);
-		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
+		const storageCfg = this.storageCfg as Required<z.infer<typeof FSStorageCfg>>;
 		const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-		const directory = storageCfg.directory ?? DEFAULT_DIRECTORY;
-		const fullPath = path.join(directory, filePath);
+		const fullPath = path.join(storageCfg.directory, filePath);
 
 		try {
 			const fileContent = await readFile(fullPath);
@@ -52,9 +55,8 @@ export default class FSStorage implements FileStorage {
 
 	async upload(fileData: FileData, filesToSave: { name: string; content: Buffer }[], context: FileContext) {
 		fileData.etag = crypto.createHash('md5').update(filesToSave[0].content).digest('hex');
-		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
-		const storageDirectory = storageCfg.directory ?? DEFAULT_DIRECTORY;
-		const rootDirectory = path.join(storageDirectory, fileData.key.replace(fileData.name, ''));
+		const storageCfg = this.storageCfg as Required<z.infer<typeof FSStorageCfg>>;
+		const rootDirectory = path.join(storageCfg.directory, path.dirname(fileData.key));
 
 		await BluebirdPromise.each(filesToSave, async ({ name, content }) => {
 			const filePath = path.join(rootDirectory, name);
@@ -87,8 +89,8 @@ export default class FSStorage implements FileStorage {
 	}
 
 	async delete(directory: string, fileName: string) {
-		const storageCfg = this.storageCfg as z.infer<typeof FSStorageCfg>;
-		directory = `${storageCfg.directory ?? DEFAULT_DIRECTORY}/${directory}`;
+		const storageCfg = this.storageCfg as Required<z.infer<typeof FSStorageCfg>>;
+		directory = `${storageCfg.directory}/${directory}`;
 
 		const fullPath = path.join(directory, decodeURIComponent(fileName));
 		const thumbnailFullPath = path.join(directory, 'thumbnail', decodeURIComponent(fileName));

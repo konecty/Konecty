@@ -49,7 +49,7 @@ export async function setupKonsistent() {
 	}
 
 	if (usingExternalKonsistent && !Konsistent.isQueueEnabled) {
-		logger.warn('[konsistent] is set to external but no config found - default to using sync');
+		logger.warn('[konsistent] is set to external but no config found');
 	}
 }
 
@@ -71,7 +71,7 @@ async function processChangeSync(metaName: string, operation: string, user: obje
 		throw new Error(`[${metaName}] Error creating history`);
 	}
 
-	if (MetaObject.Namespace.plan?.useExternalKonsistent !== true || Konsistent.isQueueEnabled === false) {
+	if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
 		logger.debug('Processing sync Konsistent');
 
 		return processIncomingChange(metaName, data.newRecord, operation, user, changedProps, dbSession);

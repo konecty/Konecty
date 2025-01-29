@@ -1,19 +1,22 @@
+name: konecty-full
 services:
-    konecty-mongodb:
+    mongodb:
         image: mongo:6
-        container_name: konecty-mongodb
+        container_name: mongodb
         restart: always
+        volumes:
+            - ${PWD}/.dev-data/mongodb:/data
         env_file:
             - .env
         ports:
             - '${MONGO_PORT:-27017}:27017'
-        command: ['mongod', '--bind_ip_all', '--replSet', 'rs0']
+        command: ['mongod', '--bind_ip_all', '--replSet', 'rs0', '--dbpath', '/data']
 
-    konecty-mongodb-init:
+    mongodb-init:
         image: mongo:6
-        container_name: konecty-mongodb-init
+        container_name: mongodb-init
         depends_on:
-            - konecty-mongodb
+            - mongodb
         command:
             - /bin/bash
             - -c
@@ -21,9 +24,9 @@ services:
                 echo 'Waiting 10 seconds before checking replica set status';
                 sleep 10;
                 echo 'Checking replica set status';
-                if ! mongosh --host konecty-mongodb --eval 'rs.status()' | grep "set: 'rs0'"; then
+                if ! mongosh --host mongodb --eval 'rs.status()' | grep "set: 'rs0'"; then
                     echo 'Initiating replica set';
-                    mongosh --host konecty-mongodb --eval 'rs.initiate({_id : "rs0", members: [ { _id: 0, host: "konecty-mongodb:27017" } ] })';
+                    mongosh --host mongodb --eval 'rs.initiate({_id : "rs0", members: [ { _id: 0, host: "mongodb:27017" } ] })';
                 else
                     echo 'Replica set already initialized';
                 fi
@@ -35,16 +38,18 @@ services:
 
     konecty:
         container_name: konecty
-        image: konecty/konecty:2.2.1
+        image: konecty/konecty:3.0.0
         ports:
             - '${PORT:-3000}:${PORT:-3000}'
         env_file:
             - .env
         environment:
-            - MONGO_URL=mongodb://konecty-mongodb:27017/${KONMETA_NAMESPACE}?directConnection=true
+            - MONGO_URL=mongodb://mongodb:27017/${KONMETA_NAMESPACE}?directConnection=true
         depends_on:
-            konecty-mongodb-init:
+            mongodb-init:
                 condition: service_completed_successfully
+            rabbitmq:
+                condition: service_healthy
         healthcheck:
             test: ['CMD', 'curl', '-f', 'http://localhost:${PORT:-3000}/liveness']
             interval: 30s
@@ -65,9 +70,9 @@ services:
         volumes:
             - ${PWD}/.dev-data/rabbitmq:/var/lib/rabbitmq
         healthcheck:
-        test: rabbitmq-diagnostics check_port_connectivity
-        interval: 10s
-        timeout: 5s
-        retries: 3
-        start_period: 5s
+            test: ['CMD', 'rabbitmq-diagnostics', 'check_port_connectivity']
+            interval: 6s
+            timeout: 5s
+            retries: 3
+            start_period: 5s
         restart: always

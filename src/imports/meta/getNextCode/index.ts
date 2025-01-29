@@ -1,8 +1,9 @@
 import get from 'lodash/get';
 
 import { MetaObject } from '@imports/model/MetaObject';
+import { DataDocument } from '@imports/types/data';
 import { logger } from '@imports/utils/logger';
-import { ClientSession, Filter, FindOneAndUpdateOptions } from 'mongodb';
+import { ClientSession, Filter, FindOneAndUpdateOptions, UpdateFilter } from 'mongodb';
 
 const GENERATE_CODE_MAX_DEPTH = 1000;
 
@@ -15,9 +16,9 @@ export async function getNextCode(documentName: string, fieldName: string, dbSes
 	const documentCollection = MetaObject.Collections[documentName];
 
 	// Mount query, sort, update, and options
-	const query: Filter<{ _id: string }> = { _id: fieldName };
+	const query: Filter<DataDocument> = { _id: fieldName };
 
-	const update = {
+	const update: UpdateFilter<DataDocument<{}>> = {
 		$inc: {
 			next_val: 1,
 		},
@@ -44,7 +45,7 @@ export async function getNextCode(documentName: string, fieldName: string, dbSes
 			if (existingCodes === 0) {
 				return {
 					success: true,
-					data: nextVal,
+					data: nextVal as number,
 				};
 			}
 
