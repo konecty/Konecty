@@ -11,12 +11,12 @@ import { DEFAULT_JPEG_MAX_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_THUMBNAIL_SIZE, FI
 import { MetaObject } from '@imports/model/MetaObject';
 import { StorageImageSizeCfg } from '@imports/model/Namespace/Storage';
 import FileStorage, { FileData } from '@imports/storage/FileStorage';
+import generateFileThumbnailSvg from '@imports/template/fileThumbnail';
 import { getAccessFor, getFieldPermissions } from '@imports/utils/accessUtils';
 import getMissingParams from '@imports/utils/getMissingParams';
 import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
-import generateFileThumbnailSvg from '@private/templates/fileThumbnail.js';
 import Bluebird from 'bluebird';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
