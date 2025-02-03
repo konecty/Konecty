@@ -575,7 +575,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				return errorReturn(
 					fieldPermissionResult
 						.filter(result => result.success === false)
-						.map(result => result.errors)
+						.map(result => result.errors ?? result.reason ?? result.message ?? result)
 						.flat(),
 				);
 			}
@@ -613,7 +613,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				return errorReturn(
 					validationResults
 						.filter(result => result.success === false)
-						.map(result => result.errors)
+						.map(result => result.errors ?? result.reason ?? result.message ?? result)
 						.flat(),
 				);
 			}
@@ -702,7 +702,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				return errorReturn(
 					validateAllFieldsResult
 						.filter(result => result.success === false)
-						.map(result => result.errors)
+						.map(result => result.errors ?? result.reason ?? result.message ?? result)
 						.flat(),
 				);
 			}
@@ -1248,7 +1248,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					return errorReturn(
 						validateResult
 							.filter(result => result.success === false)
-							.map(result => result.errors)
+							.map(result => result.errors ?? result.reason ?? result.message ?? result)
 							.flat(),
 					);
 				}
@@ -1317,7 +1317,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				return errorReturn(
 					updateResults
 						.filter(result => result.success === false)
-						.map(result => result.errors)
+						.map(result => result.errors ?? result.reason ?? result.message ?? result)
 						.flat(),
 				);
 			}
@@ -1333,7 +1333,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				return errorReturn(
 					walResults
 						.filter(result => result.success === false)
-						.map(result => result.errors)
+						.map(result => result.errors ?? result.reason ?? result.message ?? result)
 						.flat(),
 				);
 			}
