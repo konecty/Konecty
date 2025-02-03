@@ -509,6 +509,9 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				return acc;
 			}, {});
 
+			const newRecordId = get(cleanedData, '_id', randomId());
+			cleanedData._id = newRecordId;
+
 			if (cleanedData._user == null) {
 				cleanedData._user = { _id: user._id };
 
@@ -724,7 +727,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				const now = DateTime.local().toJSDate();
 
 				const newRecord = Object.assign({}, cleanedData, {
-					_id: get(cleanedData, '_id', randomId()),
+					_id: newRecordId,
 					_createdAt: get(cleanedData, '_createdAt', now),
 					_createdBy: get(cleanedData, '_createdBy', pick(user, ['_id', 'name', 'group'])),
 					_updatedAt: get(cleanedData, '_updatedAt', now),
