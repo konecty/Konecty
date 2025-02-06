@@ -2405,16 +2405,6 @@ export async function historyFind({ authTokenId, document, dataId, fields, conte
 
 	const fieldsObject = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(fields) ?? {};
 
-	const unreadableFields = Object.keys(metaObject.fields).reduce((acc, fieldName) => {
-		const accessField = getFieldPermissions(access, fieldName);
-		if (accessField.isReadable !== true) {
-			acc[fieldName] = 0;
-		}
-		return acc;
-	}, {});
-
-	Object.assign(fieldsObject, unreadableFields);
-
 	const projection = Object.entries(fieldsObject).reduce((acc, [fieldName, value]) => {
 		acc[`data.${fieldName}`] = value;
 		acc[`diffs.${fieldName}`] = value;
@@ -2432,7 +2422,9 @@ export async function historyFind({ authTokenId, document, dataId, fields, conte
 
 	const resultData = records.map(record => {
 		if (record.diffs == null && record.data != null) {
-			return {
+			record.data = removeUnauthorizedDataForRead(access, record.data, user, metaObject);
+
+			record = {
 				...omit(record, ['data']),
 				diffs: Object.entries(record.data).reduce(
 					(acc, [fieldName, value]) => Object.assign(acc, { [fieldName]: record.type === 'delete' ? { from: value } : { to: value } }),
