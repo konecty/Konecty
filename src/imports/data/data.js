@@ -1056,8 +1056,6 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				return processLoginResult;
 			}
 
-			isRetry = true;
-
 			const fieldFilterConditions = Object.keys(data.data).reduce((acc, fieldName) => {
 				const accessFieldConditions = getFieldConditions(access, fieldName);
 				if (accessFieldConditions.UPDATE) {
@@ -1169,6 +1167,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				}
 			}
 
+			isRetry = true;
 			const emailsToSend = [];
 
 			const updateResults = await BluebirdPromise.mapSeries(existsRecords, async record => {
