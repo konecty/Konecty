@@ -47,6 +47,7 @@ import { renderTemplate } from '../template';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
+import { handleTransactionError, retryMongoTransaction } from '../utils/transaction';
 import populateDetailFields from './populateDetailFields/fromArray';
 
 export async function getNextUserFromQueue({ authTokenId, document, queueId, contextUser }) {
@@ -494,7 +495,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 	try {
-		const transactionResult = await dbSession.withTransaction(async function createTransaction() {
+		const transactionResult = await retryMongoTransaction(() => dbSession.withTransaction(async function createTransaction() {
 			tracingSpan?.addEvent('Processing login');
 			const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
 			if (processLoginResult.success === false) {
@@ -810,6 +811,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
 					}
 				} catch (e) {
+					await handleTransactionError(e, dbSession);
+
 					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on insert', { error: e.message });
 					tracingSpan?.setAttribute({ error: e.message });
@@ -892,6 +895,8 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 				try {
 					await Konsistent.processChangeSync(document, 'create', user, { newRecord: resultRecord }, dbSession);
 				} catch (e) {
+					await handleTransactionError(e, dbSession);
+
 					tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
 					logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
 					await dbSession.abortTransaction();
@@ -902,7 +907,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			}
 
 			return errorReturn(`[${document}] Error on insert, there is no affected record`);
-		});
+		}));
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
@@ -1038,11 +1043,14 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 	}
 
+	let isRetry = false;
 	const originals = {};
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
+
 	try {
-		const transactionResult = await dbSession.withTransaction(async function updateTransaction() {
+		const transactionResult = await retryMongoTransaction(() => dbSession.withTransaction(async function updateTransaction() {
 			tracingSpan?.addEvent('Processing login');
+
 			const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
 			if (processLoginResult.success === false) {
 				return processLoginResult;
@@ -1108,7 +1116,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			}
 
 			// outdateRecords are records that user are trying to update but they are out of date
-			if (metaObject.ignoreUpdatedAt !== true) {
+			if (metaObject.ignoreUpdatedAt !== true && isRetry === false) {
 				const outdateRecords = data.ids.filter(id => {
 					const record = originals[id._id];
 					if (record == null) {
@@ -1159,6 +1167,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				}
 			}
 
+			isRetry = true;
 			const emailsToSend = [];
 
 			const updateResults = await BluebirdPromise.mapSeries(existsRecords, async record => {
@@ -1302,10 +1311,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				try {
 					tracingSpan?.addEvent('Updating record', { filter, updateOperation });
 					await collection.updateOne(filter, updateOperation, { session: dbSession });
+
 					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
-					logger.error(e, `Error on update ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-					tracingSpan?.addEvent('Error on update', { error: e.message });
+					await handleTransactionError(e, dbSession);
+
+					logger.error(e, `Error updating record ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
+					tracingSpan?.addEvent('Error updating record', { error: e.message });
 					tracingSpan?.setAttribute({ error: e.message });
 
 					if (e.code === 11000) {
@@ -1401,9 +1413,10 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					try {
 						await Konsistent.processChangeSync(document, 'update', user, { originalRecord, newRecord }, dbSession);
 					} catch (e) {
+						await handleTransactionError(e, dbSession);
+
 						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
 						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
-						await dbSession.abortTransaction();
 
 						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
 					}
@@ -1437,7 +1450,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				// Full is the full affected documents,    Changed are the changed props only
 				return successReturn({ full: responseData, changed: updateResults.map(r => r.data) });
 			}
-		});
+		}));
 
 		if (transactionResult != null && transactionResult.success != null) {
 			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
