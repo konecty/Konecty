@@ -83,3 +83,11 @@ The namespace is made of many parts, documented at:
 ## Logs
 
 -   KONDATA only log requests when **_status code_** of the response isn't 200 (OK).
+
+---
+
+# Contributors
+
+<a href="https://github.com/konecty/konecty/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=konecty/konecty" />
+</a>
