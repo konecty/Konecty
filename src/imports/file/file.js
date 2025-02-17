@@ -66,8 +66,9 @@ export async function fileUpload({ authTokenId = null, document, fieldName, reco
 	const collection = MetaObject.Collections[document];
 
 	// Find record by code or id
+	const isValidCode = !isNaN(Number(recordCode));
 	const record = await collection.findOne({
-		$or: [{ code: parseInt(recordCode) }, { _id: recordCode }],
+		$or: [{ _id: recordCode }].concat(isValidCode ? [{ code: Number(recordCode) }] : []),
 	});
 
 	// If no record found then return error
