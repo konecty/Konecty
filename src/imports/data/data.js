@@ -1122,7 +1122,9 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					if (record == null) {
 						return true;
 					}
-					if (DateTime.fromJSDate(record._updatedAt).diff(DateTime.fromISO(id._updatedAt.$date)).milliseconds !== 0) {
+					const updatedDate = "$date" in id._updatedAt ? DateTime.fromISO(id._updatedAt.$date) : DateTime.fromJSDate(new Date(id._updatedAt));
+
+					if (DateTime.fromJSDate(record._updatedAt).diff(updatedDate).milliseconds !== 0) {
 						return true;
 					}
 					return false;
@@ -1153,7 +1155,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 							Object.keys(data.data).forEach(fieldName => {
 								if (history.data[fieldName] != null) {
 									acc.push(
-										`[${document}] Record ${history.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(history.createdAt).toISO()} by ${get(history, "updatedBy.name", "Unknown")}`,
+										`[${document}] Record ${history.dataId} is out of date, field ${fieldName} was updated at ${DateTime.fromJSDate(history.createdAt).toISO()} by ${get(history, "createdBy.name", "Unknown")}`,
 									);
 								}
 							});
