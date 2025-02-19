@@ -689,3 +689,25 @@ export function filterConditionToFn(condition, metaObject, req) {
 			return errorReturn(`Operator [${condition.operator}] not supported`);
 	}
 }
+
+/**
+ * Check if the update is from interface upload. If its updating only a single file field, from a single record,
+ * then it's probably from interface upload.
+ * @param {object} metaObject - The meta object
+ * @param {object} updateData - The data to check
+ * @returns {boolean} - True if the update is from interface upload, false otherwise
+ */
+export function isUpdateFromInterfaceUpload(metaObject, updateData) {
+	const keys = Object.keys(updateData.data);
+	if (keys.length !== 1 || updateData.ids.length !== 1) {
+		return false;
+	}
+
+	const key = keys[0];
+	const field = metaObject.fields[key];
+	if (field == null) {
+		return false;
+	}
+
+	return field.type === 'file';
+}
