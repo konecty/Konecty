@@ -735,6 +735,13 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					_updatedBy: get(cleanedData, '_updatedBy', pick(user, ['_id', 'name', 'group'])),
 				});
 
+				const walResult = await Konsistent.writeAheadLog(document, 'create', newRecord, user, dbSession);
+				if (walResult.success === false) {
+					await dbSession.abortTransaction();
+					return walResult;
+				}
+
+
 				try {
 					if (processLoginResult.data != null) {
 						await MetaObject.Collections['User'].insertOne({
@@ -757,12 +764,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						}
 
 						set(newRecord, get(metaObject, 'login.field', 'login'), loginFieldResult.data);
-					}
-
-					const walResult = await Konsistent.writeAheadLog(document, 'create', newRecord, user, dbSession);
-					if (walResult.success === false) {
-						await dbSession.abortTransaction();
-						return walResult;
 					}
 
 					if (upsert != null && isObject(upsert)) {
@@ -894,6 +895,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 				try {
 					await Konsistent.processChangeSync(document, 'create', user, { newRecord: resultRecord }, dbSession);
+					await Konsistent.processChangeAsync({ _id: walResult.data });
 				} catch (e) {
 					await handleTransactionError(e, dbSession);
 
@@ -916,13 +918,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			if (transactionResult.success === true && transactionResult.data?.[0] != null) {
 				const record = transactionResult.data[0];
 
-				try {
-					await Konsistent.processChangeAsync(record);
-				} catch (e) {
-					logger.error(e, `Error sending Konsistent message: ${e.message}`);
-				}
-
-				// Send events
 				try {
 					await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
 				} catch (e) {
@@ -1415,9 +1410,11 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				// Process sync Konsistent
 				for await (const newRecord of updatedRecords) {
 					const originalRecord = originals[newRecord._id];
+					const konsistentWalId = walResults.find(wal => wal.data === newRecord._id);
 
 					try {
 						await Konsistent.processChangeSync(document, 'update', user, { originalRecord, newRecord }, dbSession);
+						await Konsistent.processChangeAsync({ _id: konsistentWalId });
 					} catch (e) {
 						await handleTransactionError(e, dbSession);
 
@@ -1472,14 +1469,6 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					...acc,
 					[doc._id]: transactionResult.data.changed.find(changed => changed._id === doc._id),
 				}), {});
-
-				for (const _id in changedDocs) {
-					try {
-						await Konsistent.processChangeAsync(changedDocs[_id]);
-					} catch (e) {
-						logger.error(e, `Error sending Konsistent message: ${e.message}`);
-					}
-				}
 
 				// Send events
 				try {
