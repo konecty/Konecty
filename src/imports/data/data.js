@@ -895,7 +895,9 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 				try {
 					await Konsistent.processChangeSync(document, 'create', user, { newRecord: resultRecord }, dbSession);
-					await Konsistent.processChangeAsync({ _id: walResult.data });
+					if (walResult.data != null) {
+						await Konsistent.processChangeAsync(walResult.data);
+					}
 				} catch (e) {
 					await handleTransactionError(e, dbSession);
 
@@ -1410,11 +1412,15 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 				// Process sync Konsistent
 				for await (const newRecord of updatedRecords) {
 					const originalRecord = originals[newRecord._id];
-					const konsistentWalId = walResults.find(wal => wal.data === newRecord._id);
 
 					try {
+						const konsistentWal = walResults.find(wal => wal.data._id === newRecord._id);
+						if (konsistentWal == null) {
+							throw new Error(`Konsistent WAL not found for record ${newRecord._id}`);
+						}
+
 						await Konsistent.processChangeSync(document, 'update', user, { originalRecord, newRecord }, dbSession);
-						await Konsistent.processChangeAsync({ _id: konsistentWalId });
+						await Konsistent.processChangeAsync(konsistentWal.data);
 					} catch (e) {
 						await handleTransactionError(e, dbSession);
 

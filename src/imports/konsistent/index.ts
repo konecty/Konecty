@@ -5,6 +5,7 @@ import { User } from '@imports/model/User';
 import queueManager from '@imports/queue/QueueManager';
 import { DataDocument } from '@imports/types/data';
 import { LogDocument } from '@imports/types/Konsistent';
+import { KonectyResult } from '@imports/types/result';
 import getMissingParams from '@imports/utils/getMissingParams';
 import objectsDiff from '@imports/utils/objectsDiff';
 import { errorReturn, successReturn } from '@imports/utils/return';
@@ -53,10 +54,10 @@ export async function setupKonsistent() {
 	}
 }
 
-async function processChangeAsync(data: DataDocument) {
+async function processChangeAsync({ walId }: { walId: string }) {
 	if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 		await queueManager.sendMessage(Konsistent.queue!.resource!, Konsistent.queue!.name!, {
-			_id: data._id,
+			_id: walId,
 		});
 	}
 }
@@ -78,7 +79,13 @@ async function processChangeSync(metaName: string, operation: string, user: obje
 	}
 }
 
-async function writeAheadLog(metaName: string, operation: string, data: DataDocument, user: User, dbSession: ClientSession) {
+async function writeAheadLog(
+	metaName: string,
+	operation: string,
+	data: DataDocument,
+	user: User,
+	dbSession: ClientSession,
+): Promise<KonectyResult<{ _id: string; walId?: string }>> {
 	if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 		try {
 			const result = await Konsistent.LogCollection.insertOne(
@@ -94,7 +101,7 @@ async function writeAheadLog(metaName: string, operation: string, data: DataDocu
 				{ session: dbSession },
 			);
 
-			return result.insertedId ? successReturn(result.insertedId) : errorReturn('Error on writeAheadLog');
+			return result.insertedId ? successReturn({ _id: data._id, walId: result.insertedId }) : errorReturn('Error on writeAheadLog');
 		} catch (e) {
 			const message = `Error on writeAheadLog ${metaName}: ${(e as Error).message}`;
 			logger.error(e, message);
@@ -102,7 +109,7 @@ async function writeAheadLog(metaName: string, operation: string, data: DataDocu
 		}
 	}
 
-	return successReturn(null);
+	return successReturn({ _id: data._id });
 }
 
 async function removeWAL(payload: Awaited<ReturnType<typeof writeAheadLog>>) {
