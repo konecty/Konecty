@@ -29,7 +29,7 @@ import words from 'lodash/words';
 import { MetaObject } from '@imports/model/MetaObject';
 import { getAccessFor, getFieldConditions, getFieldPermissions, removeUnauthorizedDataForRead } from '../utils/accessUtils';
 import { logger } from '../utils/logger';
-import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } from './filterUtils';
+import { clearProjectionPathCollision, filterConditionToFn, isUpdateFromInterfaceUpload, parseFilterObject } from './filterUtils';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
@@ -1043,6 +1043,8 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		}
 	}
 
+	const isFromInterfaceUpload = isUpdateFromInterfaceUpload(metaObject, data);
+
 	let isRetry = false;
 	const originals = {};
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
@@ -1051,7 +1053,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 		const transactionResult = await retryMongoTransaction(() => dbSession.withTransaction(async function updateTransaction() {
 			tracingSpan?.addEvent('Processing login');
 
-			const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
+			const processLoginResult = await processCollectionLogin({ meta: metaObject, data: data.data });
 			if (processLoginResult.success === false) {
 				return processLoginResult;
 			}
@@ -1116,13 +1118,15 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 			}
 
 			// outdateRecords are records that user are trying to update but they are out of date
-			if (metaObject.ignoreUpdatedAt !== true && isRetry === false) {
+			if (metaObject.ignoreUpdatedAt !== true && isRetry === false && isFromInterfaceUpload === false) {
+				const getUpdatedDate = id => "$date" in id._updatedAt ? DateTime.fromISO(id._updatedAt.$date) : DateTime.fromJSDate(new Date(id._updatedAt));
+
 				const outdateRecords = data.ids.filter(id => {
 					const record = originals[id._id];
 					if (record == null) {
 						return true;
 					}
-					const updatedDate = "$date" in id._updatedAt ? DateTime.fromISO(id._updatedAt.$date) : DateTime.fromJSDate(new Date(id._updatedAt));
+					const updatedDate = getUpdatedDate(id);
 
 					if (DateTime.fromJSDate(record._updatedAt).diff(updatedDate).milliseconds !== 0) {
 						return true;
@@ -1139,7 +1143,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						$or: outdateRecords.map(record => ({
 							dataId: record._id,
 							createdAt: {
-								$gt: DateTime.fromISO(record._updatedAt.$date).toJSDate(),
+								$gt: getUpdatedDate(record).toJSDate(),
 							},
 							$or: mapOfFieldsToUpdateForHistoryQuery,
 						})),
@@ -1163,7 +1167,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						}, []);
 
 						if (errorMessage.length > 0) {
-							return errorReturn(errorMessage.join('\n'));
+							return errorReturn(errorMessage);
 						}
 					}
 				}
