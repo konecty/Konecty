@@ -8,6 +8,7 @@ import pick from 'lodash/pick';
 import { MetaObject } from '@imports/model/MetaObject';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '@imports/utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
 import { logger } from '@imports/utils/logger';
+import { MongoServerError } from 'mongodb';
 import { getFieldNamesOfPaths } from '../utils';
 import updateLookupReferences from './lookupReferences';
 
@@ -37,7 +38,7 @@ async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, met
             const projection = convertStringOfFieldsSeparatedByCommaIntoObjectToFind(keysToFind);
 
             const Collection = MetaObject.Collections[lookupField.document];
-            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v._id) } }, { projection, session: dbSession }).toArray();
+            const lookupRecord = await Collection.find({ _id: { $in: [].concat(record[lookupField.name]).map(v => v?._id).filter(Boolean) } }, { projection, session: dbSession }).toArray();
 
             for await (const lookupRec of lookupRecord) {
                 const result = await getDescriptionAndInheritedFieldsToUpdate({ record: lookupRec, metaField: lookupField, meta, dbSession });
@@ -92,7 +93,10 @@ export default async function updateLookupReference(metaName, fieldName, field, 
 
         return updateResult.modifiedCount;
     } catch (e) {
-        logger.error(e, 'Error updating lookup reference');
-        logger.error({ metaName, fieldName, field, relatedMetaName })
+        if ((e instanceof MongoServerError || e.type === "MongoServerError") === false) {
+            logger.error(e, 'Error updating lookup reference', { metaName, fieldName, field, relatedMetaName });
+        }
+
+        throw e;
     }
 }
