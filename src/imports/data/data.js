@@ -45,6 +45,7 @@ import { getNextUserFromQueue as getNext } from '../meta/getNextUserFromQueue';
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { renderTemplate } from '../template';
 import { convertStringOfFieldsSeparatedByCommaIntoObjectToFind } from '../utils/convertStringOfFieldsSeparatedByCommaIntoObjectToFind';
+import { getUpdatedDate } from '../utils/dateUtils';
 import { randomId } from '../utils/random';
 import { errorReturn, successReturn } from '../utils/return';
 import { handleTransactionError, retryMongoTransaction } from '../utils/transaction';
@@ -1116,16 +1117,14 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			// outdateRecords are records that user are trying to update but they are out of date
 			if (metaObject.ignoreUpdatedAt !== true && isRetry === false && isFromInterfaceUpload === false) {
-				const getUpdatedDate = id => "$date" in id._updatedAt ? DateTime.fromISO(id._updatedAt.$date) : DateTime.fromJSDate(new Date(id._updatedAt));
-
 				const outdateRecords = data.ids.filter(id => {
 					const record = originals[id._id];
 					if (record == null) {
 						return true;
 					}
-					const updatedDate = getUpdatedDate(id);
+					const updatedDate = getUpdatedDate(id._updatedAt);
 
-					if (DateTime.fromJSDate(record._updatedAt).diff(updatedDate).milliseconds !== 0) {
+					if (updatedDate == null || DateTime.fromJSDate(record._updatedAt).diff(updatedDate).milliseconds > 500) {
 						return true;
 					}
 					return false;
@@ -1140,7 +1139,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						$or: outdateRecords.map(record => ({
 							dataId: record._id,
 							createdAt: {
-								$gt: getUpdatedDate(record).toJSDate(),
+								$gt: getUpdatedDate(record._updatedAt)?.toJSDate(),
 							},
 							$or: mapOfFieldsToUpdateForHistoryQuery,
 						})),
