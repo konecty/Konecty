@@ -6,9 +6,11 @@ import { User } from '@imports/model/User';
 import { MetaObjectType } from '@imports/types/metadata';
 import isObject from 'lodash/isObject';
 
-export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
+export type FieldConditions = Partial<Record<'UPDATE' | 'READ' | 'CREATE', KonCondition>>;
+
+export function getFieldConditions(metaAccess: MetaAccess, fieldName: string): FieldConditions {
 	const accessField = metaAccess.fields?.[fieldName];
-	const conditions: Partial<Record<'UPDATE' | 'READ' | 'CREATE', KonCondition>> = {};
+	const conditions: FieldConditions = {};
 
 	if (accessField?.UPDATE?.condition != null) {
 		conditions.UPDATE = accessField.UPDATE.condition;
@@ -25,9 +27,11 @@ export function getFieldConditions(metaAccess: MetaAccess, fieldName: string) {
 	return conditions;
 }
 
-export function getFieldPermissions(metaAccess: MetaAccess, fieldName: string) {
+export type FieldPermissions = Partial<Record<'isUpdatable' | 'isCreatable' | 'isDeletable' | 'isReadable', boolean>>;
+
+export function getFieldPermissions(metaAccess: MetaAccess, fieldName: string): FieldPermissions {
 	const accessField = metaAccess.fields?.[fieldName];
-	const access = {
+	const access: FieldPermissions = {
 		isUpdatable: true,
 		isCreatable: true,
 		isDeletable: true,
