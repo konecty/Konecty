@@ -28,6 +28,11 @@ type RunningKonsistent = {
 	removeWAL: typeof removeWAL;
 };
 
+export type KonsistentWal = {
+	_id: string;
+	walId?: string;
+};
+
 export const Konsistent: RunningKonsistent = {
 	isQueueEnabled: false,
 	LogCollection: db.collection('Konsistent'),
@@ -54,7 +59,7 @@ export async function setupKonsistent() {
 	}
 }
 
-async function processChangeAsync({ walId }: { walId: string }) {
+async function processChangeAsync({ walId }: { walId?: string }) {
 	if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 		await queueManager.sendMessage(Konsistent.queue!.resource!, Konsistent.queue!.name!, {
 			_id: walId,
@@ -79,13 +84,7 @@ async function processChangeSync(metaName: string, operation: string, user: obje
 	}
 }
 
-async function writeAheadLog(
-	metaName: string,
-	operation: string,
-	data: DataDocument,
-	user: User,
-	dbSession: ClientSession,
-): Promise<KonectyResult<{ _id: string; walId?: string }>> {
+async function writeAheadLog(metaName: string, operation: string, data: DataDocument, user: User, dbSession: ClientSession): Promise<KonectyResult<KonsistentWal>> {
 	if (MetaObject.Namespace.plan?.useExternalKonsistent === true && Konsistent.isQueueEnabled) {
 		try {
 			const result = await Konsistent.LogCollection.insertOne(

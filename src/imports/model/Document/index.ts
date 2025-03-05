@@ -18,7 +18,11 @@ export const DocumentSchema = z
 		document: z.string().optional(),
 		access: z.string().optional(),
 		group: z.string().optional(),
+
+		scriptBeforeValidation: z.string().optional(),
 		validationScript: z.string().optional(),
+		scriptAfterSave: z.string().optional(),
+
 		indexes: z
 			.record(
 				z.object({

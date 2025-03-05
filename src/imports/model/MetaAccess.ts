@@ -29,6 +29,8 @@ export const MetaAccessSchema = z.object({
 	isReadable: z.boolean().optional(),
 	isDeletable: z.boolean().optional(),
 
+	changeUser: z.boolean().optional(),
+
 	readFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
 	updateFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
 });

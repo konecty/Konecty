@@ -44,3 +44,18 @@ export async function isReplicaSet() {
 		return false;
 	}
 }
+
+interface DuplicateKeyError extends MongoServerError {
+	keyPattern: Record<string, number>;
+	keyValue: Record<string, any>;
+}
+
+export function isDuplicateKeyError(error: unknown): error is DuplicateKeyError {
+	return error instanceof MongoServerError && error.code === 11000;
+}
+
+export function getDuplicateKeyField(error: DuplicateKeyError): string {
+	const keyPattern = Object.keys(error.keyPattern)[0];
+	const keyValue = error.keyValue[keyPattern];
+	return `${keyPattern}: ${keyValue}`;
+}
