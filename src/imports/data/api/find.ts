@@ -264,7 +264,7 @@ export default async function find<AsStream extends boolean = false>({
 			}
 		}
 
-		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true });
+		const cursor = collection.aggregate(aggregateStages, { allowDiskUse: true, readPreference: 'secondaryPreferred' });
 		const recordStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);

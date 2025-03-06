@@ -435,7 +435,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						merge(updatedQuery, readFilter);
 					}
 
-					const updatedRecords = await collection.find(updatedQuery, { session: dbSession }).toArray();
+					const updatedRecords = await collection.find(updatedQuery, { session: dbSession, readPreference: 'primary' }).toArray();
 
 					if (metaObject.scriptAfterSave != null) {
 						tracingSpan?.addEvent('Running scriptAfterSave');
