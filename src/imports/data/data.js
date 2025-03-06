@@ -831,7 +831,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					return errorReturn(`[${document}] Error on insert, there is no affected record`);
 				}
 
-				const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession });
+				const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: "primary" });
 				const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
 
 				if (isEmpty(MetaObject.Namespace.onCreate) === false) {
@@ -1401,7 +1401,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					merge(updatedQuery, readFilter);
 				}
 
-				const updatedRecords = await collection.find(updatedQuery, { session: dbSession }).toArray();
+				const updatedRecords = await collection.find(updatedQuery, { session: dbSession, readPreference: "primary" }).toArray();
 
 				if (metaObject.scriptAfterSave != null) {
 					tracingSpan?.addEvent('Running scriptAfterSave');
