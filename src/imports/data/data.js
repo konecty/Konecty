@@ -1044,6 +1044,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 	const isFromInterfaceUpload = isUpdateFromInterfaceUpload(metaObject, data);
 
 	let isRetry = false;
+	let updatedRecords = [];
 	const originals = {};
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 
@@ -1401,12 +1402,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					merge(updatedQuery, readFilter);
 				}
 
-				const updatedRecords = await collection.find(updatedQuery, { session: dbSession, readPreference: "primary" }).toArray();
-
-				if (metaObject.scriptAfterSave != null) {
-					tracingSpan?.addEvent('Running scriptAfterSave');
-					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
-				}
+				updatedRecords = await collection.find(updatedQuery, { session: dbSession, readPreference: "primary" }).toArray();
 
 				// Process sync Konsistent
 				for await (const newRecord of updatedRecords) {
@@ -1423,10 +1419,10 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					} catch (e) {
 						await handleTransactionError(e, dbSession);
 
-						logger.error(e, `Error on processIncomingChange ${document}: ${e.message}`);
+						logger.error(e, `Error on Konsistent ${document}: ${e.message}`);
 						tracingSpan?.addEvent('Error on Konsistent', { error: e.message });
 
-						return errorReturn(`[${document}] Error on Konsistent: ${e.message}`);
+						return errorReturn(`[${document}] ${e.message}`);
 					}
 				}
 
@@ -1465,6 +1461,13 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			if (transactionResult.success === false) {
 				return transactionResult;
+			}
+
+			if (metaObject.scriptAfterSave != null) {
+				tracingSpan?.addEvent('Running scriptAfterSave');
+				const existsRecords = updatedRecords.map(record => originals[record._id]);
+
+				await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
 			}
 
 			// Process events and messages after transaction completes successfully

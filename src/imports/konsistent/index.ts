@@ -69,7 +69,7 @@ async function processChangeSync(metaName: string, operation: string, user: obje
 
 	const historyResult = await createHistory(metaName, operation, data.newRecord._id, user, new Date(), changedProps, dbSession);
 	if (historyResult === false) {
-		throw new Error(`[${metaName}] Error creating history`);
+		throw new Error(`Error creating history`);
 	}
 
 	if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {
