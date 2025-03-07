@@ -797,11 +797,16 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 							upsert: true,
 							session: dbSession,
 						});
+
+						// If upsertedId is not null, get the affected record _id
 						if (upsertResult.upsertedId != null) {
 							set(insertedQuery, '_id', upsertResult.upsertedId);
 							tracingSpan?.addEvent('Record upserted', { upsertedId: upsertResult.upsertedId });
-						} else if (upsertResult.modifiedCount > 0) {
-							const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession });
+						}
+
+						// If upsertedId is null, search for the affected record
+						if (upsertResult.upsertedId == null) {
+							const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: "primary" });
 							if (upsertedRecord != null) {
 								set(insertedQuery, '_id', upsertedRecord._id);
 								tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
@@ -914,22 +919,25 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			return errorReturn(`[${document}] Error on insert, there is no affected record`);
 		}));
 
-		if (transactionResult != null && transactionResult.success != null) {
-			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
-
-			// Process events and messages after transaction completes successfully
-			if (transactionResult.success === true && transactionResult.data?.[0] != null) {
-				const record = transactionResult.data[0];
-
-				try {
-					await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
-				} catch (e) {
-					logger.error(e, `Error sending event: ${e.message}`);
-				}
-			}
-
-			return transactionResult;
+		if (transactionResult == null || transactionResult.success == null) {
+			return errorReturn(`[${document}] Transaction error`);
 		}
+
+		tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+
+		// Process events and messages after transaction completes successfully
+		if (transactionResult.success === true && transactionResult.data?.[0] != null) {
+			const record = transactionResult.data[0];
+
+			try {
+				await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
+			} catch (e) {
+				logger.error(e, `Error sending event: ${e.message}`);
+			}
+		}
+
+		return transactionResult;
+
 	} catch (e) {
 		tracingSpan?.addEvent('Error on transaction', { error: e.message });
 		tracingSpan?.setAttribute({ error: e.message });
@@ -940,7 +948,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		dbSession.endSession();
 	}
 
-	return errorReturn(`[${document}] Error on insert, there is no affected record`);
+	return errorReturn(`[${document}] Unexpected error`);
 }
 
 /**
