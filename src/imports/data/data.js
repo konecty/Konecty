@@ -37,6 +37,7 @@ import { find } from "@imports/data/api";
 import { client } from '@imports/database';
 import { Konsistent } from '@imports/konsistent';
 import eventManager from '@imports/lib/EventManager';
+import { handleCommonMongoError } from '@imports/utils/mongo';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
 import { processCollectionLogin } from '../data/processCollectionLogin';
@@ -819,6 +820,10 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					}
 				} catch (e) {
 					await handleTransactionError(e, dbSession);
+					const mongoErrorResult = handleCommonMongoError(e, document);
+					if (mongoErrorResult.success === false) {
+						return mongoErrorResult;
+					}
 
 					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on insert', { error: e.message });
@@ -1325,6 +1330,10 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
 					await handleTransactionError(e, dbSession);
+					const mongoErrorResult = handleCommonMongoError(e, document);
+					if (mongoErrorResult.success === false) {
+						return mongoErrorResult;
+					}
 
 					logger.error(e, `Error updating record ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error updating record', { error: e.message });
