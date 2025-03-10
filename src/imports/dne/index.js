@@ -12,6 +12,7 @@ import { dneDB } from '../database';
 
 const accentToRegex = function (str) {
 	return toLower(str)
+		.replace(/\[|\]/g, '')
 		.replace(/a/g, '[aàáâãäåæ]')
 		.replace(/c/g, '[cç]')
 		.replace(/d/g, '[DÐ]')
