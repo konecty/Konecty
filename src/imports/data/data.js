@@ -823,7 +823,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on insert', { error: e.message });
 					tracingSpan?.setAttribute({ error: e.message });
-					await dbSession.abortTransaction();
 
 					if (e.code === 11000) {
 						return errorReturn(`[${document}] Duplicate key error`);
@@ -909,7 +908,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 					tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
 					logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
-					await dbSession.abortTransaction();
+
 					return errorReturn(`[${document}] Error on sync Konsistent: ${e.message}`);
 				}
 
