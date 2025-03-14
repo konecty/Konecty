@@ -1,3 +1,4 @@
+import Bluebird from 'bluebird';
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
@@ -5,6 +6,8 @@ import isString from 'lodash/isString';
 import { MetaObject } from '@imports/model/MetaObject';
 
 import { getUserSafe } from '@imports/auth/getUser';
+import { Konsistent } from '@imports/konsistent';
+import { errorReturn, successReturn } from '@imports/utils/return';
 import { stringToDate } from '../data/dateParser';
 import { getNextUserFromQueue } from '../meta/getNextUserFromQueue';
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
@@ -116,50 +119,38 @@ export async function addUser({ authTokenId, document, ids, users }) {
 	}
 	const now = new Date();
 
-	const updateResults = await Promise.all(
-		validateResult.data.map(async newUser => {
-			const query = {
-				_id: {
-					$in: ids,
-				},
-				'_user._id': {
-					$ne: newUser._id,
-				},
-			};
-
-			const update = {
-				$push: {
-					_user: {
-						$each: [stringToDate(newUser)],
-						$position: 0,
-					},
-				},
-				$set: {
-					_updatedAt: now,
-					_updatedBy: {
-						_id: user._id,
-						name: user.name,
-						group: user.group,
-						ts: now,
-					},
-				},
-			};
-
-			try {
-				await MetaObject.Collections[document].updateMany(query, update);
-				return { success: true };
-			} catch (e) {
-				return {
-					success: false,
-					errors: [
-						{
-							message: e.message,
-						},
-					],
-				};
+	const update = {
+		$addToSet: {
+			_user: {
+				$each: validateResult.data.map(user => stringToDate(user)),
 			}
-		}),
-	);
+		},
+		$set: {
+			_updatedAt: now,
+			_updatedBy: {
+				_id: user._id,
+				name: user.name,
+				group: user.group,
+				ts: now,
+			},
+		},
+	};
+
+	const updateResults = await Bluebird.map(ids, async id => {
+		try {
+			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+			if (result == null) return successReturn(null);
+
+			await Konsistent.processChangeSync(document, 'update', user, {
+				originalRecord: { _id: id, _user: undefined },
+				newRecord: { _id: id, _user: result._user },
+			});
+
+			return successReturn(result);
+		} catch (e) {
+			return errorReturn(e.message);
+		}
+	}, { concurrency: 10 });
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
@@ -173,7 +164,7 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		};
 	}
 
-	return { success: true };
+	return successReturn(null);
 }
 
 /* Remove users
@@ -223,18 +214,7 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 	}
 
 	const userIds = users.map(user => user._id);
-
 	const now = new Date();
-
-	const query = {
-		_id: {
-			$in: ids,
-		},
-		'_user._id': {
-			$in: userIds,
-		},
-	};
-
 	const update = {
 		$pull: {
 			_user: {
@@ -254,19 +234,38 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
-	try {
-		await MetaObject.Collections[document].updateMany(query, update);
-		return { success: true };
-	} catch (e) {
+	const updateResults = await Bluebird.map(ids, async id => {
+		try {
+			const result = await MetaObject.Collections[document].findOneAndUpdate({
+				_id: id,
+				'_user._id': { $in: userIds },
+			}, update, { returnDocument: 'after', includeResultMetadata: false });
+			if (result == null) return successReturn(null);
+
+			await Konsistent.processChangeSync(document, 'update', user, {
+				originalRecord: { _id: id, _user: undefined },
+				newRecord: { _id: id, _user: result._user },
+			});
+
+			return successReturn(result);
+		} catch (e) {
+			return errorReturn(e.message);
+		}
+	}, { concurrency: 10 });
+
+	if (updateResults.some(result => result.success === false)) {
 		return {
 			success: false,
-			errors: [
-				{
-					message: e.message,
-				},
-			],
+			errors: updateResults.reduce((acc, result) => {
+				if (result.success === false) {
+					acc.push(...result.errors);
+				}
+				return acc;
+			}, []),
 		};
 	}
+
+	return successReturn(null);
 }
 
 /* Define users
@@ -331,18 +330,9 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 	}
 
 	const now = new Date();
-
-	const validatedUsers = validateResult.data;
-
-	const query = {
-		_id: {
-			$in: ids,
-		},
-	};
-
 	const update = {
 		$set: {
-			_user: validatedUsers.map(user => stringToDate(user)),
+			_user: validateResult.data.map(user => stringToDate(user)),
 			_updatedAt: now,
 			_updatedBy: {
 				_id: user._id,
@@ -353,19 +343,35 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
-	try {
-		await MetaObject.Collections[document].updateMany(query, update);
-		return { success: true };
-	} catch (e) {
+	const updateResults = await Bluebird.map(ids, async id => {
+		try {
+			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+			if (result == null) return successReturn(null);
+
+			await Konsistent.processChangeSync(document, 'update', user, {
+				originalRecord: { _id: id, _user: undefined },
+				newRecord: { _id: id, _user: result._user },
+			});
+
+			return successReturn(result);
+		} catch (e) {
+			return errorReturn(e.message);
+		}
+	}, { concurrency: 10 });
+
+	if (updateResults.some(result => result.success === false)) {
 		return {
 			success: false,
-			errors: [
-				{
-					message: e.message,
-				},
-			],
+			errors: updateResults.reduce((acc, result) => {
+				if (result.success === false) {
+					acc.push(...result.errors);
+				}
+				return acc;
+			}, []),
 		};
 	}
+
+	return successReturn(null);
 }
 
 /* Replace users
@@ -458,20 +464,8 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 
 	const now = new Date();
 
-	const query = {
-		_id: {
-			$in: ids,
-		},
-		'_user._id': from._id,
-	};
-
+	const newUser = stringToDate(resultOfValidation.data[0]);
 	const update = {
-		$push: {
-			_user: {
-				$each: resultOfValidation.data.map(user => stringToDate(user)),
-				$position: 0,
-			},
-		},
 		$set: {
 			_updatedAt: now,
 			_updatedBy: {
@@ -483,49 +477,45 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		},
 	};
 
-	try {
-		await MetaObject.Collections[document].updateMany(query, update);
-	} catch (e) {
+	const records = await MetaObject.Collections[document].find({ _id: { $in: ids }, "_user._id": from._id }).project({ _user: 1 }).toArray();
+
+	const updateResults = await Bluebird.map(records, async record => {
+		try {
+			const newUsers = [...record._user];
+
+			const userToRemoveIndex = newUsers.findIndex(user => user._id === from._id);
+			if (userToRemoveIndex === -1) return successReturn(null);
+
+			newUsers[userToRemoveIndex] = newUser;
+			update.$set._user = newUsers;
+
+			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+			if (result == null) return successReturn(null);
+
+			await Konsistent.processChangeSync(document, 'update', user, {
+				originalRecord: { _id: record._id, _user: undefined },
+				newRecord: { _id: record._id, _user: result._user },
+			});
+
+			return successReturn(result);
+		} catch (e) {
+			return errorReturn(e.message);
+		}
+	}, { concurrency: 10 });
+
+	if (updateResults.some(result => result.success === false)) {
 		return {
 			success: false,
-			errors: [
-				{
-					message: e.message,
-				},
-			],
+			errors: updateResults.reduce((acc, result) => {
+				if (result.success === false) {
+					acc.push(...result.errors);
+				}
+				return acc;
+			}, []),
 		};
 	}
 
-	const removeUpdate = {
-		$pull: {
-			_user: {
-				_id: from._id,
-			},
-		},
-		$set: {
-			_updatedAt: now,
-			_updatedBy: {
-				_id: user._id,
-				name: user.name,
-				group: user.group,
-				ts: now,
-			},
-		},
-	};
-
-	try {
-		await MetaObject.Collections[document].updateMany(query, removeUpdate);
-		return { success: true };
-	} catch (e) {
-		return {
-			success: false,
-			errors: [
-				{
-					message: e.message,
-				},
-			],
-		};
-	}
+	return successReturn(null);
 }
 
 /* Count inactive users
@@ -658,20 +648,7 @@ export async function removeInactive({ authTokenId, document, ids }) {
 	}
 
 	const now = new Date();
-
-	const query = {
-		_id: {
-			$in: ids,
-		},
-		'_user.active': false,
-	};
-
 	const update = {
-		$pull: {
-			_user: {
-				active: false,
-			},
-		},
 		$set: {
 			_updatedAt: now,
 			_updatedBy: {
@@ -683,19 +660,42 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		},
 	};
 
-	try {
-		await MetaObject.Collections[document].updateMany(query, update);
-		return { success: true };
-	} catch (e) {
+	const records = await MetaObject.Collections[document].find({ _id: { $in: ids }, '_user.active': false }).project({ _user: 1 }).toArray();
+
+	const updateResults = await Bluebird.map(records, async record => {
+		try {
+			const newUsers = [].concat(record._user).filter(user => user.active === true);
+			if (newUsers.length === record._user.length) return successReturn(null);
+
+			update.$set._user = newUsers;
+
+			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+			if (result == null) return successReturn(null);
+
+			await Konsistent.processChangeSync(document, 'update', user, {
+				originalRecord: { _id: record._id, _user: undefined },
+				newRecord: { _id: record._id, _user: result._user },
+			});
+
+			return successReturn(result);
+		} catch (e) {
+			return errorReturn(e.message);
+		}
+	}, { concurrency: 10 });
+
+	if (updateResults.some(result => result.success === false)) {
 		return {
 			success: false,
-			errors: [
-				{
-					message: e.message,
-				},
-			],
+			errors: updateResults.reduce((acc, result) => {
+				if (result.success === false) {
+					acc.push(...result.errors);
+				}
+				return acc;
+			}, []),
 		};
 	}
+
+	return successReturn(null);
 }
 
 /* Set queue and user
