@@ -63,7 +63,7 @@ const CaseFunctions = {
 	titleCase,
 	upperCase,
 	lowerCase,
-	slugify: slugify,
+	slugCase: slugify,
 };
 
 const VALID_OPERATORS = [
