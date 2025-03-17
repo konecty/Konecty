@@ -14,6 +14,7 @@ import isString from 'lodash/isString';
 import kebabCase from 'lodash/kebabCase';
 import omit from 'lodash/omit';
 import size from 'lodash/size';
+import deburr from 'lodash/deburr';
 
 import { DateTime } from 'luxon';
 
@@ -39,6 +40,13 @@ const regexUtils = {
 	url: /^http(?:s)?:\/\/(www\.)?[a-z0-9]+(?:[-.]{1}[a-z0-9]+)*(?::[0-9]{1,5})?(\/.*)?$/,
 };
 
+const slugify = (text) => {
+	if (text == null) return '';
+	return deburr(String(text).toLowerCase())
+		.replace(/[^a-z0-9]/g, '')
+		.trim();
+};
+
 const CaseFunctions = {
 	camelCase,
 	capitalCase,
@@ -55,6 +63,7 @@ const CaseFunctions = {
 	titleCase,
 	upperCase,
 	lowerCase,
+	slugCase: slugify,
 };
 
 const VALID_OPERATORS = [
