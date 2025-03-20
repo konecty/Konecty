@@ -37,7 +37,7 @@ class EventManager {
 	}
 
 	async sendEvent(metaName: string, operation: string, { data, original, full }: SendEventParams): Promise<void> {
-		const commonEventData = { metaName, operation, data };
+		const commonEventData = { metaName, operation, data, original, full };
 
 		const { events } = await this.jsonEngine.run(commonEventData);
 		if (events.length === 0) return;
@@ -45,7 +45,7 @@ class EventManager {
 		await Promise.all(
 			(events as CustomRuleEvent[]).map(async event => {
 				logger.debug(`Triggered event ${event.params.name}`);
-				const eventData = Object.assign({}, commonEventData, event.params.sendOriginal ? { original } : null, event.params.sendFull ? { full } : null);
+				const eventData = Object.assign({}, { metaName, operation, data }, event.params.sendOriginal ? { original } : null, event.params.sendFull ? { full } : null);
 
 				switch (event.type) {
 					case 'queue':
@@ -70,9 +70,10 @@ class EventManager {
 
 		// Queue can be a string or a string array
 		await Promise.all(
+			// eslint-disable-next-line @typescript-eslint/no-array-constructor
 			Array()
 				.concat(event.params.queue)
-				.map(queueName => queueManager.sendMessage(get(event.params, 'resource', ''), queueName, eventData)),
+				.map(queueName => queueManager.sendMessage(get(event.params, 'resource', ''), queueName, eventData, event.params.headers)),
 		);
 	}
 

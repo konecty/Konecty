@@ -41,10 +41,15 @@ export class RabbitMQResource extends QueueResource {
 		await this.channel?.assertQueue(name, driverParams);
 	}
 
-	async sendMessage(queue: string, message: unknown, retries: number = 0): Promise<KonectyResult> {
+	async sendMessage(queue: string, message: unknown, retries: number = 0, headers?: Record<string, any>): Promise<KonectyResult> {
 		try {
 			const strMessage = typeof message === 'object' ? JSON.stringify(message) : String(message);
-			const success = this.channel?.sendToQueue(queue, Buffer.from(strMessage), { appId: 'konecty', persistent: true, deliveryMode: 2 });
+			const success = this.channel?.sendToQueue(queue, Buffer.from(strMessage), {
+				appId: 'konecty',
+				persistent: true,
+				deliveryMode: 2,
+				headers,
+			});
 
 			return success ? successReturn('Message sent') : errorReturn('Failed to send message');
 		} catch (error) {
@@ -55,7 +60,7 @@ export class RabbitMQResource extends QueueResource {
 
 			await this.disconnect();
 			await this.handleConnectionError(error as Error, () => this.connect(this.connectionUrl));
-			return this.sendMessage(queue, message, retries + 1);
+			return this.sendMessage(queue, message, retries + 1, headers);
 		}
 	}
 }

@@ -4,7 +4,7 @@ const QueueEventSchema = z.object({
 	type: z.literal('queue'),
 	queue: z.string().or(z.string().array()),
 	resource: z.string(),
-
+	headers: z.record(z.any()).optional(),
 	sendOriginal: z.boolean().optional(),
 	sendFull: z.boolean().optional(),
 });
