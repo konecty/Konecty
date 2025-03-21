@@ -41,7 +41,7 @@ class QueueManager {
 		);
 	}
 
-	public async sendMessage(resourceName: string, queueName: string, message: unknown) {
+	public async sendMessage(resourceName: string, queueName: string, message: unknown, headers?: Record<string, any>) {
 		const resource = this.resources[resourceName];
 		if (resource == null) {
 			logger.warn(`Resource ${resourceName} not found`);
@@ -49,7 +49,7 @@ class QueueManager {
 		}
 
 		logger.debug(`Sending queue message to ${resourceName} - ${queueName}`);
-		return await resource.sendMessage(queueName, message);
+		return await resource.sendMessage(queueName, message, 0, headers);
 	}
 
 	public async disconnectAllResources() {
