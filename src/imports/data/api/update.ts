@@ -384,7 +384,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 						return successReturn({ _id: record._id, ...bodyData });
 					} catch (e) {
 						const error = e as Error;
-						await handleTransactionError(error, dbSession);
+						await handleTransactionError(error);
 
 						logger.error(error, `Error updating record ${MetaObject.Namespace.ns}.${document}: ${error.message}`);
 						tracingSpan?.addEvent('Error updating record', { error: error.message });
