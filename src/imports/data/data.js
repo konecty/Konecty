@@ -1329,7 +1329,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 					return successReturn({ _id: record._id, ...bodyData });
 				} catch (e) {
-					await handleTransactionError(e, dbSession);
+					await handleTransactionError(e);
 					const mongoErrorResult = handleCommonMongoError(e, document);
 					if (mongoErrorResult.success === false) {
 						return mongoErrorResult;
