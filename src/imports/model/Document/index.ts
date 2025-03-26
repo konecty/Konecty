@@ -27,6 +27,7 @@ export const DocumentSchema = z
 			.record(
 				z.object({
 					keys: z.record(z.string(), z.union([z.number(), z.boolean()])),
+					label: LabelSchema.optional(),
 					options: z.object({
 						name: z.string().optional(),
 						unique: z.boolean().optional(),

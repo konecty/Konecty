@@ -37,6 +37,7 @@ import { find } from "@imports/data/api";
 import { client } from '@imports/database';
 import { Konsistent } from '@imports/konsistent';
 import eventManager from '@imports/lib/EventManager';
+import { handleCommonMongoError } from '@imports/utils/mongo';
 import { dateToString, stringToDate } from '../data/dateParser';
 import { populateLookupsData } from '../data/populateLookupsData';
 import { processCollectionLogin } from '../data/processCollectionLogin';
@@ -797,11 +798,16 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 							upsert: true,
 							session: dbSession,
 						});
+
+						// If upsertedId is not null, get the affected record _id
 						if (upsertResult.upsertedId != null) {
 							set(insertedQuery, '_id', upsertResult.upsertedId);
 							tracingSpan?.addEvent('Record upserted', { upsertedId: upsertResult.upsertedId });
-						} else if (upsertResult.modifiedCount > 0) {
-							const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession });
+						}
+
+						// If upsertedId is null, search for the affected record
+						if (upsertResult.upsertedId == null) {
+							const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: "primary" });
 							if (upsertedRecord != null) {
 								set(insertedQuery, '_id', upsertedRecord._id);
 								tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
@@ -814,11 +820,14 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					}
 				} catch (e) {
 					await handleTransactionError(e, dbSession);
+					const mongoErrorResult = handleCommonMongoError(e, document);
+					if (mongoErrorResult.success === false) {
+						return mongoErrorResult;
+					}
 
 					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 					tracingSpan?.addEvent('Error on insert', { error: e.message });
 					tracingSpan?.setAttribute({ error: e.message });
-					await dbSession.abortTransaction();
 
 					if (isDuplicateKeyError(e)) {
 						const duplicateField = getDuplicateKeyField(e);
@@ -832,7 +841,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					return errorReturn(`[${document}] Error on insert, there is no affected record`);
 				}
 
-				const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession });
+				const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: "primary" });
 				const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
 
 				await runNamespaceWebhook({ action: 'create', ids: [insertedQuery._id], metaName: document, user });
@@ -874,7 +883,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 					tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
 					logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
-					await dbSession.abortTransaction();
+
 					return errorReturn(`[${document}] Error on sync Konsistent: ${e.message}`);
 				}
 
@@ -884,22 +893,25 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			return errorReturn(`[${document}] Error on insert, there is no affected record`);
 		}));
 
-		if (transactionResult != null && transactionResult.success != null) {
-			tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
-
-			// Process events and messages after transaction completes successfully
-			if (transactionResult.success === true && transactionResult.data?.[0] != null) {
-				const record = transactionResult.data[0];
-
-				try {
-					await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
-				} catch (e) {
-					logger.error(e, `Error sending event: ${e.message}`);
-				}
-			}
-
-			return transactionResult;
+		if (transactionResult == null || transactionResult.success == null) {
+			return errorReturn(`[${document}] Transaction error`);
 		}
+
+		tracingSpan?.addEvent('Operation result', omit(transactionResult, ['data']));
+
+		// Process events and messages after transaction completes successfully
+		if (transactionResult.success === true && transactionResult.data?.[0] != null) {
+			const record = transactionResult.data[0];
+
+			try {
+				await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
+			} catch (e) {
+				logger.error(e, `Error sending event: ${e.message}`);
+			}
+		}
+
+		return transactionResult;
+
 	} catch (e) {
 		tracingSpan?.addEvent('Error on transaction', { error: e.message });
 		tracingSpan?.setAttribute({ error: e.message });
@@ -910,7 +922,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		dbSession.endSession();
 	}
 
-	return errorReturn(`[${document}] Error on insert, there is no affected record`);
+	return errorReturn(`[${document}] Unexpected error`);
 }
 
 /* Delete records
@@ -918,7 +930,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 	@param document
 	@param data
 */
-
 export async function deleteData({ authTokenId, document, data, contextUser }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 	if (success === false) {

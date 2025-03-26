@@ -18,8 +18,10 @@ export const FieldSchema = z.object({
 	renderAs: z.string().optional(),
 	decimalSize: z.number().optional(),
 	minValue: z.number().optional(),
+	maxValue: z.number().optional(),
 	isList: z.boolean().optional(),
 	ignoreHistory: z.boolean().optional(),
+	size: z.number().optional(),
 	sizes: z.array(z.string()).optional(),
 	detailFields: z.array(z.string()).optional(),
 	inheritedFields: z
