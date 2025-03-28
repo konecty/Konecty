@@ -96,7 +96,8 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		logger.trace({ contentType, originalFileName }, `Uploading file ${fileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;
-		const key = `${directory}/${fileName}${path.extname(originalFileName) ?? ''}`;
+		const keyFileName = `${fileName}${path.extname(originalFileName) ?? ''}`;
+		const key = `${directory}/${keyFileName}`;
 
 		const fileData: FileData = {
 			key,
@@ -132,7 +133,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			});
 
 			const imageBuffer = await image.toBuffer();
-			filesToSave.push({ name: `${fileName}.jpeg`, content: imageBuffer });
+			filesToSave.push({ name: keyFileName, content: imageBuffer });
 			fileData.size = imageBuffer.length;
 
 			// Generate thumbnail for jpeg
@@ -149,7 +150,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			}
 		} else {
 			// Non-jpeg files
-			filesToSave.push({ name: fileData.key.split('/').at(-1) ?? '', content: fileContent });
+			filesToSave.push({ name: keyFileName, content: fileContent });
 
 			const thumbnailFile = await generateFileVersion({
 				filename: fileName,
