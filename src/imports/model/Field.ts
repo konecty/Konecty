@@ -20,6 +20,7 @@ export const FieldSchema = z.object({
 	minValue: z.number().optional(),
 	maxValue: z.number().optional(),
 	isList: z.boolean().optional(),
+	ignoreHistory: z.boolean().optional(),
 	size: z.number().optional(),
 	sizes: z.array(z.string()).optional(),
 	detailFields: z.array(z.string()).optional(),

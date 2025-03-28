@@ -14,6 +14,10 @@ export const NamespaceSchema = z
 		sessionExpirationInSeconds: z.number().nonnegative().finite().optional(),
 		ns: z.string(),
 
+		onUpdate: z.string().or(z.array(z.string())).optional(),
+		onCreate: z.string().or(z.array(z.string())).optional(),
+		onDelete: z.string().or(z.array(z.string())).optional(),
+
 		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg]).optional(),
 		RocketChat: z
 			.object({

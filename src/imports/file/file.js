@@ -5,7 +5,7 @@ import size from 'lodash/size';
 
 import { MetaObject } from '@imports/model/MetaObject';
 import { getUserSafe } from '../auth/getUser';
-import { update } from '../data/data';
+import { update } from '../data/api/update';
 import { logger } from '../utils/logger';
 
 /**
