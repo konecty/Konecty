@@ -17,7 +17,7 @@ export abstract class QueueResource {
 
 	abstract createQueue(name: string, driverParams?: Record<string, any>): Promise<void>;
 
-	abstract sendMessage(queue: string, message: unknown, retries: number, headers?: Record<string, any>): Promise<KonectyResult>;
+	abstract sendMessage(queue: string, message: unknown, retries: number, params?: Record<string, any>): Promise<KonectyResult>;
 
 	protected async handleError(error: Error, context: string): Promise<never> {
 		this.logger.error(error, `Queue error in ${context}`);

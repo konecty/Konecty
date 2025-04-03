@@ -29,7 +29,7 @@ class QueueManager {
 			Object.entries(resources).map(async ([resourceName, resourceConfig]) => {
 				try {
 					const resource = createResourcefromType(resourceConfig.type);
-					await resource.connect(resourceConfig.url);
+					await resource.connect(process.env.RABBITMQ_URL || resourceConfig.url);
 
 					await Promise.all(resourceConfig.queues.map(async queue => resource.createQueue(queue.name, queue.driverParams)));
 
@@ -41,7 +41,7 @@ class QueueManager {
 		);
 	}
 
-	public async sendMessage(resourceName: string, queueName: string, message: unknown, headers?: Record<string, any>) {
+	public async sendMessage(resourceName: string, queueName: string, message: unknown, params?: Record<string, any>) {
 		const resource = this.resources[resourceName];
 		if (resource == null) {
 			logger.warn(`Resource ${resourceName} not found`);
@@ -49,7 +49,7 @@ class QueueManager {
 		}
 
 		logger.debug(`Sending queue message to ${resourceName} - ${queueName}`);
-		return await resource.sendMessage(queueName, message, 0, headers);
+		return await resource.sendMessage(queueName, message, 0, params);
 	}
 
 	public async disconnectAllResources() {
