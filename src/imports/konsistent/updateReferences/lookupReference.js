@@ -17,7 +17,11 @@ async function getDescriptionAndInheritedFieldsToUpdate({ record, metaField, met
 
     if (isArray(metaField.descriptionFields) && metaField.descriptionFields.length > 0) {
         const updateKey = metaField.isList ? `${metaField.name}.$` : `${metaField.name}`;
-        const descriptionFieldsValue = pick(record, Array.from(new Set(['_id'].concat(metaField.descriptionFields))));
+        // For lookup description fields, such as "director.name" add _id on the lookup "director._id"
+        const descriptionFieldNames = metaField.descriptionFields.flatMap(descrField =>
+            /\./.test(descrField) ? [descrField, `${getFieldNamesOfPaths(descrField)}._id`] : descrField
+        );
+        const descriptionFieldsValue = pick(record, Array.from(new Set(['_id'].concat(descriptionFieldNames))));
 
         fieldsToUpdate[updateKey] = descriptionFieldsValue;
     }
