@@ -2,6 +2,7 @@ import { hash as bcryptHash } from 'bcryptjs';
 
 import { createHash } from 'crypto';
 
+import deburr from 'lodash/deburr';
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
 import isBoolean from 'lodash/isBoolean';
@@ -14,7 +15,6 @@ import isString from 'lodash/isString';
 import kebabCase from 'lodash/kebabCase';
 import omit from 'lodash/omit';
 import size from 'lodash/size';
-import deburr from 'lodash/deburr';
 
 import { DateTime } from 'luxon';
 
@@ -119,17 +119,6 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		if (field.isAllowDuplicates === false && isArray(value)) {
 			if (value.some((itemA, indexA) => value.some((itemB, indexB) => indexA !== indexB && isEqual(itemA, itemB)))) {
 				return errorReturn(`Value for field ${fieldName} must be a list with no duplicated values`);
-			}
-		}
-	}
-
-	// Validate picklist min selected
-	if (field.type === 'picklist') {
-		if (isNumber(field.minSelected)) {
-			if (field.minSelected === 1) {
-				if (!value || (isArray(value) && value.length === 0)) {
-					return errorReturn(`Value for field ${fieldName} must be an array with at least 1 item`);
-				}
 			}
 		}
 	}
@@ -395,6 +384,9 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				if (isNumber(field.minSelected) && field.minSelected > 0) {
+					if (field.minSelected === 1 && (!value || (isArray(value) && value.length === 0))) {
+						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
+					}
 					if (value.length < field.minSelected) {
 						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
 					}
