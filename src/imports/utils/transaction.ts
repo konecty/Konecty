@@ -48,7 +48,7 @@ export async function handleTransactionError(error: unknown, session?: ClientSes
 	await session?.abortTransaction();
 
 	if (ERROR_CODES.includes((error as MongoServerError).codeName ?? '')) {
-		logger.error(`handleTransaction ${(error as MongoServerError).codeName}`);
+		logger.trace(`handleTransaction ${(error as MongoServerError).codeName}`);
 		throw error;
 	}
 }
