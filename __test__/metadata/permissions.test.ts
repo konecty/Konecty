@@ -1,7 +1,7 @@
-import { expect } from 'chai';
-import * as KonectyApi from '../utils/api';
 import { db } from '@imports/database';
+import { expect } from 'chai';
 import products from '../fixtures/mongodb/permissions/data.Product.json';
+import * as KonectyApi from '../utils/api';
 const UsersAuth = {
 	Default: '__user_is_default__',
 	User: '__user_is_broker__',
@@ -39,7 +39,7 @@ describe('Permissions', () => {
 
 				expect(konResponse.success).to.be.false;
 				expect(konResponse.errors).to.be.not.empty;
-				expect(konResponse.errors?.[0]?.message).to.includes("You don't have permission to update records Product_from_user_Default");
+				expect(konResponse.errors?.[0]?.message).to.includes("You don't have permission to update records or they don't exists");
 			});
 		});
 
