@@ -876,11 +876,6 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					});
 				}
 
-				if (metaObject.scriptAfterSave != null) {
-					tracingSpan?.addEvent('Running scriptAfterSave');
-					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [resultRecord], user });
-				}
-
 				if (emailsToSend.length > 0) {
 					tracingSpan?.addEvent('Sending emails');
 					const messagesCollection = MetaObject.Collections['Message'];
@@ -934,6 +929,10 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			const record = transactionResult.data[0];
 
 			try {
+				if (metaObject.scriptAfterSave != null) {
+					tracingSpan?.addEvent('Running scriptAfterSave');
+					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [record], user });
+				}
 				await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
 			} catch (e) {
 				logger.error(e, `Error sending event: ${e.message}`);
