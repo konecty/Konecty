@@ -20,7 +20,7 @@
 	"dependencies": {
 		"@autotelic/fastify-opentelemetry": "^0.18.0",
 		"@aws-sdk/client-s3": "^3.730.0",
-		"@babel/runtime": "^7.23.1",
+		"@babel/runtime": "^7.26.10",
 		"@fastify/cookie": "^9.1.0",
 		"@fastify/cors": "^8.4.1",
 		"@fastify/formbody": "^7.4.0",
