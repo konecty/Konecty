@@ -373,23 +373,45 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				return successReturn(value);
 
 			case 'picklist':
-				if (isNumber(field.maxSelected) && field.maxSelected > 1) {
-					const pickListResult = mustBeArray(value);
-					if (pickListResult.success === false) {
-						return pickListResult;
+				if (isArray(value)) {
+					value = value.filter(v => v && size(v) > 0);
+				} else if (isString(value) && size(value) === 0) {
+					value = null;
+				}
+
+				if (isNumber(field.maxSelected)) {
+					if (field.maxSelected > 1) {
+						const pickListResult = mustBeArray(value);
+						if (pickListResult.success === false) {
+							return pickListResult;
+						}
 					}
-					if (value.length > field.maxSelected) {
+					if (value != null && value.length > field.maxSelected) {
 						return errorReturn(`Value for field ${fieldName} must be an array with max of ${field.maxSelected} item(s)`);
+					}
+
+					if (field.maxSelected === 1 && isArray(value)) {
+						value = value[0];
 					}
 				}
 
 				if (isNumber(field.minSelected) && field.minSelected > 0) {
 					if (field.minSelected === 1 && (!value || (isArray(value) && value.length === 0))) {
 						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
+					} else if (field.minSelected > 1) {
+						const pickListResult = mustBeArray(value);
+						if (pickListResult.success === false) {
+							return pickListResult;
+						}
+
+						if (value.length < field.minSelected) {
+							return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
+						}
 					}
-					if (value.length < field.minSelected) {
-						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
-					}
+				}
+
+				if (value == null) {
+					return successReturn(value);
 				}
 
 				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
@@ -420,10 +442,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					}
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(size(value) > 0 ? value : null);
 
 			case 'dateTime':
 			case 'date':
@@ -555,10 +574,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					};
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(size(value) > 0 ? value : null);
 
 			case 'personName':
 				const personObjectResult = mustBeObject(value);
@@ -576,7 +592,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				value = keys.reduce((acc, key) => {
-					if (isString(value[key])) {
+					if (isString(value[key]) && size(value[key]) > 0) {
 						acc[key] = titleCase(value[key]);
 					}
 					return acc;
@@ -792,7 +808,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					.concat(optionalKeys)
 					.concat(extraKeys)
 					.reduce((acc, key) => {
-						if (value[key] == null) {
+						if (value[key] == null || size(value[key]) === 0) {
 							return acc;
 						}
 						if (isNumber(value[key])) {
