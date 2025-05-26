@@ -6,7 +6,7 @@ const baseMeta = {
     fields: {
         pick: {
             type: 'picklist',
-            options: { A: 'A', B: 'B', C: 'C' },
+            options: { A: 'A', B: 'B', C: 'C', Quadrados: 'Quadrados' },
             isRequired: false,
         },
     },
@@ -74,6 +74,10 @@ describe('Picklist Validation', () => {
 
         // Valid: single value
         result = await validateAndProcessValueFor({ ...defaultParams, meta, value: 'B' });
+        expect(result.success).toBe(true);
+
+        // Valid: single value
+        result = await validateAndProcessValueFor({ ...defaultParams, meta, value: 'Quadrados' });
         expect(result.success).toBe(true);
 
         // Invalid: array with more than 1

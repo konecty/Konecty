@@ -1,8 +1,8 @@
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
+import { Promise as BluebirdPromise } from 'bluebird';
 import fs from 'fs/promises';
 import path from 'node:path';
-import { Promise as BluebirdPromise } from 'bluebird';
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -21,6 +21,7 @@ export default async function globalSetup() {
 	process.env.MONGO_URL = 'mongodb://127.0.0.1:27019/jest?replicaSet=testset';
 	process.env.DISABLE_SENDMAIL = 'true';
 	process.env.DISABLE_KONSISTENT = 'true';
+	process.env.DISABLE_REINDEX = 'true';
 	process.env.BASE_URL = 'http://127.0.0.1:3000/rest';
 	process.env.UI_URL = 'https://ui.konecty.com';
 	process.env.LOG_LEVEL = 'fatal';

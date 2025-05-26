@@ -386,7 +386,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 							return pickListResult;
 						}
 					}
-					if (value != null && value.length > field.maxSelected) {
+					if (isArray(value) && value.length > field.maxSelected) {
 						return errorReturn(`Value for field ${fieldName} must be an array with max of ${field.maxSelected} item(s)`);
 					}
 
