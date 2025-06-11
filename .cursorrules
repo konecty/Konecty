@@ -17,3 +17,4 @@
 - Implement JWT authentication when necessary
 - Use connection pooling for the database
 - Implement graceful shutdown for connections and services 
+- All docs and memory banks must be in american english
