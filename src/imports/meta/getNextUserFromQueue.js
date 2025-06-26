@@ -44,7 +44,7 @@ export async function getNextUserFromQueue(queueStrId, user) {
 	const queueUser = await collection.findOneAndUpdate(query, update, options);
 
 	if (queueUser != null) {
-		const user = convertObjectIds(queueUser);
+		const user = convertObjectIds(queueUser.value ? queueUser.value : queueUser);
 		return {
 			success: true,
 			data: user,

@@ -525,7 +525,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 					if (userQueueResult.success == false) {
 						return userQueueResult;
 					}
-					cleanedData._user = { _id: userQueueResult.data.user };
+					cleanedData._user = { _id: userQueueResult.data.user._id };
 				}
 
 				if (metaObject.fields._user?.isList === true) {
