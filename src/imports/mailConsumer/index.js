@@ -32,10 +32,10 @@ async function sendEmail(record) {
 	let user;
 	let server = transporters.default;
 	if (record.server) {
-		if (transporters[record.server] == null) {
+		if (transporters[record.server] != null) {
 			server = transporters[record.server];
 		} else {
-			logger.error(`Server ${record.server} not found`);
+			logger.error(`Server ${record.server} not found - Using default server`);
 		}
 	} else {
 		record.server = 'default';
