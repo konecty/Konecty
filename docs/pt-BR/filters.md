@@ -50,7 +50,7 @@ O Konecty suporta filtros aninhados, permitindo criar lógicas mais complexas co
                     "term": "status",    // Campo a ser filtrado
                     "value": [           // Valor ou array de valores
                         "Nova",
-                        "Em+Andamento"
+                        "Em Andamento"
                     ],
                     "operator": "in"     // Operador de comparação
                 }
