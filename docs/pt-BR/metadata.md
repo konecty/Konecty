@@ -1,6 +1,6 @@
-## **1. Metadata**
+# Metadata
 
-### **Descrição**
+## Descrição
 Metadados definem as propriedades e validações de campos específicos no sistema. Eles são essenciais para garantir que os dados sejam capturados e armazenados corretamente.
 
 A plataforma tem um conjunto inicial de metadata necessários para iniciar um servidor disponíveis em `/src/private/metadata`.
@@ -14,7 +14,7 @@ Existem 5 tipos de metadata distintos, `document`, `access`, `list`, `view` e `p
 - **view**: descreve uma visualização e formulário do módulo onde um registro é editável ou visualizado com detalhes. Cada `list` define uma `view` para abrir a tela do registro. Esse metadata é opcional para o servidor, mas obrigatório que exista pelo menos uma `view` por módulo para a interface padrão.
 - **pivot**: descreve um relatório em formato de tabela pivot para cada módulo, configurando filtros, colunas, linhas, valores e agregadores. Podem existir múltiplos `pivot` para cada módulo. O metadata `pivot` é opcional.
 
-## **Document**
+## Document
 
 Um objeto `document` define a estrutura, os campos, as regras de validação, relacionamentos e configurações de um módulo de dados na plataforma. Ele serve como a especificação principal para como os dados desse módulo serão armazenados, exibidos e manipulados pelo sistema. Cada propriedade do objeto controla um aspecto fundamental do comportamento do módulo, permitindo flexibilidade e padronização na criação de novos módulos.
 
@@ -325,7 +325,7 @@ Cada campo dentro de `fields` também possui suas próprias propriedades, como `
 	},
 ```
 
-## **List**
+## List
 
 O objeto `list` define como os registros de um módulo são apresentados em listas na interface do sistema. Ele especifica colunas, filtros, ordenações, opções de visualização, paginação e outros aspectos que controlam a experiência do usuário ao visualizar múltiplos registros de um módulo. Cada propriedade do objeto permite customizar a exibição, filtragem e interação com os dados listados.
 
@@ -632,7 +632,7 @@ Cada coluna definida em `columns` pode conter propriedades como `name`, `linkFie
 	},
 ```
 
-## **View**
+## View
 
 O objeto `view` define a estrutura e a organização visual dos formulários e telas de detalhamento de um módulo. Ele especifica como os campos e grupos de campos são apresentados ao usuário, permitindo customizar a experiência de visualização e edição dos registros. Cada propriedade do objeto controla aspectos como agrupamento, ordem, rótulos, estilos e tipos de componentes exibidos.
 
@@ -789,7 +789,7 @@ O tipo `reverseLookup` dentro de `visuals` permite exibir uma lista de registros
 ```
 
 
-## **Pivot**
+## Pivot
 
 ### Descrição Geral
 
@@ -982,11 +982,11 @@ Cada item em `columns`, `rows` e `values` pode conter propriedades como `name`, 
 	},
 ```
 
-## **Access, papéis e grupos**
+## Access, papéis e grupos
 
 [Descrito em detalhes em ./access.md](./access.md)
 
-## **Hooks**
+## Hooks
 
 [Descrito em detalhes em ./hooks.md](./hooks.md)
 
