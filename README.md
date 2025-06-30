@@ -2,6 +2,12 @@
 
 # Konecty Open source Tech Business Platform
 
+> The Konecty documentation is available in:
+> - [Português (pt-BR)](docs/pt-BR/index.md)
+> - [English (en)](docs/en/index.md)
+>
+> The documentation covers main concepts, configuration, API, and usage examples for the Konecty platform.
+
 ## How to run local/development
 
 You will need a mongodb database (you can use a free account at cloud.mongodb.com or a local mongodb install)
@@ -69,16 +75,12 @@ docker pull konecty/konecty
 docker run --name kondata -p 3000:3000 --link mongo --env MONGO_URL=mongodb://mongo:27017/konecty --env MONGO_OPLOG_URL=mongodb://mongo:27017/local konecty/konecty
 ```
 
-## REST API
-
-Examples of REST usage can be found here: [REST](REST.md)
-
 ## Namespace configuration
 
 The namespace is made of many parts, documented at:
 
--   [Storage api](docs/en/STORAGE.md)
--   [Resources and Events](docs/en/RESOURCES_AND_EVENTS.md)
+-   [Storage api](docs/en/internal/STORAGE.md)
+-   [Resources and Events](docs/en/internal/RESOURCES_AND_EVENTS.md)
 
 ## Logs
 
