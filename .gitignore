@@ -71,3 +71,4 @@ dist
 coverage
 .jestcache
 .dev-data
+dbtest
