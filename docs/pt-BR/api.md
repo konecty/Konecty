@@ -136,21 +136,69 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 -   **POST** `/rest/data/:document`
 -   **Parâmetros:**
-    -   `:document` — Nome do módulo (ex: `Contact`)
+    -   `:document` — Nome do módulo (ex: `Activity`)
 -   **Body:**
     Objeto JSON com os campos do registro a ser criado.
+
+    ```json
+    {
+    	"contact": [
+    		{
+    			"_id": "xmGSwsyD9ivv69Ndm",
+    			"type": ["Cliente"]
+    		}
+    	],
+    	"priority": "Baixa",
+    	"status": "Nova",
+    	"description": "",
+    	"location": "",
+    	"private": null,
+    	"realEstateInterest": null,
+    	"reason": "testes",
+    	"subject": "testes",
+    	"type": "Comentario",
+    	"_user": null
+    }
+    ```
+
 -   **Headers:** Requer autenticação
 -   **Resposta de Sucesso:**
     ```json
     {
     	"success": true,
-    	"data": {
-    		"_id": "abc123",
-    		"name": "João da Silva",
-    		"email": "joao@exemplo.com",
-    		"phone": "+55 11 99999-9999"
-    		// ... outros campos
-    	}
+    	"data": [
+    		{
+    			"_id": "MznGugx9fPXY4fiKa",
+    			"contact": [
+    				{
+    					"_id": "xmGSwsyD9ivv69Ndm",
+    					"code": 1663376,
+    					"name": {
+    						"full": "Dev Teste"
+    					}
+    				}
+    			],
+    			"priority": "Baixa",
+    			"status": "Nova",
+    			"reason": "testes",
+    			"subject": "testes",
+    			"type": "Comentario",
+    			"_user": [
+    				{
+    					/* dados do usuário */
+    				}
+    			],
+    			"code": 2690731,
+    			"_createdAt": "2025-07-02T10:45:43.745-03:00",
+    			"_createdBy": {
+    				/* dados do usuário */
+    			},
+    			"_updatedAt": "2025-07-02T10:45:43.745-03:00",
+    			"_updatedBy": {
+    				/* dados do usuário */
+    			}
+    		}
+    	]
     }
     ```
 -   **Resposta de Falha:**
@@ -185,29 +233,64 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 -   **PUT** `/rest/data/:document`
 -   **Parâmetros:**
-    -   `:document` — Nome do módulo (ex: `Contact`)
+    -   `:document` — Nome do módulo (ex: `Activity`)
 -   **Body:**
     Objeto JSON com os campos a serem atualizados.  
-    **É obrigatório informar o identificador do registro (`_id`).**  
+    **É obrigatório informar o identificador do registro (`_id`) e o campo (`_updatedAt`).**
+
     Exemplo:
+
     ```json
     {
-    	"_id": "abc123",
-    	"name": "João da Silva Atualizado",
-    	"email": "joao@exemplo.com"
+    	"data": {
+    		"reason": "update",
+    		"subject": "assunto teste"
+    	},
+    	"ids": [
+    		{
+    			"_id": "MznGugx9fPXY4fiKa",
+    			"_updatedAt": { "$date": "2025-07-02T13:45:43.745Z" }
+    		}
+    	]
     }
     ```
+
 -   **Headers:** Requer autenticação
 -   **Resposta de Sucesso:**
     ```json
     {
     	"success": true,
-    	"data": {
-    		"_id": "abc123",
-    		"name": "João da Silva Atualizado",
-    		"email": "joao@exemplo.com"
-    		// ... outros campos atualizados
-    	}
+    	"data": [
+    		{
+    			"_id": "MznGugx9fPXY4fiKa",
+    			"contact": [
+    				{
+    					"_id": "xmGSwsyD9ivv69Ndm",
+    					"code": 1663376,
+    					"name": {
+    						"full": "Dev Test"
+    					}
+    				}
+    			],
+    			"priority": "Baixa",
+    			"status": "Nova",
+    			"reason": "update 2",
+    			"subject": "assunto teste doc",
+    			"type": "Comentario",
+    			"_user": [
+    				/* dados do usuário */
+    			],
+    			"code": 2690731,
+    			"_createdAt": "2025-07-02T10:45:43.745-03:00",
+    			"_createdBy": {
+    				/* dados do usuário */
+    			},
+    			"_updatedAt": "2025-07-02T10:54:37.489-03:00",
+    			"_updatedBy": {
+    				/* dados do usuário */
+    			}
+    		}
+    	]
     }
     ```
 -   **Resposta de Falha:**
@@ -221,9 +304,13 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
     **Possíveis mensagens de erro:**
 
-    -   Registro não encontrado:
         ```json
         { "message": "Registro não encontrado." }
+        ```
+
+    -   Campo "\_updatedAt" ausente ou desatualizado:
+        ```json
+        { "message": "[Activity] Record MznGugx9fPXY4fiKa is out of date, field reason was updated at 2025-07-02T10:45:43.755-03:00 by Admin" }
         ```
     -   Campo obrigatório ausente:
         ```json
@@ -242,21 +329,27 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 -   **DELETE** `/rest/data/:document`
 -   **Parâmetros:**
-    -   `:document` — Nome do módulo (ex: `Contact`)
+    -   `:document` — Nome do módulo (ex: `Activity`)
 -   **Body:**
     Objeto JSON com o identificador do registro a ser deletado.  
-    **É obrigatório informar o identificador do registro (`_id`).**  
-    Exemplo:
+     **É obrigatório informar o identificador do registro (`_id`).**  
+     Exemplo:
     ```json
     {
-    	"_id": "abc123"
+    	"ids": [
+    		{
+    			"_id": "MznGugx9fPXY4fiKa",
+    			"_updatedAt": { "$date": "2025-07-02T10:54:37.489-03:00" }
+    		}
+    	]
     }
     ```
 -   **Headers:** Requer autenticação
 -   **Resposta de Sucesso:**
     ```json
     {
-    	"success": true
+    	"success": true,
+    	"data": ["MznGugx9fPXY4fiKa"]
     }
     ```
 -   **Resposta de Falha:**
@@ -295,7 +388,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 -   **GET** `/rest/data/:document/:dataId/history`
 -   **Parâmetros:**
-    -   `:document` — Nome do módulo (ex: `Contact`)
+    -   `:document` — Nome do módulo (ex: `Activity`)
     -   `:dataId` — ID do registro
 -   **Query String:**
     -   `fields` — (opcional) Campos específicos do histórico a serem retornados
@@ -306,21 +399,89 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     	"success": true,
     	"data": [
     		{
-    			"_id": "hist1",
-    			"action": "update",
-    			"createdAt": "2024-06-07T14:00:00.000Z",
+    			"_id": "256315c3-ea1a-4458-afc2-6eae8129063a",
+    			"dataId": "MznGugx9fPXY4fiKa",
+    			"createdAt": "2025-07-02T13:45:43.755Z",
     			"createdBy": {
     				/* dados do usuário */
     			},
-    			"changes": {
-    				"field": {
-    					"from": "valor antigo",
-    					"to": "valor novo"
+    			"type": "create",
+    			"diffs": {
+    				"_id": {},
+    				"contact": {
+    					"to": [
+    						{
+    							"_id": "xmGSwsyD9ivv69Ndm",
+    							"code": 1663376,
+    							"name": {
+    								"full": "Dev Test"
+    							}
+    						}
+    					]
+    				},
+    				"priority": {
+    					"to": "Baixa"
+    				},
+    				"status": {
+    					"to": "Nova"
+    				},
+    				"reason": {
+    					"to": "testes"
+    				},
+    				"subject": {
+    					"to": "testes"
+    				},
+    				"type": {
+    					"to": "Comentario"
+    				},
+    				"_user": {
+    					"to": [
+    						{
+    							/* dados do usuário */
+    						}
+    					]
+    				},
+    				"code": {
+    					"to": 2690731
     				}
     			}
-    			// ... outros campos
+    		},
+    		{
+    			"_id": "9f709270-5ccc-4e2d-a614-bb1e19947718",
+    			"dataId": "MznGugx9fPXY4fiKa",
+    			"createdAt": "2025-07-02T13:49:47.537Z",
+    			"createdBy": {
+    				/* dados do usuário */
+    			},
+    			"type": "update",
+    			"diffs": {
+    				"_id": {},
+    				"reason": {
+    					"to": "update"
+    				},
+    				"subject": {
+    					"to": "assunto teste"
+    				}
+    			}
+    		},
+    		{
+    			"_id": "a7fa7ee7-4df9-423d-9225-85c9f644db7f",
+    			"dataId": "MznGugx9fPXY4fiKa",
+    			"createdAt": "2025-07-02T13:54:37.497Z",
+    			"createdBy": {
+    				/* dados do usuário */
+    			},
+    			"type": "update",
+    			"diffs": {
+    				"_id": {},
+    				"reason": {
+    					"to": "update 2"
+    				},
+    				"subject": {
+    					"to": "assunto teste doc"
+    				}
+    			}
     		}
-    		// ... outros eventos de histórico
     	]
     }
     ```
@@ -365,15 +526,14 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     	"success": true,
     	"data": [
     		{
-    			"_id": "commentId1",
-    			"text": "Primeiro comentário",
-    			"createdAt": "2024-06-07T12:00:00.000Z",
-    			"createdBy": {
+    			"_id": "334j4qGh4SqTMci4b",
+    			"dataId": "hMyiED7RiXmw63S8v",
+    			"_createdAt": "2025-07-02T14:16:49.724Z",
+    			"_createdBy": {
     				/* dados do usuário */
-    			}
-    			// ... outros campos
+    			},
+    			"text": "test"
     		}
-    		// ... outros comentários
     	]
     }
     ```
@@ -420,6 +580,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     	"success": true,
     	"data": {
     		"_id": "commentId2",
+    		"dataId": "hMyiED7RiXmw63S8v",
     		"text": "Este é um novo comentário",
     		"createdAt": "2024-06-07T12:34:56.000Z",
     		"createdBy": {
@@ -584,14 +745,15 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     ```json
     [
     	{
-    		"postalCode": "12345678",
-    		"place": "Rua Exemplo",
-    		"placeType": "Rua",
-    		"init": 1,
-    		"end": 999,
-    		"city": "São Paulo",
+    		"_id": "63c83a1a3e51ef46111c65a1",
+    		"cityAbbr": "Ituverava",
+    		"type": "M",
+    		"status": "0",
+    		"postalCode": "14500000",
+    		"city": "Ituverava",
     		"state": "SP",
-    		"district": "Centro"
+    		"id": 9262,
+    		"__v": 0
     	}
     ]
     ```
@@ -599,8 +761,8 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     ```json
     [
     	{
-    		"postalCode": "12345678",
-    		"city": "São Paulo",
+    		"postalCode": "14500000",
+    		"city": "Ituverava",
     		"state": "SP"
     	}
     ]
@@ -621,14 +783,26 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     ```json
     [
     	{
-    		"postalCode": "12345678",
-    		"city": "São Paulo",
-    		"state": "SP"
+    		"_id": "63c83a1a3e51ef46111c661b",
+    		"cityAbbr": "Adamantina",
+    		"type": "M",
+    		"status": "0",
+    		"postalCode": "17800000",
+    		"city": "Adamantina",
+    		"state": "SP",
+    		"id": 8853,
+    		"__v": 0
     	},
     	{
-    		"postalCode": "87654321",
-    		"city": "Campinas",
-    		"state": "SP"
+    		"_id": "63c83a1a3e51ef46111c661c",
+    		"cityAbbr": "Adolfo",
+    		"type": "M",
+    		"status": "0",
+    		"postalCode": "15230000",
+    		"city": "Adolfo",
+    		"state": "SP",
+    		"id": 8854,
+    		"__v": 0
     	}
     ]
     ```
@@ -649,16 +823,24 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     ```json
     [
     	{
-    		"district": "Centro",
-    		"postalCode": "12345678",
-    		"city": "São Paulo",
-    		"state": "SP"
+    		"_id": "63c83a9f3e51ef46111cf4e9",
+    		"districtAbbr": "A C Ind Empresarial/Alphaville.",
+    		"district": "Alphaville Centro Industrial e Empresarial/Alphaville.",
+    		"cityAbbr": "Barueri",
+    		"city": "Barueri",
+    		"state": "SP",
+    		"id": 63354,
+    		"__v": 0
     	},
     	{
-    		"district": "Jardins",
-    		"postalCode": "87654321",
-    		"city": "São Paulo",
-    		"state": "SP"
+    		"_id": "63c83ae03e51ef46111d470c",
+    		"districtAbbr": "A C Apoio I",
+    		"district": "Alphaville Centro de Apoio I",
+    		"cityAbbr": "Barueri",
+    		"city": "Barueri",
+    		"state": "SP",
+    		"id": 15331,
+    		"__v": 0
     	}
     ]
     ```
