@@ -39,7 +39,10 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 		const cookieMaxAge = get(MetaObject.Namespace, 'sessionExpirationInSeconds', 2592000);
 
 		// Set cookie with session id
-		reply.header('set-cookie', `_authTokenNs=${req.params.ns}; _authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`);
+		reply.header('set-cookie', [
+			`_authTokenNs=${req.params.ns}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`,
+			`_authTokenId=${req.params.sessionId}; ${domain} Version=1; Path=/; Max-Age=${cookieMaxAge.toString()}`,
+		]);
 
 		// Redirect to system
 		return reply.redirect('/');
