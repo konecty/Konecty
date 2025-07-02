@@ -145,7 +145,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     	"contact": [
     		{
     			"_id": "xmGSwsyD9ivv69Ndm",
-    			"type": ["Cliente"]
+    			"type": "Cliente"
     		}
     	],
     	"priority": "Baixa",
@@ -156,8 +156,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     	"realEstateInterest": null,
     	"reason": "testes",
     	"subject": "testes",
-    	"type": "Comentario",
-    	"_user": null
+    	"type": "Comentario"
     }
     ```
 
