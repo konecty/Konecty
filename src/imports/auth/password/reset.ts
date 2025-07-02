@@ -23,7 +23,6 @@ export async function resetPassword({ user, ns, host }: ResetPasswordParams) {
 	}
 
 	const emailAddress = userRecord.emails?.[0]?.address;
-	console.log(emailAddress);
 	if (emailAddress == null) {
 		return {
 			success: false,
