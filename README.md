@@ -48,6 +48,7 @@ The UI will be running at `localhost:3000`
 -   `UI_URL`: host for ui
 -   `LOG_LEVEL`: [Pino log levels](https://github.com/pinojs/pino/blob/HEAD/docs/api.md#level-string)
 -   `LOG_TO_FILE`: Optional file name to write all logs. Path relative to project root
+-   `DISABLE_SENDMAIL`: (optional) `true` to disable email processing
 
 ## FILE STORAGE API
 
