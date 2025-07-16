@@ -3,7 +3,6 @@ import { ClientSession, Collection, Filter, UpdateFilter } from 'mongodb';
 
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
-import flatten from 'lodash/flatten';
 
 import { parseFilterObject } from '@imports/data/filterUtils';
 
@@ -109,23 +108,25 @@ export default async function updateRelationReference(metaName: string, relation
 				group.$group.currency = { $first: `$${aggregator.field?.replace('.value', '.currency')}` };
 			}
 
-			if (type === 'lookup' && aggregator.aggregator === 'addToSet') {
+			if (aggregator.aggregator === 'addToSet') {
 				if (aggregatorField.isList === true) {
 					pipeline.push({ $unwind: `$${aggregator.field}` });
 				}
 
-				const addToSetGroup = {
-					$group: {
-						_id: `$${aggregator.field}._id`,
-						value: {
-							$first: `$${aggregator.field}`,
+				if (type === 'lookup') {
+					const addToSetGroup = {
+						$group: {
+							_id: `$${aggregator.field}._id`,
+							value: {
+								$first: `$${aggregator.field}`,
+							},
 						},
-					},
-				};
+					};
 
-				pipeline.push(addToSetGroup);
+					pipeline.push(addToSetGroup);
 
-				aggregator.field = 'value';
+					aggregator.field = 'value';
+				}
 			}
 
 			// If agg inst count then use agg method over passed agg field
@@ -149,12 +150,8 @@ export default async function updateRelationReference(metaName: string, relation
 				if (type === 'money') {
 					valuesToUpdate.$set[fieldName] = { currency: result[0].currency, value: result[0].value };
 				} else {
-					// Garantir que não haja arrays aninhados
-					let value = result[0].value;
-					if (isArray(value) && isArray(value[0])) {
-						value = flatten(value);
-					}
-					valuesToUpdate.$set[fieldName] = value;
+					// Then add value to update object
+					valuesToUpdate.$set[fieldName] = result[0].value;
 				}
 			} else {
 				valuesToUpdate.$unset = valuesToUpdate.$unset ?? {};
