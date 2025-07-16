@@ -108,23 +108,25 @@ export default async function updateRelationReference(metaName: string, relation
 				group.$group.currency = { $first: `$${aggregator.field?.replace('.value', '.currency')}` };
 			}
 
-			if (type === 'lookup' && aggregator.aggregator === 'addToSet') {
+			if (aggregator.aggregator === 'addToSet') {
 				if (aggregatorField.isList === true) {
 					pipeline.push({ $unwind: `$${aggregator.field}` });
 				}
 
-				const addToSetGroup = {
-					$group: {
-						_id: `$${aggregator.field}._id`,
-						value: {
-							$first: `$${aggregator.field}`,
+				if (type === 'lookup') {
+					const addToSetGroup = {
+						$group: {
+							_id: `$${aggregator.field}._id`,
+							value: {
+								$first: `$${aggregator.field}`,
+							},
 						},
-					},
-				};
+					};
 
-				pipeline.push(addToSetGroup);
+					pipeline.push(addToSetGroup);
 
-				aggregator.field = 'value';
+					aggregator.field = 'value';
+				}
 			}
 
 			// If agg inst count then use agg method over passed agg field
