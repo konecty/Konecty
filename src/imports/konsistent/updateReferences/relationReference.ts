@@ -3,6 +3,7 @@ import { ClientSession, Collection, Filter, UpdateFilter } from 'mongodb';
 
 import isArray from 'lodash/isArray';
 import isObject from 'lodash/isObject';
+import flatten from 'lodash/flatten';
 
 import { parseFilterObject } from '@imports/data/filterUtils';
 
@@ -148,8 +149,12 @@ export default async function updateRelationReference(metaName: string, relation
 				if (type === 'money') {
 					valuesToUpdate.$set[fieldName] = { currency: result[0].currency, value: result[0].value };
 				} else {
-					// Then add value to update object
-					valuesToUpdate.$set[fieldName] = result[0].value;
+					// Garantir que não haja arrays aninhados
+					let value = result[0].value;
+					if (isArray(value) && isArray(value[0])) {
+						value = flatten(value);
+					}
+					valuesToUpdate.$set[fieldName] = value;
 				}
 			} else {
 				valuesToUpdate.$unset = valuesToUpdate.$unset ?? {};
