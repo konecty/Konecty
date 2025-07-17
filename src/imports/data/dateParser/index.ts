@@ -22,8 +22,7 @@ export function dateToString<ReturnT = string | Array<any> | object>(record: Ret
 			return typedRecord.toHexString() as ReturnT;
 		}
 
-		const transformToString = isFunction(transformFn) ? transformFn : (date: DateTime) => date.toISO();
-
+		const transformToString = isFunction(transformFn) ? transformFn : (date: DateTime) => date.toUTC().toISO();
 		return reduce(
 			typedRecord,
 			(acc, value, key) => {
