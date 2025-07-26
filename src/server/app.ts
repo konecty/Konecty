@@ -12,7 +12,9 @@ const app = async () => {
 	try {
 		ShutdownManager.initialize();
 
+		logger.info('BUILD:: 00001');
 		await loadMetaObjects();
+
 		if (/true|1|enabled/i.test(process.env.DISABLE_SENDMAIL ?? '') === true) {
 			logger.warn('[sendmail] Sendmail is disabled');
 		} else {
