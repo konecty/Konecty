@@ -31,6 +31,10 @@ export const MetaAccessSchema = z.object({
 
 	readFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
 	updateFilter: KonFilter.extend({ allow: z.boolean().optional() }).optional(),
+
+	// New properties for granular menu control
+	hideListsFromMenu: z.array(z.string()).optional(),
+	hidePivotsFromMenu: z.array(z.string()).optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;

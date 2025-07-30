@@ -11,6 +11,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { isPlainObject } from 'lodash';
 import { MetaObject } from '../../model/MetaObject';
 import { getAccessFor } from '../../utils/accessUtils';
+import { shouldFilterMetaObjectFromMenu } from '../../utils/menuFilteringUtils';
 import { errorReturn } from '../../utils/return';
 
 /* Get system menu
@@ -50,6 +51,11 @@ export async function menuFull({ authTokenId }) {
 			return;
 		}
 
+		// Check if this meta object should be filtered from menu based on access configuration
+		if (access !== false && isObject(access) && shouldFilterMetaObjectFromMenu(access, metaObject)) {
+			return;
+		}
+
 		if (['document', 'composite'].includes(metaObject.type) && isObject(access)) {
 			accesses.push(access._id);
 			metaObject.access = metaObject.namespace + ':' + access._id;
@@ -84,7 +90,7 @@ export async function menuFull({ authTokenId }) {
 				const item = metaObject.filter.conditions[key];
 
 				if (item?.value instanceof Date) {
-					item.value = { "$date": item.value.toISOString() };
+					item.value = { $date: item.value.toISOString() };
 					metaObject.filter.conditions[key] = item;
 				}
 			}
