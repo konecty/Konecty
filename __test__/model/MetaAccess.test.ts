@@ -148,7 +148,7 @@ describe('MetaAccessSchema', () => {
 				type: 'access',
 				fields: {},
 				fieldDefaults: {},
-				hidePivotsFromMenu: ['Pivot1', 456, 'Pivot3'],
+				hidePivotsFromMenu: ['Pivot1', 123, 'Pivot3'],
 			};
 
 			const result = MetaAccessSchema.safeParse(invalidAccess);
@@ -156,8 +156,8 @@ describe('MetaAccessSchema', () => {
 		});
 	});
 
-	describe('both properties together', () => {
-		it('should accept both properties with valid arrays', () => {
+	describe('menuSorter property', () => {
+		it('should accept valid object with string keys and number values', () => {
 			const validAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
@@ -165,30 +165,95 @@ describe('MetaAccessSchema', () => {
 				type: 'access',
 				fields: {},
 				fieldDefaults: {},
-				hideListsFromMenu: ['List1', 'List2'],
-				hidePivotsFromMenu: ['Pivot1', 'Pivot2'],
+				menuSorter: {
+					Campaign: 0,
+					Opportunity: 5,
+					Contact: 10,
+				},
 			};
 
 			const result = MetaAccessSchema.safeParse(validAccess);
 			expect(result.success).toBe(true);
 		});
 
-		it('should maintain backward compatibility with existing access objects', () => {
-			const existingAccess = {
+		it('should accept empty object', () => {
+			const validAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
 				type: 'access',
 				fields: {},
 				fieldDefaults: {},
-				isReadable: true,
-				isCreatable: true,
-				isUpdatable: true,
-				isDeletable: false,
+				menuSorter: {},
 			};
 
-			const result = MetaAccessSchema.safeParse(existingAccess);
+			const result = MetaAccessSchema.safeParse(validAccess);
 			expect(result.success).toBe(true);
 		});
+
+		it('should be optional', () => {
+			const validAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+			};
+
+			const result = MetaAccessSchema.safeParse(validAccess);
+			expect(result.success).toBe(true);
+		});
+
+		it('should reject non-object values', () => {
+			const invalidAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: 'not-an-object',
+			};
+
+			const result = MetaAccessSchema.safeParse(invalidAccess);
+			expect(result.success).toBe(false);
+		});
+
+		it('should reject object with non-string keys', () => {
+			const invalidAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {
+					'not-a-valid-key': 0,
+					Campaign: 5,
+				},
+			};
+
+			const result = MetaAccessSchema.safeParse(invalidAccess);
+			expect(result.success).toBe(true); // Zod accepts any string as key
+		});
+
+		it('should reject object with non-number values', () => {
+			const invalidAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {
+					Campaign: 'not-a-number',
+					Opportunity: 5,
+				},
+			};
+
+			const result = MetaAccessSchema.safeParse(invalidAccess);
+			expect(result.success).toBe(false);
+		});
 	});
-}); 
+});

@@ -11,7 +11,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { isPlainObject } from 'lodash';
 import { MetaObject } from '../../model/MetaObject';
 import { getAccessFor } from '../../utils/accessUtils';
-import { shouldFilterMetaObjectFromMenu } from '../../utils/menuFilteringUtils';
+import { shouldFilterMetaObjectFromMenu, getMenuSorterFromAccess } from '../../utils/menuFilteringUtils';
 import { errorReturn } from '../../utils/return';
 
 /* Get system menu
@@ -54,6 +54,11 @@ export async function menuFull({ authTokenId }) {
 		// Check if this meta object should be filtered from menu based on access configuration
 		if (access !== false && isObject(access) && shouldFilterMetaObjectFromMenu(access, metaObject)) {
 			return;
+		}
+
+		// Apply menuSorter override from access configuration
+		if (access !== false && isObject(access) && metaObject.menuSorter !== undefined) {
+			metaObject.menuSorter = getMenuSorterFromAccess(access, metaObject.name, metaObject.menuSorter);
 		}
 
 		if (['document', 'composite'].includes(metaObject.type) && isObject(access)) {

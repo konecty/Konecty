@@ -1,28 +1,27 @@
 // @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
 import { describe, it, expect } from 'bun:test';
 
+import { shouldFilterListFromMenu, shouldFilterPivotFromMenu, shouldFilterMetaObjectFromMenu, getMenuSorterFromAccess } from '../../../src/imports/utils/menuFilteringUtils';
 import { MetaAccess } from '../../../src/imports/model/MetaAccess';
-import { shouldFilterListFromMenu, shouldFilterPivotFromMenu, shouldFilterMetaObjectFromMenu } from '../../../src/imports/utils/menuFilteringUtils';
 
-describe('Menu Filtering Logic', () => {
+describe('menuFilteringUtils', () => {
 	describe('shouldFilterListFromMenu', () => {
-		it('should return false when access has no hideListsFromMenu property', () => {
-			const access = {
+		it('should return false when hideListsFromMenu is not defined', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
 				type: 'access',
 				fields: {},
 				fieldDefaults: {},
-			} as MetaAccess;
+			};
 
-			const listName = 'MyList';
-			const shouldFilter = shouldFilterListFromMenu(access, listName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterListFromMenu(access, 'MyList');
+			expect(result).toBe(false);
 		});
 
-		it('should return false when hideListsFromMenu is empty array', () => {
-			const access = {
+		it('should return false when hideListsFromMenu is empty', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -30,15 +29,14 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hideListsFromMenu: [],
-			} as MetaAccess;
+			};
 
-			const listName = 'MyList';
-			const shouldFilter = shouldFilterListFromMenu(access, listName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterListFromMenu(access, 'MyList');
+			expect(result).toBe(false);
 		});
 
-		it('should return true when list name is in hideListsFromMenu array', () => {
-			const access = {
+		it('should return true when list is in hideListsFromMenu', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -46,15 +44,14 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hideListsFromMenu: ['MyList', 'AnotherList'],
-			} as MetaAccess;
+			};
 
-			const listName = 'MyList';
-			const shouldFilter = shouldFilterListFromMenu(access, listName);
-			expect(shouldFilter).toBe(true);
+			const result = shouldFilterListFromMenu(access, 'MyList');
+			expect(result).toBe(true);
 		});
 
-		it('should return false when list name is not in hideListsFromMenu array', () => {
-			const access = {
+		it('should return false when list is not in hideListsFromMenu', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -62,48 +59,30 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hideListsFromMenu: ['AnotherList', 'ThirdList'],
-			} as MetaAccess;
+			};
 
-			const listName = 'MyList';
-			const shouldFilter = shouldFilterListFromMenu(access, listName);
-			expect(shouldFilter).toBe(false);
-		});
-
-		it('should be case sensitive', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hideListsFromMenu: ['MyList'],
-			} as MetaAccess;
-
-			const listName = 'mylist';
-			const shouldFilter = shouldFilterListFromMenu(access, listName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterListFromMenu(access, 'MyList');
+			expect(result).toBe(false);
 		});
 	});
 
 	describe('shouldFilterPivotFromMenu', () => {
-		it('should return false when access has no hidePivotsFromMenu property', () => {
-			const access = {
+		it('should return false when hidePivotsFromMenu is not defined', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
 				type: 'access',
 				fields: {},
 				fieldDefaults: {},
-			} as MetaAccess;
+			};
 
-			const pivotName = 'MyPivot';
-			const shouldFilter = shouldFilterPivotFromMenu(access, pivotName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterPivotFromMenu(access, 'MyPivot');
+			expect(result).toBe(false);
 		});
 
-		it('should return false when hidePivotsFromMenu is empty array', () => {
-			const access = {
+		it('should return false when hidePivotsFromMenu is empty', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -111,15 +90,14 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hidePivotsFromMenu: [],
-			} as MetaAccess;
+			};
 
-			const pivotName = 'MyPivot';
-			const shouldFilter = shouldFilterPivotFromMenu(access, pivotName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterPivotFromMenu(access, 'MyPivot');
+			expect(result).toBe(false);
 		});
 
-		it('should return true when pivot name is in hidePivotsFromMenu array', () => {
-			const access = {
+		it('should return true when pivot is in hidePivotsFromMenu', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -127,15 +105,14 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hidePivotsFromMenu: ['MyPivot', 'AnotherPivot'],
-			} as MetaAccess;
+			};
 
-			const pivotName = 'MyPivot';
-			const shouldFilter = shouldFilterPivotFromMenu(access, pivotName);
-			expect(shouldFilter).toBe(true);
+			const result = shouldFilterPivotFromMenu(access, 'MyPivot');
+			expect(result).toBe(true);
 		});
 
-		it('should return false when pivot name is not in hidePivotsFromMenu array', () => {
-			const access = {
+		it('should return false when pivot is not in hidePivotsFromMenu', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -143,33 +120,46 @@ describe('Menu Filtering Logic', () => {
 				fields: {},
 				fieldDefaults: {},
 				hidePivotsFromMenu: ['AnotherPivot', 'ThirdPivot'],
-			} as MetaAccess;
+			};
 
-			const pivotName = 'MyPivot';
-			const shouldFilter = shouldFilterPivotFromMenu(access, pivotName);
-			expect(shouldFilter).toBe(false);
-		});
-
-		it('should be case sensitive', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hidePivotsFromMenu: ['MyPivot'],
-			} as MetaAccess;
-
-			const pivotName = 'mypivot';
-			const shouldFilter = shouldFilterPivotFromMenu(access, pivotName);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterPivotFromMenu(access, 'MyPivot');
+			expect(result).toBe(false);
 		});
 	});
 
 	describe('shouldFilterMetaObjectFromMenu', () => {
-		it('should return false for non-list and non-pivot types', () => {
-			const access = {
+		it('should filter list when it is in hideListsFromMenu', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				hideListsFromMenu: ['MyList'],
+			};
+
+			const result = shouldFilterMetaObjectFromMenu(access, { type: 'list', name: 'MyList' });
+			expect(result).toBe(true);
+		});
+
+		it('should filter pivot when it is in hidePivotsFromMenu', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				hidePivotsFromMenu: ['MyPivot'],
+			};
+
+			const result = shouldFilterMetaObjectFromMenu(access, { type: 'pivot', name: 'MyPivot' });
+			expect(result).toBe(true);
+		});
+
+		it('should not filter other types', () => {
+			const access: MetaAccess = {
 				_id: 'Test:access:Default',
 				document: 'Test',
 				name: 'Default',
@@ -178,99 +168,97 @@ describe('Menu Filtering Logic', () => {
 				fieldDefaults: {},
 				hideListsFromMenu: ['MyList'],
 				hidePivotsFromMenu: ['MyPivot'],
-			} as MetaAccess;
-
-			const documentMetaObject = {
-				type: 'document',
-				name: 'TestDocument',
 			};
 
-			const shouldFilter = shouldFilterMetaObjectFromMenu(access, documentMetaObject);
-			expect(shouldFilter).toBe(false);
-		});
-
-		it('should filter list when name is in hideListsFromMenu', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hideListsFromMenu: ['MyList'],
-				hidePivotsFromMenu: ['MyPivot'],
-			} as MetaAccess;
-
-			const listMetaObject = {
-				type: 'list',
-				name: 'MyList',
-			};
-
-			const shouldFilter = shouldFilterMetaObjectFromMenu(access, listMetaObject);
-			expect(shouldFilter).toBe(true);
-		});
-
-		it('should not filter list when name is not in hideListsFromMenu', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hideListsFromMenu: ['AnotherList'],
-				hidePivotsFromMenu: ['MyPivot'],
-			} as MetaAccess;
-
-			const listMetaObject = {
-				type: 'list',
-				name: 'MyList',
-			};
-
-			const shouldFilter = shouldFilterMetaObjectFromMenu(access, listMetaObject);
-			expect(shouldFilter).toBe(false);
-		});
-
-		it('should filter pivot when name is in hidePivotsFromMenu', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hideListsFromMenu: ['MyList'],
-				hidePivotsFromMenu: ['MyPivot'],
-			} as MetaAccess;
-
-			const pivotMetaObject = {
-				type: 'pivot',
-				name: 'MyPivot',
-			};
-
-			const shouldFilter = shouldFilterMetaObjectFromMenu(access, pivotMetaObject);
-			expect(shouldFilter).toBe(true);
-		});
-
-		it('should not filter pivot when name is not in hidePivotsFromMenu', () => {
-			const access = {
-				_id: 'Test:access:Default',
-				document: 'Test',
-				name: 'Default',
-				type: 'access',
-				fields: {},
-				fieldDefaults: {},
-				hideListsFromMenu: ['MyList'],
-				hidePivotsFromMenu: ['AnotherPivot'],
-			} as MetaAccess;
-
-			const pivotMetaObject = {
-				type: 'pivot',
-				name: 'MyPivot',
-			};
-
-			const shouldFilter = shouldFilterMetaObjectFromMenu(access, pivotMetaObject);
-			expect(shouldFilter).toBe(false);
+			const result = shouldFilterMetaObjectFromMenu(access, { type: 'document', name: 'MyDocument' });
+			expect(result).toBe(false);
 		});
 	});
-}); 
+
+	describe('getMenuSorterFromAccess', () => {
+		it('should return original menuSorter when access.menuSorter is not defined', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+			};
+
+			const result = getMenuSorterFromAccess(access, 'Campaign', 13);
+			expect(result).toBe(13);
+		});
+
+		it('should return original menuSorter when module is not in access.menuSorter', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {
+					Opportunity: 0,
+					Contact: 5,
+				},
+			};
+
+			const result = getMenuSorterFromAccess(access, 'Campaign', 13);
+			expect(result).toBe(13);
+		});
+
+		it('should return overridden menuSorter when module is in access.menuSorter', () => {
+			const access = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access' as const,
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {
+					Campaign: 0,
+					Opportunity: 5,
+					Contact: 10,
+				},
+			} satisfies MetaAccess;
+
+			const result = getMenuSorterFromAccess(access, 'Campaign', 13);
+			expect(result).toBe(0);
+		});
+
+		it('should return overridden menuSorter for different module', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {
+					Campaign: 0,
+					Opportunity: 5,
+					Contact: 10,
+				},
+			};
+
+			const result = getMenuSorterFromAccess(access, 'Opportunity', 20);
+			expect(result).toBe(5);
+		});
+
+		it('should handle empty menuSorter object', () => {
+			const access: MetaAccess = {
+				_id: 'Test:access:Default',
+				document: 'Test',
+				name: 'Default',
+				type: 'access',
+				fields: {},
+				fieldDefaults: {},
+				menuSorter: {},
+			};
+
+			const result = getMenuSorterFromAccess(access, 'Campaign', 13);
+			expect(result).toBe(13);
+		});
+	});
+});

@@ -41,3 +41,17 @@ export function shouldFilterMetaObjectFromMenu(access: MetaAccess, metaObject: {
 	}
 	return false;
 }
+
+/**
+ * Applies menuSorter override from access configuration
+ * @param access - The access configuration object
+ * @param moduleName - The name of the module/document
+ * @param originalMenuSorter - The original menuSorter value from the module
+ * @returns The menuSorter value to use (overridden or original)
+ */
+export function getMenuSorterFromAccess(access: MetaAccess, moduleName: string, originalMenuSorter: number): number {
+	if (!access.menuSorter || !(moduleName in access.menuSorter)) {
+		return originalMenuSorter;
+	}
+	return access.menuSorter[moduleName];
+}
