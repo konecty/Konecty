@@ -50,8 +50,8 @@ export function shouldFilterMetaObjectFromMenu(access: MetaAccess, metaObject: {
  * @returns The menuSorter value to use (overridden or original)
  */
 export function getMenuSorterFromAccess(access: MetaAccess, moduleName: string, originalMenuSorter: number): number {
-	if (!access.menuSorter || !(moduleName in access.menuSorter)) {
+	if (!access.menuSorter) {
 		return originalMenuSorter;
 	}
-	return access.menuSorter[moduleName];
+	return access.menuSorter;
 }
