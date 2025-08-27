@@ -101,7 +101,7 @@ class EventManager {
 
 function addMetaConditionToEvent(eventCfg: DocumentEvent, metaName: string) {
 	return {
-		name: eventCfg.name ?? `${eventCfg.event.type}:${metaName}`,
+		name: `${eventCfg.event.type}:${metaName}`,
 		...eventCfg,
 		conditions: {
 			all: [{ fact: 'metaName', operator: 'equal', value: metaName }, { ...eventCfg.conditions }],

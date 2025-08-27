@@ -240,7 +240,7 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 					return parseInt(value);
 				}
 				break;
-			case "phone.phoneNumber":
+			case 'phone.phoneNumber':
 				if (value && !isString(value)) {
 					return value.toString();
 				}
@@ -349,9 +349,9 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 }
 
 /**
- * 
- * @param {import("@imports/model/Filter").KonFilter} filter 
- * @param {import("@imports/types/metadata").MetaObjectType} metaObject 
+ *
+ * @param {import("@imports/model/Filter").KonFilter} filter
+ * @param {import("@imports/types/metadata").MetaObjectType} metaObject
  * @param {{ user: import('@imports/model/User').User }} req
  * @returns {import('mongodb').Filter} - mongo filter
  */
@@ -576,7 +576,7 @@ export function filterConditionToFn(condition, metaObject, req) {
 	const getConditionValue = data => {
 		const condValue = getValue(conditionValueResult.data);
 		return get(data, condValue, condValue);
-	}
+	};
 
 	/**
 	 * @param {object} data - The whole document to search

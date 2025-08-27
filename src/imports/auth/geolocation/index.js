@@ -30,7 +30,7 @@ export async function saveGeoLocation({ authTokenId, longitude, latitude, userAg
 					group: user.group,
 				},
 			],
-			__from: "setGeoLocation",
+			__from: 'setGeoLocation',
 		};
 
 		await MetaObject.Collections.AccessLog.insertOne(accessLog);

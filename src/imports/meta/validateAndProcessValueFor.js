@@ -40,7 +40,7 @@ const regexUtils = {
 	url: /^http(?:s)?:\/\/(www\.)?[a-z0-9]+(?:[-.]{1}[a-z0-9]+)*(?::[0-9]{1,5})?(\/.*)?$/,
 };
 
-const slugify = (text) => {
+const slugify = text => {
 	if (text == null) return '';
 	return deburr(String(text).toLowerCase())
 		.replace(/[^a-z0-9]/g, '')
@@ -363,11 +363,11 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				if (isNumber(field.maxValue) && value > field.maxValue) {
-					return errorReturn(`Value for field ${fieldName} must be less than ${field.maxValue}`)
+					return errorReturn(`Value for field ${fieldName} must be less than ${field.maxValue}`);
 				}
 
 				if (isNumber(field.minValue) && value < field.minValue) {
-					return errorReturn(`Value for field ${fieldName} must be greater than ${field.minValue}`)
+					return errorReturn(`Value for field ${fieldName} must be greater than ${field.minValue}`);
 				}
 
 				return successReturn(value);
@@ -415,7 +415,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
-					return errorReturn(`Value ${value} for field ${fieldName} is invalid`)
+					return errorReturn(`Value ${value} for field ${fieldName} is invalid`);
 				}
 
 				return successReturn(value);
@@ -598,10 +598,12 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return acc;
 				}, {});
 
-				value.full = value.full ?? keys
-					.map(key => value[key] ?? '')
-					.filter(v => v.length > 0)
-					.join(' ');
+				value.full =
+					value.full ??
+					keys
+						.map(key => value[key] ?? '')
+						.filter(v => v.length > 0)
+						.join(' ');
 
 				return {
 					success: true,
@@ -887,7 +889,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 								actionType,
 								objectOriginalValues: value,
 								objectNewValues: value,
-								idsToUpdate
+								idsToUpdate,
 							};
 
 							const validationResult = await validateAndProcessValueFor(params, dbSession);
@@ -937,15 +939,18 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return errorReturn(`Record not found for field ${fieldName} with _id [${value._id}] on document [${field.document}]`);
 				}
 
-				const inheritedFieldsResult = await copyDescriptionAndInheritedFields({
-					field,
-					record,
-					meta,
-					actionType,
-					objectOriginalValues,
-					objectNewValues,
-					idsToUpdate,
-				}, dbSession);
+				const inheritedFieldsResult = await copyDescriptionAndInheritedFields(
+					{
+						field,
+						record,
+						meta,
+						actionType,
+						objectOriginalValues,
+						objectNewValues,
+						idsToUpdate,
+					},
+					dbSession,
+				);
 
 				return inheritedFieldsResult;
 

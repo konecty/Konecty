@@ -4,8 +4,8 @@ import isArray from 'lodash/isArray';
 import { successReturn } from '../utils/return';
 
 /**
- * 
- * @param {*} sortArray 
+ *
+ * @param {*} sortArray
  * @returns {{ success: true, data: Record<string, import('mongodb').SortDirection> }}
  */
 export function parseSortArray(sortArray) {

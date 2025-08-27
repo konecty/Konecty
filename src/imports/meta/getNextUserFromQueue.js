@@ -48,7 +48,7 @@ export async function getNextUserFromQueue(queueStrId, user) {
 		return {
 			success: true,
 			data: user,
-			user
+			user,
 		};
 	}
 
@@ -70,7 +70,7 @@ export async function getNextUserFromQueue(queueStrId, user) {
 		return {
 			success: true,
 			data: user,
-			user
+			user,
 		};
 	}
 

@@ -1,7 +1,6 @@
-
 /**
- * 
- * @param {any} value 
+ *
+ * @param {any} value
  * @returns {{success: true, data: any}}
  */
 export const successReturn = function (value) {
@@ -17,8 +16,8 @@ export const successReturn = function (value) {
 };
 
 /**
- * 
- * @param {string | string[] | {message: string}[]} messages 
+ *
+ * @param {string | string[] | {message: string}[]} messages
  * @returns {{success: false, errors: import("../types/result").KonectyError[]}}
  */
 export const errorReturn = function (messages) {

@@ -11,6 +11,6 @@
 	"type": "namespace",
 	"ns": "konecty",
 	"title": "Konecty Open Source Business Platform",
-    "emailServers": {},
-    "version": "1.0.0"
+	"emailServers": {},
+	"version": "1.0.0"
 }

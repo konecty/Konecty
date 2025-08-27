@@ -38,21 +38,21 @@
 						"pt_BR": "Categoria",
 						"sort": 2
 					},
-                    "channel": {
-                        "en": "Channel",
-                        "pt_BR": "Canal",
-                        "sort": 3
-                    },
-                    "medium": {
-                        "en": "Medium",
-                        "pt_BR": "Mídia",
-                        "sort": 4
-                    },
-                    "other": {
-                        "en": "Other",
-                        "pt_BR": "Outro",
-                        "sort": 5
-                    }
+					"channel": {
+						"en": "Channel",
+						"pt_BR": "Canal",
+						"sort": 3
+					},
+					"medium": {
+						"en": "Medium",
+						"pt_BR": "Mídia",
+						"sort": 4
+					},
+					"other": {
+						"en": "Other",
+						"pt_BR": "Outro",
+						"sort": 5
+					}
 				}
 			},
 			"name": {
@@ -256,32 +256,11 @@
 			"pt_BR": "Tags"
 		},
 		"refreshRate": {
-			"options": [
-				0,
-				5,
-				10,
-				15,
-				30,
-				60,
-				300,
-				600,
-				900,
-				1800,
-				3600
-			],
+			"options": [0, 5, 10, 15, 30, 60, 300, 600, 900, 1800, 3600],
 			"default": 0
 		},
 		"rowsPerPage": {
-			"options": [
-				5,
-				10,
-				15,
-				20,
-				25,
-				50,
-				100,
-				200
-			],
+			"options": [5, 10, 15, 20, 25, 50, 100, 200],
 			"default": 25
 		},
 		"sorters": [

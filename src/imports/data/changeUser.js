@@ -123,7 +123,7 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		$addToSet: {
 			_user: {
 				$each: validateResult.data.map(user => stringToDate(user)),
-			}
+			},
 		},
 		$set: {
 			_updatedAt: now,
@@ -136,21 +136,25 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
-	const updateResults = await Bluebird.map(ids, async id => {
-		try {
-			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
-			if (result == null) return successReturn(null);
+	const updateResults = await Bluebird.map(
+		ids,
+		async id => {
+			try {
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				if (result == null) return successReturn(null);
 
-			await Konsistent.processChangeSync(document, 'update', user, {
-				originalRecord: { _id: id, _user: undefined },
-				newRecord: { _id: id, _user: result._user },
-			});
+				await Konsistent.processChangeSync(document, 'update', user, {
+					originalRecord: { _id: id, _user: undefined },
+					newRecord: { _id: id, _user: result._user },
+				});
 
-			return successReturn(result);
-		} catch (e) {
-			return errorReturn(e.message);
-		}
-	}, { concurrency: 10 });
+				return successReturn(result);
+			} catch (e) {
+				return errorReturn(e.message);
+			}
+		},
+		{ concurrency: 10 },
+	);
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
@@ -234,24 +238,32 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
-	const updateResults = await Bluebird.map(ids, async id => {
-		try {
-			const result = await MetaObject.Collections[document].findOneAndUpdate({
-				_id: id,
-				'_user._id': { $in: userIds },
-			}, update, { returnDocument: 'after', includeResultMetadata: false });
-			if (result == null) return successReturn(null);
+	const updateResults = await Bluebird.map(
+		ids,
+		async id => {
+			try {
+				const result = await MetaObject.Collections[document].findOneAndUpdate(
+					{
+						_id: id,
+						'_user._id': { $in: userIds },
+					},
+					update,
+					{ returnDocument: 'after', includeResultMetadata: false },
+				);
+				if (result == null) return successReturn(null);
 
-			await Konsistent.processChangeSync(document, 'update', user, {
-				originalRecord: { _id: id, _user: undefined },
-				newRecord: { _id: id, _user: result._user },
-			});
+				await Konsistent.processChangeSync(document, 'update', user, {
+					originalRecord: { _id: id, _user: undefined },
+					newRecord: { _id: id, _user: result._user },
+				});
 
-			return successReturn(result);
-		} catch (e) {
-			return errorReturn(e.message);
-		}
-	}, { concurrency: 10 });
+				return successReturn(result);
+			} catch (e) {
+				return errorReturn(e.message);
+			}
+		},
+		{ concurrency: 10 },
+	);
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
@@ -343,21 +355,25 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
-	const updateResults = await Bluebird.map(ids, async id => {
-		try {
-			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
-			if (result == null) return successReturn(null);
+	const updateResults = await Bluebird.map(
+		ids,
+		async id => {
+			try {
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				if (result == null) return successReturn(null);
 
-			await Konsistent.processChangeSync(document, 'update', user, {
-				originalRecord: { _id: id, _user: undefined },
-				newRecord: { _id: id, _user: result._user },
-			});
+				await Konsistent.processChangeSync(document, 'update', user, {
+					originalRecord: { _id: id, _user: undefined },
+					newRecord: { _id: id, _user: result._user },
+				});
 
-			return successReturn(result);
-		} catch (e) {
-			return errorReturn(e.message);
-		}
-	}, { concurrency: 10 });
+				return successReturn(result);
+			} catch (e) {
+				return errorReturn(e.message);
+			}
+		},
+		{ concurrency: 10 },
+	);
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
@@ -477,31 +493,38 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		},
 	};
 
-	const records = await MetaObject.Collections[document].find({ _id: { $in: ids }, "_user._id": from._id }).project({ _user: 1 }).toArray();
+	const records = await MetaObject.Collections[document]
+		.find({ _id: { $in: ids }, '_user._id': from._id })
+		.project({ _user: 1 })
+		.toArray();
 
-	const updateResults = await Bluebird.map(records, async record => {
-		try {
-			const newUsers = [...record._user];
+	const updateResults = await Bluebird.map(
+		records,
+		async record => {
+			try {
+				const newUsers = [...record._user];
 
-			const userToRemoveIndex = newUsers.findIndex(user => user._id === from._id);
-			if (userToRemoveIndex === -1) return successReturn(null);
+				const userToRemoveIndex = newUsers.findIndex(user => user._id === from._id);
+				if (userToRemoveIndex === -1) return successReturn(null);
 
-			newUsers[userToRemoveIndex] = newUser;
-			update.$set._user = newUsers;
+				newUsers[userToRemoveIndex] = newUser;
+				update.$set._user = newUsers;
 
-			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
-			if (result == null) return successReturn(null);
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				if (result == null) return successReturn(null);
 
-			await Konsistent.processChangeSync(document, 'update', user, {
-				originalRecord: { _id: record._id, _user: undefined },
-				newRecord: { _id: record._id, _user: result._user },
-			});
+				await Konsistent.processChangeSync(document, 'update', user, {
+					originalRecord: { _id: record._id, _user: undefined },
+					newRecord: { _id: record._id, _user: result._user },
+				});
 
-			return successReturn(result);
-		} catch (e) {
-			return errorReturn(e.message);
-		}
-	}, { concurrency: 10 });
+				return successReturn(result);
+			} catch (e) {
+				return errorReturn(e.message);
+			}
+		},
+		{ concurrency: 10 },
+	);
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
@@ -660,28 +683,35 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		},
 	};
 
-	const records = await MetaObject.Collections[document].find({ _id: { $in: ids }, '_user.active': false }).project({ _user: 1 }).toArray();
+	const records = await MetaObject.Collections[document]
+		.find({ _id: { $in: ids }, '_user.active': false })
+		.project({ _user: 1 })
+		.toArray();
 
-	const updateResults = await Bluebird.map(records, async record => {
-		try {
-			const newUsers = [].concat(record._user).filter(user => user.active === true);
-			if (newUsers.length === record._user.length) return successReturn(null);
+	const updateResults = await Bluebird.map(
+		records,
+		async record => {
+			try {
+				const newUsers = [].concat(record._user).filter(user => user.active === true);
+				if (newUsers.length === record._user.length) return successReturn(null);
 
-			update.$set._user = newUsers;
+				update.$set._user = newUsers;
 
-			const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
-			if (result == null) return successReturn(null);
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				if (result == null) return successReturn(null);
 
-			await Konsistent.processChangeSync(document, 'update', user, {
-				originalRecord: { _id: record._id, _user: undefined },
-				newRecord: { _id: record._id, _user: result._user },
-			});
+				await Konsistent.processChangeSync(document, 'update', user, {
+					originalRecord: { _id: record._id, _user: undefined },
+					newRecord: { _id: record._id, _user: result._user },
+				});
 
-			return successReturn(result);
-		} catch (e) {
-			return errorReturn(e.message);
-		}
-	}, { concurrency: 10 });
+				return successReturn(result);
+			} catch (e) {
+				return errorReturn(e.message);
+			}
+		},
+		{ concurrency: 10 },
+	);
 
 	if (updateResults.some(result => result.success === false)) {
 		return {
