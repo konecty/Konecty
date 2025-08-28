@@ -20,8 +20,10 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { renderTemplate } from '../template';
 import { logger } from '../utils/logger';
 import { errorReturn, successReturn } from '../utils/return';
+import { withTimeout } from '../utils/timeout';
 
 const MAIL_CONSUME_SCHEDULE = process.env.MAIL_CONSUME_SCHEDULE || '*/1 * * * * *';
+const SEND_EMAIL_TIMEOUT = Number(process.env.SEND_EMAIL_TIMEOUT ?? 30e3);
 const TZ = process.env.TZ || 'America/Sao_Paulo';
 
 const consumeCronJob = new CronJob(MAIL_CONSUME_SCHEDULE, consume, null, false, TZ);
@@ -107,6 +109,7 @@ async function sendEmail(record) {
 			if (server) {
 				var serverHost = get(server, 'transporter.options.host');
 				try {
+					logger.trace(`🔜 Sending email to ${mail.to} via [${serverHost || record.server}]`);
 					const response = await server.sendMail(mail);
 
 					if (get(response, 'accepted.length') > 0) {
@@ -197,13 +200,26 @@ async function consume() {
 	}
 
 	await BluebirdPromise.each(range(0, mailCount), async () => {
-		const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
+		try {
+			await withTimeout(
+				async () => {
+					const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
 
-		if (updatedRecords == null || updatedRecords._id == null) {
-			return;
+					if (updatedRecords == null || updatedRecords._id == null) {
+						return;
+					}
+
+					return send(updatedRecords);
+				},
+				SEND_EMAIL_TIMEOUT,
+				'consume->send',
+			);
+		} catch (error) {
+			logger.error(`📧 Email error: ${error.message}`);
+			await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+
+			return errorReturn(err);
 		}
-
-		return send(updatedRecords);
 	});
 
 	return consumeCronJob.start();
