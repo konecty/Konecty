@@ -215,10 +215,9 @@ async function consume() {
 				'consume->send',
 			);
 		} catch (error) {
-			logger.error(`📧 Email error: ${error.message}`);
-			await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: err } });
+			logger.error(error, `📧 Email error ${JSON.stringify(query, null, 2)}`);
 
-			return errorReturn(err);
+			return errorReturn("message" in error ? error.message : "Unknown error");
 		}
 	});
 
