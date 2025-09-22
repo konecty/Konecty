@@ -33,7 +33,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		Querystring: { displayName: string; displayType: string; fields: string; filter: string; sort: string; limit: string; start: string; withDetailFields: string };
 	}>('/rest/data/:document/find', async (req, reply) => {
 		if (req.query.filter != null && isString(req.query.filter)) {
-			req.query.filter = JSON.parse(req.query.filter.replace(/\+/g, ' '));
+			req.query.filter = JSON.parse(decodeURIComponent(req.query.filter));
 		}
 
 		const { tracer } = req.openTelemetry();
