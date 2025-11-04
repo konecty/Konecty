@@ -1,0 +1,467 @@
+{
+	"info": {
+		"_postman_id": "konecty-api-collection",
+		"name": "Konecty API",
+		"description": "Postman collection for Konecty API endpoints including OTP authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user\": \"user@example.com\",\n  \"password\": \"yourPassword\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "auth", "login"]
+						},
+						"description": "Authenticate user with email/username and password"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user\": \"user@example.com\",\n  \"password\": \"yourPassword\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/rest/auth/login",
+									"host": ["{{baseUrl}}"],
+									"path": ["rest", "auth", "login"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"authId\": \"<token>\",\n  \"user\": {\n    \"_id\": \"user-id\",\n    \"name\": \"User Name\",\n    \"email\": \"user@example.com\"\n  },\n  \"cookieMaxAge\": 2592000\n}"
+						}
+					]
+				},
+				{
+					"name": "OTP Authentication",
+					"item": [
+						{
+							"name": "Request OTP - Phone",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"phoneNumber\": \"+5511999999999\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/request-otp",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "auth", "request-otp"]
+								},
+								"description": "Request OTP via phone number. OTP will be sent via WhatsApp (if configured), RabbitMQ, or Email as fallback.\n\n**Phone Number Format:** E.164 format (e.g., +5511999999999)\n\n**Rate Limit:** Maximum 5 requests per minute per phone number"
+							},
+							"response": [
+								{
+									"name": "Success - WhatsApp",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"message\": \"OTP sent via whatsapp\"\n}"
+								},
+								{
+									"name": "Success - Email Fallback",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"message\": \"OTP sent via email\"\n}"
+								},
+								{
+									"name": "User Not Found",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"User not found for this phone number\"\n    }\n  ]\n}"
+								},
+								{
+									"name": "Rate Limit Exceeded",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "Too Many Requests",
+									"code": 429,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Too many requests. Please try again later.\"\n    }\n  ]\n}"
+								},
+								{
+									"name": "Invalid Phone Format",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"5511999999999\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Invalid phone number format. Must be in E.164 format (e.g., +5511999999999)\"\n    }\n  ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Request OTP - Email",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/request-otp",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "auth", "request-otp"]
+								},
+								"description": "Request OTP via email. OTP will be sent directly via email (skips WhatsApp).\n\n**Rate Limit:** Maximum 5 requests per minute per email address"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"email\": \"user@example.com\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/request-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "request-otp"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"message\": \"OTP sent via email\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Verify OTP - Phone",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"phoneNumber\": \"+5511999999999\",\n  \"otpCode\": \"123456\",\n  \"geolocation\": {\n    \"longitude\": -46.633309,\n    \"latitude\": -23.550520\n  },\n  \"resolution\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"source\": \"mobile-app\",\n  \"fingerprint\": \"device-fingerprint-hash\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/verify-otp",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "auth", "verify-otp"]
+								},
+								"description": "Verify OTP code and authenticate user via phone number.\n\n**OTP Details:**\n- 6-digit code\n- Expires after configurable time (default: 5 minutes)\n- Maximum 3 verification attempts\n- OTP is single-use (deleted after successful verification)\n\n**Optional Fields (same as traditional login):**\n- `geolocation`: { longitude: number, latitude: number } or JSON string\n- `resolution`: { width: number, height: number } or JSON string\n- `source`: string (e.g., 'mobile-app', 'web')\n- `fingerprint`: string (device fingerprint hash)\n\nThese fields are recorded in AccessLog for audit and security purposes."
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\",\n  \"otpCode\": \"123456\",\n  \"geolocation\": {\n    \"longitude\": -46.633309,\n    \"latitude\": -23.550520\n  },\n  \"resolution\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"source\": \"mobile-app\",\n  \"fingerprint\": \"device-fingerprint-hash\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/verify-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "verify-otp"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"logged\": true,\n  \"authId\": \"<token>\",\n  \"user\": {\n    \"_id\": \"user-id\",\n    \"name\": \"User Name\",\n    \"email\": \"user@example.com\",\n    \"group\": {\n      \"_id\": \"group-id\",\n      \"name\": \"Group Name\"\n    },\n    \"locale\": \"pt-BR\",\n    \"namespace\": \"default\"\n  }\n}"
+								},
+								{
+									"name": "Invalid OTP Code",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\",\n  \"otpCode\": \"000000\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/verify-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "verify-otp"]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Invalid OTP code\"\n    }\n  ]\n}"
+								},
+								{
+									"name": "OTP Expired",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\",\n  \"otpCode\": \"123456\",\n  \"geolocation\": {\n    \"longitude\": -46.633309,\n    \"latitude\": -23.550520\n  },\n  \"resolution\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"source\": \"mobile-app\",\n  \"fingerprint\": \"device-fingerprint-hash\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/verify-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "verify-otp"]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"OTP not found or expired. Please request a new OTP.\"\n    }\n  ]\n}"
+								},
+								{
+									"name": "Max Attempts Exceeded",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"phoneNumber\": \"+5511999999999\",\n  \"otpCode\": \"123456\",\n  \"geolocation\": {\n    \"longitude\": -46.633309,\n    \"latitude\": -23.550520\n  },\n  \"resolution\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"source\": \"mobile-app\",\n  \"fingerprint\": \"device-fingerprint-hash\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/verify-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "verify-otp"]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Maximum verification attempts exceeded. Please request a new OTP.\"\n    }\n  ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Verify OTP - Email",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"email\": \"user@example.com\",\n  \"otpCode\": \"123456\",\n  \"geolocation\": {\n    \"longitude\": -46.633309,\n    \"latitude\": -23.550520\n  },\n  \"resolution\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"source\": \"web\",\n  \"fingerprint\": \"device-fingerprint-hash\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/verify-otp",
+									"host": ["{{baseUrl}}"],
+									"path": ["api", "auth", "verify-otp"]
+								},
+								"description": "Verify OTP code and authenticate user via email.\n\n**OTP Details:**\n- 6-digit code\n- Expires after configurable time (default: 5 minutes)\n- Maximum 3 verification attempts\n- OTP is single-use (deleted after successful verification)\n\n**Optional Fields (same as traditional login):**\n- `geolocation`: { longitude: number, latitude: number } or JSON string\n- `resolution`: { width: number, height: number } or JSON string\n- `source`: string (e.g., 'mobile-app', 'web')\n- `fingerprint`: string (device fingerprint hash)\n\nThese fields are recorded in AccessLog for audit and security purposes."
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"email\": \"user@example.com\",\n  \"otpCode\": \"123456\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/auth/verify-otp",
+											"host": ["{{baseUrl}}"],
+											"path": ["api", "auth", "verify-otp"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [],
+									"cookie": [],
+									"body": "{\n  \"success\": true,\n  \"logged\": true,\n  \"authId\": \"<token>\",\n  \"user\": {\n    \"_id\": \"user-id\",\n    \"name\": \"User Name\",\n    \"email\": \"user@example.com\",\n    \"group\": {\n      \"_id\": \"group-id\",\n      \"name\": \"Group Name\"\n    },\n    \"locale\": \"pt-BR\",\n    \"namespace\": \"default\"\n  }\n}"
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
+

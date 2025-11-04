@@ -50,6 +50,14 @@ The UI will be running at `localhost:3000`
 -   `LOG_TO_FILE`: Optional file name to write all logs. Path relative to project root
 -   `DISABLE_SENDMAIL`: (optional) `true` to disable email processing
 
+### OTP Authentication (WhatsApp)
+
+-   `WHATSAPP_ACCESS_TOKEN`: WhatsApp Business API access token
+-   `WHATSAPP_PHONE_NUMBER_ID`: WhatsApp Business API phone number ID
+-   `WHATSAPP_BUSINESS_ACCOUNT_ID`: (optional) WhatsApp Business Account ID
+-   `WHATSAPP_TEMPLATE_ID`: WhatsApp template ID for OTP messages
+-   `WHATSAPP_BUTTON_URL_PARAMETER`: (optional) URL parameter for templates with URL buttons. **Maximum 15 characters** (WhatsApp limit). If longer, it will be truncated. Example: `verify?t=abc` (14 chars)
+
 ## FILE STORAGE API
 
 -   `STORAGE`: Can be `s3` or `fs` for files and images uploads

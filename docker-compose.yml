@@ -1,0 +1,80 @@
+name: konecty-dev
+
+services:
+  mongodb:
+    image: mongo:8.2
+    container_name: konecty-mongodb-dev
+    restart: unless-stopped
+    volumes:
+      - mongodb-data:/data/db
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-konecty}
+    command: mongod --bind_ip_all --replSet rs0
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - konecty-dev-network
+
+  mongodb-init:
+    image: mongo:8.2
+    container_name: konecty-mongodb-init
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo 'Waiting for MongoDB to be ready...';
+        until mongosh --host mongodb:27017 --eval 'db.adminCommand("ping")' > /dev/null 2>&1; do
+          sleep 2;
+        done;
+        echo 'Checking replica set status...';
+        if ! mongosh --host mongodb:27017 --eval 'rs.status()' 2>/dev/null | grep -q "set: \"rs0\""; then
+          echo 'Initiating replica set...';
+          mongosh --host mongodb:27017 --eval 'rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]})';
+          echo 'Replica set initiated successfully';
+        else
+          echo 'Replica set already initialized';
+        fi
+    networks:
+      - konecty-dev-network
+
+  rabbitmq:
+    image: rabbitmq:4.1.0-management-alpine
+    container_name: konecty-rabbitmq-dev
+    hostname: konecty-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"   # AMQP protocol
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672" # Management interface
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-admin}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - konecty-dev-network
+
+volumes:
+  mongodb-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+networks:
+  konecty-dev-network:
+    driver: bridge
+

@@ -44,6 +44,28 @@ export const NamespaceSchema = z
 			.optional(),
 
 		QueueConfig: QueueConfigSchema.optional(),
+
+		otpConfig: z
+			.object({
+				expirationMinutes: z.number().positive().optional(),
+				whatsapp: z
+					.object({
+						accessToken: z.string(),
+						phoneNumberId: z.string(),
+						businessAccountId: z.string().optional(),
+						templateId: z.string(),
+						apiUrlTemplate: z.string().optional(),
+						languageCode: z.string().optional(),
+						buttonUrlParameter: z.string().optional(),
+					})
+					.optional(),
+				rabbitmqQueue: z.string().optional(),
+				emailTemplateId: z.string().optional(),
+				emailFrom: z.string().optional(),
+			})
+			.optional(),
+
+		otpRequestCollectionVersion: z.number().int().nonnegative().optional(),
 	})
 	.catchall(z.string());
 
