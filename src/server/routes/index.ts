@@ -41,6 +41,8 @@ const fastify = Fastify({
 	logger,
 	maxParamLength: 250,
 	disableRequestLogging: DISABLE_REQUEST_LOGGING,
+	connectionTimeout: 120000, // 2 minutes
+	requestTimeout: 120000, // 2 minutes
 });
 
 fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });

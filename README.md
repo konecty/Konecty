@@ -27,6 +27,16 @@ If this is a empty database, basic metadata and starting collections will be aut
 
 The UI will be running at `localhost:3000`
 
+### Modern Login Page Development
+
+If you're using the modern login page (`loginPageVariant: 'modern'`), the CSS will be automatically generated on first access in development mode. For faster development with CSS hot-reload, run in a separate terminal:
+
+```bash
+yarn dev:css
+```
+
+This will watch the Tailwind input file and regenerate CSS automatically when you modify the template.
+
 ## Konecty environment variables
 
 -   `KONECTY_MODE`: Can be `production` or `development`
@@ -57,6 +67,13 @@ The UI will be running at `localhost:3000`
 -   `WHATSAPP_BUSINESS_ACCOUNT_ID`: (optional) WhatsApp Business Account ID
 -   `WHATSAPP_TEMPLATE_ID`: WhatsApp template ID for OTP messages
 -   `WHATSAPP_BUTTON_URL_PARAMETER`: (optional) URL parameter for templates with URL buttons. **Maximum 15 characters** (WhatsApp limit). If longer, it will be truncated. Example: `verify?t=abc` (14 chars)
+
+### Modern Login Page
+
+-   `LOGIN_PAGE_VARIANT`: (optional) Login page variant. Values: `classic` (default) or `modern`. Priority: Namespace → env var → default
+-   `OTP_EMAIL_ENABLED`: (optional) Enable OTP via email. Values: `true` or `false`. Priority: Namespace → env var → default `false`
+-   `OTP_WHATSAPP_ENABLED`: (optional) Enable OTP via WhatsApp. Values: `true` or `false`. Priority: Namespace → env var → default `false`
+-   `DEFAULT_LOCALE`: (optional) Default locale for login page. Values: `pt-BR` (default) or `en`. Priority: Namespace → env var → default `pt-BR`
 
 ## FILE STORAGE API
 

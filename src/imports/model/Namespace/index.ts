@@ -66,6 +66,8 @@ export const NamespaceSchema = z
 			.optional(),
 
 		otpRequestCollectionVersion: z.number().int().nonnegative().optional(),
+
+		loginPageVariant: z.string().optional(),
 	})
 	.catchall(z.string());
 
