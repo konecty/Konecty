@@ -77,6 +77,134 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     }
     ```
 
+#### Solicitar OTP
+
+-   **POST** `/api/auth/request-otp`
+-   **Body:** (exatamente um de `phoneNumber` ou `email` deve ser fornecido)
+    ```json
+    {
+    	"phoneNumber": "+5511999999999",
+    	"geolocation": {
+    		"longitude": -46.633309,
+    		"latitude": -23.550520
+    	},
+    	"resolution": {
+    		"width": 1920,
+    		"height": 1080
+    	},
+    	"source": "mobile-app",
+    	"fingerprint": "device-fingerprint-hash"
+    }
+    ```
+    ou
+    ```json
+    {
+    	"email": "usuario@exemplo.com",
+    	"geolocation": {
+    		"longitude": -46.633309,
+    		"latitude": -23.550520
+    	},
+    	"resolution": {
+    		"width": 1920,
+    		"height": 1080
+    	},
+    	"source": "web",
+    	"fingerprint": "device-fingerprint-hash"
+    }
+    ```
+    **Campos Opcionais** (mesmos do login tradicional):
+    - `geolocation`: Objeto com `longitude` e `latitude` números, ou string JSON
+    - `resolution`: Objeto com `width` e `height` números, ou string JSON
+    - `source`: String (ex: 'mobile-app', 'web')
+    - `fingerprint`: String (hash de fingerprint do dispositivo)
+    
+    Estes campos são registrados no AccessFailedLog para auditoria e segurança.
+-   **Resposta de Sucesso:**
+    ```json
+    {
+    	"success": true,
+    	"message": "OTP sent via whatsapp"
+    }
+    ```
+-   **Resposta de Falha:**
+    ```json
+    {
+    	"success": false,
+    	"errors": [{ "message": "User not found for this phone number" }]
+    }
+    ```
+-   **Rate Limit:** 429 Too Many Requests se mais de 5 requisições por minuto por telefone/email
+
+#### Verificar OTP
+
+-   **POST** `/api/auth/verify-otp`
+-   **Body:** (exatamente um de `phoneNumber` ou `email` deve ser fornecido)
+    ```json
+    {
+    	"phoneNumber": "+5511999999999",
+    	"otpCode": "123456",
+    	"geolocation": {
+    		"longitude": -46.633309,
+    		"latitude": -23.550520
+    	},
+    	"resolution": {
+    		"width": 1920,
+    		"height": 1080
+    	},
+    	"source": "mobile-app",
+    	"fingerprint": "device-fingerprint-hash"
+    }
+    ```
+    ou
+    ```json
+    {
+    	"email": "usuario@exemplo.com",
+    	"otpCode": "123456",
+    	"geolocation": {
+    		"longitude": -46.633309,
+    		"latitude": -23.550520
+    	},
+    	"resolution": {
+    		"width": 1920,
+    		"height": 1080
+    	},
+    	"source": "web",
+    	"fingerprint": "device-fingerprint-hash"
+    }
+    ```
+    **Campos Opcionais** (mesmos do login tradicional):
+    - `geolocation`: Objeto com `longitude` e `latitude` números, ou string JSON
+    - `resolution`: Objeto com `width` e `height` números, ou string JSON
+    - `source`: String (ex: 'mobile-app', 'web')
+    - `fingerprint`: String (hash de fingerprint do dispositivo)
+    
+    Estes campos são registrados no AccessLog para auditoria e segurança.
+-   **Resposta de Sucesso:**
+    ```json
+    {
+    	"success": true,
+    	"logged": true,
+    	"authId": "<token>",
+    	"user": {
+    		/* informações do usuário */
+    	}
+    }
+    ```
+-   **Resposta de Falha:**
+    ```json
+    {
+    	"success": false,
+    	"errors": [{ "message": "Invalid OTP code" }]
+    }
+    ```
+-   **Notas:**
+    - Código OTP tem 6 dígitos
+    - OTP expira após tempo configurável (padrão: 5 minutos)
+    - Máximo de 3 tentativas de verificação antes do OTP ser invalidado
+    - Método de entrega:
+      - Se solicitado por telefone: WhatsApp → RabbitMQ (sem fallback para email)
+      - Se solicitado por email: Apenas email (não tenta WhatsApp)
+
 ---
 
 ### 2. Dados (CRUD)
@@ -892,5 +1020,137 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 ## Tratamento de Erros
 
 Todos os endpoints retornam um booleano `success`. Se `success` for `false`, um array `errors` é fornecido com mensagens de erro.
+
+---
+
+## Coleção Postman
+
+Uma coleção Postman está disponível para testar os endpoints da API Konecty, incluindo autenticação OTP.
+
+### Importando a Coleção
+
+1. **Baixe os arquivos:**
+   - Arquivo da coleção: [`docs/postman/Konecty-API.postman_collection.json`](../postman/Konecty-API.postman_collection.json)
+   - Arquivo de ambiente: [`docs/postman/Konecty-API.postman_environment.json`](../postman/Konecty-API.postman_environment.json)
+
+2. **Importe no Postman:**
+   - Abra o Postman
+   - Clique no botão **Import**
+   - Selecione ambos os arquivos (coleção e ambiente)
+   - Ou arraste e solte os arquivos no Postman
+
+3. **Configure o Ambiente:**
+   - Selecione o ambiente importado "Konecty Local Development"
+   - Atualize `baseUrl` se seu servidor estiver rodando em um host/porta diferente
+   - Defina `authToken` após autenticação bem-sucedida (para endpoints autenticados)
+
+### Estrutura da Coleção
+
+A coleção inclui:
+
+- **Autenticação**
+  - Login (usuário/senha tradicional)
+  - **Autenticação OTP**
+    - Solicitar OTP - Telefone (com exemplos para WhatsApp, fallback de Email, erros)
+    - Solicitar OTP - Email
+    - Verificar OTP - Telefone (com exemplos para sucesso, código inválido, expirado, tentativas máximas)
+    - Verificar OTP - Email
+
+### Usando a Coleção
+
+#### Testando o Fluxo de Autenticação OTP
+
+1. **Solicitar OTP:**
+   - Use "Request OTP - Phone" ou "Request OTP - Email"
+   - Atualize o `phoneNumber` ou `email` no corpo da requisição
+   - Envie a requisição
+   - Verifique a resposta para o método de entrega (whatsapp, email, etc.)
+
+2. **Verificar OTP:**
+   - Verifique seu telefone/email para o código OTP de 6 dígitos
+   - Use "Verify OTP - Phone" ou "Verify OTP - Email"
+   - Digite o código OTP recebido no campo `otpCode`
+   - Envie a requisição
+   - Em caso de sucesso, salve o token `authId` na variável de ambiente `authToken`
+
+3. **Usar Endpoints Autenticados:**
+   - O `authToken` pode ser usado em requisições subsequentes
+   - Adicione-o como cabeçalho `Authorization`: `Authorization: {{authToken}}`
+
+### Exemplos
+
+#### Exemplo 1: Autenticação OTP via Telefone
+
+```http
+POST /api/auth/request-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+5511999999999"
+}
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "OTP sent via whatsapp"
+}
+```
+
+Depois verifique:
+```http
+POST /api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+5511999999999",
+  "otpCode": "123456"
+}
+```
+
+#### Exemplo 2: Autenticação OTP via Email
+
+```http
+POST /api/auth/request-otp
+Content-Type: application/json
+
+{
+  "email": "usuario@exemplo.com"
+}
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "message": "OTP sent via email"
+}
+```
+
+Depois verifique:
+```http
+POST /api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "email": "usuario@exemplo.com",
+  "otpCode": "123456"
+}
+```
+
+### Variáveis da Coleção
+
+- `baseUrl`: URL base para requisições da API (padrão: `http://localhost:3000`)
+- `authToken`: Token de autenticação (definido após login/verificação OTP bem-sucedida)
+
+### Exemplos de Resposta
+
+A coleção inclui múltiplos exemplos de resposta para cada endpoint:
+- Cenários de sucesso
+- Cenários de erro (usuário não encontrado, formato inválido, limite de taxa, OTP expirado, etc.)
+- Diferentes métodos de entrega (WhatsApp, RabbitMQ, Email)
+
+Esses exemplos ajudam a entender as respostas esperadas e o tratamento de erros.
 
 ---
