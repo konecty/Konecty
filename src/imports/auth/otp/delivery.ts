@@ -28,7 +28,8 @@ function getWhatsAppConfig(): WhatsAppConfig | null {
 	const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 	const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
 	const templateId = process.env.WHATSAPP_TEMPLATE_ID;
-	const buttonUrlParameter = process.env.WHATSAPP_BUTTON_URL_PARAMETER;
+	const hasCopyButtonEnv = process.env.HAS_COPY_BUTTON;
+	const hasCopyButton = hasCopyButtonEnv != null ? hasCopyButtonEnv.toLowerCase() === 'true' : undefined;
 
 	if (accessToken && phoneNumberId && templateId) {
 		return {
@@ -36,7 +37,7 @@ function getWhatsAppConfig(): WhatsAppConfig | null {
 			phoneNumberId,
 			...(businessAccountId != null && { businessAccountId }),
 			templateId,
-			...(buttonUrlParameter != null && { buttonUrlParameter }),
+			...(hasCopyButton !== undefined && { hasCopyButton }),
 		};
 	}
 

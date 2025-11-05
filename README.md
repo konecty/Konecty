@@ -66,7 +66,7 @@ This will watch the Tailwind input file and regenerate CSS automatically when yo
 -   `WHATSAPP_PHONE_NUMBER_ID`: WhatsApp Business API phone number ID
 -   `WHATSAPP_BUSINESS_ACCOUNT_ID`: (optional) WhatsApp Business Account ID
 -   `WHATSAPP_TEMPLATE_ID`: WhatsApp template ID for OTP messages
--   `WHATSAPP_BUTTON_URL_PARAMETER`: (optional) URL parameter for templates with URL buttons. **Maximum 15 characters** (WhatsApp limit). If longer, it will be truncated. Example: `verify?t=abc` (14 chars)
+-   `HAS_COPY_BUTTON`: (optional) Set to `true` if the WhatsApp template has a URL button that requires the OTP code as parameter. When enabled, the OTP code will be sent as the URL button parameter. Default: `false`. Priority: Namespace → env var → default
 
 ### Modern Login Page
 

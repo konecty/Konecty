@@ -22,4 +22,3 @@ export const OTP_MAX_VERIFICATION_ATTEMPTS = 3;
 export const OTP_RATE_LIMIT_REQUESTS_PER_MINUTE = 5;
 export const OTP_EXPIRATION_BUFFER_SECONDS = 60; // Buffer for TTL index cleanup (1 minute after expiration)
 export const OTP_COUNTRY_CODE_SEARCH_CONCURRENCY = 3; // Maximum parallel country code searches
-export const WHATSAPP_BUTTON_URL_PARAMETER_MAX_LENGTH = 15; // WhatsApp Business API limit for button URL parameters

@@ -56,7 +56,7 @@ export const NamespaceSchema = z
 						templateId: z.string(),
 						apiUrlTemplate: z.string().optional(),
 						languageCode: z.string().optional(),
-						buttonUrlParameter: z.string().optional(),
+						hasCopyButton: z.boolean().optional(),
 					})
 					.optional(),
 				rabbitmqQueue: z.string().optional(),

@@ -1,7 +1,6 @@
 import Handlebars from 'handlebars';
 import { logger } from '@imports/utils/logger';
 import { MetaObject } from '@imports/model/MetaObject';
-import { WHATSAPP_BUTTON_URL_PARAMETER_MAX_LENGTH } from '@imports/consts';
 
 export interface WhatsAppConfig {
 	accessToken: string;
@@ -10,7 +9,7 @@ export interface WhatsAppConfig {
 	templateId: string;
 	apiUrlTemplate?: string;
 	languageCode?: string;
-	buttonUrlParameter?: string;
+	hasCopyButton?: boolean;
 }
 
 export interface WhatsAppResult {
@@ -62,40 +61,19 @@ export async function sendOtpViaWhatsApp(phoneNumber: string, otpCode: string, c
 			},
 		];
 
-		// Add button component if template has a URL button that requires a parameter
-		// WhatsApp has a limit of 15 characters for button URL parameters
-		if (whatsappConfig.buttonUrlParameter != null) {
-			const buttonParam = whatsappConfig.buttonUrlParameter.trim();
-			if (buttonParam.length > WHATSAPP_BUTTON_URL_PARAMETER_MAX_LENGTH) {
-				logger.warn(
-					`WhatsApp buttonUrlParameter exceeds maximum length of ${WHATSAPP_BUTTON_URL_PARAMETER_MAX_LENGTH} characters. Received: ${buttonParam.length}. Parameter will be truncated.`,
-				);
-				// Truncate to maximum length (WhatsApp limit)
-				const truncatedParam = buttonParam.substring(0, WHATSAPP_BUTTON_URL_PARAMETER_MAX_LENGTH);
-				components.push({
-					type: 'button',
-					sub_type: 'url',
-					index: '0', // First button (index 0)
-					parameters: [
-						{
-							type: 'text',
-							text: truncatedParam,
-						},
-					],
-				});
-			} else {
-				components.push({
-					type: 'button',
-					sub_type: 'url',
-					index: '0', // First button (index 0)
-					parameters: [
-						{
-							type: 'text',
-							text: buttonParam,
-						},
-					],
-				});
-			}
+		// Add button component if template has a URL button that requires the OTP code as parameter
+		if (whatsappConfig.hasCopyButton === true) {
+			components.push({
+				type: 'button',
+				sub_type: 'url',
+				index: '0', // First button (index 0)
+				parameters: [
+					{
+						type: 'text',
+						text: otpCode,
+					},
+				],
+			});
 		}
 
 		const messageBody = {
