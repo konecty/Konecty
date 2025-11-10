@@ -82,7 +82,7 @@ function getLocale(): string {
 // Translations
 const translations = {
 	'pt-BR': {
-		title_login_page: 'Entre na sua conta do Konecty',
+		title_login_page: 'Entre na sua conta',
 		lbl_login: 'Usuário',
 		lbl_password: 'Senha',
 		lbl_email: 'Email',

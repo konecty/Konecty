@@ -771,6 +771,7 @@ function collectGeolocation(callback) {
 				{ code: 'MX', flag: '🇲🇽', callingCode: '52' },
 				{ code: 'PT', flag: '🇵🇹', callingCode: '351' },
 				{ code: 'ES', flag: '🇪🇸', callingCode: '34' },
+				{ code: 'IT', flag: '🇮🇹', callingCode: '39' },
 			];
 			
 			var defaultCountry = countrySelect.getAttribute('data-default-country') || 'BR';
