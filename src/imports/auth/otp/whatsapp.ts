@@ -1,6 +1,6 @@
-import Handlebars from 'handlebars';
-import { logger } from '@imports/utils/logger';
 import { MetaObject } from '@imports/model/MetaObject';
+import { logger } from '@imports/utils/logger';
+import Handlebars from 'handlebars';
 
 export interface WhatsAppConfig {
 	accessToken: string;
@@ -109,8 +109,9 @@ export async function sendOtpViaWhatsApp(phoneNumber: string, otpCode: string, c
 			};
 		}
 
-		await response.json();
+		const result = await response.json();
 		logger.info(`OTP sent via WhatsApp to ${phoneNumber}`);
+		logger.debug({ result });
 		return { success: true };
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via WhatsApp');
