@@ -20,6 +20,7 @@
 			"additionalProperties": { "type": "string" }
 		},
 		"saveHistory": { "type": "boolean" },
+		"changeUserRunHooks": { "type": "boolean" },
 		"help": {
 			"type": "object",
 			"additionalProperties": { "type": "string" }
