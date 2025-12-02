@@ -13,41 +13,71 @@ import { getNextUserFromQueue } from '../meta/getNextUserFromQueue';
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { getAccessFor } from '../utils/accessUtils';
 import { runScriptBeforeValidation, runScriptAfterSave } from '../data/scripts';
+import extend from 'lodash/extend';
+import set from 'lodash/set';
 
 /**
  * Executa os hooks (beforeValidation e afterSave) se a flag changeUserRunHooks estiver ativa
+ * Retorna o update modificado ou erro se o script falhar
  */
-async function runHooksIfEnabled({ meta, document, originalRecord, updatedRecord, user }) {
-	if (meta.changeUserRunHooks !== true || originalRecord == null) {
-		return;
+async function processBeforeValidation({ meta, originalRecord, update, requestData, user }) {
+	if (meta.changeUserRunHooks !== true || originalRecord == null || meta.scriptBeforeValidation == null) {
+		return { update, shouldContinue: true };
 	}
 
-	try {
-		if (meta.scriptBeforeValidation != null) {
-			const extraData = {
-				original: originalRecord,
-				request: { _user: updatedRecord._user },
-			};
-			await runScriptBeforeValidation({
-				script: meta.scriptBeforeValidation,
-				data: updatedRecord,
-				user,
-				meta,
-				extraData,
-			});
+	// Prepara extraData
+	const extraData = {
+		original: originalRecord,
+		request: requestData,
+		validated: {},
+	};
+
+	// Prepara data do update para ser validada: extend({}, record, data.data, lookupValues)
+	const dataToValidate = extend({}, originalRecord, requestData, {});
+
+	// Executa beforeValidation
+	const scriptResult = await runScriptBeforeValidation({
+		script: meta.scriptBeforeValidation,
+		data: dataToValidate,
+		user,
+		meta,
+		extraData,
+	});
+
+	// Se o script retornar erro, interrompe
+	if (scriptResult.success === false) {
+		return { update, shouldContinue: false, error: scriptResult };
+	}
+
+	// Prepara o update que será aplicado
+	let updateToApply = { ...update };
+
+	// Aplica as modificações retornadas ao update
+	if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
+		const modifications = scriptResult.data.result;
+
+		// Garante que $set existe
+		if (updateToApply.$set == null) {
+			updateToApply.$set = {};
 		}
 
-		if (meta.scriptAfterSave != null) {
-			await runScriptAfterSave({
-				script: meta.scriptAfterSave,
-				data: [updatedRecord],
-				user,
-				extraData: { original: [originalRecord] },
-			});
-		}
-	} catch (hookError) {
-		console.error(`Error running hooks for changeUser on ${document}:`, hookError);
+		// Aplica as modificações ao $set
+		Object.keys(modifications).forEach(key => {
+			if (modifications[key] === null) {
+				// Se o valor for null, remove o campo
+				if (updateToApply.$unset == null) {
+					updateToApply.$unset = {};
+				}
+				updateToApply.$unset[key] = 1;
+				delete updateToApply.$set[key];
+			} else {
+				// Aplica a modificação ao $set
+				set(updateToApply.$set, key, modifications[key]);
+			}
+		});
 	}
+
+	return { update: updateToApply, shouldContinue: true };
 }
 
 function validateRequest({ document, ids, users, access }) {
@@ -180,7 +210,26 @@ export async function addUser({ authTokenId, document, ids, users }) {
 				// Busca o registro original antes de atualizar (para os hooks)
 				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados
+				const newUserData = [...(originalRecord?._user || []), ...validateResult.data.map(user => stringToDate(user))];
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
@@ -188,8 +237,15 @@ export async function addUser({ authTokenId, document, ids, users }) {
 					newRecord: { _id: id, _user: result._user },
 				});
 
-				// Executa hooks se a flag estiver ativa
-				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				// Executa afterSave depois do update
+				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -288,12 +344,31 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 				// Busca o registro original antes de atualizar (para os hooks)
 				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
 
+				// Prepara os dados que serão atualizados
+				const newUserData = (originalRecord?._user || []).filter(u => !userIds.includes(u._id));
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
 				const result = await MetaObject.Collections[document].findOneAndUpdate(
 					{
 						_id: id,
 						'_user._id': { $in: userIds },
 					},
-					update,
+					updateToApply,
 					{ returnDocument: 'after', includeResultMetadata: false },
 				);
 				if (result == null) return successReturn(null);
@@ -303,8 +378,15 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 					newRecord: { _id: id, _user: result._user },
 				});
 
-				// Executa hooks se a flag estiver ativa
-				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				// Executa afterSave depois do update
+				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -411,7 +493,26 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 				// Busca o registro original antes de atualizar (para os hooks)
 				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados (simula o resultado após o update)
+				const newUserData = validateResult.data.map(user => stringToDate(user));
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation ANTES do update (seguindo padrão do update)
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
@@ -419,8 +520,15 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 					newRecord: { _id: id, _user: result._user },
 				});
 
-				// Executa hooks se a flag estiver ativa
-				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				// Executa afterSave depois do update
+				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -557,7 +665,7 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		records,
 		async record => {
 			try {
-				// Busca o registro original antes de atualizar (para os hooks)
+				// Busca o registro original completo antes de atualizar (para os hooks)
 				const originalRecord = meta?.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: record._id }) : record;
 
 				const newUsers = [...record._user];
@@ -568,7 +676,29 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 				newUsers[userToRemoveIndex] = newUser;
 				update.$set._user = newUsers;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados
+				const requestData = { _user: newUsers };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, updateToApply, {
+					returnDocument: 'after',
+					includeResultMetadata: false,
+				});
+
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
@@ -576,8 +706,15 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 					newRecord: { _id: record._id, _user: result._user },
 				});
 
-				// Executa hooks se a flag estiver ativa
-				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				// Executa afterSave depois do update
+				if (meta?.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -762,7 +899,28 @@ export async function removeInactive({ authTokenId, document, ids }) {
 
 				update.$set._user = newUsers;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados
+				const requestData = { _user: newUsers };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, updateToApply, {
+					returnDocument: 'after',
+					includeResultMetadata: false,
+				});
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
@@ -770,9 +928,14 @@ export async function removeInactive({ authTokenId, document, ids }) {
 					newRecord: { _id: record._id, _user: result._user },
 				});
 
-				// Executa hooks se a flag estiver ativa
-				if (meta != null) {
-					await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				// Executa afterSave depois do update
+				if (meta?.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
 				}
 
 				return successReturn(result);
