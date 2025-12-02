@@ -15,6 +15,10 @@ import { getAccessFor } from '../utils/accessUtils';
 import { runScriptBeforeValidation, runScriptAfterSave } from '../data/scripts';
 import extend from 'lodash/extend';
 import set from 'lodash/set';
+import cloneDeep from 'lodash/cloneDeep';
+import { DateTime } from 'luxon';
+import pick from 'lodash/pick';
+import { randomId } from '../utils/random';
 
 /**
  * Executa os hooks (beforeValidation e afterSave) se a flag changeUserRunHooks estiver ativa
@@ -49,8 +53,8 @@ async function processBeforeValidation({ meta, originalRecord, update, requestDa
 		return { update, shouldContinue: false, error: scriptResult };
 	}
 
-	// Prepara o update que será aplicado
-	let updateToApply = { ...update };
+	// Prepara o update que será aplicado (deep clone para evitar race condition)
+	let updateToApply = cloneDeep(update);
 
 	// Aplica as modificações retornadas ao update
 	if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
@@ -77,7 +81,61 @@ async function processBeforeValidation({ meta, originalRecord, update, requestDa
 		});
 	}
 
-	return { update: updateToApply, shouldContinue: true };
+	return {
+		update: updateToApply,
+		shouldContinue: true,
+		emailsToSend: scriptResult.data?.emailsToSend,
+	};
+}
+
+/**
+ * Executa afterSave seguindo o padrão do update
+ */
+async function processAfterSave({ meta, originalRecord, updatedRecord, user }) {
+	if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+		await runScriptAfterSave({
+			script: meta.scriptAfterSave,
+			data: [updatedRecord],
+			user,
+			extraData: { original: [originalRecord] },
+		});
+	}
+}
+
+/**
+ * Processa emails retornados pelo beforeValidation
+ */
+async function processEmailsToSend(emailsToSend, user) {
+	if (emailsToSend.length === 0) {
+		return;
+	}
+
+	const messagesCollection = MetaObject.Collections['Message'];
+	if (messagesCollection == null) {
+		return;
+	}
+
+	const now = DateTime.local().toJSDate();
+	try {
+		await messagesCollection.insertMany(
+			emailsToSend.map(email =>
+				Object.assign(
+					{},
+					{
+						_id: randomId(),
+						_createdAt: now,
+						_createdBy: pick(user, ['_id', 'name', 'group']),
+						_updatedAt: now,
+						_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
+					},
+					email,
+				),
+			),
+		);
+	} catch (e) {
+		// Log erro mas não falha a operação
+		console.error(`Error inserting emails from changeUser:`, e);
+	}
 }
 
 function validateRequest({ document, ids, users, access }) {
@@ -203,6 +261,7 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
@@ -227,6 +286,11 @@ export async function addUser({ authTokenId, document, ids, users }) {
 					return beforeValidationResult.error;
 				}
 
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
 				const updateToApply = beforeValidationResult.update;
 
 				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
@@ -238,14 +302,7 @@ export async function addUser({ authTokenId, document, ids, users }) {
 				});
 
 				// Executa afterSave depois do update
-				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
-					await runScriptAfterSave({
-						script: meta.scriptAfterSave,
-						data: [result],
-						user,
-						extraData: { original: [originalRecord] },
-					});
-				}
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -337,6 +394,7 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
@@ -361,6 +419,11 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 					return beforeValidationResult.error;
 				}
 
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
 				const updateToApply = beforeValidationResult.update;
 
 				const result = await MetaObject.Collections[document].findOneAndUpdate(
@@ -379,14 +442,7 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 				});
 
 				// Executa afterSave depois do update
-				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
-					await runScriptAfterSave({
-						script: meta.scriptAfterSave,
-						data: [result],
-						user,
-						extraData: { original: [originalRecord] },
-					});
-				}
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -407,6 +463,9 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -486,6 +545,7 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
@@ -510,6 +570,11 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 					return beforeValidationResult.error;
 				}
 
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
 				const updateToApply = beforeValidationResult.update;
 
 				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
@@ -521,14 +586,7 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 				});
 
 				// Executa afterSave depois do update
-				if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
-					await runScriptAfterSave({
-						script: meta.scriptAfterSave,
-						data: [result],
-						user,
-						extraData: { original: [originalRecord] },
-					});
-				}
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -661,6 +719,7 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		.project({ _user: 1 })
 		.toArray();
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		records,
 		async record => {
@@ -735,6 +794,9 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -887,6 +949,7 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		.toArray();
 
 	const meta = MetaObject.Meta[document];
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		records,
 		async record => {
@@ -913,6 +976,11 @@ export async function removeInactive({ authTokenId, document, ids }) {
 
 				if (beforeValidationResult.shouldContinue === false) {
 					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
 				}
 
 				const updateToApply = beforeValidationResult.update;
@@ -957,6 +1025,9 @@ export async function removeInactive({ authTokenId, document, ids }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
