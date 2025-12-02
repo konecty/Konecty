@@ -30,6 +30,7 @@ Abaixo estão as principais propriedades de um objeto `document`:
 | `name`           | string       | Nome técnico do módulo/documento, utilizado internamente pelo sistema. Deve ser o mesmo que o `_id` |
 | `plurals`        | objeto       | Pluralização do nome do módulo em diferentes idiomas, para uso em listas e títulos.                 |
 | `saveHistory`    | boolean      | Indica se o histórico de alterações do módulo deve ser salvo.                                       |
+| `changeUserRunHooks` | boolean      | Indica se os hooks padrões (BeforeValidation, AfterSave, etc.) devem ser executados quando há alterações nos usuários do módulo via `changeUser`. |
 | `type`           | string       | Tipo do metadata, neste caso sempre `"document"`.                                                   |
 | `indexes`        | objeto       | Índices adicionais para o módulo, otimizando buscas e garantindo unicidade de combinações de campos.|
 | `sendAlerts`     | boolean      | Indica se o sistema deve enviar alertas relacionados a este módulo.                                 |

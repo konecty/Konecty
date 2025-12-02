@@ -30,6 +30,7 @@ Below are the main properties of a `document` object:
 | `name`           | string       | Technical name of the module/document, used internally by the system. Must be the same as `_id` |
 | `plurals`        | object       | Pluralization of the module name in different languages, for use in lists and titles.                 |
 | `saveHistory`    | boolean      | Indicates whether the module's change history should be saved.                                       |
+| `changeUserRunHooks` | boolean      | Indicates whether standard hooks (BeforeValidation, AfterSave, etc.) should be executed when changes are detected in the module's users via `changeUser`. |
 | `type`           | string       | Metadata type, in this case always `"document"`.                                                   |
 | `indexes`        | object       | Additional indexes for the module, optimizing searches and ensuring uniqueness of field combinations.|
 | `sendAlerts`     | boolean      | Indicates whether the system should send alerts related to this module.                                 |

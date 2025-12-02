@@ -12,6 +12,148 @@ import { stringToDate } from '../data/dateParser';
 import { getNextUserFromQueue } from '../meta/getNextUserFromQueue';
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { getAccessFor } from '../utils/accessUtils';
+import { runScriptBeforeValidation, runScriptAfterSave } from '../data/scripts';
+import extend from 'lodash/extend';
+import set from 'lodash/set';
+import cloneDeep from 'lodash/cloneDeep';
+import { DateTime } from 'luxon';
+import pick from 'lodash/pick';
+import { randomId } from '../utils/random';
+
+/**
+ * Executa os hooks (beforeValidation e afterSave) se a flag changeUserRunHooks estiver ativa
+ * Retorna o update modificado ou erro se o script falhar
+ */
+async function processBeforeValidation({ meta, originalRecord, update, requestData, user }) {
+	if (meta.changeUserRunHooks !== true || originalRecord == null || meta.scriptBeforeValidation == null) {
+		return { update, shouldContinue: true };
+	}
+
+	// Prepara extraData
+	const extraData = {
+		original: originalRecord,
+		request: requestData,
+		validated: {},
+	};
+
+	// Prepara data do update para ser validada: extend({}, record, data.data, lookupValues)
+	const dataToValidate = extend({}, originalRecord, requestData, {});
+
+	// Executa beforeValidation
+	const scriptResult = await runScriptBeforeValidation({
+		script: meta.scriptBeforeValidation,
+		data: dataToValidate,
+		user,
+		meta,
+		extraData,
+	});
+
+	// Se o script retornar erro, interrompe
+	if (scriptResult.success === false) {
+		return { update, shouldContinue: false, error: scriptResult };
+	}
+
+	// Prepara o update que será aplicado (deep clone para evitar race condition)
+	let updateToApply = cloneDeep(update);
+
+	// Aplica as modificações retornadas ao update
+	if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
+		const modifications = scriptResult.data.result;
+
+		// Garante que $set existe
+		if (updateToApply.$set == null) {
+			updateToApply.$set = {};
+		}
+
+		// Aplica as modificações ao $set
+		Object.keys(modifications).forEach(key => {
+			if (modifications[key] === null) {
+				// Se o valor for null, remove o campo
+				if (updateToApply.$unset == null) {
+					updateToApply.$unset = {};
+				}
+				updateToApply.$unset[key] = 1;
+				delete updateToApply.$set[key];
+			} else {
+				// Aplica a modificação ao $set
+				set(updateToApply.$set, key, modifications[key]);
+			}
+
+			// Se o script modificar _user, remove operadores conflitantes ($addToSet, $pull)
+			// MongoDB não permite múltiplos operadores no mesmo campo
+			if (key === '_user') {
+				if (updateToApply.$addToSet != null && updateToApply.$addToSet._user != null) {
+					delete updateToApply.$addToSet._user;
+					if (Object.keys(updateToApply.$addToSet).length === 0) {
+						delete updateToApply.$addToSet;
+					}
+				}
+				if (updateToApply.$pull != null && updateToApply.$pull._user != null) {
+					delete updateToApply.$pull._user;
+					if (Object.keys(updateToApply.$pull).length === 0) {
+						delete updateToApply.$pull;
+					}
+				}
+			}
+		});
+	}
+
+	return {
+		update: updateToApply,
+		shouldContinue: true,
+		emailsToSend: scriptResult.data?.emailsToSend,
+	};
+}
+
+/**
+ * Executa afterSave seguindo o padrão do update
+ */
+async function processAfterSave({ meta, originalRecord, updatedRecord, user }) {
+	if (meta.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+		await runScriptAfterSave({
+			script: meta.scriptAfterSave,
+			data: [updatedRecord],
+			user,
+			extraData: { original: [originalRecord] },
+		});
+	}
+}
+
+/**
+ * Processa emails retornados pelo beforeValidation
+ */
+async function processEmailsToSend(emailsToSend, user) {
+	if (emailsToSend.length === 0) {
+		return;
+	}
+
+	const messagesCollection = MetaObject.Collections['Message'];
+	if (messagesCollection == null) {
+		return;
+	}
+
+	const now = DateTime.local().toJSDate();
+	try {
+		await messagesCollection.insertMany(
+			emailsToSend.map(email =>
+				Object.assign(
+					{},
+					{
+						_id: randomId(),
+						_createdAt: now,
+						_createdBy: pick(user, ['_id', 'name', 'group']),
+						_updatedAt: now,
+						_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
+					},
+					email,
+				),
+			),
+		);
+	} catch (e) {
+		// Log erro mas não falha a operação
+		console.error(`Error inserting emails from changeUser:`, e);
+	}
+}
 
 function validateRequest({ document, ids, users, access }) {
 	// Verify if user have permission to update record
@@ -136,17 +278,48 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
 			try {
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
+				// Prepara os dados que serão atualizados
+				const newUserData = [...(originalRecord?._user || []), ...validateResult.data.map(user => stringToDate(user))];
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa afterSave depois do update
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -167,6 +340,9 @@ export async function addUser({ authTokenId, document, ids, users }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -238,16 +414,44 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
+				// Prepara os dados que serão atualizados
+				const newUserData = (originalRecord?._user || []).filter(u => !userIds.includes(u._id));
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
 				const result = await MetaObject.Collections[document].findOneAndUpdate(
 					{
 						_id: id,
 						'_user._id': { $in: userIds },
 					},
-					update,
+					updateToApply,
 					{ returnDocument: 'after', includeResultMetadata: false },
 				);
 				if (result == null) return successReturn(null);
@@ -256,6 +460,9 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa afterSave depois do update
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -276,6 +483,9 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -355,17 +565,48 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		},
 	};
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		ids,
 		async id => {
 			try {
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
+				// Prepara os dados que serão atualizados (simula o resultado após o update)
+				const newUserData = validateResult.data.map(user => stringToDate(user));
+				const requestData = { _user: newUserData };
+
+				// Executa beforeValidation ANTES do update (seguindo padrão do update)
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, updateToApply, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa afterSave depois do update
+				await processAfterSave({ meta, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -386,6 +627,9 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -498,10 +742,14 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		.project({ _user: 1 })
 		.toArray();
 
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		records,
 		async record => {
 			try {
+				// Busca o registro original completo antes de atualizar (para os hooks)
+				const originalRecord = meta?.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: record._id }) : record;
+
 				const newUsers = [...record._user];
 
 				const userToRemoveIndex = newUsers.findIndex(user => user._id === from._id);
@@ -510,13 +758,50 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 				newUsers[userToRemoveIndex] = newUser;
 				update.$set._user = newUsers;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados
+				const requestData = { _user: newUsers };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, updateToApply, {
+					returnDocument: 'after',
+					includeResultMetadata: false,
+				});
+
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
 					originalRecord: { _id: record._id, _user: undefined },
 					newRecord: { _id: record._id, _user: result._user },
 				});
+
+				// Executa afterSave depois do update
+				if (meta?.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -537,6 +822,9 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
@@ -688,22 +976,70 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		.project({ _user: 1 })
 		.toArray();
 
+	const meta = MetaObject.Meta[document];
+	if (meta == null) {
+		return {
+			success: false,
+			errors: [{ message: `[withMetaForDocument] Document [${document}] does not exists` }],
+		};
+	}
+
+	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		records,
 		async record => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta?.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: record._id }) : record;
+
 				const newUsers = [].concat(record._user).filter(user => user.active === true);
 				if (newUsers.length === record._user.length) return successReturn(null);
 
 				update.$set._user = newUsers;
 
-				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, update, { returnDocument: 'after', includeResultMetadata: false });
+				// Prepara os dados que serão atualizados
+				const requestData = { _user: newUsers };
+
+				// Executa beforeValidation antes do update
+				const beforeValidationResult = await processBeforeValidation({
+					meta,
+					originalRecord,
+					update,
+					requestData,
+					user,
+				});
+
+				if (beforeValidationResult.shouldContinue === false) {
+					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
+				}
+
+				const updateToApply = beforeValidationResult.update;
+
+				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: record._id }, updateToApply, {
+					returnDocument: 'after',
+					includeResultMetadata: false,
+				});
 				if (result == null) return successReturn(null);
 
 				await Konsistent.processChangeSync(document, 'update', user, {
 					originalRecord: { _id: record._id, _user: undefined },
 					newRecord: { _id: record._id, _user: result._user },
 				});
+
+				// Executa afterSave depois do update
+				if (meta?.changeUserRunHooks === true && originalRecord != null && meta.scriptAfterSave != null) {
+					await runScriptAfterSave({
+						script: meta.scriptAfterSave,
+						data: [result],
+						user,
+						extraData: { original: [originalRecord] },
+					});
+				}
 
 				return successReturn(result);
 			} catch (e) {
@@ -724,6 +1060,9 @@ export async function removeInactive({ authTokenId, document, ids }) {
 			}, []),
 		};
 	}
+
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
 
 	return successReturn(null);
 }
