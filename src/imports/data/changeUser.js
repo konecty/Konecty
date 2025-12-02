@@ -78,6 +78,23 @@ async function processBeforeValidation({ meta, originalRecord, update, requestDa
 				// Aplica a modificação ao $set
 				set(updateToApply.$set, key, modifications[key]);
 			}
+
+			// Se o script modificar _user, remove operadores conflitantes ($addToSet, $pull)
+			// MongoDB não permite múltiplos operadores no mesmo campo
+			if (key === '_user') {
+				if (updateToApply.$addToSet != null && updateToApply.$addToSet._user != null) {
+					delete updateToApply.$addToSet._user;
+					if (Object.keys(updateToApply.$addToSet).length === 0) {
+						delete updateToApply.$addToSet;
+					}
+				}
+				if (updateToApply.$pull != null && updateToApply.$pull._user != null) {
+					delete updateToApply.$pull._user;
+					if (Object.keys(updateToApply.$pull).length === 0) {
+						delete updateToApply.$pull;
+					}
+				}
+			}
 		});
 	}
 
@@ -960,6 +977,13 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		.toArray();
 
 	const meta = MetaObject.Meta[document];
+	if (meta == null) {
+		return {
+			success: false,
+			errors: [{ message: `[withMetaForDocument] Document [${document}] does not exists` }],
+		};
+	}
+
 	const emailsToSend = [];
 	const updateResults = await Bluebird.map(
 		records,
