@@ -12,6 +12,43 @@ import { stringToDate } from '../data/dateParser';
 import { getNextUserFromQueue } from '../meta/getNextUserFromQueue';
 import { validateAndProcessValueFor } from '../meta/validateAndProcessValueFor';
 import { getAccessFor } from '../utils/accessUtils';
+import { runScriptBeforeValidation, runScriptAfterSave } from '../data/scripts';
+
+/**
+ * Executa os hooks (beforeValidation e afterSave) se a flag changeUserRunHooks estiver ativa
+ */
+async function runHooksIfEnabled({ meta, document, originalRecord, updatedRecord, user }) {
+	if (meta.changeUserRunHooks !== true || originalRecord == null) {
+		return;
+	}
+
+	try {
+		if (meta.scriptBeforeValidation != null) {
+			const extraData = {
+				original: originalRecord,
+				request: { _user: updatedRecord._user },
+			};
+			await runScriptBeforeValidation({
+				script: meta.scriptBeforeValidation,
+				data: updatedRecord,
+				user,
+				meta,
+				extraData,
+			});
+		}
+
+		if (meta.scriptAfterSave != null) {
+			await runScriptAfterSave({
+				script: meta.scriptAfterSave,
+				data: [updatedRecord],
+				user,
+				extraData: { original: [originalRecord] },
+			});
+		}
+	} catch (hookError) {
+		console.error(`Error running hooks for changeUser on ${document}:`, hookError);
+	}
+}
 
 function validateRequest({ document, ids, users, access }) {
 	// Verify if user have permission to update record
@@ -140,6 +177,9 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		ids,
 		async id => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
 				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
@@ -147,6 +187,9 @@ export async function addUser({ authTokenId, document, ids, users }) {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa hooks se a flag estiver ativa
+				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -242,6 +285,9 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 		ids,
 		async id => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
 				const result = await MetaObject.Collections[document].findOneAndUpdate(
 					{
 						_id: id,
@@ -256,6 +302,9 @@ export async function removeUser({ authTokenId, document, ids, users }) {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa hooks se a flag estiver ativa
+				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -359,6 +408,9 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		ids,
 		async id => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: id }) : null;
+
 				const result = await MetaObject.Collections[document].findOneAndUpdate({ _id: id }, update, { returnDocument: 'after', includeResultMetadata: false });
 				if (result == null) return successReturn(null);
 
@@ -366,6 +418,9 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 					originalRecord: { _id: id, _user: undefined },
 					newRecord: { _id: id, _user: result._user },
 				});
+
+				// Executa hooks se a flag estiver ativa
+				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -502,6 +557,9 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 		records,
 		async record => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta?.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: record._id }) : record;
+
 				const newUsers = [...record._user];
 
 				const userToRemoveIndex = newUsers.findIndex(user => user._id === from._id);
@@ -517,6 +575,9 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 					originalRecord: { _id: record._id, _user: undefined },
 					newRecord: { _id: record._id, _user: result._user },
 				});
+
+				// Executa hooks se a flag estiver ativa
+				await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
 
 				return successReturn(result);
 			} catch (e) {
@@ -688,10 +749,14 @@ export async function removeInactive({ authTokenId, document, ids }) {
 		.project({ _user: 1 })
 		.toArray();
 
+	const meta = MetaObject.Meta[document];
 	const updateResults = await Bluebird.map(
 		records,
 		async record => {
 			try {
+				// Busca o registro original antes de atualizar (para os hooks)
+				const originalRecord = meta?.changeUserRunHooks === true ? await MetaObject.Collections[document].findOne({ _id: record._id }) : record;
+
 				const newUsers = [].concat(record._user).filter(user => user.active === true);
 				if (newUsers.length === record._user.length) return successReturn(null);
 
@@ -704,6 +769,11 @@ export async function removeInactive({ authTokenId, document, ids }) {
 					originalRecord: { _id: record._id, _user: undefined },
 					newRecord: { _id: record._id, _user: result._user },
 				});
+
+				// Executa hooks se a flag estiver ativa
+				if (meta != null) {
+					await runHooksIfEnabled({ meta, document, originalRecord, updatedRecord: result, user });
+				}
 
 				return successReturn(result);
 			} catch (e) {
