@@ -324,6 +324,9 @@ export async function addUser({ authTokenId, document, ids, users }) {
 		};
 	}
 
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
+
 	return successReturn(null);
 }
 
@@ -608,6 +611,9 @@ export async function defineUser({ authTokenId, document, ids, users }) {
 		};
 	}
 
+	// Processa emails para enviar (se houver)
+	await processEmailsToSend(emailsToSend, user);
+
 	return successReturn(null);
 }
 
@@ -749,6 +755,11 @@ export async function replaceUser({ authTokenId, document, ids, from, to }) {
 
 				if (beforeValidationResult.shouldContinue === false) {
 					return beforeValidationResult.error;
+				}
+
+				// Coleta emails para enviar
+				if (beforeValidationResult.emailsToSend != null && isArray(beforeValidationResult.emailsToSend)) {
+					emailsToSend.push(...beforeValidationResult.emailsToSend);
 				}
 
 				const updateToApply = beforeValidationResult.update;
