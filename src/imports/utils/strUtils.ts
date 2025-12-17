@@ -57,6 +57,13 @@ export const accentToRegex = (str: string): string => {
 		.toLowerCase()
 		.replace(regexSpecialChars, '\\$&') // Escape all regex special characters
 		.split('')
+		.map(char => removeAccents(char)) // Remove accents
 		.map(char => charMap[char] || char)
 		.join('');
+};
+
+const removeAccents = (str: string) => {
+	if (str === null || str === undefined) return '';
+	
+	return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
