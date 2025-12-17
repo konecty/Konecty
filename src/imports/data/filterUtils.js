@@ -16,6 +16,7 @@ import uniqBy from 'lodash/uniqBy';
 import { MetaObject } from '@imports/model/MetaObject';
 import { logger } from '../utils/logger';
 import { errorReturn, successReturn } from '../utils/return';
+import { accentToRegex } from '@imports/utils/strUtils';
 
 const validOperators = [
 	'equals',
@@ -291,16 +292,16 @@ export function parseFilterCondition(condition, metaObject, { user }, invert) {
 			queryCondition[condition.term] = { $ne: conditionValue };
 			break;
 		case 'contains':
-			queryCondition[condition.term] = { $regex: conditionValue, $options: 'i' };
+			queryCondition[condition.term] = { $regex: accentToRegex(conditionValue), $options: 'i' };
 			break;
 		case 'not_contains':
-			queryCondition[condition.term] = { $not: { $regex: conditionValue, $options: 'i' } };
+			queryCondition[condition.term] = { $not: { $regex: accentToRegex(conditionValue), $options: 'i' } };
 			break;
 		case 'starts_with':
-			queryCondition[condition.term] = { $regex: `^${conditionValue}`, $options: 'i' };
+			queryCondition[condition.term] = { $regex: `^${accentToRegex(conditionValue)}`, $options: 'i' };
 			break;
 		case 'end_with':
-			queryCondition[condition.term] = { $regex: conditionValue + '$', $options: 'i' };
+			queryCondition[condition.term] = { $regex: accentToRegex(conditionValue) + '$', $options: 'i' };
 			break;
 		case 'in':
 			queryCondition[condition.term] = { $in: [].concat(conditionValue) };
