@@ -2,6 +2,8 @@
  * Country Code Utilities for Phone Input
  * Uses libphonenumber-js loaded from CDN
  */
+/* eslint-env browser */
+/* global libphonenumber_js, libphonenumber */
 
 (function () {
 	'use strict';
@@ -36,16 +38,17 @@
 	// Returns array of { code, flag, name, callingCode }
 	function getCountryList() {
 		// libphonenumber-js CDN exposes the library as libphonenumber_js
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		if (!lib || !lib.getCountries) {
 			console.error('libphonenumber-js not loaded');
 			return [];
 		}
 
 		const countries = lib.getCountries();
-		
+
 		// Basic country name mapping for common countries (can be extended)
+		// This is used as fallback if libphonenumber doesn't provide country names
 		const countryNames = {
 			BR: 'Brazil',
 			US: 'United States',
@@ -68,13 +71,23 @@
 			IN: 'India',
 		};
 
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
 		const countryList = countries.map(function (countryCode) {
 			const callingCode = lib ? lib.getCountryCallingCode(countryCode) : '';
 			const flag = countryCodeToUnicodeFlag(countryCode);
-			// Use country name from mapping or fallback to country code
-			const countryName = countryNames[countryCode] || countryCode;
+
+			// Try to get country name from libphonenumber first, then fallback to mapping or country code
+			let countryName;
+			if (lib && typeof lib.getCountryName === 'function') {
+				try {
+					countryName = lib.getCountryName(countryCode, 'en');
+				} catch (error) {
+					// Fallback to mapping or country code
+					countryName = countryNames[countryCode] || countryCode;
+				}
+			} else {
+				// Use country name from mapping or fallback to country code
+				countryName = countryNames[countryCode] || countryCode;
+			}
 
 			return {
 				code: countryCode,
@@ -94,8 +107,8 @@
 
 	// Validate phone number by country using libphonenumber-js
 	function validatePhoneNumberByCountry(phoneNumber, countryCode) {
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		if (!lib || !lib.isValidPhoneNumber) {
 			// Fallback to basic E.164 validation if libphonenumber is not available
 			const e164Pattern = /^\+[1-9]\d{1,14}$/;
@@ -114,8 +127,8 @@
 
 	// Parse phone number and get country code
 	function parsePhoneNumber(phoneNumber) {
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		if (!lib || !lib.parsePhoneNumber) {
 			return null;
 		}
@@ -144,15 +157,15 @@
 		}
 
 		// Get calling code for the country
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		if (lib && lib.getCountryCallingCode) {
 			try {
 				const callingCode = lib.getCountryCallingCode(countryCode);
-				
+
 				// Clean phone number: remove any existing +, spaces, dashes, parentheses
-				var cleanedNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
-				
+				var cleanedNumber = phoneNumber.replace(/[\s-()]/g, '');
+
 				// If phoneNumber already starts with +, try to parse it
 				if (cleanedNumber.startsWith('+')) {
 					cleanedNumber = cleanedNumber.substring(1);
@@ -161,10 +174,10 @@
 						cleanedNumber = cleanedNumber.substring(callingCode.length);
 					}
 				}
-				
+
 				// Remove leading zeros (common in some countries)
 				cleanedNumber = cleanedNumber.replace(/^0+/, '');
-				
+
 				return '+' + callingCode + cleanedNumber;
 			} catch (error) {
 				console.error('Error getting calling code for', countryCode, error);
@@ -189,4 +202,3 @@
 		combineToE164: combineToE164,
 	};
 })();
-

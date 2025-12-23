@@ -157,19 +157,21 @@
 		return hex(md51(s));
 	};
 
-	function add32(a, b) {
+	// Use variable to allow reassignment if needed
+	var add32 = function (a, b) {
 		return (a + b) & 0xffffffff;
-	}
+	};
 
 	if (window.md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
 		window.md5 = function (s) {
 			return hex(md51(s));
 		};
-		function add32(x, y) {
+		// Override with more precise implementation
+		add32 = function (x, y) {
 			var lsw = (x & 0xffff) + (y & 0xffff),
 				msw = (x >> 16) + (y >> 16) + (lsw >> 16);
 			return (msw << 16) | (lsw & 0xffff);
-		}
+		};
 	}
 })();
 
@@ -224,7 +226,7 @@ function SHA256(s) {
 		m[l >> 5] |= 0x80 << (24 - (l % 32));
 		m[(((l + 64) >> 9) << 4) + 15] = l;
 
-		for (var i = 0; i < m.length; i += 16) {
+		for (i = 0; i < m.length; i += 16) {
 			a = HASH[0];
 			b = HASH[1];
 			c = HASH[2];
@@ -234,7 +236,7 @@ function SHA256(s) {
 			g = HASH[6];
 			h = HASH[7];
 
-			for (var j = 0; j < 64; j++) {
+			for (j = 0; j < 64; j++) {
 				if (j < 16) W[j] = m[j + i];
 				else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
 
@@ -307,15 +309,16 @@ function SHA256(s) {
 function createCookie(cookie, value, days) {
 	var newDate = new Date();
 	var url = window.location.href;
-	var match = url.match(/^(http|https|ftp)?(?:[\:\/]*)([a-z0-9\.-]*)(?:\:([0-9]+))?(\/[^?#]*)?(?:\?([^#]*))?(?:#(.*))?$/i);
+	var match = url.match(/^(http|https|ftp)?(?:[:/]*)([a-z0-9.-]*)(?::([0-9]+))?(\/[^?#]*)?(?:\?([^#]*))?(?:#(.*))?$/i);
 	var host = match[2];
 	var server = /localhost/i.test(host) ? host : host.split('.').slice(1).join('.');
 
+	var strExpires;
 	if (days) {
 		newDate.setTime(newDate.getTime() + days * 24 * 60 * 60 * 1000);
-		var strExpires = '; expires=' + newDate.toGMTString();
+		strExpires = '; expires=' + newDate.toGMTString();
 	} else {
-		var strExpires = '';
+		strExpires = '';
 	}
 
 	var domain = /localhost/i.test(server) ? '' : '; domain=' + server;
@@ -757,25 +760,33 @@ function collectGeolocation(callback) {
 		}
 
 		// libphonenumber-js CDN exposes as libphonenumber_js
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		// If library not available, populate with basic countries
 		if (!lib || typeof window.CountryCodes === 'undefined') {
 			// Fallback: add basic countries manually
+			// This list includes common countries as fallback when libphonenumber-js is not available
 			var basicCountries = [
-				{ code: 'BR', flag: '🇧🇷', callingCode: '55' },
-				{ code: 'US', flag: '🇺🇸', callingCode: '1' },
-				{ code: 'AR', flag: '🇦🇷', callingCode: '54' },
-				{ code: 'CL', flag: '🇨🇱', callingCode: '56' },
-				{ code: 'CO', flag: '🇨🇴', callingCode: '57' },
-				{ code: 'MX', flag: '🇲🇽', callingCode: '52' },
-				{ code: 'PT', flag: '🇵🇹', callingCode: '351' },
-				{ code: 'ES', flag: '🇪🇸', callingCode: '34' },
-				{ code: 'IT', flag: '🇮🇹', callingCode: '39' },
+				{ code: 'BR', flag: '🇧🇷', callingCode: '55', name: 'Brasil' },
+				{ code: 'US', flag: '🇺🇸', callingCode: '1', name: 'Estados Unidos' },
+				{ code: 'AR', flag: '🇦🇷', callingCode: '54', name: 'Argentina' },
+				{ code: 'CL', flag: '🇨🇱', callingCode: '56', name: 'Chile' },
+				{ code: 'CO', flag: '🇨🇴', callingCode: '57', name: 'Colômbia' },
+				{ code: 'MX', flag: '🇲🇽', callingCode: '52', name: 'México' },
+				{ code: 'PT', flag: '🇵🇹', callingCode: '351', name: 'Portugal' },
+				{ code: 'ES', flag: '🇪🇸', callingCode: '34', name: 'Espanha' },
+				{ code: 'IT', flag: '🇮🇹', callingCode: '39', name: 'Itália' },
+				{ code: 'FR', flag: '🇫🇷', callingCode: '33', name: 'França' },
+				{ code: 'DE', flag: '🇩🇪', callingCode: '49', name: 'Alemanha' },
+				{ code: 'GB', flag: '🇬🇧', callingCode: '44', name: 'Reino Unido' },
+				{ code: 'CA', flag: '🇨🇦', callingCode: '1', name: 'Canadá' },
+				{ code: 'AU', flag: '🇦🇺', callingCode: '61', name: 'Austrália' },
+				{ code: 'JP', flag: '🇯🇵', callingCode: '81', name: 'Japão' },
+				{ code: 'CN', flag: '🇨🇳', callingCode: '86', name: 'China' },
 			];
-			
+
 			var defaultCountry = countrySelect.getAttribute('data-default-country') || 'BR';
-			
+
 			basicCountries.forEach(function (country) {
 				var option = document.createElement('option');
 				option.value = country.code;
@@ -786,13 +797,13 @@ function collectGeolocation(callback) {
 				}
 				countrySelect.appendChild(option);
 			});
-			
+
 			updatePhoneInputPlaceholder();
 			return;
 		}
 
 		// Get default country from data attribute or locale
-		var defaultCountry = countrySelect.getAttribute('data-default-country') || 'BR';
+		defaultCountry = countrySelect.getAttribute('data-default-country') || 'BR';
 		if (window.CountryCodes && window.CountryCodes.getDefaultCountry) {
 			var htmlLang = document.documentElement.lang || '';
 			defaultCountry = window.CountryCodes.getDefaultCountry(htmlLang) || defaultCountry;
@@ -804,6 +815,25 @@ function collectGeolocation(callback) {
 			countryList = window.CountryCodes.getCountryList();
 		}
 
+		// If country list is empty or has very few countries, wait a bit and try again
+		// This handles cases where the library hasn't fully loaded yet
+		if (countryList.length === 0 || countryList.length < 10) {
+			setTimeout(function () {
+				if (window.CountryCodes && window.CountryCodes.getCountryList) {
+					var retryList = window.CountryCodes.getCountryList();
+					if (retryList.length > countryList.length) {
+						countryList = retryList;
+						populateCountryDropdown(countrySelect, countryList, defaultCountry);
+					}
+				}
+			}, 500);
+		}
+
+		populateCountryDropdown(countrySelect, countryList, defaultCountry);
+	}
+
+	// Helper function to populate country dropdown
+	function populateCountryDropdown(countrySelect, countryList, defaultCountryValue) {
 		// Clear existing options
 		countrySelect.innerHTML = '';
 
@@ -811,13 +841,17 @@ function collectGeolocation(callback) {
 		countryList.forEach(function (country) {
 			var option = document.createElement('option');
 			option.value = country.code;
+			// Display format: flag + calling code (e.g., 🇧🇷 +55)
 			option.textContent = country.flag + ' +' + country.callingCode;
 			option.setAttribute('data-calling-code', country.callingCode);
-			if (country.code === defaultCountry) {
+			if (country.code === defaultCountryValue) {
 				option.selected = true;
 			}
 			countrySelect.appendChild(option);
 		});
+
+		// Update phone input placeholder based on selected country
+		updatePhoneInputPlaceholder();
 
 		// Update phone input placeholder based on selected country
 		updatePhoneInputPlaceholder();
@@ -833,7 +867,6 @@ function collectGeolocation(callback) {
 
 		var selectedOption = countrySelect.options[countrySelect.selectedIndex];
 		if (selectedOption && selectedOption.value) {
-			var callingCode = selectedOption.getAttribute('data-calling-code') || '';
 			// Set placeholder based on country (Brazil: 11 digits, US: 10 digits, etc.)
 			if (selectedOption.value === 'BR') {
 				phoneInput.placeholder = '11999999999';
@@ -1006,14 +1039,14 @@ function collectGeolocation(callback) {
 					headers: {
 						'Content-Type': 'application/json',
 					},
-				body: JSON.stringify({
-					phoneNumber: fullPhoneNumber || phoneNumber,
-					otpCode: otpCode,
-					geolocation: clientInfo.geolocation,
-					resolution: clientInfo.resolution,
-					fingerprint: clientInfo.fingerprint,
-					source: clientInfo.source,
-				}),
+					body: JSON.stringify({
+						phoneNumber: fullPhoneNumber || phoneNumber,
+						otpCode: otpCode,
+						geolocation: clientInfo.geolocation,
+						resolution: clientInfo.resolution,
+						fingerprint: clientInfo.fingerprint,
+						source: clientInfo.source,
+					}),
 				})
 					.then(function (response) {
 						return response.json().then(function (data) {
@@ -1143,4 +1176,3 @@ function collectGeolocation(callback) {
 		}
 	});
 })();
-
