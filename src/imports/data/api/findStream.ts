@@ -7,6 +7,38 @@ import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
 import { Readable } from 'node:stream';
 import { DataDocument } from '@imports/types/data';
+import { NANOSECONDS_TO_MILLISECONDS } from './streamConstants';
+
+function buildStreamPipeline(
+	mongoStream: Readable,
+	accessConditions: Record<string, Function>,
+	conditionsKeys: string[],
+	transformDatesToString: boolean,
+	tracingSpan?: Span,
+): Readable {
+	// Build pipeline step by step
+	const streamAfterPermissions = conditionsKeys.length > 0
+		? (() => {
+				tracingSpan?.addEvent('Applying field permissions transform');
+				const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
+				return mongoStream.pipe(permissionsTransform);
+			})()
+		: mongoStream;
+
+	const streamAfterDates = transformDatesToString
+		? (() => {
+				tracingSpan?.addEvent('Applying date to string transform');
+				const dateTransform = new ApplyDateToStringTransform();
+				return streamAfterPermissions.pipe(dateTransform);
+			})()
+		: streamAfterPermissions;
+
+	// Convert objects to JSON strings for HTTP streaming
+	// This transform converts from objectMode to string/buffer mode
+	tracingSpan?.addEvent('Converting objects to JSON');
+	const jsonTransform = new ObjectToJsonTransform();
+	return streamAfterDates.pipe(jsonTransform);
+}
 
 export type FindStreamParams = BuildFindQueryParams & {
 	getTotal?: boolean;
@@ -42,32 +74,11 @@ export default async function findStream({
 		const mongoStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => FindStream ${params.document}, filter: ${JSON.stringify(query)}`;
+		const log = `${totalTime[0]}s ${totalTime[1] / NANOSECONDS_TO_MILLISECONDS}ms => FindStream ${params.document}, filter: ${JSON.stringify(query)}`;
 		logger.trace(log);
 
 		// Create pipeline with Transform streams
-		// MongoDB stream is already in objectMode
-		let stream: Readable = mongoStream;
-
-		// Apply field permissions if needed
-		if (conditionsKeys.length > 0) {
-			tracingSpan?.addEvent('Applying field permissions transform');
-			const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
-			stream = stream.pipe(permissionsTransform);
-		}
-
-		// Apply date transformation if needed
-		if (transformDatesToString) {
-			tracingSpan?.addEvent('Applying date to string transform');
-			const dateTransform = new ApplyDateToStringTransform();
-			stream = stream.pipe(dateTransform);
-		}
-
-		// Convert objects to JSON strings for HTTP streaming
-		// This transform converts from objectMode to string/buffer mode
-		tracingSpan?.addEvent('Converting objects to JSON');
-		const jsonTransform = new ObjectToJsonTransform();
-		stream = stream.pipe(jsonTransform);
+		const stream = buildStreamPipeline(mongoStream, accessConditions, conditionsKeys, transformDatesToString, tracingSpan);
 
 		const result: FindStreamResult = {
 			success: true,
@@ -82,7 +93,7 @@ export default async function findStream({
 				.then(total => {
 					result.total = total;
 				})
-				.catch(error => {
+				.catch((error: Error) => {
 					logger.error(error, 'Error calculating total');
 				});
 		}

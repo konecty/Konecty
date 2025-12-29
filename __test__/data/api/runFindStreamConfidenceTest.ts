@@ -2,6 +2,9 @@
 // Ensures both endpoints return exactly the same records and data
 // Executes directly in Node
 
+import { MAX_DIFFERENCES_TO_SHOW, MAX_SAMPLE_LENGTH } from '../../../src/imports/data/api/streamConstants';
+import { readStreamRecords } from './streamTestHelpers';
+
 const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:3000';
 const TEST_TOKEN = process.env.TEST_TOKEN || 'CupITXzG8fdfqGgwtV5j4PC5aFXrk8lz/2eW7JhwqvA=';
 
@@ -12,9 +15,11 @@ type TestResult = {
 };
 
 async function fetchFindPaginated(document: string, filter: string, limit?: number): Promise<any> {
+	// Add default sort to ensure consistent ordering (same as findStream)
+	const sortParam = encodeURIComponent(JSON.stringify([['_id', 'asc']]));
 	const url = limit
-		? `${SERVER_URL}/rest/data/${document}/find?filter=${encodeURIComponent(filter)}&limit=${limit}`
-		: `${SERVER_URL}/rest/data/${document}/find?filter=${encodeURIComponent(filter)}`;
+		? `${SERVER_URL}/rest/data/${document}/find?filter=${encodeURIComponent(filter)}&limit=${limit}&sort=${sortParam}`
+		: `${SERVER_URL}/rest/data/${document}/find?filter=${encodeURIComponent(filter)}&sort=${sortParam}`;
 
 	const response = await fetch(url, {
 		method: 'GET',
@@ -32,9 +37,11 @@ async function fetchFindPaginated(document: string, filter: string, limit?: numb
 }
 
 async function fetchFindStream(document: string, filter: string, limit?: number): Promise<any[]> {
+	// Add default sort to ensure consistent ordering (same as findStream's default)
+	const sortParam = encodeURIComponent(JSON.stringify([['_id', 'asc']]));
 	const url = limit
-		? `${SERVER_URL}/rest/stream/${document}/findStream?filter=${encodeURIComponent(filter)}&limit=${limit}`
-		: `${SERVER_URL}/rest/stream/${document}/findStream?filter=${encodeURIComponent(filter)}`;
+		? `${SERVER_URL}/rest/stream/${document}/findStream?filter=${encodeURIComponent(filter)}&limit=${limit}&sort=${sortParam}`
+		: `${SERVER_URL}/rest/stream/${document}/findStream?filter=${encodeURIComponent(filter)}&sort=${sortParam}`;
 
 	const response = await fetch(url, {
 		method: 'GET',
@@ -53,56 +60,18 @@ async function fetchFindStream(document: string, filter: string, limit?: number)
 		throw new Error('Response body is not readable');
 	}
 
-	const decoder = new TextDecoder();
-	let buffer = '';
-	const records: any[] = [];
-
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
-
-		if (value) {
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || '';
-
-			for (const line of lines) {
-				if (line.trim()) {
-					try {
-						const record = JSON.parse(line);
-						records.push(record);
-					} catch (error) {
-						// Not a complete JSON record yet, keep in buffer
-					}
-				}
-			}
-		}
-	}
-
-	// Process any remaining buffer
-	if (buffer.trim()) {
-		try {
-			const record = JSON.parse(buffer.trim());
-			records.push(record);
-		} catch {
-			// Ignore incomplete JSON
-		}
-	}
-
-	return records;
+	return await readStreamRecords(reader);
 }
 
 function normalizeRecord(record: any): any {
 	// Create a normalized version for comparison
 	// Sort keys for consistent comparison
-	const normalized: any = {};
-	const sortedKeys = Object.keys(record).sort();
-
-	for (const key of sortedKeys) {
-		normalized[key] = record[key];
-	}
-
-	return normalized;
+	return Object.keys(record)
+		.sort()
+		.reduce<Record<string, any>>((acc, key) => {
+			acc[key] = record[key];
+			return acc;
+		}, {});
 }
 
 function compareRecords(findRecords: any[], streamRecords: any[]): TestResult {
@@ -119,20 +88,13 @@ function compareRecords(findRecords: any[], streamRecords: any[]): TestResult {
 	}
 
 	// Create maps by _id for easier comparison
-	const findMap = new Map<string, any>();
-	const streamMap = new Map<string, any>();
+	const findMap = new Map<string, any>(
+		findRecords.filter(record => record._id).map(record => [String(record._id), normalizeRecord(record)]),
+	);
 
-	for (const record of findRecords) {
-		if (record._id) {
-			findMap.set(String(record._id), normalizeRecord(record));
-		}
-	}
-
-	for (const record of streamRecords) {
-		if (record._id) {
-			streamMap.set(String(record._id), normalizeRecord(record));
-		}
-	}
+	const streamMap = new Map<string, any>(
+		streamRecords.filter(record => record._id).map(record => [String(record._id), normalizeRecord(record)]),
+	);
 
 	// Check if all IDs match
 	const findIds = Array.from(findMap.keys()).sort();
@@ -145,80 +107,46 @@ function compareRecords(findRecords: any[], streamRecords: any[]): TestResult {
 		};
 	}
 
-	const missingInStream: string[] = [];
-	const missingInFind: string[] = [];
+	const missingInStream = findIds.filter(id => !streamMap.has(id));
+	const missingInFind = streamIds.filter(id => !findMap.has(id));
 	const differentRecords: Array<{ id: string; differences: string[] }> = [];
-
-	for (const id of findIds) {
-		if (!streamMap.has(id)) {
-			missingInStream.push(id);
-		}
-	}
-
-	for (const id of streamIds) {
-		if (!findMap.has(id)) {
-			missingInFind.push(id);
-		}
-	}
 
 	if (missingInStream.length > 0 || missingInFind.length > 0) {
 		return {
 			success: false,
 			message: `ID mismatch: missing in stream=${missingInStream.length}, missing in find=${missingInFind.length}`,
 			details: {
-				missingInStream: missingInStream.slice(0, 10), // Show first 10
-				missingInFind: missingInFind.slice(0, 10),
+				missingInStream: missingInStream.slice(0, MAX_DIFFERENCES_TO_SHOW),
+				missingInFind: missingInFind.slice(0, MAX_DIFFERENCES_TO_SHOW),
 			},
 		};
 	}
 
 	// Compare record content
-	let comparedCount = 0;
-	for (const id of findIds) {
-		const findRecord = findMap.get(id);
-		const streamRecord = streamMap.get(id);
+	const comparisonResults = findIds
+		.map(id => {
+			const findRecord = findMap.get(id);
+			const streamRecord = streamMap.get(id);
 
-		if (!findRecord || !streamRecord) {
-			continue;
-		}
-
-		comparedCount++;
-		const differences: string[] = [];
-
-		// Compare all fields
-		const allKeys = new Set([...Object.keys(findRecord), ...Object.keys(streamRecord)]);
-
-		for (const key of allKeys) {
-			const findValue = findRecord[key];
-			const streamValue = streamRecord[key];
-
-			// Deep comparison using JSON.stringify for complex objects
-			const findStr = JSON.stringify(findValue);
-			const streamStr = JSON.stringify(streamValue);
-
-			if (findStr !== streamStr) {
-				// Show first difference for debugging
-				if (differences.length === 0) {
-					differences.push(
-						`${key}: find=${findStr.substring(0, 100)}... vs stream=${streamStr.substring(0, 100)}...`,
-					);
-				} else {
-					differences.push(key);
-				}
+			if (!findRecord || !streamRecord) {
+				return null;
 			}
-		}
 
-		if (differences.length > 0) {
-			differentRecords.push({ id, differences });
-		}
-	}
+			const differences = compareRecordFields(findRecord, streamRecord);
+
+			return differences.length > 0 ? { id, differences } : null;
+		})
+		.filter((result): result is { id: string; differences: string[] } => result !== null);
+
+	differentRecords.push(...comparisonResults);
+	const comparedCount = findIds.filter(id => findMap.get(id) && streamMap.get(id)).length;
 
 	if (differentRecords.length > 0) {
 		return {
 			success: false,
 			message: `${differentRecords.length} records have different field values`,
 			details: {
-				differentRecords: differentRecords.slice(0, 10), // Show first 10
+				differentRecords: differentRecords.slice(0, MAX_DIFFERENCES_TO_SHOW),
 				totalDifferent: differentRecords.length,
 			},
 		};
@@ -239,6 +167,27 @@ function compareRecords(findRecords: any[], streamRecords: any[]): TestResult {
 			sampleFieldsCount: sampleFind ? Object.keys(sampleFind).length : 0,
 		},
 	};
+}
+
+function compareRecordFields(findRecord: any, streamRecord: any): string[] {
+	const allKeys = new Set([...Object.keys(findRecord), ...Object.keys(streamRecord)]);
+
+	return Array.from(allKeys)
+		.map(key => {
+			const findValue = findRecord[key];
+			const streamValue = streamRecord[key];
+
+			// Deep comparison using JSON.stringify for complex objects
+			const findStr = JSON.stringify(findValue);
+			const streamStr = JSON.stringify(streamValue);
+
+			if (findStr !== streamStr) {
+				// Show first difference for debugging
+				return `${key}: find=${findStr.substring(0, MAX_SAMPLE_LENGTH)}... vs stream=${streamStr.substring(0, MAX_SAMPLE_LENGTH)}...`;
+			}
+			return null;
+		})
+		.filter((diff): diff is string => diff !== null);
 }
 
 async function runConfidenceTest(document: string, filter: string, limit?: number): Promise<TestResult> {
@@ -330,7 +279,7 @@ async function runAllTests() {
 
 	const document = 'Opportunity';
 
-	let allPassed = true;
+	const testResults = { allPassed: true };
 	const results: Array<{ test: string; result: TestResult }> = [];
 
 	// Test 1: Small dataset (100 records)
@@ -347,7 +296,7 @@ async function runAllTests() {
 			console.error('Details:', JSON.stringify(test1.details, null, 2));
 		}
 		console.error('');
-		allPassed = false;
+		testResults.allPassed = false;
 	}
 
 	// Test 2: Medium dataset (1000 records)
@@ -364,7 +313,7 @@ async function runAllTests() {
 			console.error('Details:', JSON.stringify(test2.details, null, 2));
 		}
 		console.error('');
-		allPassed = false;
+		testResults.allPassed = false;
 	}
 
 	// Test 3: Large dataset (5000 records)
@@ -381,7 +330,7 @@ async function runAllTests() {
 			console.error('Details:', JSON.stringify(test3.details, null, 2));
 		}
 		console.error('');
-		allPassed = false;
+		testResults.allPassed = false;
 	}
 
 	// Test 4: Full dataset (all ~55k records)
@@ -398,7 +347,7 @@ async function runAllTests() {
 		console.log(`Total records: ${totalCount.toLocaleString()}\n`);
 	} catch (error) {
 		console.error('Failed to get total count:', error);
-		allPassed = false;
+		testResults.allPassed = false;
 	}
 
 	if (totalCount > 0) {
@@ -412,7 +361,7 @@ async function runAllTests() {
 				console.error('Details:', JSON.stringify(test4.details, null, 2));
 			}
 			console.error('');
-			allPassed = false;
+			testResults.allPassed = false;
 		}
 	}
 
@@ -426,7 +375,7 @@ async function runAllTests() {
 	}
 
 	console.log('\n' + '='.repeat(60));
-	if (allPassed) {
+	if (testResults.allPassed) {
 		console.log('✅ All confidence tests passed!');
 		console.log('✅ findStream returns exactly the same data as find paginated');
 	} else {

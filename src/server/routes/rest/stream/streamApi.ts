@@ -8,14 +8,24 @@ import { KonFilter } from '@imports/model/Filter';
 
 import { find, findStream } from '@imports/data/api';
 
+function parseFilterFromQuery(filter: string | KonFilter | undefined): KonFilter | undefined {
+	if (filter == null) {
+		return undefined;
+	}
+
+	if (isString(filter)) {
+		return JSON.parse(filter.replace(/\+/g, ' ')) as KonFilter;
+	}
+
+	return filter as KonFilter;
+}
+
 export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 	fastify.get<{
 		Params: { document: string };
 		Querystring: { displayName: string; displayType: string; fields: string; filter: string; sort: string; limit: string; start: string; withDetailFields: string };
 	}>('/rest/stream/:document/find', async (req, reply) => {
-		if (req.query.filter != null && isString(req.query.filter)) {
-			req.query.filter = JSON.parse(req.query.filter.replace(/\+/g, ' '));
-		}
+		const parsedFilter = parseFilterFromQuery(req.query.filter);
 
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET stream/find');
@@ -26,7 +36,7 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 			displayName: req.query.displayName,
 			displayType: req.query.displayType,
 			fields: req.query.fields,
-			filter: req.query.filter,
+			filter: parsedFilter,
 			sort: req.query.sort,
 			limit: req.query.limit,
 			start: req.query.start,
@@ -44,12 +54,7 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 		Params: { document: string };
 		Querystring: { displayName: string; displayType: string; fields: string; filter: string; sort: string; limit: string; start: string; withDetailFields: string };
 	}>('/rest/stream/:document/findStream', async (req, reply) => {
-		let parsedFilter: KonFilter | undefined;
-		if (req.query.filter != null && isString(req.query.filter)) {
-			parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-		} else if (req.query.filter != null) {
-			parsedFilter = req.query.filter as KonFilter;
-		}
+		const parsedFilter = parseFilterFromQuery(req.query.filter);
 
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET stream/findStream');

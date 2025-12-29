@@ -1,6 +1,7 @@
 // Direct test runner for findStream that bypasses Jest globalSetup
 import { expect } from 'chai';
 import findStream from '../../../src/imports/data/api/findStream';
+import { readStreamRecords, countStreamChunks } from './streamTestHelpers';
 
 const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:3000';
 const TEST_TOKEN = process.env.TEST_TOKEN || 'v5+zj+CGtYlPHYLYMR3elJn5v/kAl3naUI+N7XwEgpM=';
@@ -76,8 +77,7 @@ async function runTests() {
 	console.log('✅ Server is available\n');
 
 	const authId = TEST_TOKEN;
-	let passed = 0;
-	let failed = 0;
+	const testResults = { passed: 0, failed: 0 };
 	let product: { _id: string } | null = null;
 
 	// Test 1: Error handling
@@ -93,10 +93,10 @@ async function runTests() {
 			expect(result.errors).to.be.an('array');
 		}
 		console.log('✅ PASSED\n');
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Setup: Create product for remaining tests
@@ -129,10 +129,10 @@ async function runTests() {
 		expect(response.ok).to.be.true;
 		expect(response.body).to.not.be.null;
 		console.log('✅ PASSED\n');
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Test 3: Transform streams via HTTP
@@ -152,35 +152,12 @@ async function runTests() {
 			throw new Error('Response body is not readable');
 		}
 
-		const decoder = new TextDecoder();
-		let buffer = '';
-		let recordCount = 0;
-
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-
-			if (value) {
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n');
-				buffer = lines.pop() || '';
-
-				for (const line of lines) {
-					if (line.trim()) {
-						try {
-							JSON.parse(line);
-							recordCount++;
-						} catch {
-							// Not a complete JSON record yet
-						}
-					}
-				}
-			}
-		}
+		const records = await readStreamRecords(reader);
+		const recordCount = records.length;
 
 		expect(recordCount).to.be.greaterThan(0);
 		console.log(`✅ PASSED (${recordCount} records)\n`);
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
 		failed++;
@@ -200,10 +177,10 @@ async function runTests() {
 		expect(response.ok).to.be.true;
 		expect(response.body).to.not.be.null;
 		console.log('✅ PASSED (stream returned)\n');
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Test 5: transformDatesToString option (always true in HTTP endpoint)
@@ -219,10 +196,10 @@ async function runTests() {
 
 		expect(response.ok).to.be.true;
 		console.log('✅ PASSED\n');
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Test 6: Process records one by one via HTTP
@@ -242,23 +219,11 @@ async function runTests() {
 			throw new Error('Response body is not readable');
 		}
 
-		let chunkCount = 0;
-		const decoder = new TextDecoder();
-		let buffer = '';
-
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-
-			if (value) {
-				chunkCount++;
-				buffer += decoder.decode(value, { stream: true });
-			}
-		}
+		const chunkCount = await countStreamChunks(reader);
 
 		expect(chunkCount).to.be.greaterThan(0);
 		console.log(`✅ PASSED (${chunkCount} chunks received)\n`);
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
 		failed++;
@@ -277,10 +242,10 @@ async function runTests() {
 
 		expect(response.status).to.equal(500);
 		console.log('✅ PASSED\n');
-		passed++;
+		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Cleanup
@@ -304,11 +269,11 @@ async function runTests() {
 	}
 
 	console.log('=== Test Results ===');
-	console.log(`Passed: ${passed}`);
-	console.log(`Failed: ${failed}`);
-	console.log(`Total: ${passed + failed}\n`);
+	console.log(`Passed: ${testResults.passed}`);
+	console.log(`Failed: ${testResults.failed}`);
+	console.log(`Total: ${testResults.passed + testResults.failed}\n`);
 
-	if (failed > 0) {
+	if (testResults.failed > 0) {
 		process.exit(1);
 	} else {
 		console.log('✅ All tests passed!');

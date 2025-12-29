@@ -1,6 +1,16 @@
 // Direct benchmark runner for findStream vs original find (paginated)
 // Executes directly in Node, no Jest
 
+import BluebirdPromise from 'bluebird';
+import {
+	BENCHMARK_ITERATION_CONCURRENCY,
+	MEMORY_MONITOR_INTERVAL_MS,
+	WARMUP_RECORD_LIMIT,
+	ITERATION_DELAY_MS,
+	MILLISECONDS_PER_SECOND,
+} from '../../../src/imports/data/api/streamConstants';
+import { readStreamRecordsWithMetrics, calculateAverageMetrics } from './streamTestHelpers';
+
 const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:3000';
 const TEST_TOKEN = process.env.TEST_TOKEN || 'v5+zj+CGtYlPHYLYMR3elJn5v/kAl3naUI+N7XwEgpM=';
 
@@ -39,17 +49,17 @@ async function benchmarkFindPaginated(endpoint: string, filter: string, limit: n
 
 	// Find paginated returns JSON with data array
 	// Monitor memory during JSON parsing (this is where memory accumulates)
-	let peakMemory = startMemory.heapUsed;
+	const memoryState = { peakMemory: startMemory.heapUsed };
 	const memoryInterval = setInterval(() => {
 		const currentMemory = process.memoryUsage();
-		peakMemory = Math.max(peakMemory, currentMemory.heapUsed);
-	}, 50);
+		memoryState.peakMemory = Math.max(memoryState.peakMemory, currentMemory.heapUsed);
+	}, MEMORY_MONITOR_INTERVAL_MS);
 
 	const data = await response.json();
 	const recordCount = Array.isArray(data.data) ? data.data.length : 0;
 
 	// Wait a bit to capture peak memory after JSON parsing
-	await new Promise(resolve => setTimeout(resolve, 50));
+	await new Promise(resolve => setTimeout(resolve, MEMORY_MONITOR_INTERVAL_MS));
 
 	clearInterval(memoryInterval);
 
@@ -58,7 +68,7 @@ async function benchmarkFindPaginated(endpoint: string, filter: string, limit: n
 	const endMemory = process.memoryUsage();
 
 	const totalTime = endTime - startTime;
-	const throughput = recordCount / (totalTime / 1000); // records per second
+	const throughput = recordCount / (totalTime / MILLISECONDS_PER_SECOND); // records per second
 
 	return {
 		totalTime,
@@ -66,11 +76,11 @@ async function benchmarkFindPaginated(endpoint: string, filter: string, limit: n
 		heapUsed: endMemory.heapUsed - startMemory.heapUsed,
 		heapTotal: endMemory.heapTotal - startMemory.heapTotal,
 		rss: endMemory.rss - startMemory.rss,
-		cpuUser: endCpu.user / 1000, // Convert to milliseconds
-		cpuSystem: endCpu.system / 1000,
+		cpuUser: endCpu.user / MILLISECONDS_PER_SECOND, // Convert to milliseconds
+		cpuSystem: endCpu.system / MILLISECONDS_PER_SECOND,
 		recordCount,
 		throughput,
-		peakMemory: peakMemory - startMemory.heapUsed,
+		peakMemory: memoryState.peakMemory - startMemory.heapUsed,
 	};
 }
 
@@ -99,47 +109,14 @@ async function benchmarkFindStream(endpoint: string, filter: string, limit: numb
 		throw new Error('Response body is not readable');
 	}
 
-	const decoder = new TextDecoder();
-	let buffer = '';
-	let recordCount = 0;
-	let peakMemory = startMemory.heapUsed;
-
-	// Monitor memory during streaming
-	const memoryInterval = setInterval(() => {
-		const currentMemory = process.memoryUsage();
-		peakMemory = Math.max(peakMemory, currentMemory.heapUsed);
-	}, 50);
-
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
-
-		if (value) {
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || '';
-
-			for (const line of lines) {
-				if (line.trim()) {
-					try {
-						JSON.parse(line);
-						recordCount++;
-					} catch {
-						// Not a complete JSON record yet
-					}
-				}
-			}
-		}
-	}
-
-	clearInterval(memoryInterval);
+	const { recordCount, peakMemory } = await readStreamRecordsWithMetrics(reader, startMemory);
 
 	const endTime = performance.now();
 	const endCpu = process.cpuUsage(startCpu);
 	const endMemory = process.memoryUsage();
 
 	const totalTime = endTime - startTime;
-	const throughput = recordCount / (totalTime / 1000); // records per second
+	const throughput = recordCount / (totalTime / MILLISECONDS_PER_SECOND); // records per second
 
 	return {
 		totalTime,
@@ -147,8 +124,8 @@ async function benchmarkFindStream(endpoint: string, filter: string, limit: numb
 		heapUsed: endMemory.heapUsed - startMemory.heapUsed,
 		heapTotal: endMemory.heapTotal - startMemory.heapTotal,
 		rss: endMemory.rss - startMemory.rss,
-		cpuUser: endCpu.user / 1000, // Convert to milliseconds
-		cpuSystem: endCpu.system / 1000,
+		cpuUser: endCpu.user / MILLISECONDS_PER_SECOND, // Convert to milliseconds
+		cpuSystem: endCpu.system / MILLISECONDS_PER_SECOND,
 		recordCount,
 		throughput,
 		peakMemory: peakMemory - startMemory.heapUsed,
@@ -294,14 +271,14 @@ async function runBenchmark() {
 	console.log(`⚠️  Testing with ${totalRecords.toLocaleString()} records (limit=${limit}) - this may take several minutes...\n`);
 
 	// Warm up with smaller dataset first
-	console.log('Warming up (with 100 records)...');
+	console.log(`Warming up (with ${WARMUP_RECORD_LIMIT} records)...`);
 	try {
-		await benchmarkFindPaginated('/rest/data/Opportunity/find', filter, 100);
+		await benchmarkFindPaginated('/rest/data/Opportunity/find', filter, WARMUP_RECORD_LIMIT);
 	} catch {
 		// Ignore warm-up errors
 	}
 	try {
-		await benchmarkFindStream('/rest/stream/Opportunity/findStream', filter, 100);
+		await benchmarkFindStream('/rest/stream/Opportunity/findStream', filter, WARMUP_RECORD_LIMIT);
 	} catch {
 		// Ignore warm-up errors
 	}
@@ -309,28 +286,32 @@ async function runBenchmark() {
 	console.log('⚠️  Starting full benchmark with ~50k records - this may take several minutes...\n');
 
 	// Run benchmarks
-	for (let i = 0; i < iterations; i++) {
-		console.log(`Running iteration ${i + 1}/${iterations}...`);
+	await BluebirdPromise.map(
+		Array.from({ length: iterations }, (_, i) => i + 1),
+		async iterationNumber => {
+			console.log(`Running iteration ${iterationNumber}/${iterations}...`);
 
-		try {
-			console.log('  Benchmarking original find (paginated)...');
-			const oldMetrics = await benchmarkFindPaginated('/rest/data/Opportunity/find', filter, limit);
-			oldMetricsArray.push(oldMetrics);
+			try {
+				console.log('  Benchmarking original find (paginated)...');
+				const oldMetrics = await benchmarkFindPaginated('/rest/data/Opportunity/find', filter, limit);
+				oldMetricsArray.push(oldMetrics);
 
-			// Wait a bit between requests
-			await new Promise(resolve => setTimeout(resolve, 2000));
+				// Wait a bit between requests
+				await new Promise(resolve => setTimeout(resolve, ITERATION_DELAY_MS));
 
-			console.log('  Benchmarking new findStream...');
-			const newMetrics = await benchmarkFindStream('/rest/stream/Opportunity/findStream', filter, limit);
-			newMetricsArray.push(newMetrics);
+				console.log('  Benchmarking new findStream...');
+				const newMetrics = await benchmarkFindStream('/rest/stream/Opportunity/findStream', filter, limit);
+				newMetricsArray.push(newMetrics);
 
-			// Wait a bit between iterations
-			await new Promise(resolve => setTimeout(resolve, 2000));
-		} catch (error) {
-			console.error(`Iteration ${i + 1} failed:`, error);
-			// Continue with other iterations
-		}
-	}
+				// Wait a bit between iterations
+				await new Promise(resolve => setTimeout(resolve, ITERATION_DELAY_MS));
+			} catch (error) {
+				console.error(`Iteration ${iterationNumber} failed:`, error);
+				// Continue with other iterations
+			}
+		},
+		{ concurrency: BENCHMARK_ITERATION_CONCURRENCY },
+	);
 
 	// Calculate averages
 	if (oldMetricsArray.length === 0 || newMetricsArray.length === 0) {
@@ -338,30 +319,16 @@ async function runBenchmark() {
 		process.exit(1);
 	}
 
+	const avgOldMetricsBase = calculateAverageMetrics(oldMetricsArray);
 	const avgOldMetrics: BenchmarkMetrics = {
-		totalTime: oldMetricsArray.reduce((sum, m) => sum + m.totalTime, 0) / oldMetricsArray.length,
-		ttfb: oldMetricsArray.reduce((sum, m) => sum + m.ttfb, 0) / oldMetricsArray.length,
-		heapUsed: oldMetricsArray.reduce((sum, m) => sum + m.heapUsed, 0) / oldMetricsArray.length,
-		heapTotal: oldMetricsArray.reduce((sum, m) => sum + m.heapTotal, 0) / oldMetricsArray.length,
-		rss: oldMetricsArray.reduce((sum, m) => sum + m.rss, 0) / oldMetricsArray.length,
-		cpuUser: oldMetricsArray.reduce((sum, m) => sum + m.cpuUser, 0) / oldMetricsArray.length,
-		cpuSystem: oldMetricsArray.reduce((sum, m) => sum + m.cpuSystem, 0) / oldMetricsArray.length,
-		recordCount: Math.round(oldMetricsArray.reduce((sum, m) => sum + m.recordCount, 0) / oldMetricsArray.length),
-		throughput: oldMetricsArray.reduce((sum, m) => sum + m.throughput, 0) / oldMetricsArray.length,
-		peakMemory: oldMetricsArray.reduce((sum, m) => sum + m.peakMemory, 0) / oldMetricsArray.length,
+		...avgOldMetricsBase,
+		recordCount: Math.round(avgOldMetricsBase.recordCount),
 	};
 
+	const avgNewMetricsBase = calculateAverageMetrics(newMetricsArray);
 	const avgNewMetrics: BenchmarkMetrics = {
-		totalTime: newMetricsArray.reduce((sum, m) => sum + m.totalTime, 0) / newMetricsArray.length,
-		ttfb: newMetricsArray.reduce((sum, m) => sum + m.ttfb, 0) / newMetricsArray.length,
-		heapUsed: newMetricsArray.reduce((sum, m) => sum + m.heapUsed, 0) / newMetricsArray.length,
-		heapTotal: newMetricsArray.reduce((sum, m) => sum + m.heapTotal, 0) / newMetricsArray.length,
-		rss: newMetricsArray.reduce((sum, m) => sum + m.rss, 0) / newMetricsArray.length,
-		cpuUser: newMetricsArray.reduce((sum, m) => sum + m.cpuUser, 0) / newMetricsArray.length,
-		cpuSystem: newMetricsArray.reduce((sum, m) => sum + m.cpuSystem, 0) / newMetricsArray.length,
-		recordCount: Math.round(newMetricsArray.reduce((sum, m) => sum + m.recordCount, 0) / newMetricsArray.length),
-		throughput: newMetricsArray.reduce((sum, m) => sum + m.throughput, 0) / newMetricsArray.length,
-		peakMemory: newMetricsArray.reduce((sum, m) => sum + m.peakMemory, 0) / newMetricsArray.length,
+		...avgNewMetricsBase,
+		recordCount: Math.round(avgNewMetricsBase.recordCount),
 	};
 
 	// Compare and report

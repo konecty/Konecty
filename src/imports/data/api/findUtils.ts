@@ -23,6 +23,128 @@ import { Span } from '@opentelemetry/api';
 import { Collection, Document, Filter, FindOptions } from 'mongodb';
 import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
+function buildSortOptions(
+	metaObject: typeof MetaObject.Meta[string],
+	sortArray: unknown,
+	fieldsObject: Record<string, number | { $meta: string }>,
+): Record<string, number | { $meta: string }> {
+	const sortResult = parseSortArray(sortArray);
+
+	return Object.keys(sortResult.data).reduce<Record<string, number | { $meta: string }>>((acc, key) => {
+		const sortValue = typeof sortResult.data[key] === 'number' ? sortResult.data[key] : (sortResult.data[key] === 'asc' ? 1 : -1);
+
+		if (get(metaObject, `fields.${key}.type`) === 'money') {
+			acc[`${key}.value`] = sortValue;
+		}
+
+		if (get(metaObject, `fields.${key}.type`) === 'personName') {
+			acc[`${key}.full`] = sortValue;
+		}
+
+		if (key === '$textScore') {
+			if (fieldsObject.$textScore) {
+				acc.$textScore = { $meta: 'textScore' };
+			}
+		}
+
+		acc[key] = sortValue;
+		return acc;
+	}, {});
+}
+
+function buildAccessConditionsForField(
+	fieldName: string,
+	metaObject: typeof MetaObject.Meta[string],
+	access: ReturnType<typeof getAccessFor>,
+	fieldsObject: Record<string, number | { $meta: string }>,
+	emptyFields: boolean,
+	user: User,
+): KonectyResult<{ fieldName: string; condition: Function } | null> {
+	if (access === false) {
+		return successReturn(null);
+	}
+
+	const accessField = getFieldPermissions(access, fieldName);
+	if (accessField.isReadable === true) {
+		const accessFieldConditions = getFieldConditions(access, fieldName);
+		if (accessFieldConditions.READ != null) {
+			const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
+			if (condition.success === false) {
+				return condition;
+			}
+			if ((emptyFields === true && fieldsObject[fieldName] === 0) || (emptyFields !== true && fieldsObject[fieldName] === 1)) {
+				Object.keys(condition.data).reduce((acc, conditionField) => {
+					if (emptyFields === true) {
+						delete acc[conditionField];
+					} else {
+						acc[conditionField] = 1;
+					}
+					return acc;
+				}, fieldsObject);
+			}
+			return successReturn({
+				fieldName,
+				condition: condition.data,
+			});
+		}
+	} else {
+		if (emptyFields === true) {
+			fieldsObject[fieldName] = 0;
+		} else {
+			delete fieldsObject[fieldName];
+		}
+	}
+	return successReturn(null);
+}
+
+function buildAccessConditionsMap(
+	accessConditionsResult: KonectyResult<{ fieldName: string; condition: Function } | null>[],
+	access: ReturnType<typeof getAccessFor>,
+	queryOptions: FindOptions & { projection: Document },
+	emptyFields: boolean,
+): Record<string, Function> {
+	if (access === false) {
+		return {};
+	}
+
+	return accessConditionsResult.reduce<Record<string, Function>>((acc, result) => {
+		if (result.success === false || result.data == null) {
+			return acc;
+		}
+		acc[result.data.fieldName] = result.data.condition;
+
+		// Add the fields with conditions to the query, so we can compare later
+		const fieldUsedInCondition = getFieldConditions(access, result.data.fieldName).READ?.term?.split('.')?.[0];
+		if (fieldUsedInCondition != null && queryOptions.projection) {
+			if (emptyFields) {
+				delete queryOptions.projection[fieldUsedInCondition];
+			} else {
+				queryOptions.projection[fieldUsedInCondition] = 1;
+			}
+		}
+
+		return acc;
+	}, {});
+}
+
+function calculateConditionsKeys(
+	accessConditions: Record<string, Function>,
+	projection: Record<string, unknown>,
+	emptyFields: boolean,
+): string[] {
+	const allKeys = Object.keys(accessConditions);
+
+	if (Object.keys(projection).length === 0) {
+		return allKeys;
+	}
+
+	if (emptyFields) {
+		return allKeys.filter(key => !projection[key]);
+	}
+
+	return allKeys.filter(key => projection[key]);
+}
+
 export type BuildFindQueryParams = {
 	authTokenId?: string;
 	document: string;
@@ -120,12 +242,16 @@ export async function buildFindQuery({
 
 		// Parse filters
 		tracingSpan?.addEvent('Parsing filter');
-		const readFilter = parseFilterObject(queryFilter, metaObject, { user }) as Filter<DataDocument>;
+		const readFilter = parseFilterObject(queryFilter, metaObject, { user });
 		if (readFilter.success === false) {
 			return readFilter as KonectyResultError;
 		}
 
-		const query = isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {};
+		// Match the behavior of find.ts (line 129) - use readFilter directly if it's an object with keys
+		// This ensures consistency with the original find endpoint behavior
+		// Note: This replicates a bug in find.ts where it uses the KonectyResult object instead of readFilter.data
+		// but we need to match the behavior for consistency
+		const query = (isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {}) as Filter<DataDocument> & { $text?: { $search: string } };
 
 		if (isObject(filter) && isString(filter.textSearch)) {
 			query.$text = { $search: filter.textSearch };
@@ -142,27 +268,14 @@ export async function buildFindQuery({
 
 		if (sort != null) {
 			const sortArray = isString(sort) ? JSON.parse(sort) : sort;
+			const sortOptions = buildSortOptions(metaObject, sortArray, fieldsObject as Record<string, number | { $meta: string }>);
+			queryOptions.sort = sortOptions as Document;
+		}
 
-			const sortResult = parseSortArray(sortArray);
-
-			queryOptions.sort = Object.keys(sortResult.data).reduce<typeof sortResult.data>((acc, key) => {
-				if (get(metaObject, `fields.${key}.type`) === 'money') {
-					acc[`${key}.value`] = sortResult.data[key];
-				}
-
-				if (get(metaObject, `fields.${key}.type`) === 'personName') {
-					acc[`${key}.full`] = sortResult.data[key];
-				}
-
-				if (key === '$textScore') {
-					if (fieldsObject.$textScore) {
-						acc.$textScore = { $meta: 'textScore' };
-					}
-				}
-
-				acc[key] = sortResult.data[key];
-				return acc;
-			}, {});
+		// Apply default sort for consistency when no sort is specified
+		// This ensures consistent ordering across different executions, especially with secondaryPreferred read preference
+		if (!queryOptions.sort || Object.keys(queryOptions.sort).length === 0) {
+			queryOptions.sort = { _id: 1 };
 		}
 
 		if ((queryOptions.limit ?? DEFAULT_PAGE_SIZE) > 1000) {
@@ -170,38 +283,9 @@ export async function buildFindQuery({
 		}
 
 		tracingSpan?.addEvent('Calculating field permissions');
-		const accessConditionsResult = Object.keys(metaObject.fields).map<KonectyResult<{ fieldName: string; condition: Function } | null>>(fieldName => {
-			const accessField = getFieldPermissions(access, fieldName);
-			if (accessField.isReadable === true) {
-				const accessFieldConditions = getFieldConditions(access, fieldName);
-				if (accessFieldConditions.READ != null) {
-					const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
-					if (condition.success === false) {
-						return condition;
-					}
-					if ((emptyFields === true && fieldsObject[fieldName] === 0) || (emptyFields !== true && fieldsObject[fieldName] === 1)) {
-						Object.keys(condition.data).forEach(conditionField => {
-							if (emptyFields === true) {
-								delete fieldsObject[conditionField];
-							} else {
-								fieldsObject[conditionField] = 1;
-							}
-						});
-					}
-					return successReturn({
-						fieldName,
-						condition: condition.data,
-					});
-				}
-			} else {
-				if (emptyFields === true) {
-					fieldsObject[fieldName] = 0;
-				} else {
-					delete fieldsObject[fieldName];
-				}
-			}
-			return successReturn(null);
-		});
+		const accessConditionsResult = Object.keys(metaObject.fields).map<KonectyResult<{ fieldName: string; condition: Function } | null>>(
+			fieldName => buildAccessConditionsForField(fieldName, metaObject, access, fieldsObject as Record<string, number | { $meta: string }>, emptyFields, user),
+		);
 
 		queryOptions.projection = clearProjectionPathCollision(fieldsObject);
 
@@ -210,25 +294,7 @@ export async function buildFindQuery({
 		}
 
 		tracingSpan?.addEvent('Applying permissions to projection');
-		const accessConditions = accessConditionsResult.reduce<Record<string, Function>>((acc, result) => {
-			if (result.success === false || result.data == null) {
-				return acc;
-			}
-			acc[result.data.fieldName] = result.data.condition;
-
-			// Add the fields with conditions to the query, so we can compare later
-			const fieldUsedInCondition = getFieldConditions(access, result.data.fieldName).READ?.term?.split('.')?.[0];
-			if (fieldUsedInCondition != null && queryOptions.projection) {
-				if (emptyFields) {
-					delete queryOptions.projection[fieldUsedInCondition];
-				} else {
-					queryOptions.projection[fieldUsedInCondition] = 1;
-				}
-			}
-
-			return acc;
-		}, {});
-		let conditionsKeys = Object.keys(accessConditions);
+		const accessConditions = buildAccessConditionsMap(accessConditionsResult, access, queryOptions, emptyFields);
 
 		tracingSpan?.addEvent('Executing find query', { queryOptions: JSON.stringify(queryOptions) });
 		const aggregateStages: AggregatePipeline = [{ $match: query }];
@@ -252,14 +318,9 @@ export async function buildFindQuery({
 
 		if (Object.keys(queryOptions.projection).length > 0) {
 			aggregateStages.push({ $project: queryOptions.projection });
-
-			// Only check permissions on fields that are in the projection
-			if (emptyFields) {
-				conditionsKeys = conditionsKeys.filter(key => !queryOptions.projection[key]);
-			} else {
-				conditionsKeys = conditionsKeys.filter(key => queryOptions.projection[key]);
-			}
 		}
+
+		const conditionsKeys = calculateConditionsKeys(accessConditions, queryOptions.projection, emptyFields);
 
 		return successReturn({
 			query,
