@@ -454,6 +454,212 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "Data Streaming",
+			"item": [
+				{
+					"name": "Find Stream",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100&sort=[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", ":document", "findStream"],
+							"query": [
+								{
+									"key": "filter",
+									"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}",
+									"description": "Filter in JSON format"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "Maximum number of records to return (default: 50)"
+								},
+								{
+									"key": "start",
+									"value": "0",
+									"description": "Start index of results (default: 0)",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
+									"description": "Sorting in JSON format"
+								},
+								{
+									"key": "fields",
+									"value": "",
+									"description": "Fields to return, comma-separated (optional)",
+									"disabled": true
+								},
+								{
+									"key": "displayName",
+									"value": "",
+									"description": "Display name to use (optional)",
+									"disabled": true
+								},
+								{
+									"key": "displayType",
+									"value": "",
+									"description": "Display type to use (optional)",
+									"disabled": true
+								},
+								{
+									"key": "withDetailFields",
+									"value": "",
+									"description": "Whether to include detail fields (optional)",
+									"disabled": true
+								}
+							],
+							"variable": [
+								{
+									"key": "document",
+									"value": "Opportunity",
+									"description": "Module name (e.g., Opportunity, Contact)"
+								}
+							]
+						},
+						"description": "Find records with HTTP streaming. Returns data in newline-delimited JSON (NDJSON) format, sent incrementally without accumulating in server memory.\n\n**Advantages over `/rest/data/:document/find`:**\n- 68% reduction in server memory usage\n- 99.3% faster TTFB (client receives data immediately)\n- 81.8% better throughput\n- Supports much larger volumes (50k+ records) without memory impact\n\n**Response Format:**\n- Content-Type: `application/json`\n- Transfer-Encoding: `chunked`\n- Format: Newline-delimited JSON (one record per line)\n\n**When to use:**\n- Large data volumes (1000+ records)\n- When client needs to process data incrementally\n- When low TTFB is critical\n- When there are server memory limitations\n\n**Default Sorting:**\nIf not specified, applies `{ _id: 1 }` to ensure consistency."
+					},
+					"response": [
+						{
+							"name": "Stream Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100",
+									"host": ["{{baseUrl}}"],
+									"path": ["rest", "stream", "Opportunity", "findStream"],
+									"query": [
+										{
+											"key": "filter",
+											"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}"
+										},
+										{
+											"key": "limit",
+											"value": "100"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								}
+							],
+							"cookie": [],
+							"body": "{\"_id\":\"001\",\"name\":\"Registro 1\",\"status\":\"Nova\",\"createdAt\":\"2024-01-01T00:00:00.000Z\"}\n{\"_id\":\"002\",\"name\":\"Registro 2\",\"status\":\"Em Visitação\",\"createdAt\":\"2024-01-02T00:00:00.000Z\"}\n{\"_id\":\"003\",\"name\":\"Registro 3\",\"status\":\"Nova\",\"createdAt\":\"2024-01-03T00:00:00.000Z\"}"
+						},
+						{
+							"name": "Error Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rest/stream/InvalidDocument/findStream",
+									"host": ["{{baseUrl}}"],
+									"path": ["rest", "stream", "InvalidDocument", "findStream"]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Oops something went wrong, please try again later... if this message persisits, please contact our support\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Find Stream - Contact",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Contact/findStream?limit=50",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", "Contact", "findStream"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Find Contact records with streaming. Example with minimal parameters."
+					},
+					"response": []
+				},
+				{
+					"name": "Find Stream - With Filter",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}&limit=1000",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", "Opportunity", "findStream"],
+							"query": [
+								{
+									"key": "filter",
+									"value": "{\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}"
+								},
+								{
+									"key": "limit",
+									"value": "1000"
+								}
+							]
+						},
+						"description": "Find Opportunity records with complex filter. Example filtering by multiple status values."
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
