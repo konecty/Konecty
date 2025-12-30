@@ -31,6 +31,7 @@ import healthApi from './rest/health';
 import menuApi from './rest/menu/menu';
 import processApi from './rest/process/processApi';
 import rocketchatApi from './rest/rocketchat/livechat';
+import streamApi from './rest/stream/streamApi';
 import viewPaths from './rest/view/view';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
@@ -75,6 +76,7 @@ fastify.register(file2Api);
 fastify.register(menuApi);
 fastify.register(processApi);
 fastify.register(rocketchatApi);
+fastify.register(streamApi);
 fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {

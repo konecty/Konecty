@@ -454,8 +454,453 @@
 					]
 				}
 			]
-		}
-	],
+		},
+		{
+			"name": "Data Streaming",
+			"item": [
+				{
+					"name": "Find Stream",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100&sort=[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", ":document", "findStream"],
+							"query": [
+								{
+									"key": "filter",
+									"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}",
+									"description": "Filter in JSON format"
+								},
+								{
+									"key": "limit",
+									"value": "100",
+									"description": "Maximum number of records to return (default: 50)"
+								},
+								{
+									"key": "start",
+									"value": "0",
+									"description": "Start index of results (default: 0)",
+									"disabled": true
+								},
+								{
+									"key": "sort",
+									"value": "[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
+									"description": "Sorting in JSON format"
+								},
+								{
+									"key": "fields",
+									"value": "",
+									"description": "Fields to return, comma-separated (optional)",
+									"disabled": true
+								},
+								{
+									"key": "displayName",
+									"value": "",
+									"description": "Display name to use (optional)",
+									"disabled": true
+								},
+								{
+									"key": "displayType",
+									"value": "",
+									"description": "Display type to use (optional)",
+									"disabled": true
+								},
+								{
+									"key": "withDetailFields",
+									"value": "",
+									"description": "Whether to include detail fields (optional)",
+									"disabled": true
+								}
+							],
+							"variable": [
+								{
+									"key": "document",
+									"value": "Opportunity",
+									"description": "Module name (e.g., Opportunity, Contact)"
+								}
+							]
+						},
+						"description": "Find records with HTTP streaming. Returns data in newline-delimited JSON (NDJSON) format, sent incrementally without accumulating in server memory.\n\n**Advantages over `/rest/data/:document/find`:**\n- 68% reduction in server memory usage\n- 99.3% faster TTFB (client receives data immediately)\n- 81.8% better throughput\n- Supports much larger volumes (50k+ records) without memory impact\n\n**Response Format:**\n- Content-Type: `application/json`\n- Transfer-Encoding: `chunked`\n- Format: Newline-delimited JSON (one record per line)\n\n**When to use:**\n- Large data volumes (1000+ records)\n- When client needs to process data incrementally\n- When low TTFB is critical\n- When there are server memory limitations\n\n**Default Sorting:**\nIf not specified, applies `{ _id: 1 }` to ensure consistency."
+					},
+					"response": [
+						{
+							"name": "Stream Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100",
+									"host": ["{{baseUrl}}"],
+									"path": ["rest", "stream", "Opportunity", "findStream"],
+									"query": [
+										{
+											"key": "filter",
+											"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}"
+										},
+										{
+											"key": "limit",
+											"value": "100"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								}
+							],
+							"cookie": [],
+							"body": "{\"_id\":\"001\",\"name\":\"Registro 1\",\"status\":\"Nova\",\"createdAt\":\"2024-01-01T00:00:00.000Z\"}\n{\"_id\":\"002\",\"name\":\"Registro 2\",\"status\":\"Em Visitação\",\"createdAt\":\"2024-01-02T00:00:00.000Z\"}\n{\"_id\":\"003\",\"name\":\"Registro 3\",\"status\":\"Nova\",\"createdAt\":\"2024-01-03T00:00:00.000Z\"}"
+						},
+						{
+							"name": "Error Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "{{authToken}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rest/stream/InvalidDocument/findStream",
+									"host": ["{{baseUrl}}"],
+									"path": ["rest", "stream", "InvalidDocument", "findStream"]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"Oops something went wrong, please try again later... if this message persisits, please contact our support\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Find Stream - Contact",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Contact/findStream?limit=50",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", "Contact", "findStream"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Find Contact records with streaming. Example with minimal parameters."
+					},
+					"response": []
+				},
+				{
+					"name": "Find Stream - With Filter",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}&limit=1000",
+							"host": ["{{baseUrl}}"],
+							"path": ["rest", "stream", "Opportunity", "findStream"],
+							"query": [
+								{
+									"key": "filter",
+									"value": "{\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}"
+								},
+								{
+									"key": "limit",
+									"value": "1000"
+								}
+							]
+						},
+					"description": "Find Opportunity records with complex filter. Example filtering by multiple status values."
+				},
+				"response": []
+			},
+			{
+				"name": "Pivot Table",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&pivotConfig={\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", ":document", "pivot"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "pivotConfig",
+								"value": "{\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
+								"description": "Pivot table configuration in JSON format"
+							},
+							{
+								"key": "limit",
+								"value": "",
+								"description": "Maximum number of records to process (optional)",
+								"disabled": true
+							},
+							{
+								"key": "sort",
+								"value": "",
+								"description": "Sorting in JSON format (optional)",
+								"disabled": true
+							}
+						]
+					},
+					"description": "Generate pivot table from Opportunity records with hierarchical rows (director > group > user) and status columns, counting codes and summing amounts."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"originalRequest": {
+							"method": "GET",
+							"header": [
+								{
+									"key": "Authorization",
+									"value": "{{authToken}}"
+								}
+							],
+							"url": {
+								"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&pivotConfig={\"rows\":[{\"field\":\"status\"}],\"columns\":[{\"field\":\"type\"}],\"values\":[{\"field\":\"value\",\"aggregator\":\"sum\"}]}",
+								"host": ["{{baseUrl}}"],
+								"path": ["rest", "data", "Opportunity", "pivot"],
+								"query": [
+									{
+										"key": "filter",
+										"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}"
+									},
+									{
+										"key": "pivotConfig",
+										"value": "{\"rows\":[{\"field\":\"status\"}],\"columns\":[{\"field\":\"type\"}],\"values\":[{\"field\":\"value\",\"aggregator\":\"sum\"}]}"
+									}
+								]
+							}
+						},
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"cookie": [],
+						"body": "{\n  \"success\": true,\n  \"metadata\": {\n    \"rows\": [\n      {\n        \"field\": \"status\",\n        \"label\": \"Situação\",\n        \"type\": \"picklist\",\n        \"level\": 0\n      }\n    ],\n    \"columns\": [\n      {\n        \"field\": \"type\",\n        \"label\": \"Tipo\",\n        \"type\": \"picklist\",\n        \"values\": [\n          { \"key\": \"Residencial\", \"label\": \"Residencial\" },\n          { \"key\": \"Comercial\", \"label\": \"Comercial\" }\n        ]\n      }\n    ],\n    \"values\": [\n      {\n        \"field\": \"value\",\n        \"aggregator\": \"sum\",\n        \"label\": \"Valor\",\n        \"type\": \"money\",\n        \"format\": \"currency\"\n      }\n    ]\n  },\n  \"data\": [\n    {\n      \"key\": \"Nova\",\n      \"label\": \"Nova\",\n      \"level\": 0,\n      \"cells\": {\n        \"Residencial\": { \"value\": 150000 },\n        \"Comercial\": { \"value\": 200000 }\n      },\n      \"totals\": { \"value\": 350000 },\n      \"children\": []\n    },\n    {\n      \"key\": \"Em Visitação\",\n      \"label\": \"Em Visitação\",\n      \"level\": 0,\n      \"cells\": {\n        \"Residencial\": { \"value\": 300000 },\n        \"Comercial\": { \"value\": 250000 }\n      },\n      \"totals\": { \"value\": 550000 },\n      \"children\": []\n    }\n  ],\n  \"grandTotals\": {\n    \"cells\": {\n      \"Residencial\": { \"value\": 450000 },\n      \"Comercial\": { \"value\": 450000 }\n    },\n    \"totals\": { \"value\": 900000 }\n  },\n  \"total\": 2\n}"
+					},
+					{
+						"name": "Error - Missing pivotConfig",
+						"originalRequest": {
+							"method": "GET",
+							"header": [
+								{
+									"key": "Authorization",
+									"value": "{{authToken}}"
+								}
+							],
+							"url": {
+								"raw": "{{baseUrl}}/rest/data/Opportunity/pivot",
+								"host": ["{{baseUrl}}"],
+								"path": ["rest", "data", "Opportunity", "pivot"]
+							}
+						},
+						"status": "Bad Request",
+						"code": 400,
+						"_postman_previewlanguage": "json",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"cookie": [],
+						"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"[Opportunity] pivotConfig is required\"\n    }\n  ]\n}"
+					}
+				]
+			},
+			{
+				"name": "Graph - Bar Chart by Status",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing count of opportunities by status. Uses Polars for fast aggregation."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Bar Chart by Status (Sum Values)",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing sum of amount.value by status."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Bar Chart by Director",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing count of opportunities by director nickname."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Pie Chart",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate pie chart showing distribution of opportunities by status."
+				},
+				"response": []
+			}
+		]
+	}
+],
 	"variable": [
 		{
 			"key": "baseUrl",
