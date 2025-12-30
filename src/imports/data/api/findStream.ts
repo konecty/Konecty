@@ -1,4 +1,5 @@
 import { logger } from '@imports/utils/logger';
+import { hasSecondaryNodes } from '@imports/utils/mongo';
 
 import { buildFindQuery, BuildFindQueryParams } from './findUtils';
 import { ApplyDateToStringTransform, ApplyFieldPermissionsTransform, ObjectToJsonTransform } from './streamTransforms';
@@ -7,7 +8,7 @@ import { errorReturn, successReturn } from '@imports/utils/return';
 import { Span } from '@opentelemetry/api';
 import { Readable } from 'node:stream';
 import { DataDocument } from '@imports/types/data';
-import { NANOSECONDS_TO_MILLISECONDS } from './streamConstants';
+import { NANOSECONDS_TO_MILLISECONDS, STREAM_BATCH_SIZE, STREAM_MAX_TIME_MS } from './streamConstants';
 
 function buildStreamPipeline(
 	mongoStream: Readable,
@@ -66,10 +67,21 @@ export default async function findStream({
 
 		const { query, aggregateStages, accessConditions, conditionsKeys, collection } = queryResult.data;
 
-		tracingSpan?.addEvent('Creating MongoDB cursor stream');
+		// Determine read preference: use secondary if available, fallback to secondaryPreferred
+		// This ensures we use secondary nodes when possible but don't fail when they're unavailable
+		// See ADR-0005 for detailed rationale
+		const hasSecondaries = await hasSecondaryNodes();
+		const readPreference = hasSecondaries ? 'secondary' : 'secondaryPreferred';
+
+		tracingSpan?.addEvent(`Creating MongoDB cursor stream with ${readPreference} read preference`, {
+			hasSecondaries: String(hasSecondaries),
+		});
+
 		const cursor = collection.aggregate(aggregateStages, {
 			allowDiskUse: true,
-			readPreference: 'secondaryPreferred',
+			readPreference,
+			batchSize: STREAM_BATCH_SIZE,
+			maxTimeMS: STREAM_MAX_TIME_MS,
 		});
 		const mongoStream = cursor.stream();
 
@@ -86,10 +98,14 @@ export default async function findStream({
 		};
 
 		// Calculate total in parallel if requested (doesn't block stream)
+		// Also uses secondary nodes (or secondaryPreferred fallback) to maintain consistency
 		if (getTotal === true) {
-			tracingSpan?.addEvent('Calculating total');
+			tracingSpan?.addEvent(`Calculating total with ${readPreference} read preference`);
 			collection
-				.countDocuments(query)
+				.countDocuments(query, {
+					readPreference,
+					maxTimeMS: STREAM_MAX_TIME_MS,
+				})
 				.then(total => {
 					result.total = total;
 				})

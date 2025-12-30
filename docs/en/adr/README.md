@@ -8,6 +8,7 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0002: Common Logic Extraction to findUtils](./0002-common-logic-extraction-to-find-utils.md)
 - [ADR-0003: Node.js Transform Streams for Sequential Processing](./0003-node-transform-streams-for-sequential-processing.md)
 - [ADR-0004: Default Sorting for Consistency](./0004-default-sorting-for-consistency.md)
+- [ADR-0005: Mandatory Secondary Nodes for Reading](./0005-mandatory-secondary-nodes-for-reading.md)
 
 ## Format
 

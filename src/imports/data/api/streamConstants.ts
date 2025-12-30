@@ -11,3 +11,8 @@ export const MAX_SAMPLE_LENGTH = 100;
 export const BENCHMARK_ITERATION_CONCURRENCY = 3; // Maximum parallel benchmark iterations
 export const CONFIDENCE_TEST_CONCURRENCY = 2; // Maximum parallel confidence test executions
 
+// MongoDB read performance optimizations for findStream
+// See ADR-0005 for detailed rationale on mandatory secondary node usage
+export const STREAM_BATCH_SIZE = 1000; // Optimal batch size for streaming
+export const STREAM_MAX_TIME_MS = 300_000; // 5 minutes max query time
+
