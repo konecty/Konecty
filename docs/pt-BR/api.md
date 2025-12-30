@@ -537,6 +537,101 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     -   Requer `uv` instalado no servidor (já incluído na imagem Docker)
     -   Total: O total de registros pode ser calculado em paralelo (não bloqueia o stream)
 
+#### Gerar Gráfico
+
+-   **GET** `/rest/data/:document/graph`
+-   **Parâmetros:**
+    -   `:document` — Nome do módulo (ex: `Opportunity`)
+    -   Query parameters (opcionais): `filter`, `sort`, `limit`, `start`, `fields`, `displayName`, `displayType`, `withDetailFields` (mesmos do endpoint `find`)
+    -   `graphConfig` (obrigatório) — Configuração do gráfico em formato JSON
+-   **Resposta:**
+    -   **Sucesso:** `200 OK` com `Content-Type: image/svg+xml` e corpo SVG
+    -   **Erro:** `400 Bad Request` com JSON de erro
+-   **Características:**
+    -   **Processamento interno**: Utiliza streaming interno para eficiência
+    -   **Processamento Python**: Utiliza Polars para agregações (performance) e pandas/matplotlib para visualização
+    -   **Performance**: Polars é 3-10x mais rápido que Pandas para groupby/agregações
+    -   **Permissões**: Aplicadas automaticamente conforme configuração do usuário
+    -   **Formato SVG**: Retorna SVG diretamente como resposta HTTP (escalável, sem perda de qualidade)
+    -   **Tipos suportados**: bar, line, pie, scatter, histogram, timeSeries
+-   **Estrutura de `graphConfig`:**
+    ```typescript
+    {
+      type: 'bar' | 'line' | 'pie' | 'scatter' | 'histogram' | 'timeSeries';
+      xAxis?: {
+        field: string;      // Campo para eixo X
+        label?: string;     // Label customizado
+        format?: string;    // Formato de valores
+      };
+      yAxis?: {
+        field: string;      // Campo para eixo Y
+        label?: string;     // Label customizado
+        format?: string;    // Formato de valores
+      };
+      categoryField?: string;  // Campo para agrupar (ex: status, type)
+      aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max';  // Tipo de agregação
+      title?: string;       // Título do gráfico
+      width?: number;       // Largura em pixels (padrão: 800)
+      height?: number;      // Altura em pixels (padrão: 600)
+      colors?: string[];    // Cores customizadas
+      showLegend?: boolean; // Mostrar legenda (padrão: true)
+      showGrid?: boolean;   // Mostrar grade (padrão: true)
+    }
+    ```
+-   **Exemplos de uso:**
+    -   **Gráfico de barras por status (contagem):**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "status",
+          "aggregation": "count",
+          "xAxis": { "field": "status", "label": "Status" },
+          "yAxis": { "field": "code", "label": "Quantidade" },
+          "title": "Oportunidades por Status"
+        }
+        ```
+    -   **Gráfico de barras por status (soma de valores):**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "status",
+          "aggregation": "sum",
+          "xAxis": { "field": "status", "label": "Status" },
+          "yAxis": { "field": "amount.value", "label": "Valor Total" },
+          "title": "Valor Total por Status"
+        }
+        ```
+    -   **Gráfico de barras por diretor:**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "_user.director.nickname",
+          "aggregation": "count",
+          "xAxis": { "field": "_user.director.nickname", "label": "Diretor" },
+          "yAxis": { "field": "code", "label": "Quantidade" },
+          "title": "Oportunidades por Diretor"
+        }
+        ```
+    -   **Gráfico de pizza:**
+        ```json
+        {
+          "type": "pie",
+          "categoryField": "status",
+          "aggregation": "count",
+          "yAxis": { "field": "code" },
+          "title": "Distribuição por Status"
+        }
+        ```
+-   **Notas importantes:**
+    -   `type` é obrigatório
+    -   Para gráficos `bar`, `line`, `scatter`, `timeSeries`: `xAxis.field` e `yAxis.field` são obrigatórios
+    -   Para gráficos `histogram`: `yAxis.field` é obrigatório
+    -   Para gráficos `pie`: `categoryField` é obrigatório
+    -   Quando `categoryField` e `aggregation` são especificados, os dados são agrupados e agregados usando Polars (mais rápido)
+    -   O processamento é feito internamente com streaming, mas a resposta é SVG síncrona
+    -   Requer `uv`, `polars`, `pandas`, `matplotlib` e `pyarrow` instalados (já incluídos na imagem Docker)
+    -   Total: O total de registros pode ser calculado em paralelo (não bloqueia o stream)
+
 #### Criar Registro
 
 -   **POST** `/rest/data/:document`

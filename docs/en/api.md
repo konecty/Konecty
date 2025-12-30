@@ -514,6 +514,101 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   - **Grand totals**: Root-level `grandTotals` contains aggregates for all data
   - **Multilingual**: Labels respect `Accept-Language` header (defaults to `pt_BR`)
 
+#### Generate Graph
+
+- **GET** `/rest/data/:document/graph`
+- **Parameters:**
+  - `:document` — Module name (e.g., `Opportunity`)
+  - Query parameters (optional): `filter`, `sort`, `limit`, `start`, `fields`, `displayName`, `displayType`, `withDetailFields` (same as `find` endpoint)
+  - `graphConfig` (required) — Graph configuration in JSON format
+- **Response:**
+  - **Success:** `200 OK` with `Content-Type: image/svg+xml` and SVG body
+  - **Error:** `400 Bad Request` with JSON error
+- **Characteristics:**
+  - **Internal processing**: Uses internal streaming for efficiency
+  - **Python processing**: Uses Polars for aggregations (performance) and pandas/matplotlib for visualization
+  - **Performance**: Polars is 3-10x faster than Pandas for groupby/aggregations
+  - **Permissions**: Automatically applied according to user configuration
+  - **SVG format**: Returns SVG directly as HTTP response (scalable, no quality loss)
+  - **Supported types**: bar, line, pie, scatter, histogram, timeSeries
+- **`graphConfig` structure:**
+  ```typescript
+  {
+    type: 'bar' | 'line' | 'pie' | 'scatter' | 'histogram' | 'timeSeries';
+    xAxis?: {
+      field: string;      // Field for X axis
+      label?: string;     // Custom label
+      format?: string;     // Value format
+    };
+    yAxis?: {
+      field: string;      // Field for Y axis
+      label?: string;     // Custom label
+      format?: string;     // Value format
+    };
+    categoryField?: string;  // Field to group by (e.g., status, type)
+    aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max';  // Aggregation type
+    title?: string;       // Chart title
+    width?: number;       // Width in pixels (default: 800)
+    height?: number;      // Height in pixels (default: 600)
+    colors?: string[];    // Custom colors
+    showLegend?: boolean; // Show legend (default: true)
+    showGrid?: boolean;   // Show grid (default: true)
+  }
+  ```
+- **Usage examples:**
+  - **Bar chart by status (count):**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "status",
+      "aggregation": "count",
+      "xAxis": { "field": "status", "label": "Status" },
+      "yAxis": { "field": "code", "label": "Quantity" },
+      "title": "Opportunities by Status"
+    }
+    ```
+  - **Bar chart by status (sum of values):**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "status",
+      "aggregation": "sum",
+      "xAxis": { "field": "status", "label": "Status" },
+      "yAxis": { "field": "amount.value", "label": "Total Value" },
+      "title": "Total Value by Status"
+    }
+    ```
+  - **Bar chart by director:**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "_user.director.nickname",
+      "aggregation": "count",
+      "xAxis": { "field": "_user.director.nickname", "label": "Director" },
+      "yAxis": { "field": "code", "label": "Quantity" },
+      "title": "Opportunities by Director"
+    }
+    ```
+  - **Pie chart:**
+    ```json
+    {
+      "type": "pie",
+      "categoryField": "status",
+      "aggregation": "count",
+      "yAxis": { "field": "code" },
+      "title": "Distribution by Status"
+    }
+    ```
+- **Important notes:**
+  - `type` is required
+  - For `bar`, `line`, `scatter`, `timeSeries` charts: `xAxis.field` and `yAxis.field` are required
+  - For `histogram` charts: `yAxis.field` is required
+  - For `pie` charts: `categoryField` is required
+  - When `categoryField` and `aggregation` are specified, data is grouped and aggregated using Polars (faster)
+  - Processing is done internally with streaming, but response is synchronous SVG
+  - Requires `uv`, `polars`, `pandas`, `matplotlib`, and `pyarrow` installed (already included in Docker image)
+  - Total: Record total can be calculated in parallel (doesn't block stream)
+
 #### Create Record
 
 🚧 Under construction

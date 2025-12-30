@@ -6,9 +6,10 @@ import isString from 'lodash/isString';
 
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-import { find, pivotStream } from '@imports/data/api';
+import { find, pivotStream, graphStream } from '@imports/data/api';
 import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
 import { PivotConfig } from '@imports/types/pivot';
+import { GraphConfig } from '@imports/types/graph';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
@@ -363,6 +364,94 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		tracingSpan.end();
 		reply.send(result);
+	});
+
+	fastify.get<{
+		Params: { document: string };
+		Querystring: {
+			displayName?: string;
+			displayType?: string;
+			fields?: string;
+			filter?: string | object;
+			sort?: string;
+			limit?: string;
+			start?: string;
+			withDetailFields?: string;
+			graphConfig?: string;
+		};
+	}>('/rest/data/:document/graph', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('GET graph');
+
+		const authTokenId = getAuthTokenIdFromReq(req);
+		tracingSpan.setAttribute('authTokenId', authTokenId ?? 'undefined');
+		tracingSpan.setAttribute('document', req.params.document);
+
+		// Parse filter from query string
+		let parsedFilter: KonFilter | undefined;
+		if (req.query.filter != null) {
+			if (isString(req.query.filter)) {
+				try {
+					parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+				} catch (error) {
+					tracingSpan.end();
+					return errorReturn(`[${req.params.document}] Invalid filter format: ${(error as Error).message}`);
+				}
+			} else if (isObject(req.query.filter)) {
+				parsedFilter = req.query.filter as KonFilter;
+			}
+		}
+
+		// Parse graphConfig from query string
+		let graphConfig: GraphConfig | undefined;
+		if (req.query.graphConfig != null) {
+			if (isString(req.query.graphConfig)) {
+				try {
+					graphConfig = JSON.parse(req.query.graphConfig.replace(/\+/g, ' ')) as GraphConfig;
+				} catch (error) {
+					tracingSpan.end();
+					return errorReturn(`[${req.params.document}] Invalid graphConfig format: ${(error as Error).message}`);
+				}
+			} else if (isObject(req.query.graphConfig)) {
+				graphConfig = req.query.graphConfig as GraphConfig;
+			}
+		}
+
+		// Validate graphConfig
+		if (graphConfig == null) {
+			tracingSpan.end();
+			return errorReturn(`[${req.params.document}] graphConfig is required`);
+		}
+
+		if (!graphConfig.type) {
+			tracingSpan.end();
+			return errorReturn(`[${req.params.document}] graphConfig.type is required`);
+		}
+
+		// Call graphStream
+		const result = await graphStream({
+			authTokenId,
+			document: req.params.document,
+			displayName: req.query.displayName,
+			displayType: req.query.displayType,
+			fields: req.query.fields,
+			filter: parsedFilter,
+			sort: req.query.sort,
+			limit: req.query.limit,
+			start: req.query.start,
+			withDetailFields: req.query.withDetailFields,
+			graphConfig,
+			tracingSpan,
+		});
+
+		tracingSpan.end();
+
+		if (result.success === false) {
+			return reply.status(400).send(result);
+		}
+
+		reply.type('image/svg+xml');
+		reply.send(result.svg);
 	});
 
 	done();

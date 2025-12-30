@@ -8,9 +8,12 @@ import path from 'node:path';
 const PYTHON_SCRIPT_PATH = path.join(process.cwd(), 'src', 'scripts', 'python', 'pivot_table.py');
 const PYTHON_SCRIPT_PATH_DOCKER = path.join('/app', 'scripts', 'python', 'pivot_table.py');
 
+const PYTHON_GRAPH_SCRIPT_PATH = path.join(process.cwd(), 'src', 'scripts', 'python', 'graph_generator.py');
+const PYTHON_GRAPH_SCRIPT_PATH_DOCKER = path.join('/app', 'scripts', 'python', 'graph_generator.py');
+
 /**
- * Creates a Python process using uv to run the pivot table script
- * @param scriptPath Optional path to the script (defaults to detected path)
+ * Creates a Python process using uv to run a Python script
+ * @param scriptPath Optional path to the script (defaults to pivot table script)
  * @returns ChildProcess instance
  */
 export function createPythonProcess(scriptPath?: string): ChildProcess {
@@ -187,6 +190,136 @@ export async function collectResultFromPython(pythonProcess: ChildProcess): Prom
 			}
 
 			resolve(resultData);
+		});
+
+		pythonProcess.stdout.on('error', (error: Error) => {
+			reject(error);
+		});
+
+		pythonProcess.on('error', (error: Error) => {
+			reject(error);
+		});
+
+		pythonProcess.on('exit', (code: number | null, signal: string | null) => {
+			if (code !== 0 && code != null) {
+				reject(new Error(`Python process exited with code ${code}`));
+			} else if (signal != null) {
+				reject(new Error(`Python process exited with signal ${signal}`));
+			}
+		});
+	});
+}
+
+/**
+ * Creates a Python process for graph generation
+ * @param scriptPath Optional path to the graph script (defaults to detected path)
+ * @returns ChildProcess instance
+ */
+export function createGraphPythonProcess(scriptPath?: string): ChildProcess {
+	const script = scriptPath ?? (process.env.NODE_ENV === 'production' ? PYTHON_GRAPH_SCRIPT_PATH_DOCKER : PYTHON_GRAPH_SCRIPT_PATH);
+
+	const pythonProcess = spawn('uv', ['run', '--script', script], {
+		stdio: ['pipe', 'pipe', 'pipe'],
+	});
+
+	pythonProcess.on('error', (error: Error) => {
+		logger.error(error, 'Error spawning Python graph process');
+	});
+
+	pythonProcess.stderr?.on('data', (data: Buffer) => {
+		logger.warn({ stderr: data.toString() }, 'Python graph process stderr');
+	});
+
+	return pythonProcess;
+}
+
+/**
+ * Sends an RPC request to Python process for graph generation
+ * @param pythonProcess Python child process
+ * @param method RPC method name
+ * @param params RPC parameters (must contain config: GraphConfig)
+ */
+export async function sendGraphRPCRequest(pythonProcess: ChildProcess, method: string, params: { config: unknown }): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (pythonProcess.stdin == null) {
+			reject(new Error('Python process stdin is not available'));
+			return;
+		}
+
+		const request = {
+			jsonrpc: '2.0',
+			method,
+			params,
+		};
+
+		const requestLine = JSON.stringify(request) + NEWLINE_SEPARATOR;
+
+		pythonProcess.stdin.write(requestLine, (error?: Error | null) => {
+			if (error != null) {
+				reject(error);
+			} else {
+				resolve();
+			}
+		});
+	});
+}
+
+/**
+ * Collects SVG content from Python stdout (after RPC response)
+ * SVG can span multiple lines, so we read everything after the RPC response
+ * @param pythonProcess Python child process
+ * @returns Promise resolving to SVG string
+ */
+export async function collectSVGFromPython(pythonProcess: ChildProcess): Promise<string> {
+	return new Promise((resolve, reject) => {
+		if (pythonProcess.stdout == null) {
+			reject(new Error('Python process stdout is not available'));
+			return;
+		}
+
+		let buffer = '';
+		let rpcResponseRead = false;
+		let svgStartIndex = -1;
+
+		pythonProcess.stdout.on('data', (data: Buffer) => {
+			buffer += data.toString();
+
+			// If we haven't read the RPC response yet, try to find it
+			if (!rpcResponseRead) {
+				const firstNewlineIndex = buffer.indexOf(NEWLINE_SEPARATOR);
+				if (firstNewlineIndex !== -1) {
+					const firstLine = buffer.substring(0, firstNewlineIndex).trim();
+					try {
+						const rpcResponse = parseRPCResponse(firstLine);
+						if (rpcResponse.error != null) {
+							reject(new Error(`RPC error: ${rpcResponse.error.message}`));
+							return;
+						}
+						rpcResponseRead = true;
+						// SVG starts after the first newline
+						svgStartIndex = firstNewlineIndex + NEWLINE_SEPARATOR.length;
+					} catch (error) {
+						// If parsing fails, continue accumulating (might be incomplete JSON)
+					}
+				}
+			}
+		});
+
+		pythonProcess.stdout.on('end', () => {
+			if (!rpcResponseRead) {
+				reject(new Error('RPC response not received from Python process'));
+				return;
+			}
+
+			// Extract SVG content (everything after RPC response)
+			const svgContent = svgStartIndex >= 0 ? buffer.substring(svgStartIndex).trim() : '';
+
+			if (!svgContent) {
+				reject(new Error('SVG content not received from Python process'));
+				return;
+			}
+
+			resolve(svgContent);
 		});
 
 		pythonProcess.stdout.on('error', (error: Error) => {

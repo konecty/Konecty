@@ -11,6 +11,7 @@ Este diretório contém as decisões arquiteturais tomadas durante o desenvolvim
 - [ADR-0005: Uso Obrigatório de Nós Secundários para Leitura](./0005-uso-obrigatorio-nos-secundarios-para-leitura.md)
 - [ADR-0006: Integração Python para Geração de Pivot Tables](./0006-integracao-python-para-pivot-tables.md)
 - [ADR-0007: Formato Hierárquico de Saída do Pivot](./0007-formato-hierarquico-saida-pivot.md)
+- [ADR-0008: Endpoint de Gráficos com Polars e Pandas](./0008-graph-endpoint-com-polars-pandas.md)
 
 ## Formato
 

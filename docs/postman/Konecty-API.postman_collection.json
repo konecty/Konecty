@@ -671,18 +671,18 @@
 						}
 					],
 					"url": {
-						"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&pivotConfig={\"rows\":[{\"field\":\"status\"}],\"columns\":[{\"field\":\"type\"}],\"values\":[{\"field\":\"value\",\"aggregator\":\"sum\"}]}",
+						"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&pivotConfig={\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
 						"host": ["{{baseUrl}}"],
 						"path": ["rest", "data", ":document", "pivot"],
 						"query": [
 							{
 								"key": "filter",
-								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
 								"description": "Filter in JSON format"
 							},
 							{
 								"key": "pivotConfig",
-								"value": "{\"rows\":[{\"field\":\"status\"}],\"columns\":[{\"field\":\"type\"}],\"values\":[{\"field\":\"value\",\"aggregator\":\"sum\"}]}",
+								"value": "{\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
 								"description": "Pivot table configuration in JSON format"
 							},
 							{
@@ -699,7 +699,7 @@
 							}
 						]
 					},
-					"description": "Generate pivot table from Opportunity records. Groups by status (rows) and type (columns), summing the value field."
+					"description": "Generate pivot table from Opportunity records with hierarchical rows (director > group > user) and status columns, counting codes and summing amounts."
 				},
 				"response": [
 					{
@@ -769,6 +769,134 @@
 						"body": "{\n  \"success\": false,\n  \"errors\": [\n    {\n      \"message\": \"[Opportunity] pivotConfig is required\"\n    }\n  ]\n}"
 					}
 				]
+			},
+			{
+				"name": "Graph - Bar Chart by Status",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing count of opportunities by status. Uses Polars for fast aggregation."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Bar Chart by Status (Sum Values)",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing sum of amount.value by status."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Bar Chart by Director",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate bar chart showing count of opportunities by director nickname."
+				},
+				"response": []
+			},
+			{
+				"name": "Graph - Pie Chart",
+				"request": {
+					"method": "GET",
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
+					"url": {
+						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "data", "Opportunity", "graph"],
+						"query": [
+							{
+								"key": "filter",
+								"value": "{\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}",
+								"description": "Filter in JSON format"
+							},
+							{
+								"key": "graphConfig",
+								"value": "{\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
+								"description": "Graph configuration in JSON format"
+							}
+						]
+					},
+					"description": "Generate pie chart showing distribution of opportunities by status."
+				},
+				"response": []
 			}
 		]
 	}
