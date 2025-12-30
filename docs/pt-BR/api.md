@@ -402,26 +402,87 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 -   **Resposta de Sucesso:**
 
-    O endpoint retorna uma resposta JSON síncrona com os dados da tabela dinâmica processada.
+    O endpoint retorna uma resposta JSON síncrona com dados hierárquicos da tabela dinâmica, metadados enriquecidos e totais calculados.
 
     ```json
     {
       "success": true,
+      "metadata": {
+        "rows": [
+          {
+            "field": "status",
+            "label": "Situação",
+            "type": "picklist",
+            "level": 0
+          }
+        ],
+        "columns": [
+          {
+            "field": "type",
+            "label": "Tipo",
+            "type": "picklist",
+            "values": [
+              { "key": "Residencial", "label": "Residencial" },
+              { "key": "Comercial", "label": "Comercial" }
+            ]
+          }
+        ],
+        "values": [
+          {
+            "field": "value",
+            "aggregator": "sum",
+            "label": "Valor",
+            "type": "money",
+            "format": "currency"
+          }
+        ]
+      },
       "data": [
         {
-          "status": "Nova",
-          "type_Residencial": 150000,
-          "type_Comercial": 200000
+          "key": "Nova",
+          "label": "Nova",
+          "level": 0,
+          "cells": {
+            "Residencial": { "value": 150000 },
+            "Comercial": { "value": 200000 }
+          },
+          "totals": { "value": 350000 },
+          "children": []
         },
         {
-          "status": "Em Visitação",
-          "type_Residencial": 300000,
-          "type_Comercial": 250000
+          "key": "Em Visitação",
+          "label": "Em Visitação",
+          "level": 0,
+          "cells": {
+            "Residencial": { "value": 300000 },
+            "Comercial": { "value": 250000 }
+          },
+          "totals": { "value": 550000 },
+          "children": []
         }
       ],
+      "grandTotals": {
+        "cells": {
+          "Residencial": { "value": 450000 },
+          "Comercial": { "value": 450000 }
+        },
+        "totals": { "value": 900000 }
+      },
       "total": 2
     }
     ```
+
+    **Estrutura da Resposta:**
+    - `metadata`: Configuração enriquecida com labels, tipos e informações dos campos
+    - `data`: Array hierárquico de linhas do pivot com `children` aninhados para hierarquias multi-nível
+    - `grandTotals`: Totais agregados de todos os dados
+    - Cada linha contém:
+      - `key`: Identificador único da linha
+      - `label`: Label formatado para exibição (pode incluir formatação de lookup como "Nome (Ativo)")
+      - `level`: Profundidade da hierarquia (0 = nível raiz)
+      - `cells`: Objeto mapeando chaves de coluna para valores agregados
+      - `totals`: Subtotais do nível da linha
+      - `children`: Linhas aninhadas para estruturas hierárquicas
 
 -   **Resposta de Falha:**
 
@@ -442,6 +503,12 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     -   **Processamento Python**: Utiliza Polars para geração da tabela dinâmica
     -   **Performance**: Otimizado para grandes volumes de dados
     -   **Permissões**: Aplicadas automaticamente conforme configuração do usuário
+    -   **Estrutura hierárquica**: Linhas multi-nível criam arrays `children` aninhados
+    -   **Formatação de lookup**: Campos de lookup sem sub-campos são formatados usando `descriptionFields` (ex: "Nome (Ativo)")
+    -   **Labels de campos aninhados**: Labels para campos aninhados são concatenados (ex: "Grupo > Nome" para `_user.group.name`)
+    -   **Subtotais**: Cada nível da hierarquia inclui `totals` para aquele nível
+    -   **Totais gerais**: `grandTotals` no nível raiz contém agregados de todos os dados
+    -   **Multilíngue**: Labels respeitam header `Accept-Language` (padrão: `pt_BR`)
 
 -   **Exemplo completo de `pivotConfig`:**
 

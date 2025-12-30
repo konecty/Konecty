@@ -380,26 +380,87 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
 
 - **Success Response:**
 
-  The endpoint returns a synchronous JSON response with the processed pivot table data.
+  The endpoint returns a synchronous JSON response with hierarchical pivot table data, enriched metadata, and calculated totals.
 
   ```json
   {
     "success": true,
+    "metadata": {
+      "rows": [
+        {
+          "field": "status",
+          "label": "Status",
+          "type": "picklist",
+          "level": 0
+        }
+      ],
+      "columns": [
+        {
+          "field": "type",
+          "label": "Type",
+          "type": "picklist",
+          "values": [
+            { "key": "Residential", "label": "Residential" },
+            { "key": "Commercial", "label": "Commercial" }
+          ]
+        }
+      ],
+      "values": [
+        {
+          "field": "value",
+          "aggregator": "sum",
+          "label": "Value",
+          "type": "money",
+          "format": "currency"
+        }
+      ]
+    },
     "data": [
       {
-        "status": "New",
-        "type_Residential": 150000,
-        "type_Commercial": 200000
+        "key": "New",
+        "label": "New",
+        "level": 0,
+        "cells": {
+          "Residential": { "value": 150000 },
+          "Commercial": { "value": 200000 }
+        },
+        "totals": { "value": 350000 },
+        "children": []
       },
       {
-        "status": "In Visit",
-        "type_Residential": 300000,
-        "type_Commercial": 250000
+        "key": "In Visit",
+        "label": "In Visit",
+        "level": 0,
+        "cells": {
+          "Residential": { "value": 300000 },
+          "Commercial": { "value": 250000 }
+        },
+        "totals": { "value": 550000 },
+        "children": []
       }
     ],
+    "grandTotals": {
+      "cells": {
+        "Residential": { "value": 450000 },
+        "Commercial": { "value": 450000 }
+      },
+      "totals": { "value": 900000 }
+    },
     "total": 2
   }
   ```
+
+  **Response Structure:**
+  - `metadata`: Enriched configuration with labels, types, and field information
+  - `data`: Hierarchical array of pivot rows with nested `children` for multi-level hierarchies
+  - `grandTotals`: Aggregated totals across all data
+  - Each row contains:
+    - `key`: Unique identifier for the row
+    - `label`: Formatted display label (may include lookup formatting like "Name (Active)")
+    - `level`: Hierarchy depth (0 = root level)
+    - `cells`: Object mapping column keys to aggregated values
+    - `totals`: Row-level subtotals
+    - `children`: Nested rows for hierarchical structures
 
 - **Failure Response:**
 
@@ -446,7 +507,12 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   - `columns` is optional
   - Processing is done internally with streaming, but response is synchronous JSON
   - Requires `uv` installed on server (already included in Docker image)
-  - Total: Total record count can be calculated in parallel (doesn't block stream)
+  - **Hierarchical structure**: Multi-level rows create nested `children` arrays
+  - **Lookup formatting**: Lookup fields without sub-fields are formatted using `descriptionFields` (e.g., "Name (Active)")
+  - **Nested field labels**: Labels for nested fields are concatenated (e.g., "Group > Name" for `_user.group.name`)
+  - **Subtotals**: Each hierarchy level includes `totals` for that level
+  - **Grand totals**: Root-level `grandTotals` contains aggregates for all data
+  - **Multilingual**: Labels respect `Accept-Language` header (defaults to `pt_BR`)
 
 #### Create Record
 

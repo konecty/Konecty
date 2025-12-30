@@ -10,6 +10,7 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0004: Default Sorting for Consistency](./0004-default-sorting-for-consistency.md)
 - [ADR-0005: Mandatory Secondary Nodes for Reading](./0005-mandatory-secondary-nodes-for-reading.md)
 - [ADR-0006: Python Integration for Pivot Table Generation](./0006-python-integration-for-pivot-tables.md)
+- [ADR-0007: Hierarchical Pivot Output Format](./0007-hierarchical-pivot-output-format.md)
 
 ## Format
 
