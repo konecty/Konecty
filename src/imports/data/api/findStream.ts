@@ -3,11 +3,9 @@ import { hasSecondaryNodes } from '@imports/utils/mongo';
 
 import { buildFindQuery, BuildFindQueryParams } from './findUtils';
 import { ApplyDateToStringTransform, ApplyFieldPermissionsTransform, ObjectToJsonTransform } from './streamTransforms';
-import { KonectyResult, KonectyResultError, KonectyResultSuccess } from '@imports/types/result';
-import { errorReturn, successReturn } from '@imports/utils/return';
+import { KonectyResultError, KonectyResultSuccess } from '@imports/types/result';
 import { Span } from '@opentelemetry/api';
 import { Readable } from 'node:stream';
-import { DataDocument } from '@imports/types/data';
 import { NANOSECONDS_TO_MILLISECONDS, STREAM_BATCH_SIZE, STREAM_MAX_TIME_MS } from './streamConstants';
 
 function buildStreamPipeline(
