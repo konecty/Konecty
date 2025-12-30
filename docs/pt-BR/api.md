@@ -358,6 +358,116 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     -   Ordenação padrão: Se não especificado, aplica `{ _id: 1 }` para garantir consistência
     -   Permissões: Aplicadas registro por registro, mantendo segurança
     -   Datas: Convertidas automaticamente para strings ISO 8601
+
+#### Gerar Tabela Dinâmica (Pivot)
+
+-   **GET** `/rest/data/:document/pivot`
+
+-   **Parâmetros:**
+
+    -   `:document` — Nome do módulo (ex: `Opportunity`, `Contact`)
+
+-   **Query String:**
+
+    -   Todos os parâmetros do endpoint `find` (filter, sort, limit, start, fields, displayName, displayType, withDetailFields)
+    -   `pivotConfig` — Configuração da tabela dinâmica em formato JSON (obrigatório)
+
+-   **Formato do `pivotConfig`:**
+
+    ```typescript
+    {
+      columns?: Array<{
+        field: string;
+        order?: 'ASC' | 'DESC';
+        format?: string;
+      }>;
+      rows: Array<{
+        field: string;
+        order?: 'ASC' | 'DESC';
+      }>;
+      values: Array<{
+        field: string;
+        aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+      }>;
+    }
+    ```
+
+-   **Exemplo de uso:**
+
+    ```http
+    GET /rest/data/Opportunity/pivot?filter={"status":{"$in":["Nova","Em Visitação"]}}&pivotConfig={"rows":[{"field":"status"}],"columns":[{"field":"type"}],"values":[{"field":"value","aggregator":"sum"}]}
+    ```
+
+-   **Headers:** Requer autenticação
+
+-   **Resposta de Sucesso:**
+
+    O endpoint retorna uma resposta JSON síncrona com os dados da tabela dinâmica processada.
+
+    ```json
+    {
+      "success": true,
+      "data": [
+        {
+          "status": "Nova",
+          "type_Residencial": 150000,
+          "type_Comercial": 200000
+        },
+        {
+          "status": "Em Visitação",
+          "type_Residencial": 300000,
+          "type_Comercial": 250000
+        }
+      ],
+      "total": 2
+    }
+    ```
+
+-   **Resposta de Falha:**
+
+    ```json
+    {
+      "success": false,
+      "errors": [
+        {
+          "message": "[Opportunity] pivotConfig.rows is required and must be a non-empty array"
+        }
+      ]
+    }
+    ```
+
+-   **Características:**
+
+    -   **Processamento interno**: Utiliza streaming interno para eficiência, mas retorna resposta JSON síncrona
+    -   **Processamento Python**: Utiliza Polars para geração da tabela dinâmica
+    -   **Performance**: Otimizado para grandes volumes de dados
+    -   **Permissões**: Aplicadas automaticamente conforme configuração do usuário
+
+-   **Exemplo completo de `pivotConfig`:**
+
+    ```json
+    {
+      "rows": [
+        { "field": "status" },
+        { "field": "priority", "order": "DESC" }
+      ],
+      "columns": [
+        { "field": "type" }
+      ],
+      "values": [
+        { "field": "value", "aggregator": "sum" },
+        { "field": "_id", "aggregator": "count" }
+      ]
+    }
+    ```
+
+-   **Notas importantes:**
+
+    -   `rows` é obrigatório e deve conter pelo menos um campo
+    -   `values` é obrigatório e deve conter pelo menos um campo
+    -   `columns` é opcional
+    -   O processamento é feito internamente com streaming, mas a resposta é JSON síncrona
+    -   Requer `uv` instalado no servidor (já incluído na imagem Docker)
     -   Total: O total de registros pode ser calculado em paralelo (não bloqueia o stream)
 
 #### Criar Registro

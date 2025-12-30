@@ -336,6 +336,116 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   - Default sorting: If not specified, applies `{ _id: 1 }` to ensure consistency
   - Permissions: Applied record by record, maintaining security
   - Dates: Automatically converted to ISO 8601 strings
+
+#### Generate Pivot Table
+
+- **GET** `/rest/data/:document/pivot`
+
+- **Parameters:**
+
+  - `:document` — Module name (e.g., `Opportunity`, `Contact`)
+
+- **Query String:**
+
+  - All parameters from the `find` endpoint (filter, sort, limit, start, fields, displayName, displayType, withDetailFields)
+  - `pivotConfig` — Pivot table configuration in JSON format (required)
+
+- **`pivotConfig` Format:**
+
+  ```typescript
+  {
+    columns?: Array<{
+      field: string;
+      order?: 'ASC' | 'DESC';
+      format?: string;
+    }>;
+    rows: Array<{
+      field: string;
+      order?: 'ASC' | 'DESC';
+    }>;
+    values: Array<{
+      field: string;
+      aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+    }>;
+  }
+  ```
+
+- **Usage Example:**
+
+  ```http
+  GET /rest/data/Opportunity/pivot?filter={"status":{"$in":["New","In Visit"]}}&pivotConfig={"rows":[{"field":"status"}],"columns":[{"field":"type"}],"values":[{"field":"value","aggregator":"sum"}]}
+  ```
+
+- **Headers:** Requires authentication
+
+- **Success Response:**
+
+  The endpoint returns a synchronous JSON response with the processed pivot table data.
+
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "status": "New",
+        "type_Residential": 150000,
+        "type_Commercial": 200000
+      },
+      {
+        "status": "In Visit",
+        "type_Residential": 300000,
+        "type_Commercial": 250000
+      }
+    ],
+    "total": 2
+  }
+  ```
+
+- **Failure Response:**
+
+  ```json
+  {
+    "success": false,
+    "errors": [
+      {
+        "message": "[Opportunity] pivotConfig.rows is required and must be a non-empty array"
+      }
+    ]
+  }
+  ```
+
+- **Characteristics:**
+
+  - **Internal processing**: Uses internal streaming for efficiency, but returns synchronous JSON response
+  - **Python processing**: Uses Polars for pivot table generation
+  - **Performance**: Optimized for large data volumes
+  - **Permissions**: Automatically applied according to user configuration
+
+- **Complete `pivotConfig` Example:**
+
+  ```json
+  {
+    "rows": [
+      { "field": "status" },
+      { "field": "priority", "order": "DESC" }
+    ],
+    "columns": [
+      { "field": "type" }
+    ],
+    "values": [
+      { "field": "value", "aggregator": "sum" },
+      { "field": "_id", "aggregator": "count" }
+    ]
+  }
+  ```
+
+- **Important notes:**
+
+  - `rows` is required and must contain at least one field
+  - `values` is required and must contain at least one field
+  - `columns` is optional
+  - Processing is done internally with streaming, but response is synchronous JSON
+  - Requires `uv` installed on server (already included in Docker image)
   - Total: Total record count can be calculated in parallel (doesn't block stream)
 
 #### Create Record

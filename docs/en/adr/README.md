@@ -9,6 +9,7 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0003: Node.js Transform Streams for Sequential Processing](./0003-node-transform-streams-for-sequential-processing.md)
 - [ADR-0004: Default Sorting for Consistency](./0004-default-sorting-for-consistency.md)
 - [ADR-0005: Mandatory Secondary Nodes for Reading](./0005-mandatory-secondary-nodes-for-reading.md)
+- [ADR-0006: Python Integration for Pivot Table Generation](./0006-python-integration-for-pivot-tables.md)
 
 ## Format
 

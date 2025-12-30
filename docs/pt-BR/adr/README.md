@@ -9,6 +9,7 @@ Este diretório contém as decisões arquiteturais tomadas durante o desenvolvim
 - [ADR-0003: Node.js Transform Streams para Processamento Sequencial](./0003-node-transform-streams-para-processamento-sequencial.md)
 - [ADR-0004: Ordenação Padrão para Consistência](./0004-ordenacao-padrao-para-consistencia.md)
 - [ADR-0005: Uso Obrigatório de Nós Secundários para Leitura](./0005-uso-obrigatorio-nos-secundarios-para-leitura.md)
+- [ADR-0006: Integração Python para Geração de Pivot Tables](./0006-integracao-python-para-pivot-tables.md)
 
 ## Formato
 
