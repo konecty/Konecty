@@ -27,7 +27,8 @@ COPY ./src/scripts/python /app/scripts/python
 # Pre-build polars to cache the compilation (runs as root before switching user)
 # This avoids compilation delay on first pivot request
 # Note: This may take several minutes on first build, but subsequent builds will be faster
-RUN echo '{"jsonrpc":"2.0","method":"pivot","params":{"config":{"rows":[{"field":"_id"}],"values":[{"field":"_id","aggregator":"count"}]}}}\n{"_id":"test"}' | uv run --script /app/scripts/python/pivot_table.py 2>&1 | head -5 || true
+# Use printf instead of echo because BusyBox ash doesn't interpret \n in echo
+RUN printf '{"jsonrpc":"2.0","method":"pivot","params":{"config":{"rows":[{"field":"_id"}],"values":[{"field":"_id","aggregator":"count"}]}}}\n{"_id":"test"}\n' | uv run --script /app/scripts/python/pivot_table.py 2>&1 | head -5 || true
 
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S konecty -u 1001 --ingroup nodejs
