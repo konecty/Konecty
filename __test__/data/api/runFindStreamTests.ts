@@ -32,8 +32,8 @@ async function createProductHelper(authId: string) {
 		throw new Error(`Failed to create product: ${response.status} - ${errorText}`);
 	}
 
-	const data = (await response.json()) as any;
-	
+	const data = (await response.json()) as { success: boolean; errors?: unknown[]; data?: unknown[] };
+
 	if (!data.success) {
 		throw new Error(`Failed to create product: ${JSON.stringify(data.errors || data)}`);
 	}
@@ -103,7 +103,7 @@ async function runTests() {
 	try {
 		console.log('Setup: Creating test product');
 		const createdProduct = await createProductHelper(authId);
-		if (!createdProduct || !createdProduct._id) {
+		if (!createdProduct || typeof createdProduct !== 'object' || createdProduct == null || !('_id' in createdProduct) || !(createdProduct as { _id?: string })._id) {
 			console.error('❌ Failed to create product: Invalid response');
 			console.error('Response:', JSON.stringify(createdProduct, null, 2));
 			process.exit(1);
@@ -160,7 +160,7 @@ async function runTests() {
 		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Test 4: Total calculation (getTotal is always true in HTTP endpoint)
@@ -226,7 +226,7 @@ async function runTests() {
 		testResults.passed++;
 	} catch (error) {
 		console.error('❌ FAILED:', error);
-		failed++;
+		testResults.failed++;
 	}
 
 	// Test 7: Error handling via HTTP
@@ -284,4 +284,3 @@ runTests().catch(error => {
 	console.error('Fatal error:', error);
 	process.exit(1);
 });
-

@@ -8,7 +8,7 @@ export const MAX_DIFFERENCES_TO_SHOW = 10;
 export const MAX_SAMPLE_LENGTH = 100;
 
 // Bluebird concurrency limits
-export const BENCHMARK_ITERATION_CONCURRENCY = 3; // Maximum parallel benchmark iterations
+export const BENCHMARK_ITERATION_CONCURRENCY = 1; // Sequential benchmark iterations (required for accurate memory measurements)
 export const CONFIDENCE_TEST_CONCURRENCY = 2; // Maximum parallel confidence test executions
 
 // MongoDB read performance optimizations for findStream
