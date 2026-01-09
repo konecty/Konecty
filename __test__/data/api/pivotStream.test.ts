@@ -129,6 +129,20 @@ describe('pivotStream', () => {
 					},
 					totals: { value: 600000 },
 				},
+				columnHeaders: [
+					{
+						key: 'Residencial',
+						value: 'Residencial',
+						label: 'Residencial',
+						level: 0,
+					},
+					{
+						key: 'Comercial',
+						value: 'Comercial',
+						label: 'Comercial',
+						level: 0,
+					},
+				],
 			});
 
 			const result = await pivotStream({
@@ -146,6 +160,14 @@ describe('pivotStream', () => {
 				expect(result.data).toHaveLength(2);
 				expect(result.grandTotals).toBeDefined();
 				expect(result.grandTotals.totals).toBeDefined();
+				expect(result.columnHeaders).toBeDefined();
+				expect(Array.isArray(result.columnHeaders)).toBe(true);
+				if (result.columnHeaders && result.columnHeaders.length > 0) {
+					expect(result.columnHeaders[0]).toHaveProperty('key');
+					expect(result.columnHeaders[0]).toHaveProperty('value');
+					expect(result.columnHeaders[0]).toHaveProperty('label');
+					expect(result.columnHeaders[0]).toHaveProperty('level');
+				}
 				expect(result.total).toBe(3);
 			}
 
@@ -191,6 +213,7 @@ describe('pivotStream', () => {
 					cells: { '__default__': { value: 600000 } },
 					totals: { value: 600000 },
 				},
+				columnHeaders: [],
 			});
 
 			const result = await pivotStream({
@@ -203,6 +226,8 @@ describe('pivotStream', () => {
 			if (result.success) {
 				expect(Array.isArray(result.data)).toBe(true);
 				expect(result.metadata.columns).toBeUndefined();
+				expect(result.columnHeaders).toBeDefined();
+				expect(Array.isArray(result.columnHeaders)).toBe(true);
 			}
 		});
 	});

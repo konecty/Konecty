@@ -134,6 +134,8 @@ async function runTests() {
 			expect(data.data).to.be.an('array');
 			expect(data.grandTotals).to.exist;
 			expect(data.grandTotals.totals).to.exist;
+			expect(data.columnHeaders).to.exist;
+			expect(data.columnHeaders).to.be.an('array');
 			
 			console.log(`   Returned ${data.data.length} pivot rows`);
 			if (data.data.length > 0) {
@@ -144,6 +146,14 @@ async function runTests() {
 				expect(sampleRow).to.have.property('cells');
 				expect(sampleRow).to.have.property('totals');
 				console.log(`   Sample row:`, JSON.stringify(sampleRow, null, 2));
+			}
+			if (data.columnHeaders && data.columnHeaders.length > 0) {
+				const sampleHeader = data.columnHeaders[0];
+				expect(sampleHeader).to.have.property('key');
+				expect(sampleHeader).to.have.property('value');
+				expect(sampleHeader).to.have.property('label');
+				expect(sampleHeader).to.have.property('level');
+				console.log(`   Sample column header:`, JSON.stringify(sampleHeader, null, 2));
 			}
 		}
 		console.log('✅ PASSED\n');
@@ -172,12 +182,17 @@ async function runTests() {
 			expect(data.data).to.be.an('array');
 			expect(data.grandTotals).to.exist;
 			expect(data.grandTotals.cells).to.exist;
+			expect(data.columnHeaders).to.exist;
+			expect(data.columnHeaders).to.be.an('array');
 			
 			console.log(`   Returned ${data.data.length} pivot rows`);
 			if (data.data.length > 0) {
 				const sampleRow = data.data[0];
 				expect(sampleRow.cells).to.be.an('object');
 				console.log(`   Sample row:`, JSON.stringify(sampleRow, null, 2));
+			}
+			if (data.columnHeaders && data.columnHeaders.length > 0) {
+				console.log(`   Column headers:`, JSON.stringify(data.columnHeaders, null, 2));
 			}
 		}
 		console.log('✅ PASSED\n');

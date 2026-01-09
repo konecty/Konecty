@@ -17,8 +17,9 @@ We will implement a hierarchical JSON response format that includes:
 2. **Hierarchical data structure**: Nested `children` arrays for multi-level row hierarchies
 3. **Subtotals per level**: Each hierarchy level includes its own `totals`
 4. **Grand totals**: Root-level aggregates for all data
-5. **Lookup formatting**: Automatic formatting of lookup values using `formatPattern` based on `descriptionFields`
-6. **Nested field labels**: Concatenated labels for nested fields (e.g., "Group > Name" for `_user.group.name`)
+5. **Hierarchical column headers**: Nested structure for multi-level columns (similar to ExtJS mz-pivot axisTop)
+6. **Lookup formatting**: Automatic formatting of lookup values using `formatPattern` based on `descriptionFields`
+7. **Nested field labels**: Concatenated labels for nested fields (e.g., "Group > Name" for `_user.group.name`)
 
 ## Structure
 
@@ -51,7 +52,23 @@ We will implement a hierarchical JSON response format that includes:
   "grandTotals": {
     "cells": {...},
     "totals": {...}
-  }
+  },
+  "columnHeaders": [
+    {
+      "key": "27",
+      "value": "27",
+      "label": "27",
+      "level": 0,
+      "children": [
+        {
+          "key": "27|Cancelada",
+          "value": "Cancelada",
+          "label": "Cancelada",
+          "level": 1
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -95,9 +112,11 @@ We will implement a hierarchical JSON response format that includes:
 ### Python Processing
 - Receives enriched config with metadata
 - Applies `formatPattern` to lookup values
-- Builds hierarchical structure with `children` arrays
+- Builds hierarchical structure with `children` arrays for rows
+- Builds hierarchical column tree structure for multi-level columns
 - Calculates subtotals at each level
 - Calculates grand totals
+- Returns column headers in hierarchical format (similar to ExtJS mz-pivot axisTop)
 
 ### Multilingual Support
 - Extracts `Accept-Language` header from request

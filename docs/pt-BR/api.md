@@ -380,15 +380,23 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
         field: string;
         order?: 'ASC' | 'DESC';
         format?: string;
+        aggregator?: 'D' | 'W' | 'M' | 'Q' | 'Y'; // Agregação de data (D=dia, W=semana, M=mês, Q=trimestre, Y=ano)
       }>;
       rows: Array<{
         field: string;
         order?: 'ASC' | 'DESC';
+        showSubtotal?: boolean;
       }>;
       values: Array<{
         field: string;
         aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+        format?: string; // Formato de exibição (ex: 'currency', 'percentage')
       }>;
+      options?: {
+        showRowGrandTotals?: boolean;
+        showColGrandTotals?: boolean;
+        showSubtotals?: boolean;
+      };
     }
     ```
 
@@ -468,6 +476,20 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
         },
         "totals": { "value": 900000 }
       },
+      "columnHeaders": [
+        {
+          "key": "Residencial",
+          "value": "Residencial",
+          "label": "Residencial",
+          "level": 0
+        },
+        {
+          "key": "Comercial",
+          "value": "Comercial",
+          "label": "Comercial",
+          "level": 0
+        }
+      ],
       "total": 2
     }
     ```
@@ -476,6 +498,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     - `metadata`: Configuração enriquecida com labels, tipos e informações dos campos
     - `data`: Array hierárquico de linhas do pivot com `children` aninhados para hierarquias multi-nível
     - `grandTotals`: Totais agregados de todos os dados
+    - `columnHeaders`: Array hierárquico de nós de cabeçalho de coluna (similar à estrutura ExtJS mz-pivot axisTop)
     - Cada linha contém:
       - `key`: Identificador único da linha
       - `label`: Label formatado para exibição (pode incluir formatação de lookup como "Nome (Ativo)")
@@ -483,6 +506,13 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
       - `cells`: Objeto mapeando chaves de coluna para valores agregados
       - `totals`: Subtotais do nível da linha
       - `children`: Linhas aninhadas para estruturas hierárquicas
+    - Cada cabeçalho de coluna contém:
+      - `key`: Caminho completo da chave (ex: "27" ou "27|Cancelada" para colunas multi-nível)
+      - `value`: Valor neste nível (ex: "27" ou "Cancelada")
+      - `label`: Label de exibição (formatado de acordo com o tipo do campo)
+      - `level`: Nível de profundidade (0 = primeira dimensão de coluna)
+      - `expanded`: Se os filhos estão visíveis (opcional)
+      - `children`: Sub-colunas para hierarquias de colunas multi-nível (opcional)
 
 -   **Resposta de Falha:**
 
@@ -508,7 +538,18 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     -   **Labels de campos aninhados**: Labels para campos aninhados são concatenados (ex: "Grupo > Nome" para `_user.group.name`)
     -   **Subtotais**: Cada nível da hierarquia inclui `totals` para aquele nível
     -   **Totais gerais**: `grandTotals` no nível raiz contém agregados de todos os dados
+    -   **Cabeçalhos de coluna**: Estrutura hierárquica para colunas multi-nível (ex: buckets de data com status)
     -   **Multilíngue**: Labels respeitam header `Accept-Language` (padrão: `pt_BR`)
+    -   **Limite de registros**: Limite padrão de 100.000 registros (configurável via variável de ambiente `PIVOT_MAX_RECORDS`). Se o limite for atingido, a resposta inclui `limitInfo`:
+      ```json
+      {
+        "limitInfo": {
+          "limited": true,
+          "limit": 100000,
+          "total": 150000
+        }
+      }
+      ```
 
 -   **Exemplo completo de `pivotConfig`:**
 
@@ -527,6 +568,24 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
       ]
     }
     ```
+
+-   **Exemplo de Colunas Multi-nível (Buckets de Data com Status):**
+
+    Para colunas multi-nível, os `columnHeaders` serão hierárquicos:
+
+    ```json
+    {
+      "columns": [
+        { "field": "createdAt", "aggregator": "M" },
+        { "field": "status" }
+      ]
+    }
+    ```
+
+    Isso cria uma estrutura hierárquica de colunas onde:
+    - Nível 0: Valores de mês (ex: "2024-01", "2024-02")
+    - Nível 1: Valores de status sob cada mês (ex: "Nova", "Em Andamento")
+    - Chaves de coluna usam separador `|`: `"2024-01|Nova"` para lookup de células
 
 -   **Notas importantes:**
 

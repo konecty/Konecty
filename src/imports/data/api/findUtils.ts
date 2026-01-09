@@ -188,6 +188,9 @@ export async function buildFindQuery({
 	tracingSpan,
 }: BuildFindQueryParams): Promise<KonectyResult<BuildFindQueryResult>> {
 	try {
+		// Import logger at the top to use it throughout the function
+		const { logger } = await import('@imports/utils/logger');
+		
 		tracingSpan?.setAttribute('document', document);
 
 		tracingSpan?.addEvent('Get User', { authTokenId, contextUser: contextUser?._id });
@@ -224,10 +227,13 @@ export async function buildFindQuery({
 			filters: [],
 		};
 
-		// If filter is not given, apply meta default filters
+		// Apply meta default filters from display meta if available
+		// BUT ONLY if no user filter is provided (or if user filter is not an object)
+		// If user sends an empty filter object, it means "no filters active", so we shouldn't apply default filters
 		if (!isObject(filter) && displayName != null && displayType != null) {
 			const displayMeta = MetaObject.DisplayMeta[`${document}:${displayType}:${displayName}`];
-			if ('filter' in displayMeta && displayMeta.filter) {
+			if (displayMeta && 'filter' in displayMeta && displayMeta.filter) {
+				logger.info(`[buildFindQuery] Applying display meta filter for ${document}:${displayType}:${displayName}`);
 				queryFilter.filters?.push(displayMeta.filter);
 			}
 		}
@@ -236,12 +242,27 @@ export async function buildFindQuery({
 			queryFilter.filters?.push(access.readFilter);
 		}
 
+		// Add user-provided filter if it exists
 		if (isObject(filter)) {
-			queryFilter.filters?.push(filter);
+			// Only add if filter has conditions or filters (not empty)
+			const hasConditions = (filter.conditions && (
+				(Array.isArray(filter.conditions) && filter.conditions.length > 0) ||
+				(isObject(filter.conditions) && Object.keys(filter.conditions).length > 0)
+			));
+			const hasFilters = (filter.filters && Array.isArray(filter.filters) && filter.filters.length > 0);
+			
+			if (hasConditions || hasFilters) {
+				queryFilter.filters?.push(filter);
+			} else {
+				logger.info(`[buildFindQuery] Filter object is empty, skipping`);
+			}
 		}
 
 		// Parse filters
 		tracingSpan?.addEvent('Parsing filter');
+		logger.info(`[buildFindQuery] Original filter received: ${JSON.stringify(filter)}`);
+		logger.info(`[buildFindQuery] QueryFilter after merging: ${JSON.stringify(queryFilter)}`);
+		
 		const readFilter = parseFilterObject(queryFilter, metaObject, { user });
 		if (readFilter.success === false) {
 			return readFilter as KonectyResultError;
@@ -252,6 +273,8 @@ export async function buildFindQuery({
 		// Note: This replicates a bug in find.ts where it uses the KonectyResult object instead of readFilter.data
 		// but we need to match the behavior for consistency
 		const query = (isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {}) as Filter<DataDocument> & { $text?: { $search: string } };
+		
+		logger.info(`[buildFindQuery] Parsed MongoDB query: ${JSON.stringify(query)}`);
 
 		if (isObject(filter) && isString(filter.textSearch)) {
 			query.$text = { $search: filter.textSearch };
@@ -259,8 +282,13 @@ export async function buildFindQuery({
 
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
+		// Special case: limit === -1 means "no limit" (used by pivot tables that need all data)
+		const parsedLimit = parseInt(String(limit), 10);
+		const noLimit = parsedLimit === -1;
+		const effectiveLimit = noLimit ? undefined : (_isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parsedLimit);
+
 		const queryOptions: FindOptions & { projection: Document } = {
-			limit: _isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parseInt(String(limit), 10),
+			limit: effectiveLimit,
 			skip: parseInt(String(start ?? 0), 10),
 			projection: {},
 			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),

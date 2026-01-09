@@ -358,15 +358,23 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
       field: string;
       order?: 'ASC' | 'DESC';
       format?: string;
+      aggregator?: 'D' | 'W' | 'M' | 'Q' | 'Y'; // Date bucketing (D=day, W=week, M=month, Q=quarter, Y=year)
     }>;
     rows: Array<{
       field: string;
       order?: 'ASC' | 'DESC';
+      showSubtotal?: boolean;
     }>;
     values: Array<{
       field: string;
       aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+      format?: string; // Display format (e.g., 'currency', 'percentage')
     }>;
+    options?: {
+      showRowGrandTotals?: boolean;
+      showColGrandTotals?: boolean;
+      showSubtotals?: boolean;
+    };
   }
   ```
 
@@ -446,6 +454,20 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
       },
       "totals": { "value": 900000 }
     },
+    "columnHeaders": [
+      {
+        "key": "Residential",
+        "value": "Residential",
+        "label": "Residential",
+        "level": 0
+      },
+      {
+        "key": "Commercial",
+        "value": "Commercial",
+        "label": "Commercial",
+        "level": 0
+      }
+    ],
     "total": 2
   }
   ```
@@ -454,6 +476,7 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   - `metadata`: Enriched configuration with labels, types, and field information
   - `data`: Hierarchical array of pivot rows with nested `children` for multi-level hierarchies
   - `grandTotals`: Aggregated totals across all data
+  - `columnHeaders`: Hierarchical array of column header nodes (similar to ExtJS mz-pivot axisTop structure)
   - Each row contains:
     - `key`: Unique identifier for the row
     - `label`: Formatted display label (may include lookup formatting like "Name (Active)")
@@ -461,6 +484,13 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
     - `cells`: Object mapping column keys to aggregated values
     - `totals`: Row-level subtotals
     - `children`: Nested rows for hierarchical structures
+  - Each column header contains:
+    - `key`: Full key path (e.g., "27" or "27|Cancelada" for multi-level columns)
+    - `value`: Value at this level (e.g., "27" or "Cancelada")
+    - `label`: Display label (formatted according to field type)
+    - `level`: Depth level (0 = first column dimension)
+    - `expanded`: Whether children are visible (optional)
+    - `children`: Sub-columns for multi-level column hierarchies (optional)
 
 - **Failure Response:**
 
@@ -500,6 +530,24 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   }
   ```
 
+- **Multi-level Columns Example (Date Buckets with Status):**
+
+  For multi-level columns, the `columnHeaders` will be hierarchical:
+
+  ```json
+  {
+    "columns": [
+      { "field": "createdAt", "aggregator": "M" },
+      { "field": "status" }
+    ]
+  }
+  ```
+
+  This creates a hierarchical column structure where:
+  - Level 0: Month values (e.g., "2024-01", "2024-02")
+  - Level 1: Status values under each month (e.g., "New", "In Progress")
+  - Column keys use `|` separator: `"2024-01|New"` for cells lookup
+
 - **Important notes:**
 
   - `rows` is required and must contain at least one field
@@ -512,7 +560,18 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   - **Nested field labels**: Labels for nested fields are concatenated (e.g., "Group > Name" for `_user.group.name`)
   - **Subtotals**: Each hierarchy level includes `totals` for that level
   - **Grand totals**: Root-level `grandTotals` contains aggregates for all data
+  - **Column headers**: Hierarchical structure for multi-level columns (e.g., date buckets with status)
   - **Multilingual**: Labels respect `Accept-Language` header (defaults to `pt_BR`)
+  - **Record limit**: Default limit of 100,000 records (configurable via `PIVOT_MAX_RECORDS` env var). If limit is reached, response includes `limitInfo`:
+    ```json
+    {
+      "limitInfo": {
+        "limited": true,
+        "limit": 100000,
+        "total": 150000
+      }
+    }
+    ```
 
 #### Generate Graph
 

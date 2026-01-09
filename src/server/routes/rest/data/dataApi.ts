@@ -292,7 +292,13 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			withDetailFields?: string;
 			pivotConfig?: string;
 		};
-	}>('/rest/data/:document/pivot', async (req, reply) => {
+	}>('/rest/data/:document/pivot', {
+		// Pivot tables can take a long time to process large datasets
+		config: {
+			// 10 minutes timeout for pivot operations
+			timeout: 600000,
+		},
+	}, async (req, reply) => {
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET pivot');
 
@@ -301,13 +307,24 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		tracingSpan.setAttribute('document', req.params.document);
 
 		// Parse filter from query string
+		const { logger } = await import('@imports/utils/logger');
+		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
+		
 		let parsedFilter: KonFilter | undefined;
 		if (req.query.filter != null) {
 			if (isString(req.query.filter)) {
-				parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+				try {
+					parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsedFilter)}`);
+				} catch (error) {
+					logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
+				}
 			} else if (isObject(req.query.filter)) {
 				parsedFilter = req.query.filter as KonFilter;
+				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsedFilter)}`);
 			}
+		} else {
+			logger.warn(`[dataApi] No filter in query string!`);
 		}
 
 		// Parse pivotConfig from query string

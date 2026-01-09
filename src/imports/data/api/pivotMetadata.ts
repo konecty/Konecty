@@ -1,6 +1,6 @@
 import { MetaObject } from '@imports/model/MetaObject';
 import { getLabel } from '@imports/meta/metaUtils';
-import type { PivotConfig, PivotEnrichedConfig, PivotRowMeta, PivotColumnMeta, PivotValueMeta, LookupDisplayConfig, PicklistOption } from '@imports/types/pivot';
+import type { PivotConfig, PivotEnrichedConfig, PivotRowMeta, PivotColumnMeta, PivotValueMeta, LookupDisplayConfig, PicklistOption, DateBucket } from '@imports/types/pivot';
 
 /**
  * Separar descriptionFields em campos simples e aninhados
@@ -16,8 +16,9 @@ function parseDescriptionFields(descriptionFields: string[]): {
 }
 
 /**
- * Montar padrão de formatação para lookup
- * Ex: ["name", "active"] -> "{name} ({active})"
+ * Montar padrão de formatação para lookup seguindo o padrão do legado
+ * O legado junta descriptionFields + searchableFields com " - "
+ * Ex: ["name", "active"] -> "{name} - {active}"
  */
 function buildFormatPattern(simpleFields: string[]): string {
 	if (simpleFields.length === 0) {
@@ -26,12 +27,13 @@ function buildFormatPattern(simpleFields: string[]): string {
 	if (simpleFields.length === 1) {
 		return `{${simpleFields[0]}}`;
 	}
-	const [first, ...rest] = simpleFields;
-	return `{${first}} (${rest.map(f => `{${f}}`).join(' - ')})`;
+	// Legacy joins with " - " and wraps nested in parentheses
+	return simpleFields.map(f => `{${f}}`).join(' - ');
 }
 
 /**
  * Resolver campo de lookup para exibição, navegando recursivamente pelos lookups aninhados
+ * Segue o padrão do legado que usa descriptionFields + searchableFields
  */
 function resolveLookupDisplayField(document: string, fieldPath: string, lang: string = 'pt_BR'): LookupDisplayConfig | null {
 	const meta = MetaObject.Meta[document];
@@ -48,21 +50,36 @@ function resolveLookupDisplayField(document: string, fieldPath: string, lang: st
 	}
 
 	// Se é o último nível e é lookup, montar config
-	if (parts.length === 1 && field.type === 'lookup') {
+	if (parts.length === 1 && (field.type === 'lookup' || field.type === 'inheritLookup')) {
+		// For display in pivot, use ONLY descriptionFields (not searchableFields)
+		// The legacy Format.lookup uses descriptionFields for label formatting
+		// Special case: _user field uses only 'name' (see Container.js line 671-680)
+		// Other fields use all descriptionFields (e.g., Contact: ['code', 'name.full'])
 		const descriptionFields = field.descriptionFields || ['name'];
 		const { simple, nested } = parseDescriptionFields(descriptionFields);
 
+		// Special handling for _user field: use only 'name'
+		if (fieldName === '_user' && simple.includes('name')) {
+			return {
+				document: field.document || '',
+				displayField: 'name',
+				formatPattern: '{name}',
+				simpleFields: ['name'],
+				nestedFields: [],
+			};
+		}
+
 		return {
 			document: field.document || '',
-			displayField: simple[0] || 'name',
+			displayField: simple[0] || nested[0]?.split('.')[0] || 'name',
 			formatPattern: buildFormatPattern(simple),
-			simpleFields: simple,
+			simpleFields: simple.length > 0 ? simple : ['name'],
 			nestedFields: nested,
 		};
 	}
 
 	// Campo aninhado - navegar recursivamente
-	if (field.type === 'lookup' && field.document) {
+	if ((field.type === 'lookup' || field.type === 'inheritLookup') && field.document) {
 		const remainingPath = parts.slice(1).join('.');
 		return resolveLookupDisplayField(field.document, remainingPath, lang);
 	}
@@ -114,7 +131,7 @@ function resolveFieldMeta(document: string, fieldPath: string, lang: string = 'p
 	}
 
 	// Campo aninhado - navegar recursivamente e concatenar labels
-	if (field.type === 'lookup' && field.document) {
+	if ((field.type === 'lookup' || field.type === 'inheritLookup') && field.document) {
 		const parentLabel = getLabel(field, lang);
 		const remainingPath = parts.slice(1).join('.');
 		const childMeta = resolveFieldMeta(field.document, remainingPath, lang);
@@ -136,6 +153,35 @@ function resolveFieldMeta(document: string, fieldPath: string, lang: string = 'p
 	}
 
 	return { label: fieldPath, type: 'text' };
+}
+
+/**
+ * Verifica se um campo é do tipo data (date ou dateTime)
+ */
+function isDateField(document: string, fieldPath: string): boolean {
+	const meta = MetaObject.Meta[document];
+	if (meta == null) {
+		return false;
+	}
+
+	const parts = fieldPath.split('.');
+	const fieldName = parts[0];
+	const field = meta.fields[fieldName];
+
+	if (field == null) {
+		return false;
+	}
+
+	if (parts.length === 1) {
+		return field.type === 'date' || field.type === 'dateTime';
+	}
+
+	// Navigate through lookups
+	if ((field.type === 'lookup' || field.type === 'inheritLookup') && field.document) {
+		return isDateField(field.document, parts.slice(1).join('.'));
+	}
+
+	return false;
 }
 
 /**
@@ -165,6 +211,12 @@ export function enrichPivotConfig(document: string, pivotConfig: PivotConfig, la
 	const enrichedColumns: PivotColumnMeta[] | undefined = pivotConfig.columns?.map(column => {
 		const fieldMeta = resolveFieldMeta(document, column.field, lang);
 		const lookupConfig = resolveLookupDisplayField(document, column.field, lang);
+		
+		// Determine bucket from column config if it's a date field
+		let bucket: DateBucket | undefined;
+		if (column.aggregator && isDateField(document, column.field)) {
+			bucket = column.aggregator;
+		}
 
 		return {
 			field: column.field,
@@ -172,6 +224,7 @@ export function enrichPivotConfig(document: string, pivotConfig: PivotConfig, la
 			type: fieldMeta.type,
 			values: fieldMeta.options,
 			lookup: lookupConfig || undefined,
+			bucket,
 		};
 	});
 
@@ -179,9 +232,9 @@ export function enrichPivotConfig(document: string, pivotConfig: PivotConfig, la
 	const enrichedValues: PivotValueMeta[] = pivotConfig.values.map(value => {
 		const fieldMeta = resolveFieldMeta(document, value.field, lang);
 
-		// Determinar formato baseado no tipo
-		let format: string | undefined;
-		if (fieldMeta.type === 'money' || fieldMeta.type === 'currency') {
+		// Determinar formato baseado no tipo ou configuração
+		let format: string | undefined = value.format;
+		if (!format && (fieldMeta.type === 'money' || fieldMeta.type === 'currency')) {
 			format = 'currency';
 		}
 
@@ -198,6 +251,6 @@ export function enrichPivotConfig(document: string, pivotConfig: PivotConfig, la
 		rows: enrichedRows,
 		columns: enrichedColumns,
 		values: enrichedValues,
+		options: pivotConfig.options,
 	};
 }
-

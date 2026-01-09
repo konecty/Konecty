@@ -7,26 +7,45 @@ import type { Span } from '@opentelemetry/api';
 
 export type PivotAggregator = 'count' | 'sum' | 'avg' | 'min' | 'max';
 
+/**
+ * Date bucketing options for columns
+ * D = Day, W = Week, M = Month, Q = Quarter, Y = Year
+ */
+export type DateBucket = 'D' | 'W' | 'M' | 'Q' | 'Y';
+
 export interface PivotColumn {
 	field: string;
 	order?: 'ASC' | 'DESC';
 	format?: string;
+	/** Date bucketing aggregator (D=day, W=week, M=month, Q=quarter, Y=year) */
+	aggregator?: DateBucket;
 }
 
 export interface PivotRow {
 	field: string;
 	order?: 'ASC' | 'DESC';
+	/** Show subtotals for this row level */
+	showSubtotal?: boolean;
 }
 
 export interface PivotValue {
 	field: string;
 	aggregator: PivotAggregator;
+	/** Display format (e.g., 'currency', 'percentage') */
+	format?: string;
+}
+
+export interface PivotOptions {
+	showRowGrandTotals?: boolean;
+	showColGrandTotals?: boolean;
+	showSubtotals?: boolean;
 }
 
 export interface PivotConfig {
 	columns?: PivotColumn[];
 	rows: PivotRow[];
 	values: PivotValue[];
+	options?: PivotOptions;
 }
 
 /**
@@ -107,6 +126,8 @@ export interface PivotColumnMeta {
 	type: string;
 	values?: PicklistOption[]; // Se for picklist
 	lookup?: LookupDisplayConfig; // Se for lookup
+	/** Date bucket type if this is a date column with bucketing */
+	bucket?: DateBucket;
 }
 
 /**
@@ -127,6 +148,7 @@ export interface PivotEnrichedConfig {
 	rows: PivotRowMeta[];
 	columns?: PivotColumnMeta[];
 	values: PivotValueMeta[];
+	options?: PivotOptions;
 }
 
 /**
@@ -150,6 +172,19 @@ export interface PivotGrandTotals {
 }
 
 /**
+ * Hierarchical column header node
+ * Similar to ExtJS mz-pivot axisTop structure
+ */
+export interface PivotColumnHeaderNode {
+	key: string; // Full key path (e.g., "27" or "27|Cancelada")
+	value: string; // Value at this level (e.g., "27" or "Cancelada")
+	label: string; // Display label
+	level: number; // Depth level (0 = first column dimension)
+	expanded?: boolean; // Whether children are visible
+	children?: PivotColumnHeaderNode[]; // Sub-columns
+}
+
+/**
  * Enhanced pivot result with hierarchical structure
  */
 export interface PivotEnrichedResult {
@@ -161,6 +196,8 @@ export interface PivotEnrichedResult {
 	};
 	data: PivotHierarchyNode[];
 	grandTotals: PivotGrandTotals;
+	/** Hierarchical column headers - each level represents a column dimension */
+	columnHeaders?: PivotColumnHeaderNode[];
 	total?: number;
 }
 

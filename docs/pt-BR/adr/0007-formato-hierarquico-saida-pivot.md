@@ -17,8 +17,9 @@ Implementaremos um formato de resposta JSON hierárquico que inclui:
 2. **Estrutura de dados hierárquica**: Arrays `children` aninhados para hierarquias de linhas multi-nível
 3. **Subtotais por nível**: Cada nível da hierarquia inclui seus próprios `totals`
 4. **Totais gerais**: Agregados no nível raiz para todos os dados
-5. **Formatação de lookup**: Formatação automática de valores de lookup usando `formatPattern` baseado em `descriptionFields`
-6. **Labels de campos aninhados**: Labels concatenados para campos aninhados (ex: "Grupo > Nome" para `_user.group.name`)
+5. **Cabeçalhos de coluna hierárquicos**: Estrutura aninhada para colunas multi-nível (similar ao ExtJS mz-pivot axisTop)
+6. **Formatação de lookup**: Formatação automática de valores de lookup usando `formatPattern` baseado em `descriptionFields`
+7. **Labels de campos aninhados**: Labels concatenados para campos aninhados (ex: "Grupo > Nome" para `_user.group.name`)
 
 ## Estrutura
 
@@ -51,7 +52,23 @@ Implementaremos um formato de resposta JSON hierárquico que inclui:
   "grandTotals": {
     "cells": {...},
     "totals": {...}
-  }
+  },
+  "columnHeaders": [
+    {
+      "key": "27",
+      "value": "27",
+      "label": "27",
+      "level": 0,
+      "children": [
+        {
+          "key": "27|Cancelada",
+          "value": "Cancelada",
+          "label": "Cancelada",
+          "level": 1
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -95,9 +112,11 @@ Implementaremos um formato de resposta JSON hierárquico que inclui:
 ### Processamento Python
 - Recebe config enriquecido com metadados
 - Aplica `formatPattern` a valores de lookup
-- Constrói estrutura hierárquica com arrays `children`
+- Constrói estrutura hierárquica com arrays `children` para linhas
+- Constrói estrutura hierárquica de árvore de colunas para colunas multi-nível
 - Calcula subtotais em cada nível
 - Calcula totais gerais
+- Retorna cabeçalhos de coluna em formato hierárquico (similar ao ExtJS mz-pivot axisTop)
 
 ### Suporte Multilíngue
 - Extrai header `Accept-Language` da requisição

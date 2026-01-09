@@ -124,7 +124,9 @@ export function parseConditionValue(condition, field, { user }, subTermPart) {
 			return successReturn(new Date());
 	}
 
-	if (/^\$user\..+/.test(condition.value)) {
+	// Check if value is a string before calling .replace()
+	// For "between" operator, value is an object {greater_or_equals: "...", less_or_equals: "..."}
+	if (isString(condition.value) && /^\$user\..+/.test(condition.value)) {
 		return successReturn(get(user, condition.value.replace('$user.', '')));
 	}
 

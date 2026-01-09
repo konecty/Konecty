@@ -99,17 +99,18 @@ export default async function findStream({
 		// Also uses secondary nodes (or secondaryPreferred fallback) to maintain consistency
 		if (getTotal === true) {
 			tracingSpan?.addEvent(`Calculating total with ${readPreference} read preference`);
-			collection
-				.countDocuments(query, {
+			// For pivot tables, we need the total synchronously, so await it
+			try {
+				const total = await collection.countDocuments(query, {
 					readPreference,
 					maxTimeMS: STREAM_MAX_TIME_MS,
-				})
-				.then(total => {
-					result.total = total;
-				})
-				.catch((error: Error) => {
-					logger.error(error, 'Error calculating total');
 				});
+				result.total = total;
+				logger.info(`[findStream] Total documents matching query: ${total}`);
+			} catch (error) {
+				logger.error(error as Error, 'Error calculating total');
+				// Don't fail the request if total calculation fails
+			}
 		}
 
 		return result;

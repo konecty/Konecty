@@ -114,11 +114,20 @@ export function parseRPCResponse(firstLine: string): RPCResponse {
 }
 
 /**
+ * Result type from Python pivot processing
+ */
+export interface PivotPythonResult {
+	data: unknown[];
+	grandTotals: Record<string, unknown>;
+	columnHeaders?: unknown[]; // Hierarchical column headers
+}
+
+/**
  * Collects hierarchical result data from Python stdout (after RPC response)
  * @param pythonProcess Python child process
- * @returns Promise resolving to hierarchical result object with data and grandTotals
+ * @returns Promise resolving to hierarchical result object with data, grandTotals, and columnHeaders
  */
-export async function collectResultFromPython(pythonProcess: ChildProcess): Promise<{ data: unknown[]; grandTotals: Record<string, unknown> }> {
+export async function collectResultFromPython(pythonProcess: ChildProcess): Promise<PivotPythonResult> {
 	return new Promise((resolve, reject) => {
 		if (pythonProcess.stdout == null) {
 			reject(new Error('Python process stdout is not available'));
@@ -127,7 +136,7 @@ export async function collectResultFromPython(pythonProcess: ChildProcess): Prom
 
 		let buffer = '';
 		let rpcResponseRead = false;
-		let resultData: { data: unknown[]; grandTotals: Record<string, unknown> } | null = null;
+		let resultData: PivotPythonResult | null = null;
 
 		pythonProcess.stdout.on('data', (data: Buffer) => {
 			buffer += data.toString();
@@ -161,7 +170,7 @@ export async function collectResultFromPython(pythonProcess: ChildProcess): Prom
 				// Second line is the hierarchical result (single JSON object)
 				if (resultData == null) {
 					try {
-						resultData = JSON.parse(line) as { data: unknown[]; grandTotals: Record<string, unknown> };
+						resultData = JSON.parse(line) as PivotPythonResult;
 					} catch (error) {
 						logger.warn({ line, error }, 'Failed to parse result as JSON');
 					}
@@ -173,7 +182,7 @@ export async function collectResultFromPython(pythonProcess: ChildProcess): Prom
 			// Process any remaining buffer
 			if (buffer.trim() && resultData == null) {
 				try {
-					resultData = JSON.parse(buffer.trim()) as { data: unknown[]; grandTotals: Record<string, unknown> };
+					resultData = JSON.parse(buffer.trim()) as PivotPythonResult;
 				} catch (error) {
 					logger.warn({ buffer, error }, 'Failed to parse final buffer as JSON');
 				}
