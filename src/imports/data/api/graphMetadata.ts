@@ -3,6 +3,14 @@ import { getLabel } from '@imports/meta/metaUtils';
 import type { GraphConfig, GraphAxis } from '@imports/types/graph';
 
 /**
+ * Graph Metadata Enrichment
+ * Enriquece configuração de gráfico com labels traduzidos e gera títulos instrutivos
+ * 
+ * ADR-0016: Processamento no backend (graphConfig é processado e enriquecido no backend)
+ * ADR-0008: Suporte a múltiplos idiomas (pt_BR, en) via parâmetro lang
+ */
+
+/**
  * Resolver metadados de um campo (label, type, etc) concatenando labels dos campos pais
  * Similar ao resolveFieldMeta do pivotMetadata, mas simplificado para graph
  */

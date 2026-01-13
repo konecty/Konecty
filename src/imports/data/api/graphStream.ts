@@ -12,6 +12,14 @@ import { NEWLINE_SEPARATOR } from './streamConstants';
 import { enrichGraphConfig } from './graphMetadata';
 
 /**
+ * Graph Stream Processing
+ * Processa requisições de gráficos: extrai campos, popula lookups, envia para Python
+ * 
+ * ADR-0016: Processamento no backend (agregação e geração de SVG no Python)
+ * ADR-0008: Mensagens de erro traduzidas (backend retorna em inglês, frontend traduz)
+ */
+
+/**
  * Extract all fields needed from graph config for MongoDB projection
  * Expands lookup fields, address, money, personName, phone, email fields
  * Following the same pattern as extractFieldsFromPivotConfig
