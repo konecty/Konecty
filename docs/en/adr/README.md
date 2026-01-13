@@ -12,6 +12,7 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0006: Python Integration for Pivot Table Generation](./0006-python-integration-for-pivot-tables.md)
 - [ADR-0007: Hierarchical Pivot Output Format](./0007-hierarchical-pivot-output-format.md)
 - [ADR-0008: Graph Endpoint with Polars and Pandas](./0008-graph-endpoint-with-polars-pandas.md)
+- [ADR-0009: Centralized Error Messages Structure in Backend](./0009-error-messages-structure-backend.md)
 
 ## Format
 

@@ -17,16 +17,23 @@ export const successReturn = function (value) {
 
 /**
  *
- * @param {string | string[] | {message: string}[]} messages
+ * @param {string | string[] | {message: string, code?: string | number, details?: string}[]} messages
  * @returns {{success: false, errors: import("../types/result").KonectyError[]}}
  */
 export const errorReturn = function (messages) {
 	if (Array.isArray(messages)) {
 		return {
 			success: false,
-			errors: messages.map(message => ({
-				message: message.message ?? message,
-			})),
+			errors: messages.map(message => {
+				if (typeof message === 'string') {
+					return { message };
+				}
+				return {
+					message: message.message ?? message,
+					code: message.code,
+					details: message.details,
+				};
+			}),
 		};
 	}
 	return {

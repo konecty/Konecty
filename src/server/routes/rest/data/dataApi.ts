@@ -15,6 +15,8 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { errorReturn } from '@imports/utils/return';
 import { KonFilter } from '@imports/model/Filter';
+import { getGraphErrorMessage } from '@imports/utils/graphErrors';
+import type { KonectyError } from '@imports/types/result';
 
 import exportData from '@imports/data/export';
 
@@ -405,18 +407,30 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		tracingSpan.setAttribute('document', req.params.document);
 
 		// Parse filter from query string
+		const { logger } = await import('@imports/utils/logger');
+		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
+
 		let parsedFilter: KonFilter | undefined;
 		if (req.query.filter != null) {
 			if (isString(req.query.filter)) {
 				try {
 					parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsedFilter)}`);
 				} catch (error) {
+					logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
 					tracingSpan.end();
-					return errorReturn(`[${req.params.document}] Invalid filter format: ${(error as Error).message}`);
+					const errorMsg = getGraphErrorMessage('GRAPH_FILTER_INVALID', {
+						document: req.params.document,
+						details: (error as Error).message
+					});
+					return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
 				}
 			} else if (isObject(req.query.filter)) {
 				parsedFilter = req.query.filter as KonFilter;
+				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsedFilter)}`);
 			}
+		} else {
+			logger.warn(`[dataApi] No filter in query string!`);
 		}
 
 		// Parse graphConfig from query string
@@ -427,7 +441,11 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					graphConfig = JSON.parse(req.query.graphConfig.replace(/\+/g, ' ')) as GraphConfig;
 				} catch (error) {
 					tracingSpan.end();
-					return errorReturn(`[${req.params.document}] Invalid graphConfig format: ${(error as Error).message}`);
+					const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_INVALID', {
+						document: req.params.document,
+						details: (error as Error).message
+					});
+					return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
 				}
 			} else if (isObject(req.query.graphConfig)) {
 				graphConfig = req.query.graphConfig as GraphConfig;
@@ -437,13 +455,49 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		// Validate graphConfig
 		if (graphConfig == null) {
 			tracingSpan.end();
-			return errorReturn(`[${req.params.document}] graphConfig is required`);
+			const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_MISSING');
+			return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
 		}
 
 		if (!graphConfig.type) {
 			tracingSpan.end();
-			return errorReturn(`[${req.params.document}] graphConfig.type is required`);
+			const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_TYPE_MISSING');
+			return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
 		}
+
+		// Validate graphConfig based on type
+		if (['bar', 'line', 'scatter', 'timeSeries'].includes(graphConfig.type)) {
+			if (!graphConfig.xAxis || !graphConfig.xAxis.field) {
+				tracingSpan.end();
+				const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_AXIS_X_MISSING', { type: graphConfig.type });
+				return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
+			}
+			if (!graphConfig.yAxis || !graphConfig.yAxis.field) {
+				tracingSpan.end();
+				const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_AXIS_Y_MISSING', { type: graphConfig.type });
+				return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
+			}
+		} else if (graphConfig.type === 'pie') {
+			if (!graphConfig.categoryField && (!graphConfig.yAxis || !graphConfig.yAxis.field)) {
+				tracingSpan.end();
+				const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_CATEGORY_MISSING');
+				return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
+			}
+		} else if (graphConfig.type === 'histogram') {
+			if (!graphConfig.yAxis || !graphConfig.yAxis.field) {
+				tracingSpan.end();
+				const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_AXIS_Y_MISSING', { type: 'histogram' });
+				return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
+			}
+		}
+
+		// Extract language from Accept-Language header (default to pt_BR)
+		const acceptLanguage = req.headers['accept-language'] || 'pt-BR';
+		const lang = acceptLanguage.startsWith('pt') ? 'pt_BR' : 'en';
+
+		// Set default limit to 100k if not provided (similar to pivot)
+		const GRAPH_MAX_RECORDS = parseInt(process.env.GRAPH_MAX_RECORDS ?? '100000', 10);
+		const limit = req.query.limit ? parseInt(req.query.limit, 10) : GRAPH_MAX_RECORDS;
 
 		// Call graphStream
 		const result = await graphStream({
@@ -454,10 +508,11 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			fields: req.query.fields,
 			filter: parsedFilter,
 			sort: req.query.sort,
-			limit: req.query.limit,
+			limit: String(limit),
 			start: req.query.start,
 			withDetailFields: req.query.withDetailFields,
 			graphConfig,
+			lang,
 			tracingSpan,
 		});
 

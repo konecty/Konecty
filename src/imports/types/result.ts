@@ -1,6 +1,7 @@
 export type KonectyError = {
 	message: string;
-	code?: number;
+	code?: string | number;
+	details?: string;
 };
 
 export type KonectyResult<T = unknown> = KonectyResultSuccess<T> | KonectyResultError;

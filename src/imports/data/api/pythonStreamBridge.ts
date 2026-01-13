@@ -246,9 +246,9 @@ export function createGraphPythonProcess(scriptPath?: string): ChildProcess {
  * Sends an RPC request to Python process for graph generation
  * @param pythonProcess Python child process
  * @param method RPC method name
- * @param params RPC parameters (must contain config: GraphConfig)
+ * @param params RPC parameters (must contain config: GraphConfig, optional lang)
  */
-export async function sendGraphRPCRequest(pythonProcess: ChildProcess, method: string, params: { config: unknown }): Promise<void> {
+export async function sendGraphRPCRequest(pythonProcess: ChildProcess, method: string, params: { config: unknown; lang?: string }): Promise<void> {
 	return new Promise((resolve, reject) => {
 		if (pythonProcess.stdin == null) {
 			reject(new Error('Python process stdin is not available'));
