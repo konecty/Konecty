@@ -129,6 +129,7 @@ export function enrichGraphConfig(document: string, graphConfig: GraphConfig, la
 	}
 
 	const enrichedConfig: GraphConfig = { ...graphConfig };
+	const isEnglish = lang.toLowerCase().startsWith('en');
 
 	// Enriquecer xAxis com label traduzido
 	if (graphConfig.xAxis?.field) {
@@ -167,6 +168,31 @@ export function enrichGraphConfig(document: string, graphConfig: GraphConfig, la
 	if (graphConfig.categoryField) {
 		const fieldMeta = resolveFieldMeta(document, graphConfig.categoryField, lang);
 		enrichedConfig.categoryFieldLabel = fieldMeta.label;
+	}
+
+	// Generate a more instructive default title when missing/empty.
+	// Preserve user-provided titles (non-empty).
+	if (!graphConfig.title || graphConfig.title.trim().length === 0) {
+		// Try to get a module label from meta (prefer plural if available)
+		const moduleLabel =
+			(meta as any)?.plural?.[lang] ??
+			(meta as any)?.plural?.pt_BR ??
+			(meta as any)?.label?.[lang] ??
+			(meta as any)?.label?.pt_BR ??
+			(meta as any)?.name ??
+			document;
+
+		const groupingLabel =
+			(enrichedConfig.type === 'pie' ? enrichedConfig.categoryFieldLabel : enrichedConfig.xAxis?.label) ||
+			enrichedConfig.xAxis?.label ||
+			enrichedConfig.categoryFieldLabel ||
+			undefined;
+
+		if (groupingLabel) {
+			enrichedConfig.title = `${moduleLabel}${isEnglish ? ' by ' : ' por '}${groupingLabel}`;
+		} else {
+			enrichedConfig.title = String(moduleLabel);
+		}
 	}
 
 	// Substituir nomes técnicos de campos no título pelos labels traduzidos
