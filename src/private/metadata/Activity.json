@@ -1367,7 +1367,21 @@
 				"aggregator": "count",
 				"name": "code"
 			}
-		]
+		],
+		"graph": {
+			"type": "pie",
+			"categoryField": "status",
+			"yAxis": {
+				"field": "code"
+			},
+			"aggregation": "count",
+			"title": {
+				"en": "Activities by Status",
+				"pt_BR": "Atividades por Situação"
+			},
+			"showLegend": true,
+			"showGrid": false
+		}
 	},
 	{
 		"_id": "Activity:view:Default",
