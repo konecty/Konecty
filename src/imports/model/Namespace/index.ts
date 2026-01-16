@@ -68,6 +68,8 @@ export const NamespaceSchema = z
 		otpRequestCollectionVersion: z.number().int().nonnegative().optional(),
 
 		loginPageVariant: z.string().optional(),
+
+		addressSource: z.enum(['DNE', 'Google']).optional(),
 	})
 	.catchall(z.string());
 
