@@ -199,9 +199,10 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 	});
 
 	/* Set a random password for User and send by email */
-	fastify.post<{ Body: string[] }>('/rest/auth/setRandomPasswordAndSendByEmail', async function (req, reply) {
+	fastify.post<{ Body: string[]; Querystring: { isNewUser?: string } }>('/rest/auth/setRandomPasswordAndSendByEmail', async function (req, reply) {
 		const authTokenId = getAuthTokenIdFromReq(req);
-		const result = await setRandomPasswordAndSendByEmail({ authTokenId, userIds: req.body, host: req.headers['host'] });
+		const isNewUser = req.query.isNewUser === 'true';
+		const result = await setRandomPasswordAndSendByEmail({ authTokenId, userIds: req.body, host: req.headers['host'], isNewUser });
 		return reply.send(result);
 	});
 
