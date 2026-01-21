@@ -6,6 +6,7 @@ import { StatusCodes } from 'http-status-codes';
 
 import get from 'lodash/get';
 import has from 'lodash/has';
+import isObject from 'lodash/isObject';
 import isString from 'lodash/isString';
 
 import { saveGeoLocation } from '@imports/auth/geolocation';
@@ -199,12 +200,27 @@ export const authApi: FastifyPluginCallback = (fastify, _, done) => {
 	});
 
 	/* Set a random password for User and send by email */
-	fastify.post<{ Body: string[]; Querystring: { isNewUser?: string } }>('/rest/auth/setRandomPasswordAndSendByEmail', async function (req, reply) {
-		const authTokenId = getAuthTokenIdFromReq(req);
-		const isNewUser = req.query.isNewUser === 'true';
-		const result = await setRandomPasswordAndSendByEmail({ authTokenId, userIds: req.body, host: req.headers['host'], isNewUser });
-		return reply.send(result);
-	});
+	fastify.post<{ Body: string[] | { userIds: string[]; isNewUser?: boolean }; Querystring: { isNewUser?: string } }>(
+		'/rest/auth/setRandomPasswordAndSendByEmail',
+		async function (req, reply) {
+			const authTokenId = getAuthTokenIdFromReq(req);
+
+			// Suporta isNewUser via query string OU via body
+			let isNewUser = req.query.isNewUser === 'true';
+			let userIds = req.body;
+
+			// Se body é um objeto com userIds e isNewUser, processa
+			if (isObject(req.body) && !Array.isArray(req.body) && req.body.userIds) {
+				userIds = req.body.userIds;
+				if (req.body.isNewUser === true) {
+					isNewUser = true;
+				}
+			}
+
+			const result = await setRandomPasswordAndSendByEmail({ authTokenId, userIds, host: req.headers['host'], isNewUser });
+			return reply.send(result);
+		},
+	);
 
 	done();
 };
