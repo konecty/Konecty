@@ -52,9 +52,20 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 
 	fastify.get<{
 		Params: { document: string };
-		Querystring: { displayName: string; displayType: string; fields: string; filter: string; sort: string; limit: string; start: string; withDetailFields: string };
+		Querystring: {
+			displayName: string;
+			displayType: string;
+			fields: string;
+			filter: string;
+			sort: string;
+			limit: string;
+			start: string;
+			withDetailFields: string;
+			includeTotal?: string;
+		};
 	}>('/rest/stream/:document/findStream', async (req, reply) => {
 		const parsedFilter = parseFilterFromQuery(req.query.filter);
+		const includeTotal = req.query.includeTotal === '1' || req.query.includeTotal === 'true';
 
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET stream/findStream');
@@ -70,7 +81,7 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 			limit: req.query.limit,
 			start: req.query.start,
 			withDetailFields: req.query.withDetailFields,
-			getTotal: true,
+			getTotal: includeTotal,
 			transformDatesToString: true,
 			tracingSpan,
 		});
@@ -81,8 +92,46 @@ export const streamApi: FastifyPluginCallback = (fastify, _, done) => {
 			return reply.status(500).send(result);
 		}
 
+		if (includeTotal && typeof result.total === 'number') {
+			reply.header('X-Total-Count', String(result.total));
+		}
+
 		// Send stream directly - Fastify will handle HTTP streaming
 		return reply.type('application/json').send(result.data);
+	});
+
+	fastify.get<{
+		Params: { document: string };
+		Querystring: { displayName?: string; displayType?: string; filter?: string; sort?: string; withDetailFields?: string };
+	}>('/rest/stream/:document/count', async (req, reply) => {
+		const parsedFilter = parseFilterFromQuery(req.query.filter);
+
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('GET stream/count');
+
+		// Reuse existing find() to compute total. We keep payload minimal with limit=1 and fields=_id.
+		const result = await find({
+			authTokenId: getAuthTokenIdFromReq(req),
+			document: req.params.document,
+			displayName: req.query.displayName,
+			displayType: req.query.displayType,
+			fields: '_id',
+			filter: parsedFilter,
+			sort: req.query.sort,
+			limit: 1,
+			start: 0,
+			withDetailFields: req.query.withDetailFields,
+			getTotal: true,
+			tracingSpan,
+		} as any);
+
+		tracingSpan.end();
+
+		if (result.success === false) {
+			return reply.status(500).send(result);
+		}
+
+		return reply.send({ success: true, total: (result as any).total ?? 0 });
 	});
 
 	done();
