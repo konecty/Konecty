@@ -72,7 +72,7 @@
 		"jsdom": "^22.1.0",
 		"json-rules-engine": "^7.3.0",
 		"jsonwebtoken": "^9.0.2",
-		"lodash": "^4.17.21",
+		"lodash": "^4.17.23",
 		"lower-case": "^2.0.2",
 		"luxon": "^3.4.3",
 		"mime-types": "^2.1.35",
