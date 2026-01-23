@@ -246,6 +246,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		
 		tracingSpan.setAttributes({ document, listName, type });
 
+		// Get export threshold from namespace config (default: 1000)
+		const DEFAULT_EXPORT_LARGE_THRESHOLD = 1000;
+		const threshold = MetaObject.Namespace?.export?.largeThreshold ?? DEFAULT_EXPORT_LARGE_THRESHOLD;
+
 		const access = getAccessFor(document, user);
 		if (access === false || access.isReadable !== true) {
 			const durationMs = Date.now() - exportStartTime;
@@ -259,7 +263,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 				type: (type === 'xls' ? 'xlsx' : type) as 'csv' | 'xlsx' | 'json',
 				start: req.query.start ?? 0,
 				limit: req.query.limit ?? 0,
-				threshold: 1000,
+				threshold: DEFAULT_EXPORT_LARGE_THRESHOLD,
 				status: 'denied',
 				reason: 'No read permission on document',
 				durationMs,
@@ -289,7 +293,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 				type: normalizedType as 'csv' | 'xlsx' | 'json',
 				start: req.query.start ?? 0,
 				limit: req.query.limit ?? 0,
-				threshold: 1000,
+				threshold: DEFAULT_EXPORT_LARGE_THRESHOLD,
 				status: 'error',
 				reason: `Invalid export type: ${normalizedType}`,
 				durationMs,
@@ -310,10 +314,9 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const isAdmin = user.admin === true;
 		if (!isAdmin) {
 			// For xlsx, also check xls (legacy format) in metadata
-			let exportPermissions = access?.export?.[normalizedType];
-			if (normalizedType === 'xlsx' && !exportPermissions) {
-				exportPermissions = access?.export?.xls;
-			}
+			const exportPermissions = normalizedType === 'xlsx' && !access?.export?.[normalizedType]
+				? access?.export?.xls
+				: access?.export?.[normalizedType];
 			
 			if (!exportPermissions || !exportPermissions.includes('list')) {
 				const durationMs = Date.now() - exportStartTime;
@@ -327,9 +330,9 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					type: normalizedType as 'csv' | 'xlsx' | 'json',
 					start: req.query.start ?? 0,
 					limit: req.query.limit ?? 0,
-					threshold: 1000,
-					status: 'denied',
-					reason: `No export permission for type: ${normalizedType}`,
+				threshold: DEFAULT_EXPORT_LARGE_THRESHOLD,
+				status: 'denied',
+				reason: `No export permission for type: ${normalizedType}`,
 					durationMs,
 				});
 				
@@ -344,20 +347,15 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			}
 		}
 
-		// Get export threshold from namespace config (default: 1000)
-		const DEFAULT_EXPORT_LARGE_THRESHOLD = 1000;
-		const threshold = MetaObject.Namespace?.export?.largeThreshold ?? DEFAULT_EXPORT_LARGE_THRESHOLD;
-		
 		const requestLimit = req.query.limit ? Number(req.query.limit) : threshold;
 
 		// Check if export is "large" and validate exportLarge permission
 		// Admin users bypass permission checks
 		if (requestLimit > threshold && !isAdmin) {
 			// For xlsx, also check xls (legacy format) in metadata
-			let exportLargePermissions = access?.exportLarge?.[normalizedType];
-			if (normalizedType === 'xlsx' && !exportLargePermissions) {
-				exportLargePermissions = access?.exportLarge?.xls;
-			}
+			const exportLargePermissions = normalizedType === 'xlsx' && !access?.exportLarge?.[normalizedType]
+				? access?.exportLarge?.xls
+				: access?.exportLarge?.[normalizedType];
 			
 			if (!exportLargePermissions || !exportLargePermissions.includes('list')) {
 				const durationMs = Date.now() - exportStartTime;
@@ -527,39 +525,53 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const { logger } = await import('@imports/utils/logger');
 		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
 		
-		let parsedFilter: KonFilter | undefined;
-		if (req.query.filter != null) {
-			if (isString(req.query.filter)) {
-				try {
-					parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsedFilter)}`);
-				} catch (error) {
-					logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
-				}
-			} else if (isObject(req.query.filter)) {
-				parsedFilter = req.query.filter as KonFilter;
-				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsedFilter)}`);
-			}
-		} else {
-			logger.warn(`[dataApi] No filter in query string!`);
-		}
+		const parsedFilter: KonFilter | undefined = req.query.filter != null
+			? isString(req.query.filter)
+				? (() => {
+						try {
+							const parsed = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+							logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsed)}`);
+							return parsed;
+						} catch (error) {
+							logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
+							return undefined;
+						}
+					})()
+				: isObject(req.query.filter)
+					? (() => {
+							const parsed = req.query.filter as KonFilter;
+							logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsed)}`);
+							return parsed;
+						})()
+					: undefined
+			: (() => {
+					logger.warn(`[dataApi] No filter in query string!`);
+					return undefined;
+				})();
 
 		// Parse pivotConfig from query string
-		let pivotConfig: PivotConfig | undefined;
-		if (req.query.pivotConfig != null) {
-			if (isString(req.query.pivotConfig)) {
-				try {
-					pivotConfig = JSON.parse(req.query.pivotConfig.replace(/\+/g, ' ')) as PivotConfig;
-				} catch (error) {
-					tracingSpan.end();
-					return errorReturn(`[${req.params.document}] Invalid pivotConfig format: ${(error as Error).message}`);
-				}
-			} else if (isObject(req.query.pivotConfig)) {
-				pivotConfig = req.query.pivotConfig as PivotConfig;
-			}
-		}
+		let pivotConfigParseError: string | undefined;
+		const pivotConfig: PivotConfig | undefined = req.query.pivotConfig != null
+			? isString(req.query.pivotConfig)
+				? (() => {
+						try {
+							return JSON.parse(req.query.pivotConfig.replace(/\+/g, ' ')) as PivotConfig;
+						} catch (error) {
+							pivotConfigParseError = `[${req.params.document}] Invalid pivotConfig format: ${(error as Error).message}`;
+							return undefined;
+						}
+					})()
+				: isObject(req.query.pivotConfig)
+					? (req.query.pivotConfig as PivotConfig)
+					: undefined
+			: undefined;
 
 		// Validate pivotConfig
+		if (pivotConfigParseError != null) {
+			tracingSpan.end();
+			return errorReturn(pivotConfigParseError);
+		}
+
 		if (pivotConfig == null) {
 			tracingSpan.end();
 			return errorReturn(`[${req.params.document}] pivotConfig is required`);
@@ -625,12 +637,16 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const { logger } = await import('@imports/utils/logger');
 		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
 
-		let parsedFilter: KonFilter | undefined;
-		if (req.query.filter != null) {
+		const parseFilterResult = (() => {
+			if (req.query.filter == null) {
+				logger.warn(`[dataApi] No filter in query string!`);
+				return { success: true as const, data: undefined as KonFilter | undefined };
+			}
 			if (isString(req.query.filter)) {
 				try {
-					parsedFilter = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsedFilter)}`);
+					const parsed = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsed)}`);
+					return { success: true as const, data: parsed };
 				} catch (error) {
 					logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
 					tracingSpan.end();
@@ -638,34 +654,55 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 						document: req.params.document,
 						details: (error as Error).message
 					});
-					return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
+					return {
+						success: false as const,
+						error: errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]),
+					};
 				}
-			} else if (isObject(req.query.filter)) {
-				parsedFilter = req.query.filter as KonFilter;
-				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsedFilter)}`);
 			}
-		} else {
-			logger.warn(`[dataApi] No filter in query string!`);
+			if (isObject(req.query.filter)) {
+				const parsed = req.query.filter as KonFilter;
+				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsed)}`);
+				return { success: true as const, data: parsed };
+			}
+			return { success: true as const, data: undefined as KonFilter | undefined };
+		})();
+
+		if (!parseFilterResult.success) {
+			return parseFilterResult.error;
 		}
+		const parsedFilter = parseFilterResult.data;
 
 		// Parse graphConfig from query string
-		let graphConfig: GraphConfig | undefined;
-		if (req.query.graphConfig != null) {
+		const parseGraphConfigResult = (() => {
+			if (req.query.graphConfig == null) {
+				return { success: true as const, data: undefined as GraphConfig | undefined };
+			}
 			if (isString(req.query.graphConfig)) {
 				try {
-					graphConfig = JSON.parse(req.query.graphConfig.replace(/\+/g, ' ')) as GraphConfig;
+					return { success: true as const, data: JSON.parse(req.query.graphConfig.replace(/\+/g, ' ')) as GraphConfig };
 				} catch (error) {
 					tracingSpan.end();
 					const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_INVALID', {
 						document: req.params.document,
 						details: (error as Error).message
 					});
-					return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
+					return {
+						success: false as const,
+						error: errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]),
+					};
 				}
-			} else if (isObject(req.query.graphConfig)) {
-				graphConfig = req.query.graphConfig as GraphConfig;
 			}
+			if (isObject(req.query.graphConfig)) {
+				return { success: true as const, data: req.query.graphConfig as GraphConfig };
+			}
+			return { success: true as const, data: undefined as GraphConfig | undefined };
+		})();
+
+		if (!parseGraphConfigResult.success) {
+			return parseGraphConfigResult.error;
 		}
+		const graphConfig = parseGraphConfigResult.data;
 
 		// Validate graphConfig
 		if (graphConfig == null) {
