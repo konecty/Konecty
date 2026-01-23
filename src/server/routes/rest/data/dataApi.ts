@@ -16,6 +16,7 @@ import { getAccessFor } from '@imports/utils/accessUtils';
 import { errorReturn } from '@imports/utils/return';
 import { KonFilter } from '@imports/model/Filter';
 import { getGraphErrorMessage } from '@imports/utils/graphErrors';
+import { MetaObject } from '@imports/model/MetaObject';
 import type { KonectyError } from '@imports/types/result';
 
 import exportData from '@imports/data/export';
@@ -217,7 +218,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	});
 
 	fastify.get<{
-		Params: { document: string; listName: string; type: 'csv' | 'xls' };
+		Params: { document: string; listName: string; type: 'csv' | 'xls' | 'xlsx' | 'json' };
 		Querystring: {
 			filter: string | object;
 			sort?: string;
@@ -230,6 +231,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	}>('/rest/data/:document/list/:listName/:type', async (req, reply) => {
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET export');
+		const exportStartTime = Date.now();
 
 		const authTokenId = getAuthTokenIdFromReq(req);
 		const userResult = await getUserSafe(authTokenId);
@@ -241,44 +243,257 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		const user = userResult.data;
 		const { document, listName, type } = req.params;
-		tracingSpan.setAttributes(req.params);
+		
+		tracingSpan.setAttributes({ document, listName, type });
 
 		const access = getAccessFor(document, user);
 		if (access === false || access.isReadable !== true) {
-			return errorReturn(`[${document}] You don't have permission to read records`);
+			const durationMs = Date.now() - exportStartTime;
+			tracingSpan.end();
+			
+			// Log denied access
+			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+			await logExportToAccessLog(authTokenId, {
+				document,
+				listName,
+				type: (type === 'xls' ? 'xlsx' : type) as 'csv' | 'xlsx' | 'json',
+				start: req.query.start ?? 0,
+				limit: req.query.limit ?? 0,
+				threshold: 1000,
+				status: 'denied',
+				reason: 'No read permission on document',
+				durationMs,
+			});
+			
+			const errorResult = errorReturn([
+				{
+					code: 'export.error.readPermission.denied',
+					message: "You don't have permission to view this data",
+					details: JSON.stringify({ document }),
+				},
+			]);
+			return reply.status(403).type('application/json').send(errorResult);
 		}
 
-		if (['csv', 'xls'].includes(type) === false) {
-			return errorReturn(`[${document}] Value for type must be one of [csv, xls]`);
+		// Validate export type and normalize xls -> xlsx
+		const normalizedType = type === 'xls' ? 'xlsx' : type;
+		if (!['csv', 'xlsx', 'json'].includes(normalizedType)) {
+			const durationMs = Date.now() - exportStartTime;
+			tracingSpan.end();
+			
+			// Log invalid type
+			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+			await logExportToAccessLog(authTokenId, {
+				document,
+				listName,
+				type: normalizedType as 'csv' | 'xlsx' | 'json',
+				start: req.query.start ?? 0,
+				limit: req.query.limit ?? 0,
+				threshold: 1000,
+				status: 'error',
+				reason: `Invalid export type: ${normalizedType}`,
+				durationMs,
+			});
+			
+			const errorResult = errorReturn([
+				{
+					code: 'export.error.invalidType',
+					message: 'Export format not supported. Use CSV, Excel, or JSON',
+					details: JSON.stringify({ document, type: normalizedType, supported: ['csv', 'xlsx', 'json'] }),
+				},
+			]);
+			return reply.status(400).type('application/json').send(errorResult);
 		}
 
-		const result = await exportData({
-			document,
-			listName,
-			type,
-			user,
-			filter: req.query.filter,
-			sort: req.query.sort,
-			fields: req.query.fields,
-			displayName: req.query.displayName,
-			displayType: req.query.displayType,
-			limit: req.query.limit,
-			start: req.query.start,
-			tracingSpan,
-		});
-
-		if (result.success === false) {
-			return result;
+		// Check export permissions
+		// Admin users bypass permission checks
+		const isAdmin = user.admin === true;
+		if (!isAdmin) {
+			// For xlsx, also check xls (legacy format) in metadata
+			let exportPermissions = access?.export?.[normalizedType];
+			if (normalizedType === 'xlsx' && !exportPermissions) {
+				exportPermissions = access?.export?.xls;
+			}
+			
+			if (!exportPermissions || !exportPermissions.includes('list')) {
+				const durationMs = Date.now() - exportStartTime;
+				tracingSpan.end();
+				
+				// Log denied export permission
+				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+				await logExportToAccessLog(authTokenId, {
+					document,
+					listName,
+					type: normalizedType as 'csv' | 'xlsx' | 'json',
+					start: req.query.start ?? 0,
+					limit: req.query.limit ?? 0,
+					threshold: 1000,
+					status: 'denied',
+					reason: `No export permission for type: ${normalizedType}`,
+					durationMs,
+				});
+				
+				const errorResult = errorReturn([
+					{
+						code: 'export.error.permission.denied',
+						message: "You don't have permission to export in this format",
+						details: JSON.stringify({ document, type: normalizedType }),
+					},
+				]);
+				return reply.status(403).type('application/json').send(errorResult);
+			}
 		}
 
-		tracingSpan.addEvent('Setting headers', result.data.httpHeaders);
-		for (const [header, value] of Object.entries(result.data.httpHeaders)) {
-			reply.header(header, value);
+		// Get export threshold from namespace config (default: 1000)
+		const DEFAULT_EXPORT_LARGE_THRESHOLD = 1000;
+		const threshold = MetaObject.Namespace?.export?.largeThreshold ?? DEFAULT_EXPORT_LARGE_THRESHOLD;
+		
+		const requestLimit = req.query.limit ? Number(req.query.limit) : threshold;
+
+		// Check if export is "large" and validate exportLarge permission
+		// Admin users bypass permission checks
+		if (requestLimit > threshold && !isAdmin) {
+			// For xlsx, also check xls (legacy format) in metadata
+			let exportLargePermissions = access?.exportLarge?.[normalizedType];
+			if (normalizedType === 'xlsx' && !exportLargePermissions) {
+				exportLargePermissions = access?.exportLarge?.xls;
+			}
+			
+			if (!exportLargePermissions || !exportLargePermissions.includes('list')) {
+				const durationMs = Date.now() - exportStartTime;
+				tracingSpan.end();
+				
+				// Log denied large export
+				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+				await logExportToAccessLog(authTokenId, {
+					document,
+					listName,
+					type: normalizedType as 'csv' | 'xlsx' | 'json',
+					start: req.query.start ?? 0,
+					limit: requestLimit,
+					threshold,
+					status: 'denied',
+					reason: `No exportLarge permission for type: ${normalizedType} (limit ${requestLimit} exceeds threshold ${threshold})`,
+					durationMs,
+				});
+				
+				const errorResult = errorReturn([
+					{
+						code: 'export.error.largeDataset.denied',
+						message: `This export contains more than ${threshold} records. Contact your administrator to export large datasets`,
+						details: JSON.stringify({ document, threshold, limit: requestLimit }),
+					},
+				]);
+				return reply.status(403).type('application/json').send(errorResult);
+			}
 		}
 
-		tracingSpan.end();
+		// Parse filter from query string
+		const parsedFilter: KonFilter | undefined = req.query.filter != null
+			? isString(req.query.filter)
+				? (() => {
+						try {
+							return JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+						} catch {
+							return undefined;
+						}
+					})()
+				: isObject(req.query.filter)
+					? (req.query.filter as KonFilter)
+					: undefined
+			: undefined;
 
-		return reply.send(result.data.content);
+		try {
+			const result = await exportData({
+				document,
+				listName,
+				type: normalizedType as 'csv' | 'xlsx' | 'json',
+				user,
+				filter: req.query.filter,
+				sort: req.query.sort,
+				fields: req.query.fields,
+				displayName: req.query.displayName,
+				displayType: req.query.displayType,
+				limit: requestLimit,
+				start: req.query.start,
+				tracingSpan,
+			});
+
+			if (result.success === false) {
+				const durationMs = Date.now() - exportStartTime;
+				
+				// Log export error
+				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+				await logExportToAccessLog(authTokenId, {
+					document,
+					listName,
+					type: normalizedType as 'csv' | 'xlsx' | 'json',
+					start: req.query.start ?? 0,
+					limit: requestLimit,
+					threshold,
+					status: 'error',
+					reason: result.errors?.[0]?.message ?? 'Unknown export error',
+					durationMs,
+				});
+				
+				tracingSpan.end();
+				return reply.status(500).type('application/json').send(result);
+			}
+
+			const durationMs = Date.now() - exportStartTime;
+			
+			// Log successful export
+			const { logExportToAccessLog, sanitizeFieldsForLog } = await import('@imports/audit/accessLogExport');
+			await logExportToAccessLog(authTokenId, {
+				document,
+				listName,
+				type: normalizedType as 'csv' | 'xlsx' | 'json',
+				start: req.query.start ?? 0,
+				limit: requestLimit,
+				threshold,
+				fields: sanitizeFieldsForLog(req.query.fields),
+				filter: parsedFilter, // Pass the parsed filter object
+				sort: req.query.sort,
+				status: 'success',
+				durationMs,
+			});
+
+			tracingSpan.addEvent('Setting headers', result.data.httpHeaders);
+			Object.entries(result.data.httpHeaders).forEach(([header, value]) => {
+				reply.header(header, value);
+			});
+
+			tracingSpan.end();
+
+			return reply.send(result.data.content);
+		} catch (error) {
+			const durationMs = Date.now() - exportStartTime;
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			
+			// Log export exception
+			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
+			await logExportToAccessLog(authTokenId, {
+				document,
+				listName,
+				type: normalizedType as 'csv' | 'xlsx' | 'json',
+				start: req.query.start ?? 0,
+				limit: requestLimit,
+				threshold,
+				status: 'error',
+				reason: `Exception: ${errorMsg}`,
+				durationMs,
+			});
+			
+			tracingSpan.end();
+			const errorResult = errorReturn([
+				{
+					code: 'export.error.generic',
+					message: 'Unable to export data. Please try again or contact support',
+					details: JSON.stringify({ document, error: errorMsg }),
+				},
+			]);
+			return reply.status(500).type('application/json').send(errorResult);
+		}
 	});
 
 	fastify.get<{
