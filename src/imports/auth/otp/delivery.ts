@@ -163,7 +163,7 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 	}
 
 	const expirationMinutes = MetaObject.Namespace.otpConfig?.expirationMinutes ?? OTP_DEFAULT_EXPIRATION_MINUTES;
-	const templateId = MetaObject.Namespace.otpConfig?.emailTemplateId ?? 'email/otp.html';
+	const templateId = MetaObject.Namespace.otpConfig?.emailTemplateId ?? 'email/otp.hbs';
 	const emailFrom = MetaObject.Namespace.otpConfig?.emailFrom ?? 'Konecty <support@konecty.com>';
 
 	// Fetch user name for email template

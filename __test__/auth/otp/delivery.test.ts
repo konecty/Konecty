@@ -42,7 +42,7 @@ describe('OTP Delivery Service', () => {
 		(MetaObject.Namespace as any) = {
 			otpConfig: {
 				expirationMinutes: 5,
-				emailTemplateId: 'email/otp.html',
+				emailTemplateId: 'email/otp.hbs',
 				emailFrom: 'test@example.com',
 				whatsapp: {
 					accessToken: 'test-token',
@@ -102,7 +102,7 @@ describe('OTP Delivery Service', () => {
 
 			(MetaObject.Namespace as any).otpConfig = {
 				expirationMinutes: 5,
-				emailTemplateId: 'email/otp.html',
+				emailTemplateId: 'email/otp.hbs',
 				emailFrom: 'test@example.com',
 				whatsapp: {
 					accessToken: 'test-token',
