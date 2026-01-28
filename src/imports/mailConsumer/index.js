@@ -151,8 +151,11 @@ async function send(record) {
 		return sendEmail(record);
 	}
 
-	if (/.+\.hbs$/.test(record.template) === true) {
-		set(record, 'template', `email/${record.template}`);
+	if (/.+\.(hbs|html)$/.test(record.template) === true) {
+		// Only add 'email/' prefix if template doesn't already start with it
+		if (!record.template.startsWith('email/')) {
+			set(record, 'template', `email/${record.template}`);
+		}
 	} else {
 		const templateRecord = await MetaObject.Collections['Template'].findOne({ _id: record.template }, { projection: { subject: 1 } });
 
@@ -217,7 +220,7 @@ async function consume() {
 		} catch (error) {
 			logger.error(error, `📧 Email error ${JSON.stringify(query, null, 2)}`);
 
-			return errorReturn("message" in error ? error.message : "Unknown error");
+			return errorReturn('message' in error ? error.message : 'Unknown error');
 		}
 	});
 

@@ -20,7 +20,7 @@ export async function renderTemplate(templateId, data) {
 		return DateTime.fromISO(str).toFormat(format);
 	});
 
-	if (/.+\.hbs$/.test(templateId) === true) {
+	if (/.+\.(hbs|html)$/.test(templateId) === true) {
 		const templateFullPath = path.join(templatePath(), templateId);
 		const templateContent = await readFile(templateFullPath, 'utf-8');
 		const template = LocalHandlebars.compile(templateContent);
