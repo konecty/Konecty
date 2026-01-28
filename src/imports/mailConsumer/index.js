@@ -152,7 +152,10 @@ async function send(record) {
 	}
 
 	if (/.+\.(hbs|html)$/.test(record.template) === true) {
-		set(record, 'template', `email/${record.template}`);
+		// Only add 'email/' prefix if template doesn't already start with it
+		if (!record.template.startsWith('email/')) {
+			set(record, 'template', `email/${record.template}`);
+		}
 	} else {
 		const templateRecord = await MetaObject.Collections['Template'].findOne({ _id: record.template }, { projection: { subject: 1 } });
 

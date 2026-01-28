@@ -7,18 +7,13 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - name: get latest release with tag
-              id: latestrelease
-              run: |
-                  TAG_NAME=$(curl -s https://api.github.com/repos/Konecty/Konecty/releases/latest | jq '.tag_name' | sed 's/\"//g')
-                  echo RELEASE_TAG=$TAG_NAME >> $GITHUB_OUTPUT
             - name: confirm release tag
               run: |
-                  echo ${{ steps.latestrelease.outputs.RELEASE_TAG }}
+                  echo "Building tag: ${{ github.ref_name }}"
             - name: Checkout
               uses: actions/checkout@v4
               with:
-                  ref: ${{ steps.latestrelease.outputs.RELEASE_TAG }}
+                  ref: ${{ github.ref_name }}
             - name: Setup NodeJS
               uses: actions/setup-node@v4
               with:
