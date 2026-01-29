@@ -53,6 +53,11 @@ export const NamespaceSchema = z
 						accessToken: z.string(),
 						phoneNumberId: z.string(),
 						businessAccountId: z.string().optional(),
+						/**
+						 * Template name (not the numeric ID).
+						 * This should be the approved template name from Meta Business Manager.
+						 * Example: "otp_verification" (not "751059698056406")
+						 */
 						templateId: z.string(),
 						apiUrlTemplate: z.string().optional(),
 						languageCode: z.string().optional(),
