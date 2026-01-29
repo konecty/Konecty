@@ -1,12 +1,11 @@
 import get from 'lodash/get';
-import { randomId } from '@imports/utils/random';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
-import { DataDocument } from '@imports/types/data';
 import { logger } from '@imports/utils/logger';
 import queueManager from '@imports/queue/QueueManager';
 import { sendOtpViaWhatsApp, WhatsAppConfig } from './whatsapp';
 import { OTP_DEFAULT_EXPIRATION_MINUTES } from '../../consts';
+import { create } from '@imports/data/data';
 
 export interface DeliveryResult {
 	success: boolean;
@@ -166,11 +165,17 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 	const templateId = MetaObject.Namespace.otpConfig?.emailTemplateId ?? 'email/otp.hbs';
 	const emailFrom = MetaObject.Namespace.otpConfig?.emailFrom ?? 'Konecty <support@konecty.com>';
 
-	// Fetch user name for email template
-	const user = (await MetaObject.Collections.User.findOne({ _id: userId }, { projection: { name: 1 } })) as Pick<User, 'name'> | null;
+	// Fetch user for contextUser and email template
+	const user = (await MetaObject.Collections.User.findOne({ _id: userId }, { projection: { _id: 1, name: 1 } })) as Pick<User, '_id' | 'name'> | null;
+
+	if (user == null) {
+		return {
+			success: false,
+			error: 'User not found',
+		};
+	}
 
 	const messageData = {
-		_id: randomId(),
 		from: emailFrom,
 		to: emailAddress,
 		subject: '[Konecty] Código de Verificação OTP',
@@ -178,21 +183,33 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 		status: 'Send',
 		template: templateId,
 		discard: true,
-		_createdAt: new Date(),
-		_updatedAt: new Date(),
+		_user: [{ _id: userId }],
 		data: {
 			otpCode,
 			...(phoneNumber != null && { phoneNumber }),
 			...(emailAddress != null && { email: emailAddress }),
 			expirationMinutes,
 			expiresAt: expiresAt.toISOString(),
-			name: user?.name,
+			name: user.name,
 		},
 	};
 
 	try {
-		await MetaObject.Collections.Message.insertOne(messageData as DataDocument);
-		return { success: true, method: 'email' };
+		// Use data.create() instead of insertOne() to trigger events
+		const result = await create({
+			document: 'Message',
+			data: messageData,
+			contextUser: user as User,
+		} as any);
+
+		if (result.success) {
+			return { success: true, method: 'email' };
+		}
+
+		return {
+			success: false,
+			error: Array.isArray(result.errors) ? result.errors.join(', ') : 'Failed to create message',
+		};
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via email');
 		return {
