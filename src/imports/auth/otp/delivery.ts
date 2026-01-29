@@ -6,6 +6,8 @@ import queueManager from '@imports/queue/QueueManager';
 import { sendOtpViaWhatsApp, WhatsAppConfig } from './whatsapp';
 import { OTP_DEFAULT_EXPIRATION_MINUTES } from '../../consts';
 import { create } from '@imports/data/data';
+import { renderTemplate } from '@imports/template';
+import { randomId } from '@imports/utils/random';
 
 export interface DeliveryResult {
 	success: boolean;
@@ -175,23 +177,42 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 		};
 	}
 
+	// Prepare template data
+	const templateData = {
+		otpCode,
+		...(phoneNumber != null && { phoneNumber }),
+		...(emailAddress != null && { email: emailAddress }),
+		expirationMinutes,
+		expiresAt: expiresAt.toISOString(),
+		name: user.name,
+	};
+
+	// Process template to generate body before creating message
+	// This is required because email-service doesn't process templates
+	let emailBody: string;
+	const emailSubject = '[Konecty] Código de Verificação OTP';
+
+	try {
+		const messageId = randomId();
+		emailBody = await renderTemplate(templateId, { message: { _id: messageId }, ...templateData });
+	} catch (error) {
+		logger.error({ template: templateId, error: (error as Error).message }, 'Error rendering OTP email template');
+		return {
+			success: false,
+			error: `Failed to render email template: ${(error as Error).message}`,
+		};
+	}
+
 	const messageData = {
 		from: emailFrom,
 		to: emailAddress,
-		subject: '[Konecty] Código de Verificação OTP',
+		subject: emailSubject,
 		type: 'Email',
 		status: 'Send',
-		template: templateId,
+		body: emailBody,
 		discard: true,
 		_user: [{ _id: userId }],
-		data: {
-			otpCode,
-			...(phoneNumber != null && { phoneNumber }),
-			...(emailAddress != null && { email: emailAddress }),
-			expirationMinutes,
-			expiresAt: expiresAt.toISOString(),
-			name: user.name,
-		},
+		data: templateData,
 	};
 
 	try {
