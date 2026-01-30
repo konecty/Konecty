@@ -97,22 +97,42 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 	}
 
 	// Validate required fields
-
-	if (field.isRequired === true && (value == null || (typeof value === 'string' && size(value) === 0))) {
-		return errorReturn(`Field ${fieldName} is required`);
+	// For list fields, also check if array is empty
+	if (field.isRequired === true) {
+		if (field.isList === true) {
+			// For list fields, check if array is empty or null
+			// If isRequired is true, minItems should be at least 1
+			if (value == null || !isArray(value) || value.length === 0) {
+				return errorReturn(`Field ${fieldName} is required`);
+			}
+		} else {
+			// For non-list fields, check if null or empty string
+			if (value == null || (typeof value === 'string' && size(value) === 0)) {
+				return errorReturn(`Field ${fieldName} is required`);
+			}
+		}
 	}
 
 	// Validate List fields
 	if (field.isList === true) {
-		if (field.maxElements && field.maxElements > 0) {
-			if (!isArray(value) || value.length > field.maxElements) {
-				return errorReturn(`Value for field ${fieldName} must be array with the maximum of ${field.maxElements} item(s)`);
+		// Support both minItems (from JSON schema) and minElements (legacy)
+		let minElements = field.minElements || field.minItems || 0;
+		const maxElements = field.maxElements || field.maxItems || 0;
+
+		// If field is required but minItems is 0, enforce at least 1 item
+		if (field.isRequired === true && minElements === 0) {
+			minElements = 1;
+		}
+
+		if (maxElements > 0) {
+			if (!isArray(value) || value.length > maxElements) {
+				return errorReturn(`Value for field ${fieldName} must be array with the maximum of ${maxElements} item(s)`);
 			}
 		}
 
-		if (field.minElements && field.minElements > 0) {
-			if (!isArray(value) || value.length < field.minElements) {
-				return errorReturn(`Value for field ${fieldName} must be array with the minimum of ${field.minElements} item(s)`);
+		if (minElements > 0) {
+			if (!isArray(value) || value.length < minElements) {
+				return errorReturn(`Value for field ${fieldName} must be array with the minimum of ${minElements} item(s)`);
 			}
 		}
 
@@ -524,22 +544,43 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				};
 
 			case 'email':
-				const emailObjectResult = mustBeObject(value);
-				if (emailObjectResult.success === false) {
-					return emailObjectResult;
+				// Accept both string and object formats
+				let emailAddress = null;
+				let emailType = null;
+
+				if (isString(value)) {
+					// If value is a string, convert to object format
+					emailAddress = value.trim();
+					emailType = null;
+				} else if (isObject(value)) {
+					// If value is already an object, use it
+					emailAddress = value.address;
+					emailType = value.type;
+				} else {
+					return {
+						success: false,
+						errors: [
+							{
+								message: `Value for field ${fieldName} must be a string or an object with 'address' property`,
+							},
+						],
+					};
 				}
-				const addressResult = mustBeString(value.address, `${fieldName}.address`);
+
+				// Validate address is a string
+				const addressResult = mustBeString(emailAddress, `${fieldName}.address`);
 				if (addressResult.success === false) {
 					return addressResult;
 				}
 
-				const typeResult = mustBeStringOrNull(value.type, `${fieldName}.type`);
-
+				// Validate type if provided
+				const typeResult = mustBeStringOrNull(emailType, `${fieldName}.type`);
 				if (typeResult.success === false) {
 					return typeResult;
 				}
 
-				if (regexUtils.email.test(value.address) === false) {
+				// Validate email format
+				if (regexUtils.email.test(emailAddress) === false) {
 					return {
 						success: false,
 						errors: [
@@ -550,11 +591,18 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					};
 				}
 
-				value.address = value.address.toLowerCase();
+				// Return normalized object format
+				const normalizedEmail = {
+					address: emailAddress.toLowerCase(),
+				};
+
+				if (emailType != null) {
+					normalizedEmail.type = emailType;
+				}
 
 				return {
 					success: true,
-					data: value,
+					data: normalizedEmail,
 				};
 
 			case 'url':
