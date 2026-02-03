@@ -60,7 +60,7 @@
 		"crypto-js": "^4.1.1",
 		"ejson": "^2.2.3",
 		"excel4node": "^1.8.2",
-		"fastify": "^4.23.2",
+		"fastify": "^5.7.3",
 		"fastify-plugin": "^4.5.1",
 		"flat": "^5.0.2",
 		"geolib": "^3.3.4",
