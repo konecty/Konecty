@@ -5,6 +5,7 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
 import { getNextUserFromQueue } from '@imports/meta/getNextUserFromQueue';
 import { recalculateQueue } from '@imports/meta/recalculateQueue';
+import type { KonectyResultError, KonectyResultSuccess } from '@imports/types/result';
 import { db } from '@imports/database';
 
 describe('getNextUserFromQueue', () => {
@@ -36,13 +37,13 @@ describe('getNextUserFromQueue', () => {
 
 		// Limpar dados de teste
 		await db.collection('data.QueueUser').deleteMany({ 'queue._id': queueId });
-		await db.collection('data.Queue').deleteMany({ _id: queueId });
+		await db.collection('data.Queue').deleteMany({ _id: queueId } as any);
 	});
 
 	afterEach(async () => {
 		// Limpar dados de teste
 		await db.collection('data.QueueUser').deleteMany({ 'queue._id': queueId });
-		await db.collection('data.Queue').deleteMany({ _id: queueId });
+		await db.collection('data.Queue').deleteMany({ _id: queueId } as any);
 	});
 
 	describe('Caso 3: QueueUser sem campo next', () => {
@@ -63,14 +64,14 @@ describe('getNextUserFromQueue', () => {
 				_createdAt: new Date(),
 			};
 
-			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2]);
+			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2] as any[]);
 
 			// Act
 			const result = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert
 			expect(result.success).to.be.true;
-			expect(result.data).to.not.be.undefined;
+			expect((result as KonectyResultSuccess).data).to.not.be.undefined;
 
 			// Verificar que a lista foi recalculada
 			const allUsers = await db.collection('data.QueueUser').find({ 'queue._id': queueId }).toArray();
@@ -100,14 +101,14 @@ describe('getNextUserFromQueue', () => {
 				_createdAt: new Date(),
 			};
 
-			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2]);
+			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2] as any[]);
 
 			// Act
 			const result = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert
 			expect(result.success).to.be.true;
-			expect(result.data).to.not.be.undefined;
+			expect((result as KonectyResultSuccess).data).to.not.be.undefined;
 
 			// Verificar que um usuário tem isCurrent: true
 			const currentUser = await db.collection('data.QueueUser').findOne({
@@ -131,14 +132,14 @@ describe('getNextUserFromQueue', () => {
 				_createdAt: new Date(),
 			};
 
-			await db.collection('data.QueueUser').insertOne(queueUser1);
+			await db.collection('data.QueueUser').insertOne(queueUser1 as any);
 
 			// Act
 			const result = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert
 			expect(result.success).to.be.true;
-			expect(result.data).to.not.be.undefined;
+			expect((result as KonectyResultSuccess).data).to.not.be.undefined;
 
 			// Verificar que a lista foi recalculada
 			const allUsers = await db.collection('data.QueueUser').find({ 'queue._id': queueId }).toArray();
@@ -181,41 +182,41 @@ describe('getNextUserFromQueue', () => {
 				_createdAt: new Date(),
 			};
 
-			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2, queueUser3]);
+			await db.collection('data.QueueUser').insertMany([queueUser1, queueUser2, queueUser3] as any[]);
 
 			// Act - Primeira chamada
 			const result1 = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert - Deve retornar user1 (o atual)
 			expect(result1.success).to.be.true;
-			expect(result1.data).to.not.be.undefined;
+			expect((result1 as KonectyResultSuccess).data).to.not.be.undefined;
 			// Verificar que retornou o QueueUser correto (user1)
-			const returnedUser1 = result1.data as any;
+			const returnedUser1 = (result1 as KonectyResultSuccess).data as any;
 			expect(returnedUser1.user?._id).to.be.equal('user1');
 
-			// Verificar que isCurrent foi movido para user2
-			const currentAfter1 = await db.collection('data.QueueUser').findOne({
-				'queue._id': queueId,
-				isCurrent: true,
-			});
-			expect(currentAfter1?._id).to.be.equal(user2Id);
+		// Verificar que isCurrent foi movido para user2
+		const currentAfter1 = await db.collection('data.QueueUser').findOne({
+			'queue._id': queueId,
+			isCurrent: true,
+		} as any);
+		expect(currentAfter1?._id).to.be.equal(user2Id);
 
 			// Act - Segunda chamada
 			const result2 = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert - Deve retornar user2
 			expect(result2.success).to.be.true;
-			expect(result2.data).to.not.be.undefined;
+			expect((result2 as KonectyResultSuccess).data).to.not.be.undefined;
 			// Verificar que retornou o QueueUser correto (user2)
-			const returnedUser2 = result2.data as any;
+			const returnedUser2 = (result2 as KonectyResultSuccess).data as any;
 			expect(returnedUser2.user?._id).to.be.equal('user2');
 
-			// Verificar que isCurrent foi movido para user3
-			const currentAfter2 = await db.collection('data.QueueUser').findOne({
-				'queue._id': queueId,
-				isCurrent: true,
-			});
-			expect(currentAfter2?._id).to.be.equal(user3Id);
+		// Verificar que isCurrent foi movido para user3
+		const currentAfter2 = await db.collection('data.QueueUser').findOne({
+			'queue._id': queueId,
+			isCurrent: true,
+		} as any);
+		expect(currentAfter2?._id).to.be.equal(user3Id);
 		});
 	});
 
@@ -234,14 +235,14 @@ describe('getNextUserFromQueue', () => {
 				],
 			};
 
-			await db.collection('data.Queue').insertOne(queue);
+			await db.collection('data.Queue').insertOne(queue as any);
 
 			// Act
 			const result = await getNextUserFromQueue(queueId, testUser);
 
 			// Assert
 			expect(result.success).to.be.true;
-			expect(result.data).to.not.be.undefined;
+			expect((result as KonectyResultSuccess).data).to.not.be.undefined;
 		});
 	});
 });
@@ -304,14 +305,14 @@ describe('recalculateQueue', () => {
 			},
 		];
 
-		await db.collection('data.QueueUser').insertMany(queueUsers);
+		await db.collection('data.QueueUser').insertMany(queueUsers as any[]);
 
 		// Act
 		const result = await recalculateQueue(queueId, testUser);
 
 		// Assert
 		expect(result.success).to.be.true;
-		expect(result.data?.totalUsers).to.be.equal(3);
+		expect((result as KonectyResultSuccess<{ totalUsers: number }>).data?.totalUsers).to.be.equal(3);
 
 		// Verificar que todos têm next
 		const allUsers = await db.collection('data.QueueUser').find({ 'queue._id': queueId }).toArray();
@@ -362,7 +363,7 @@ describe('recalculateQueue', () => {
 			},
 		];
 
-		await db.collection('data.QueueUser').insertMany(queueUsers);
+		await db.collection('data.QueueUser').insertMany(queueUsers as any[]);
 
 		// Act
 		const result = await recalculateQueue(queueId, testUser);
@@ -371,9 +372,9 @@ describe('recalculateQueue', () => {
 		expect(result.success).to.be.true;
 
 		// Verificar que a sequência user1 -> user2 -> user3 foi preservada
-		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id });
-		const user2 = await db.collection('data.QueueUser').findOne({ _id: user2Id });
-		const user3 = await db.collection('data.QueueUser').findOne({ _id: user3Id });
+		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id } as any);
+		const user2 = await db.collection('data.QueueUser').findOne({ _id: user2Id } as any);
+		const user3 = await db.collection('data.QueueUser').findOne({ _id: user3Id } as any);
 
 		expect(user1?.next).to.be.equal(user2Id);
 		expect(user2?.next).to.be.equal(user3Id);
@@ -402,7 +403,7 @@ describe('recalculateQueue', () => {
 			},
 		];
 
-		await db.collection('data.QueueUser').insertMany(queueUsers);
+		await db.collection('data.QueueUser').insertMany(queueUsers as any[]);
 
 		// Act
 		const result = await recalculateQueue(queueId, testUser);
@@ -411,13 +412,13 @@ describe('recalculateQueue', () => {
 		expect(result.success).to.be.true;
 
 		// Verificar que user1 ainda tem isCurrent: true
-		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id });
+		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id } as any);
 		expect(user1?.isCurrent).to.be.true;
 
 		// Verificar que apenas um tem isCurrent
 		const usersWithCurrent = await db
 			.collection('data.QueueUser')
-			.find({ 'queue._id': queueId, isCurrent: true })
+			.find({ 'queue._id': queueId, isCurrent: true } as any)
 			.toArray();
 		expect(usersWithCurrent.length).to.be.equal(1);
 	});
@@ -442,7 +443,7 @@ describe('recalculateQueue', () => {
 			},
 		];
 
-		await db.collection('data.QueueUser').insertMany(queueUsers);
+		await db.collection('data.QueueUser').insertMany(queueUsers as any[]);
 
 		// Act
 		const result = await recalculateQueue(queueId, testUser);
@@ -451,13 +452,13 @@ describe('recalculateQueue', () => {
 		expect(result.success).to.be.true;
 
 		// Verificar que o primeiro (mais antigo) tem isCurrent: true
-		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id });
+		const user1 = await db.collection('data.QueueUser').findOne({ _id: user1Id } as any);
 		expect(user1?.isCurrent).to.be.true;
 
 		// Verificar que apenas um tem isCurrent
 		const usersWithCurrent = await db
 			.collection('data.QueueUser')
-			.find({ 'queue._id': queueId, isCurrent: true })
+			.find({ 'queue._id': queueId, isCurrent: true } as any)
 			.toArray();
 		expect(usersWithCurrent.length).to.be.equal(1);
 	});
@@ -468,7 +469,7 @@ describe('recalculateQueue', () => {
 
 		// Assert
 		expect(result.success).to.be.false;
-		expect(result.errors).to.not.be.undefined;
-		expect(result.errors?.[0]?.message).to.include('No QueueUsers found');
+		expect((result as KonectyResultError).errors).to.not.be.undefined;
+		expect((result as KonectyResultError).errors?.[0]?.message).to.include('No QueueUsers found');
 	});
 });

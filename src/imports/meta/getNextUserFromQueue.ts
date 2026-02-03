@@ -7,7 +7,7 @@ import { KonectyResult } from '@imports/types/result';
 import { recalculateQueue } from './recalculateQueue';
 
 interface QueueUser {
-	_id: string | unknown;
+	_id: string;
 	next?: string | null;
 	isCurrent?: boolean;
 	queue?: {
@@ -57,7 +57,7 @@ export async function getNextUserFromQueue(
 	queueStrId: string,
 	user: User,
 ): Promise<KonectyResult<QueueUser>> {
-	const collection = MetaObject.Collections['QueueUser'] as Collection<QueueUser> | undefined;
+	const collection = MetaObject.Collections['QueueUser'] as unknown as Collection<QueueUser> | undefined;
 
 	if (collection == null) {
 		return {
@@ -111,7 +111,7 @@ export async function getNextUserFromQueue(
 
 		if (currentUser == null) {
 			// Fallback para Queue._user se não houver QueueUsers
-			const queueCollection = MetaObject.Collections['Queue'] as Collection<Queue> | undefined;
+			const queueCollection = MetaObject.Collections['Queue'] as unknown as Collection<Queue> | undefined;
 			const queueOwner = queueCollection ? await queueCollection.findOne({ _id: queueStrId }) : null;
 
 			if (queueOwner == null) {

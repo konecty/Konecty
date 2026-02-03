@@ -5,7 +5,7 @@ import { User } from '@imports/model/User';
 import { KonectyResult } from '@imports/types/result';
 
 interface QueueUser {
-	_id: string | unknown;
+	_id: string;
 	next?: string | null;
 	isCurrent?: boolean;
 	queue?: {
@@ -44,7 +44,7 @@ export async function recalculateQueue(
 	queueStrId: string,
 	user: User,
 ): Promise<KonectyResult<RecalculateQueueResult>> {
-	const collection = MetaObject.Collections['QueueUser'] as Collection<QueueUser> | undefined;
+	const collection = MetaObject.Collections['QueueUser'] as unknown as Collection<QueueUser> | undefined;
 
 	if (collection == null) {
 		return {
@@ -154,6 +154,10 @@ export async function recalculateQueue(
 		const currentId = String(current._id);
 		const nextId = String(next._id);
 
+		const existingCurrentInList =
+			existingCurrent && finalList.some(fl => String(fl._id) === String(existingCurrent._id));
+		const isCurrent = existingCurrentInList ? String(existingCurrent._id) === currentId : i === 0;
+
 		const update: UpdateFilter<QueueUser> = {
 			$set: {
 				next: nextId,
@@ -163,50 +167,14 @@ export async function recalculateQueue(
 					name: user.name,
 					group: user.group,
 				},
+				isCurrent,
 			},
 		};
-
-		// Definir `isCurrent: true` apenas no primeiro se não houver nenhum marcado válido
-		if (i === 0) {
-			if (!existingCurrent) {
-				update.$set!.isCurrent = true;
-			} else {
-				// Se já existe um current válido, manter ele e definir este como false
-				update.$set!.isCurrent = false;
-			}
-		} else {
-			// Garantir que outros não tenham isCurrent
-			update.$set!.isCurrent = false;
-		}
 
 		updates.push({
 			query: { _id: currentId },
 			update,
 		});
-	}
-
-	// Se havia um current válido, garantir que ele mantenha isCurrent: true
-	if (existingCurrent) {
-		const existingCurrentId = String(existingCurrent._id);
-		const existingIndex = finalList.findIndex(fl => String(fl._id) === existingCurrentId);
-		if (existingIndex >= 0) {
-			// Atualizar o update do usuário existente para manter isCurrent: true
-			const existingUpdate = updates.find(u => String(u.query._id) === existingCurrentId);
-			if (existingUpdate) {
-				existingUpdate.update.$set!.isCurrent = true;
-			}
-		} else {
-			// Se o existingCurrent não está na lista final, definir o primeiro como current
-			if (updates.length > 0) {
-				updates[0].update.$set!.isCurrent = true;
-			}
-		}
-	} else {
-		// Se não havia current válido, garantir que o primeiro tenha isCurrent: true
-		// (já foi definido no loop acima, mas garantimos aqui também)
-		if (updates.length > 0 && updates[0].update.$set!.isCurrent !== true) {
-			updates[0].update.$set!.isCurrent = true;
-		}
 	}
 
 	// Executar todas as atualizações

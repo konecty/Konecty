@@ -1,6 +1,3 @@
-// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect, beforeEach } from 'bun:test';
-
 // Import rate limiting logic (we'll need to export it from the otp.ts file)
 // For now, testing the concept
 

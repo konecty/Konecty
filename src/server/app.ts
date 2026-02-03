@@ -33,6 +33,7 @@ const app = async () => {
 		await serverStart();
 	} catch (error) {
 		logger.error(error, 'Error while starting up');
+		throw error;
 	}
 };
 
