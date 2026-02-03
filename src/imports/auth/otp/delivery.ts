@@ -205,7 +205,7 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 /**
  * Main delivery function
  * If email is provided, sends directly via email only (no WhatsApp)
- * If phoneNumber is provided, tries: WhatsApp → RabbitMQ (no email fallback)
+ * If phoneNumber is provided, tries: WhatsApp → RabbitMQ → Email (fallback)
  */
 export async function sendOtp(phoneNumber: string | undefined, email: string | undefined, otpCode: string, userId: string, expiresAt: Date): Promise<DeliveryResult> {
 	if (email != null) {
@@ -214,7 +214,6 @@ export async function sendOtp(phoneNumber: string | undefined, email: string | u
 	}
 
 	if (phoneNumber != null) {
-		// Requested by phone - try WhatsApp → RabbitMQ (no email fallback)
 		const whatsappResult = await sendViaWhatsApp(phoneNumber, otpCode);
 		if (whatsappResult.success) {
 			return whatsappResult;
@@ -227,10 +226,19 @@ export async function sendOtp(phoneNumber: string | undefined, email: string | u
 			return rabbitmqResult;
 		}
 
-		logger.error(`All phone delivery methods failed. WhatsApp: ${whatsappResult.error}, RabbitMQ: ${rabbitmqResult.error}`);
+		logger.warn(`RabbitMQ delivery failed: ${rabbitmqResult.error}. Trying Email...`);
+
+		const emailResult = await sendViaEmail(phoneNumber, otpCode, userId, expiresAt);
+		if (emailResult.success) {
+			return emailResult;
+		}
+
+		logger.error(
+			`All delivery methods failed. WhatsApp: ${whatsappResult.error}, RabbitMQ: ${rabbitmqResult.error}, Email: ${emailResult.error}`,
+		);
 		return {
 			success: false,
-			error: `Failed to send OTP via phone: WhatsApp (${whatsappResult.error}), RabbitMQ (${rabbitmqResult.error})`,
+			error: `All delivery methods failed. WhatsApp (${whatsappResult.error}), RabbitMQ (${rabbitmqResult.error}), Email (${emailResult.error})`,
 		};
 	}
 

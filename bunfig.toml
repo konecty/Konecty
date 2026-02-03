@@ -1,0 +1,8 @@
+# Bun configuration. See https://bun.sh/docs/runtime/bunfig
+
+[test]
+# Preload: start MongoDB Memory Server and app before tests (same as Jest globalSetup).
+preload = ["./__test__/bunSetup.ts"]
+# Run Bun tests with: bun run test:bun (or bun test __test__ src)
+# This limits discovery to __test__ and src so dist/ is not included.
+# The build (babel) ignores *.test.* so dist/ does not contain test files.

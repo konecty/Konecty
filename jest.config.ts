@@ -25,7 +25,15 @@ const jestConfig: JestConfigWithTsJest = {
 	modulePaths: [compilerOptions.baseUrl],
 	moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/src' }),
 	watchPathIgnorePatterns: ['globalConfig'],
-	testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/build/', '/dist/'],
+	testPathIgnorePatterns: [
+		'/node_modules/',
+		'/coverage/',
+		'/build/',
+		'/dist/',
+		'<rootDir>/src/imports/auth/info/index.test.ts', // Uses bun:test mocks; run with bun test
+		'<rootDir>/__test__/auth/otp/delivery.test.ts', // Uses bun:test mock.module; run with bun test
+		'<rootDir>/__test__/menu/legacy/menuIntegration.test.ts', // Uses bun:test mock; run with bun test
+	],
 };
 
 export default jestConfig;

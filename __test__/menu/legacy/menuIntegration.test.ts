@@ -1,9 +1,9 @@
 // @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect, beforeEach, vi } from 'bun:test';
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 
 describe('menuFull Integration Tests', () => {
 	beforeEach(() => {
-		vi.restoreAllMocks();
+		mock.restore();
 	});
 
 	describe('menuSorter override functionality', () => {

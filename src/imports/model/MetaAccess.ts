@@ -35,8 +35,8 @@ export const MetaAccessSchema = z.object({
 	// New properties for granular menu control
 	hideListsFromMenu: z.array(z.string()).optional(),
 	hidePivotsFromMenu: z.array(z.string()).optional(),
-	// New property for menu sorting override
-	menuSorter: z.number().optional(),
+	// New property for menu sorting override (module name -> sort order)
+	menuSorter: z.record(z.string(), z.number()).optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;

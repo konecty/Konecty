@@ -1,29 +1,27 @@
-import { getUser } from '@imports/auth/getUser';
-import { MetaObject } from '@imports/model/MetaObject';
+import { describe, it, expect, mock } from 'bun:test';
 import { User } from '@imports/model/User';
-import { userInfo } from '.';
 
-const mockGetUser = getUser as jest.Mock;
-jest.mock('@imports/auth/getUser', () =>
-	Object.assign({}, jest.requireActual('@imports/auth/getUser'), {
-		getUser: jest.fn(),
-	}),
-);
+// Mock getUser and MetaObject before loading the module under test (Bun uses mock.module)
+const mockGetUser = mock();
+mock.module('@imports/auth/getUser', () => ({
+	getUser: mockGetUser,
+}));
 
-jest.mock('@imports/model/MetaObject', () =>
-	Object.assign({}, jest.requireActual('@imports/model/MetaObject'), {
-		MetaObject: {
-			Namespace: {
-				ns: 'namespace',
-				logoURL: 'logoURL',
-				siteURL: 'siteURL',
-				title: 'title',
-				watermark: 'watermark',
-				addressComplementValidation: 'addressComplementValidation',
-			},
-		},
-	}),
-);
+const mockNamespace = {
+	ns: 'namespace',
+	logoURL: 'logoURL',
+	siteURL: 'siteURL',
+	title: 'title',
+	watermark: 'watermark',
+	addressComplementValidation: 'addressComplementValidation',
+};
+mock.module('@imports/model/MetaObject', () => ({
+	MetaObject: { Namespace: mockNamespace },
+}));
+
+// Dynamic import so userInfo loads after mocks
+const { userInfo } = await import('.');
+const { MetaObject } = await import('@imports/model/MetaObject');
 
 describe('userInfo', () => {
 	it('should return user info', async () => {
