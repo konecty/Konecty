@@ -13,7 +13,6 @@
 		"lint": "eslint src/**/*.ts src/**/*.js --fix",
 		"prettier": "prettier --write src",
 		"test": "jest --detectOpenHandles --runInBand",
-		"test:bun": "bun test __test__ src",
 		"prepare": "husky install"
 	},
 	"engines": {
