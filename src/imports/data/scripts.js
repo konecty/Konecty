@@ -25,11 +25,17 @@ export async function runScriptBeforeValidation({ script, data, user, meta, extr
 			console,
 			extraData,
 			result: {},
+			Models: MetaObject.Collections,
 		};
 
 		const sandbox = createContext(contextData);
-		const scriptToRun = `result = (function(data, emails, user, console) { ${script} })(data, emails, user, console);`;
+		const scriptToRun = `result = (async function(data, emails, user, console, Models) { ${script} })(data, emails, user, console, Models);`;
 		await runInContext(scriptToRun, sandbox);
+		
+		// Aguarda a Promise se o script retornou uma
+		if (sandbox.result != null && sandbox.result.then != null) {
+			sandbox.result = await sandbox.result;
+		}
 
 		// Check if scriptBeforeValidation added any e-mails to be sent
 		// Accepted values:
