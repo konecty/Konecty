@@ -310,9 +310,9 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 			let userMessage = 'Falha no envio do código de verificação. Tente novamente mais tarde.';
 
 			if (errorMessage.includes('User does not have an email address') || errorMessage.includes('does not have an email')) {
-				userMessage = 'O email informado não está cadastrado no sistema';
+				userMessage = 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.';
 			} else if (errorMessage.includes('User not found')) {
-				userMessage = 'Email ou telefone não encontrado no sistema';
+				userMessage = 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.';
 			} else if (errorMessage.includes('WhatsApp configuration not available') || errorMessage.includes('WhatsApp')) {
 				userMessage = 'Serviço de WhatsApp temporariamente indisponível. Tente novamente mais tarde.';
 			} else if (errorMessage.includes('RabbitMQ') || errorMessage.includes('queue')) {
