@@ -227,7 +227,7 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 				return reply.status(StatusCodes.BAD_REQUEST).send({
 					success: false,
-					errors: [{ message: 'Este email não está cadastrado no sistema' }],
+					errors: [{ message: 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 				});
 			}
 		}
@@ -275,7 +275,7 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 				return reply.status(StatusCodes.BAD_REQUEST).send({
 					success: false,
-					errors: [{ message: 'Este telefone não está cadastrado no sistema' }],
+					errors: [{ message: 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 				});
 			}
 		}
