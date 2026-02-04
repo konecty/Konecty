@@ -188,7 +188,8 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			return reply.status(StatusCodes.NOT_FOUND).send({
 				success: false,
-				errors: [{ message: phoneNumber != null ? 'User not found for this phone number' : 'User not found for this email' }],
+				errors: [{ message: phoneNumber != null ? 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' : 
+					'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 			});
 		}
 
@@ -436,7 +437,8 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			return reply.status(StatusCodes.NOT_FOUND).send({
 				success: false,
-				errors: [{ message: phoneNumber != null ? 'User not found for this phone number' : 'User not found for this email' }],
+				errors: [{ message: phoneNumber != null ? 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' : 
+					'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 			});
 		}
 
