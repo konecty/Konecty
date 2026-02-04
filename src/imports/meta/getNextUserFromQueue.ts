@@ -3,7 +3,6 @@ import { Collection, Filter } from 'mongodb';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
 import { convertObjectIds } from '../utils/mongo';
-import { KonectyResult } from '@imports/types/result';
 import { recalculateQueue } from './recalculateQueue';
 
 interface QueueUser {
@@ -45,6 +44,15 @@ interface Queue {
 	}>;
 }
 
+interface GetNextUserFromQueueResult {
+	success: boolean;
+	errors?: Array<{
+		message: string;
+	}>;
+	data?: QueueUser;
+	user?: QueueUser;
+}
+
 /**
  * Obtém o próximo usuário da fila usando round-robin com lista encadeada.
  * Detecta automaticamente quebras na lista e recalcula quando necessário.
@@ -53,10 +61,7 @@ interface Queue {
  * @param user - Usuário que está executando a operação
  * @returns Próximo usuário da fila
  */
-export async function getNextUserFromQueue(
-	queueStrId: string,
-	user: User,
-): Promise<KonectyResult<QueueUser>> {
+export async function getNextUserFromQueue(queueStrId: string, user: User): Promise<GetNextUserFromQueueResult> {
 	const collection = MetaObject.Collections['QueueUser'] as unknown as Collection<QueueUser> | undefined;
 
 	if (collection == null) {
@@ -130,6 +135,7 @@ export async function getNextUserFromQueue(
 				return {
 					success: true,
 					data: userData as QueueUser,
+					user: userData as QueueUser,
 				};
 			}
 
@@ -253,5 +259,6 @@ export async function getNextUserFromQueue(
 	return {
 		success: true,
 		data: userData,
+		user: userData,
 	};
 }
