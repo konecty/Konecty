@@ -134,7 +134,7 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 			fingerprint?: string;
 		};
 	}>('/api/auth/request-otp', async function (req, reply) {
-		const { phoneNumber, email, geolocation, resolution, source, fingerprint } = req.body;
+		const { phoneNumber, email } = req.body;
 
 		// Validate that exactly one of phoneNumber or email is provided
 		if ((phoneNumber == null && email == null) || (phoneNumber != null && email != null)) {
@@ -188,8 +188,96 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			return reply.status(StatusCodes.NOT_FOUND).send({
 				success: false,
-				errors: [{ message: phoneNumber != null ? 'User not found for this phone number' : 'User not found for this email' }],
+				errors: [{ message: phoneNumber != null ? 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' : 
+					'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 			});
+		}
+
+		// Validate that the user has the requested email/phone registered
+		if (email != null) {
+			const userEmails = user.emails ?? [];
+			const hasEmail = userEmails.some(e => e.address?.toLowerCase() === email.toLowerCase());
+			if (!hasEmail) {
+				const userAgent = req.headers['user-agent'];
+				const ua = new UAParser(userAgent ?? 'API Call').getResult();
+				const ip = extractIp(req);
+
+				const accessLog = {
+					_id: randomId(),
+					_createdAt: new Date(),
+					_updatedAt: new Date(),
+					ip,
+					login: identifier,
+					browser: ua.browser.name,
+					browserVersion: ua.browser.version,
+					os: ua.os.name,
+					platform: ua.device.type,
+					reason: `Email [${email}] not registered in user account`,
+					__from: 'request-otp',
+					_user: [
+						{
+							_id: user._id?.toString() || `${user._id}`,
+							name: user.name,
+							group: user.group,
+						},
+					],
+				};
+
+				await MetaObject.Collections.AccessFailedLog.insertOne(accessLog as DataDocument);
+
+				return reply.status(StatusCodes.BAD_REQUEST).send({
+					success: false,
+					errors: [{ message: 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
+				});
+			}
+		}
+
+		if (phoneNumber != null) {
+			const userDoc = (await MetaObject.Collections.User.findOne({ _id: user._id }, { projection: { phone: 1 } })) as {
+				phone?: Array<{ phoneNumber?: string; countryCode?: number }>;
+			} | null;
+			const userPhones = userDoc?.phone ?? [];
+			const normalizedPhone = phoneNumber.replace(/[+\s]/g, '');
+			const hasPhone = userPhones.some((p: { phoneNumber?: string; countryCode?: number }) => {
+				if (p.phoneNumber == null) {
+					return false;
+				}
+				const phoneStr = `${p.countryCode ?? ''}${p.phoneNumber}`.replace(/[+\s]/g, '');
+				return phoneStr === normalizedPhone || p.phoneNumber.replace(/[+\s]/g, '') === normalizedPhone;
+			});
+			if (!hasPhone) {
+				const userAgent = req.headers['user-agent'];
+				const ua = new UAParser(userAgent ?? 'API Call').getResult();
+				const ip = extractIp(req);
+
+				const accessLog = {
+					_id: randomId(),
+					_createdAt: new Date(),
+					_updatedAt: new Date(),
+					ip,
+					login: identifier,
+					browser: ua.browser.name,
+					browserVersion: ua.browser.version,
+					os: ua.os.name,
+					platform: ua.device.type,
+					reason: `Phone number [${phoneNumber}] not registered in user account`,
+					__from: 'request-otp',
+					_user: [
+						{
+							_id: user._id?.toString() || `${user._id}`,
+							name: user.name,
+							group: user.group,
+						},
+					],
+				};
+
+				await MetaObject.Collections.AccessFailedLog.insertOne(accessLog as DataDocument);
+
+				return reply.status(StatusCodes.BAD_REQUEST).send({
+					success: false,
+					errors: [{ message: 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
+				});
+			}
 		}
 
 		// Create OTP request (rate limiting is handled inside createOtpRequest via database transaction)
@@ -216,9 +304,28 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		if (!deliveryResult.success) {
 			logger.error(`Failed to send OTP: ${deliveryResult.error}`);
+
+			// Map specific errors to user-friendly messages
+			const errorMessage = deliveryResult.error ?? 'Erro desconhecido ao enviar OTP';
+			let userMessage = 'Falha no envio do código de verificação. Tente novamente mais tarde.';
+
+			if (errorMessage.includes('User does not have an email address') || errorMessage.includes('does not have an email')) {
+				userMessage = 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.';
+			} else if (errorMessage.includes('User not found')) {
+				userMessage = 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.';
+			} else if (errorMessage.includes('WhatsApp configuration not available') || errorMessage.includes('WhatsApp')) {
+				userMessage = 'Serviço de WhatsApp temporariamente indisponível. Tente novamente mais tarde.';
+			} else if (errorMessage.includes('RabbitMQ') || errorMessage.includes('queue')) {
+				userMessage = 'Serviço de mensagens temporariamente indisponível. Tente novamente mais tarde.';
+			} else if (errorMessage.includes('Failed to render email template')) {
+				userMessage = 'Erro ao processar template de email. Entre em contato com o suporte.';
+			} else if (errorMessage.includes('Failed to create message')) {
+				userMessage = 'Erro ao criar mensagem. Tente novamente mais tarde.';
+			}
+
 			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({
 				success: false,
-				errors: [{ message: 'Failed to send OTP. Please try again later.' }],
+				errors: [{ message: userMessage }],
 			});
 		}
 
@@ -330,7 +437,8 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			return reply.status(StatusCodes.NOT_FOUND).send({
 				success: false,
-				errors: [{ message: phoneNumber != null ? 'User not found for this phone number' : 'User not found for this email' }],
+				errors: [{ message: phoneNumber != null ? 'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' : 
+					'Não foi possível enviar o código de verificação. Verifique seus dados de cadastro com o administrador.' }],
 			});
 		}
 
@@ -522,17 +630,14 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 		const hashStampedToken = generateStampedLoginToken();
 
 		// Update user
-		await MetaObject.Collections.User.updateOne(
-			{ _id: user._id },
-			{
-				$set: {
-					lastLogin: new Date(),
-				},
-				$push: {
-					'services.resume.loginTokens': hashStampedToken,
-				},
-			} as any,
-		);
+		await MetaObject.Collections.User.updateOne({ _id: user._id }, {
+			$set: {
+				lastLogin: new Date(),
+			},
+			$push: {
+				'services.resume.loginTokens': hashStampedToken,
+			},
+		} as any);
 
 		// Create AccessLog with all available data (same format as traditional login)
 		const userAgent = req.headers['user-agent'];
