@@ -11,7 +11,7 @@ describe('Outros', () => {
 			const password_SHA256 = createHash('sha256').update(plainPassword).digest('hex');
 
 			// Act
-			const response = await fetch('http://127.0.0.1:3000/rest/auth/login', {
+			const response = await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/auth/login`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

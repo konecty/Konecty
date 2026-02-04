@@ -22,6 +22,7 @@ export default async function globalSetup() {
 	process.env.DISABLE_SENDMAIL = 'true';
 	process.env.DISABLE_KONSISTENT = 'true';
 	process.env.DISABLE_REINDEX = 'true';
+	process.env.PORT = '0';
 	process.env.BASE_URL = 'http://127.0.0.1:3000/rest';
 	process.env.UI_URL = 'https://ui.konecty.com';
 	process.env.LOG_LEVEL = 'fatal';
