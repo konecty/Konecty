@@ -1,3 +1,5 @@
+import { TransactionOptions } from 'mongodb';
+
 export const BCRYPT_SALT_ROUNDS = 10;
 export const DEFAULT_LOGIN_EXPIRATION = 1000 * 60 * 60 * 24; // a day
 export const MIN_PASSWORD_LENGTH = 1;
@@ -13,7 +15,7 @@ export const DEFAULT_EXPIRATION = 31536000;
 export const ALLOWED_CORS_FILE_TYPES = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
 
 export const WRITE_TIMEOUT = 3e4; // 30 seconds
-export const TRANSACTION_OPTIONS = { readConcern: { level: 'majority' }, writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } };
+export const TRANSACTION_OPTIONS: TransactionOptions = { readConcern: { level: 'majority' }, writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } };
 
 // OTP Authentication Constants
 export const OTP_CODE_LENGTH = 6;

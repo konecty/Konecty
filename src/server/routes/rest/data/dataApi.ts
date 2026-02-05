@@ -7,7 +7,8 @@ import isString from 'lodash/isString';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 import { find } from '@imports/data/api';
-import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
+import { update } from '@imports/data/api/update';
+import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead } from '@imports/data/data';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
@@ -152,15 +153,18 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		reply.send(result);
 	});
 
-	fastify.put<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+	fastify.put<{ Params: { document: string }; Body: unknown; Querystring: { abortAllOnError?: string } }>('/rest/data/:document', async (req, reply) => {
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('PUT update');
+
+		const { abortAllOnError = 'true' } = req.query;
 
 		const result = await update({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
 			tracingSpan,
+			abortAllOnError: /true/i.test(abortAllOnError),
 		} as any);
 
 		tracingSpan.end();
