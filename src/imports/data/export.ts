@@ -7,11 +7,13 @@ import { Span } from '@opentelemetry/api';
 import { flatten } from 'flat';
 
 import { find } from '@imports/data/api';
+import findObjectStream from '@imports/data/api/findObjectStream';
 import { MetaObject } from '@imports/model/MetaObject';
 import { errorReturn } from '@imports/utils/return';
 
 import csvExport from '@imports/exports/csvExport';
 import xlsExport from '@imports/exports/xlsExport';
+import jsonExport from '@imports/exports/jsonExport';
 import { User } from '@imports/model/User';
 import { KonectyResult } from '@imports/types/result';
 import internal, { Stream, Transform } from 'node:stream';
@@ -20,7 +22,7 @@ import { dateToString } from './dateParser';
 type ExportDataParams = {
 	document: string;
 	listName: string;
-	type: 'csv' | 'xls';
+	type: 'csv' | 'xls' | 'xlsx' | 'json';
 	user: User;
 
 	displayName?: string;
@@ -98,6 +100,33 @@ export default async function exportData({ document, listName, type = 'csv', use
 
 	const filter = isString(query.filter) ? JSON.parse(query.filter) : undefined;
 
+	// For JSON (NDJSON) export, use findObjectStream to keep objects in objectMode
+	if (type === 'json') {
+		tracingSpan?.addEvent('Executing findObjectStream for JSON export');
+		const result = await findObjectStream({
+			contextUser: user,
+			document,
+			displayName: query.displayName,
+			displayType: query.displayType,
+			fields,
+			filter,
+			limit: query.limit,
+			start: query.start,
+			withDetailFields: 'true',
+			transformDatesToString: true,
+			tracingSpan,
+		});
+
+		if (result == null || result.success === false) {
+			return result;
+		}
+
+		tracingSpan?.addEvent('Piping to JSON export');
+		const dataStream = result.data;
+		return jsonExport(dataStream, name);
+	}
+
+	// For CSV and XLS, use the existing find API
 	tracingSpan?.addEvent('Executing find');
 	const result = await find({
 		contextUser: user,
@@ -122,7 +151,10 @@ export default async function exportData({ document, listName, type = 'csv', use
 	tracingSpan?.addEvent('Flattening data');
 	const dataStream = result.data;
 
-	if (type === 'xls') {
+	// Normalize xls to xlsx for processing
+	const normalizedType = type === 'xls' ? 'xlsx' : type;
+
+	if (normalizedType === 'xlsx') {
 		return xlsExport(dataStream, name);
 	}
 
@@ -142,7 +174,7 @@ export class TransformFlattenData extends Transform {
 		const flatItem = flatten<object, object>(record);
 		const transformed = dateToString(flatItem, date => date.toFormat(this.dateFormat));
 
-		for (const key of Object.keys(flatItem)) this.headers.add(key);
+		Object.keys(flatItem).forEach(key => this.headers.add(key));
 
 		this.push(transformed);
 		callback();

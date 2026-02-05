@@ -49,6 +49,47 @@ export async function isReplicaSet() {
 	}
 }
 
+interface DuplicateKeyError extends MongoServerError {
+	keyPattern: Record<string, number>;
+	keyValue: Record<string, any>;
+}
+
+export function isDuplicateKeyError(error: unknown): error is DuplicateKeyError {
+	return error instanceof MongoServerError && error.code === 11000;
+}
+
+export function getDuplicateKeyField(error: DuplicateKeyError): string {
+	const keyPattern = Object.keys(error.keyPattern)[0];
+	const keyValue = error.keyValue[keyPattern];
+	return `${keyPattern}: ${keyValue}`;
+}
+
+/**
+ * Checks if there are secondary nodes available in the replica set
+ * @returns true if at least one secondary node is available, false otherwise
+ */
+export async function hasSecondaryNodes(): Promise<boolean> {
+	try {
+		const status = await db.admin().replSetGetStatus();
+		if (status == null || !status.members) {
+			return false;
+		}
+
+		// Check if there's at least one member with stateStr 'SECONDARY'
+		const hasSecondary = status.members.some(
+			(member: { stateStr?: string }) => member.stateStr === 'SECONDARY',
+		);
+
+		return hasSecondary;
+	} catch (error) {
+		if ((error as MongoServerError).codeName === 'NoReplicationEnabled') {
+			return false;
+		}
+		logger.debug('Error checking for secondary nodes:', error);
+		return false;
+	}
+}
+
 /**
  * Handles common MongoDB errors and converts them into a standardized KonectyResult object.
  * @param error - The error object to handle

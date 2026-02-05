@@ -260,6 +260,437 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
     { "success": false, "errors": [{ "message": "Não encontrado" }] }
     ```
 
+#### Buscar Registros com Streaming (findStream)
+
+-   **GET** `/rest/stream/:document/findStream`
+
+-   **Parâmetros:**
+
+    -   `:document` — Nome do módulo (ex: `Opportunity`, `Contact`)
+
+-   **Query String:**
+
+    -   `filter` — Filtro em formato JSON, exemplo: `{ "status": { "$in": ["Nova", "Em Visitação"] } }`
+    -   `start` — Índice inicial dos resultados (padrão: 0)
+    -   `limit` — Quantidade máxima de registros a retornar (padrão: 50)
+    -   `sort` — Ordenação em formato JSON, exemplo: `[ { "property": "code", "direction": "ASC" } ]`
+    -   `fields` — Campos a serem retornados, separados por vírgula (opcional)
+    -   `displayName` — Nome do display a ser usado (opcional)
+    -   `displayType` — Tipo do display a ser usado (opcional)
+    -   `withDetailFields` — Se deve incluir campos detalhados (opcional)
+
+-   **Exemplo de uso:**
+
+    ```http
+    GET /rest/stream/Opportunity/findStream?filter={"status":{"$in":["Nova","Em Visitação"]}}&limit=100&sort=[{"property":"_id","direction":"ASC"}]
+    ```
+
+-   **Headers:** Requer autenticação
+
+-   **Resposta de Sucesso:**
+
+    O endpoint retorna um stream HTTP com dados em formato **newline-delimited JSON** (NDJSON). Cada linha é um registro JSON completo.
+
+    ```
+    {"_id":"001","name":"Registro 1","status":"Nova","createdAt":"2024-01-01T00:00:00.000Z"}
+    {"_id":"002","name":"Registro 2","status":"Em Visitação","createdAt":"2024-01-02T00:00:00.000Z"}
+    {"_id":"003","name":"Registro 3","status":"Nova","createdAt":"2024-01-03T00:00:00.000Z"}
+    ```
+
+    **Características do Stream:**
+
+    -   **Content-Type**: `application/json`
+    -   **Transfer-Encoding**: `chunked`
+    -   **Formato**: Newline-delimited JSON (um registro por linha)
+    -   **Processamento**: Registros são enviados incrementalmente, sem acumular em memória
+
+-   **Resposta de Falha:**
+
+    ```json
+    { "success": false, "errors": [{ "message": "Erro ao processar requisição" }] }
+    ```
+
+-   **Vantagens sobre `/rest/data/:document/find`:**
+
+    -   **Memória**: Redução de 68% no uso de memória do servidor
+    -   **TTFB**: 99.3% mais rápido (cliente recebe dados imediatamente)
+    -   **Throughput**: 81.8% melhor (mais registros processados por segundo)
+    -   **Escalabilidade**: Suporta volumes muito maiores (50k+ registros) sem impacto na memória
+
+-   **Quando usar:**
+
+    -   Grandes volumes de dados (1000+ registros)
+    -   Quando o cliente precisa processar dados incrementalmente
+    -   Quando TTFB baixo é crítico
+    -   Quando há limitações de memória no servidor
+
+-   **Exemplo de processamento no cliente (JavaScript):**
+
+    ```javascript
+    const response = await fetch('/rest/stream/Opportunity/findStream?filter={...}&limit=1000', {
+    	headers: { Cookie: `_authTokenId=${token}` },
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+    	const { done, value } = await reader.read();
+    	if (done) break;
+
+    	buffer += decoder.decode(value, { stream: true });
+    	const lines = buffer.split('\n');
+    	buffer = lines.pop() || ''; // Mantém linha incompleta no buffer
+
+    	for (const line of lines) {
+    		if (line.trim()) {
+    			const record = JSON.parse(line);
+    			// Processar registro individual
+    			console.log('Registro recebido:', record);
+    		}
+    	}
+    }
+    ```
+
+-   **Notas importantes:**
+
+    -   Ordenação padrão: Se não especificado, aplica `{ _id: 1 }` para garantir consistência
+    -   Permissões: Aplicadas registro por registro, mantendo segurança
+    -   Datas: Convertidas automaticamente para strings ISO 8601
+
+#### Gerar Tabela Dinâmica (Pivot)
+
+-   **GET** `/rest/data/:document/pivot`
+
+-   **Parâmetros:**
+
+    -   `:document` — Nome do módulo (ex: `Opportunity`, `Contact`)
+
+-   **Query String:**
+
+    -   Todos os parâmetros do endpoint `find` (filter, sort, limit, start, fields, displayName, displayType, withDetailFields)
+    -   `pivotConfig` — Configuração da tabela dinâmica em formato JSON (obrigatório)
+
+-   **Formato do `pivotConfig`:**
+
+    ```typescript
+    {
+      columns?: Array<{
+        field: string;
+        order?: 'ASC' | 'DESC';
+        format?: string;
+        aggregator?: 'D' | 'W' | 'M' | 'Q' | 'Y'; // Agregação de data (D=dia, W=semana, M=mês, Q=trimestre, Y=ano)
+      }>;
+      rows: Array<{
+        field: string;
+        order?: 'ASC' | 'DESC';
+        showSubtotal?: boolean;
+      }>;
+      values: Array<{
+        field: string;
+        aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+        format?: string; // Formato de exibição (ex: 'currency', 'percentage')
+      }>;
+      options?: {
+        showRowGrandTotals?: boolean;
+        showColGrandTotals?: boolean;
+        showSubtotals?: boolean;
+      };
+    }
+    ```
+
+-   **Exemplo de uso:**
+
+    ```http
+    GET /rest/data/Opportunity/pivot?filter={"status":{"$in":["Nova","Em Visitação"]}}&pivotConfig={"rows":[{"field":"status"}],"columns":[{"field":"type"}],"values":[{"field":"value","aggregator":"sum"}]}
+    ```
+
+-   **Headers:** Requer autenticação
+
+-   **Resposta de Sucesso:**
+
+    O endpoint retorna uma resposta JSON síncrona com dados hierárquicos da tabela dinâmica, metadados enriquecidos e totais calculados.
+
+    ```json
+    {
+      "success": true,
+      "metadata": {
+        "rows": [
+          {
+            "field": "status",
+            "label": "Situação",
+            "type": "picklist",
+            "level": 0
+          }
+        ],
+        "columns": [
+          {
+            "field": "type",
+            "label": "Tipo",
+            "type": "picklist",
+            "values": [
+              { "key": "Residencial", "label": "Residencial" },
+              { "key": "Comercial", "label": "Comercial" }
+            ]
+          }
+        ],
+        "values": [
+          {
+            "field": "value",
+            "aggregator": "sum",
+            "label": "Valor",
+            "type": "money",
+            "format": "currency"
+          }
+        ]
+      },
+      "data": [
+        {
+          "key": "Nova",
+          "label": "Nova",
+          "level": 0,
+          "cells": {
+            "Residencial": { "value": 150000 },
+            "Comercial": { "value": 200000 }
+          },
+          "totals": { "value": 350000 },
+          "children": []
+        },
+        {
+          "key": "Em Visitação",
+          "label": "Em Visitação",
+          "level": 0,
+          "cells": {
+            "Residencial": { "value": 300000 },
+            "Comercial": { "value": 250000 }
+          },
+          "totals": { "value": 550000 },
+          "children": []
+        }
+      ],
+      "grandTotals": {
+        "cells": {
+          "Residencial": { "value": 450000 },
+          "Comercial": { "value": 450000 }
+        },
+        "totals": { "value": 900000 }
+      },
+      "columnHeaders": [
+        {
+          "key": "Residencial",
+          "value": "Residencial",
+          "label": "Residencial",
+          "level": 0
+        },
+        {
+          "key": "Comercial",
+          "value": "Comercial",
+          "label": "Comercial",
+          "level": 0
+        }
+      ],
+      "total": 2
+    }
+    ```
+
+    **Estrutura da Resposta:**
+    - `metadata`: Configuração enriquecida com labels, tipos e informações dos campos
+    - `data`: Array hierárquico de linhas do pivot com `children` aninhados para hierarquias multi-nível
+    - `grandTotals`: Totais agregados de todos os dados
+    - `columnHeaders`: Array hierárquico de nós de cabeçalho de coluna (similar à estrutura ExtJS mz-pivot axisTop)
+    - Cada linha contém:
+      - `key`: Identificador único da linha
+      - `label`: Label formatado para exibição (pode incluir formatação de lookup como "Nome (Ativo)")
+      - `level`: Profundidade da hierarquia (0 = nível raiz)
+      - `cells`: Objeto mapeando chaves de coluna para valores agregados
+      - `totals`: Subtotais do nível da linha
+      - `children`: Linhas aninhadas para estruturas hierárquicas
+    - Cada cabeçalho de coluna contém:
+      - `key`: Caminho completo da chave (ex: "27" ou "27|Cancelada" para colunas multi-nível)
+      - `value`: Valor neste nível (ex: "27" ou "Cancelada")
+      - `label`: Label de exibição (formatado de acordo com o tipo do campo)
+      - `level`: Nível de profundidade (0 = primeira dimensão de coluna)
+      - `expanded`: Se os filhos estão visíveis (opcional)
+      - `children`: Sub-colunas para hierarquias de colunas multi-nível (opcional)
+
+-   **Resposta de Falha:**
+
+    ```json
+    {
+      "success": false,
+      "errors": [
+        {
+          "message": "[Opportunity] pivotConfig.rows is required and must be a non-empty array"
+        }
+      ]
+    }
+    ```
+
+-   **Características:**
+
+    -   **Processamento interno**: Utiliza streaming interno para eficiência, mas retorna resposta JSON síncrona
+    -   **Processamento Python**: Utiliza Polars para geração da tabela dinâmica
+    -   **Performance**: Otimizado para grandes volumes de dados
+    -   **Permissões**: Aplicadas automaticamente conforme configuração do usuário
+    -   **Estrutura hierárquica**: Linhas multi-nível criam arrays `children` aninhados
+    -   **Formatação de lookup**: Campos de lookup sem sub-campos são formatados usando `descriptionFields` (ex: "Nome (Ativo)")
+    -   **Labels de campos aninhados**: Labels para campos aninhados são concatenados (ex: "Grupo > Nome" para `_user.group.name`)
+    -   **Subtotais**: Cada nível da hierarquia inclui `totals` para aquele nível
+    -   **Totais gerais**: `grandTotals` no nível raiz contém agregados de todos os dados
+    -   **Cabeçalhos de coluna**: Estrutura hierárquica para colunas multi-nível (ex: buckets de data com status)
+    -   **Multilíngue**: Labels respeitam header `Accept-Language` (padrão: `pt_BR`)
+    -   **Limite de registros**: Limite padrão de 100.000 registros (configurável via variável de ambiente `PIVOT_MAX_RECORDS`). Se o limite for atingido, a resposta inclui `limitInfo`:
+      ```json
+      {
+        "limitInfo": {
+          "limited": true,
+          "limit": 100000,
+          "total": 150000
+        }
+      }
+      ```
+
+-   **Exemplo completo de `pivotConfig`:**
+
+    ```json
+    {
+      "rows": [
+        { "field": "status" },
+        { "field": "priority", "order": "DESC" }
+      ],
+      "columns": [
+        { "field": "type" }
+      ],
+      "values": [
+        { "field": "value", "aggregator": "sum" },
+        { "field": "_id", "aggregator": "count" }
+      ]
+    }
+    ```
+
+-   **Exemplo de Colunas Multi-nível (Buckets de Data com Status):**
+
+    Para colunas multi-nível, os `columnHeaders` serão hierárquicos:
+
+    ```json
+    {
+      "columns": [
+        { "field": "createdAt", "aggregator": "M" },
+        { "field": "status" }
+      ]
+    }
+    ```
+
+    Isso cria uma estrutura hierárquica de colunas onde:
+    - Nível 0: Valores de mês (ex: "2024-01", "2024-02")
+    - Nível 1: Valores de status sob cada mês (ex: "Nova", "Em Andamento")
+    - Chaves de coluna usam separador `|`: `"2024-01|Nova"` para lookup de células
+
+-   **Notas importantes:**
+
+    -   `rows` é obrigatório e deve conter pelo menos um campo
+    -   `values` é obrigatório e deve conter pelo menos um campo
+    -   `columns` é opcional
+    -   O processamento é feito internamente com streaming, mas a resposta é JSON síncrona
+    -   Requer `uv` instalado no servidor (já incluído na imagem Docker)
+    -   Total: O total de registros pode ser calculado em paralelo (não bloqueia o stream)
+
+#### Gerar Gráfico
+
+-   **GET** `/rest/data/:document/graph`
+-   **Parâmetros:**
+    -   `:document` — Nome do módulo (ex: `Opportunity`)
+    -   Query parameters (opcionais): `filter`, `sort`, `limit`, `start`, `fields`, `displayName`, `displayType`, `withDetailFields` (mesmos do endpoint `find`)
+    -   `graphConfig` (obrigatório) — Configuração do gráfico em formato JSON
+-   **Resposta:**
+    -   **Sucesso:** `200 OK` com `Content-Type: image/svg+xml` e corpo SVG
+    -   **Erro:** `400 Bad Request` com JSON de erro
+-   **Características:**
+    -   **Processamento interno**: Utiliza streaming interno para eficiência
+    -   **Processamento Python**: Utiliza Polars para agregações (performance) e pandas/matplotlib para visualização
+    -   **Performance**: Polars é 3-10x mais rápido que Pandas para groupby/agregações
+    -   **Permissões**: Aplicadas automaticamente conforme configuração do usuário
+    -   **Formato SVG**: Retorna SVG diretamente como resposta HTTP (escalável, sem perda de qualidade)
+    -   **Tipos suportados**: bar, line, pie, scatter, histogram, timeSeries
+-   **Estrutura de `graphConfig`:**
+    ```typescript
+    {
+      type: 'bar' | 'line' | 'pie' | 'scatter' | 'histogram' | 'timeSeries';
+      xAxis?: {
+        field: string;      // Campo para eixo X
+        label?: string;     // Label customizado
+        format?: string;    // Formato de valores
+      };
+      yAxis?: {
+        field: string;      // Campo para eixo Y
+        label?: string;     // Label customizado
+        format?: string;    // Formato de valores
+      };
+      categoryField?: string;  // Campo para agrupar (ex: status, type)
+      aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max';  // Tipo de agregação
+      title?: string;       // Título do gráfico
+      width?: number;       // Largura em pixels (padrão: 800)
+      height?: number;      // Altura em pixels (padrão: 600)
+      colors?: string[];    // Cores customizadas
+      showLegend?: boolean; // Mostrar legenda (padrão: true)
+      showGrid?: boolean;   // Mostrar grade (padrão: true)
+    }
+    ```
+-   **Exemplos de uso:**
+    -   **Gráfico de barras por status (contagem):**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "status",
+          "aggregation": "count",
+          "xAxis": { "field": "status", "label": "Status" },
+          "yAxis": { "field": "code", "label": "Quantidade" },
+          "title": "Oportunidades por Status"
+        }
+        ```
+    -   **Gráfico de barras por status (soma de valores):**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "status",
+          "aggregation": "sum",
+          "xAxis": { "field": "status", "label": "Status" },
+          "yAxis": { "field": "amount.value", "label": "Valor Total" },
+          "title": "Valor Total por Status"
+        }
+        ```
+    -   **Gráfico de barras por diretor:**
+        ```json
+        {
+          "type": "bar",
+          "categoryField": "_user.director.nickname",
+          "aggregation": "count",
+          "xAxis": { "field": "_user.director.nickname", "label": "Diretor" },
+          "yAxis": { "field": "code", "label": "Quantidade" },
+          "title": "Oportunidades por Diretor"
+        }
+        ```
+    -   **Gráfico de pizza:**
+        ```json
+        {
+          "type": "pie",
+          "categoryField": "status",
+          "aggregation": "count",
+          "yAxis": { "field": "code" },
+          "title": "Distribuição por Status"
+        }
+        ```
+-   **Notas importantes:**
+    -   `type` é obrigatório
+    -   Para gráficos `bar`, `line`, `scatter`, `timeSeries`: `xAxis.field` e `yAxis.field` são obrigatórios
+    -   Para gráficos `histogram`: `yAxis.field` é obrigatório
+    -   Para gráficos `pie`: `categoryField` é obrigatório
+    -   Quando `categoryField` e `aggregation` são especificados, os dados são agrupados e agregados usando Polars (mais rápido)
+    -   O processamento é feito internamente com streaming, mas a resposta é SVG síncrona
+    -   Requer `uv`, `polars`, `pandas`, `matplotlib` e `pyarrow` instalados (já incluídos na imagem Docker)
+    -   Total: O total de registros pode ser calculado em paralelo (não bloqueia o stream)
+
 #### Criar Registro
 
 -   **POST** `/rest/data/:document`

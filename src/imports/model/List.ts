@@ -61,6 +61,20 @@ export const ListSchema = z.object({
 			sort: z.number().optional(),
 		}),
 	),
+	calendars: z
+		.array(
+			z.object({
+				name: z.string(),
+				startAt: z.string(),
+				endAt: z.string().optional(),
+				title: z.string(),
+				descriminator: z.string().optional(),
+				label: z.record(z.unknown()).optional(),
+				itemType: z.enum(['event', 'task']).optional(),
+				colorField: z.string().optional(),
+			}),
+		)
+		.optional(),
 	collection: z.string().optional(),
 });
 
