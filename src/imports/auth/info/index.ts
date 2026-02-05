@@ -38,6 +38,7 @@ export async function userInfo(authTokenId?: string | null | undefined): Promise
 		title: MetaObject.Namespace.title,
 		watermark: MetaObject.Namespace.watermark,
 		addressComplementValidation: MetaObject.Namespace.addressComplementValidation,
+		addressSource: MetaObject.Namespace.addressSource,
 	};
 
 	try {

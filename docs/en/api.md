@@ -242,6 +242,432 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
   { "success": false, "errors": [ { "message": "Not found" } ] }
   ```
 
+#### Find Records with Streaming (findStream)
+
+- **GET** `/rest/stream/:document/findStream`
+
+- **Parameters:**
+  - `:document` — Module name (e.g., `Opportunity`, `Contact`)
+
+- **Query String:**
+  - `filter` — Filter in JSON format, example: `{ "status": { "$in": ["New", "In Visit"] } }`
+  - `start` — Start index of results (default: 0)
+  - `limit` — Maximum number of records to return (default: 50)
+  - `sort` — Sorting in JSON format, example: `[ { "property": "code", "direction": "ASC" } ]`
+  - `fields` — Fields to return, comma-separated (optional)
+  - `displayName` — Display name to use (optional)
+  - `displayType` — Display type to use (optional)
+  - `withDetailFields` — Whether to include detail fields (optional)
+
+- **Usage Example:**
+  ```http
+  GET /rest/stream/Opportunity/findStream?filter={"status":{"$in":["New","In Visit"]}}&limit=100&sort=[{"property":"_id","direction":"ASC"}]
+  ```
+
+- **Headers:** Requires authentication
+
+- **Success Response:**
+
+  The endpoint returns an HTTP stream with data in **newline-delimited JSON** (NDJSON) format. Each line is a complete JSON record.
+
+  ```
+  {"_id":"001","name":"Record 1","status":"New","createdAt":"2024-01-01T00:00:00.000Z"}
+  {"_id":"002","name":"Record 2","status":"In Visit","createdAt":"2024-01-02T00:00:00.000Z"}
+  {"_id":"003","name":"Record 3","status":"New","createdAt":"2024-01-03T00:00:00.000Z"}
+  ```
+
+  **Stream Characteristics:**
+
+  - **Content-Type**: `application/json`
+  - **Transfer-Encoding**: `chunked`
+  - **Format**: Newline-delimited JSON (one record per line)
+  - **Processing**: Records are sent incrementally, without accumulating in memory
+
+- **Failure Response:**
+  ```json
+  { "success": false, "errors": [ { "message": "Error processing request" } ] }
+  ```
+
+- **Advantages over `/rest/data/:document/find`:**
+
+  - **Memory**: 68% reduction in server memory usage
+  - **TTFB**: 99.3% faster (client receives data immediately)
+  - **Throughput**: 81.8% better (more records processed per second)
+  - **Scalability**: Supports much larger volumes (50k+ records) without memory impact
+
+- **When to use:**
+
+  - Large data volumes (1000+ records)
+  - When client needs to process data incrementally
+  - When low TTFB is critical
+  - When there are server memory limitations
+
+- **Client-side processing example (JavaScript):**
+
+  ```javascript
+  const response = await fetch('/rest/stream/Opportunity/findStream?filter={...}&limit=1000', {
+    headers: { Cookie: `_authTokenId=${token}` },
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (line.trim()) {
+        const record = JSON.parse(line);
+        // Process individual record
+        console.log('Record received:', record);
+      }
+    }
+  }
+  ```
+
+- **Important notes:**
+
+  - Default sorting: If not specified, applies `{ _id: 1 }` to ensure consistency
+  - Permissions: Applied record by record, maintaining security
+  - Dates: Automatically converted to ISO 8601 strings
+
+#### Generate Pivot Table
+
+- **GET** `/rest/data/:document/pivot`
+
+- **Parameters:**
+
+  - `:document` — Module name (e.g., `Opportunity`, `Contact`)
+
+- **Query String:**
+
+  - All parameters from the `find` endpoint (filter, sort, limit, start, fields, displayName, displayType, withDetailFields)
+  - `pivotConfig` — Pivot table configuration in JSON format (required)
+
+- **`pivotConfig` Format:**
+
+  ```typescript
+  {
+    columns?: Array<{
+      field: string;
+      order?: 'ASC' | 'DESC';
+      format?: string;
+      aggregator?: 'D' | 'W' | 'M' | 'Q' | 'Y'; // Date bucketing (D=day, W=week, M=month, Q=quarter, Y=year)
+    }>;
+    rows: Array<{
+      field: string;
+      order?: 'ASC' | 'DESC';
+      showSubtotal?: boolean;
+    }>;
+    values: Array<{
+      field: string;
+      aggregator: 'count' | 'sum' | 'avg' | 'min' | 'max';
+      format?: string; // Display format (e.g., 'currency', 'percentage')
+    }>;
+    options?: {
+      showRowGrandTotals?: boolean;
+      showColGrandTotals?: boolean;
+      showSubtotals?: boolean;
+    };
+  }
+  ```
+
+- **Usage Example:**
+
+  ```http
+  GET /rest/data/Opportunity/pivot?filter={"status":{"$in":["New","In Visit"]}}&pivotConfig={"rows":[{"field":"status"}],"columns":[{"field":"type"}],"values":[{"field":"value","aggregator":"sum"}]}
+  ```
+
+- **Headers:** Requires authentication
+
+- **Success Response:**
+
+  The endpoint returns a synchronous JSON response with hierarchical pivot table data, enriched metadata, and calculated totals.
+
+  ```json
+  {
+    "success": true,
+    "metadata": {
+      "rows": [
+        {
+          "field": "status",
+          "label": "Status",
+          "type": "picklist",
+          "level": 0
+        }
+      ],
+      "columns": [
+        {
+          "field": "type",
+          "label": "Type",
+          "type": "picklist",
+          "values": [
+            { "key": "Residential", "label": "Residential" },
+            { "key": "Commercial", "label": "Commercial" }
+          ]
+        }
+      ],
+      "values": [
+        {
+          "field": "value",
+          "aggregator": "sum",
+          "label": "Value",
+          "type": "money",
+          "format": "currency"
+        }
+      ]
+    },
+    "data": [
+      {
+        "key": "New",
+        "label": "New",
+        "level": 0,
+        "cells": {
+          "Residential": { "value": 150000 },
+          "Commercial": { "value": 200000 }
+        },
+        "totals": { "value": 350000 },
+        "children": []
+      },
+      {
+        "key": "In Visit",
+        "label": "In Visit",
+        "level": 0,
+        "cells": {
+          "Residential": { "value": 300000 },
+          "Commercial": { "value": 250000 }
+        },
+        "totals": { "value": 550000 },
+        "children": []
+      }
+    ],
+    "grandTotals": {
+      "cells": {
+        "Residential": { "value": 450000 },
+        "Commercial": { "value": 450000 }
+      },
+      "totals": { "value": 900000 }
+    },
+    "columnHeaders": [
+      {
+        "key": "Residential",
+        "value": "Residential",
+        "label": "Residential",
+        "level": 0
+      },
+      {
+        "key": "Commercial",
+        "value": "Commercial",
+        "label": "Commercial",
+        "level": 0
+      }
+    ],
+    "total": 2
+  }
+  ```
+
+  **Response Structure:**
+  - `metadata`: Enriched configuration with labels, types, and field information
+  - `data`: Hierarchical array of pivot rows with nested `children` for multi-level hierarchies
+  - `grandTotals`: Aggregated totals across all data
+  - `columnHeaders`: Hierarchical array of column header nodes (similar to ExtJS mz-pivot axisTop structure)
+  - Each row contains:
+    - `key`: Unique identifier for the row
+    - `label`: Formatted display label (may include lookup formatting like "Name (Active)")
+    - `level`: Hierarchy depth (0 = root level)
+    - `cells`: Object mapping column keys to aggregated values
+    - `totals`: Row-level subtotals
+    - `children`: Nested rows for hierarchical structures
+  - Each column header contains:
+    - `key`: Full key path (e.g., "27" or "27|Cancelada" for multi-level columns)
+    - `value`: Value at this level (e.g., "27" or "Cancelada")
+    - `label`: Display label (formatted according to field type)
+    - `level`: Depth level (0 = first column dimension)
+    - `expanded`: Whether children are visible (optional)
+    - `children`: Sub-columns for multi-level column hierarchies (optional)
+
+- **Failure Response:**
+
+  ```json
+  {
+    "success": false,
+    "errors": [
+      {
+        "message": "[Opportunity] pivotConfig.rows is required and must be a non-empty array"
+      }
+    ]
+  }
+  ```
+
+- **Characteristics:**
+
+  - **Internal processing**: Uses internal streaming for efficiency, but returns synchronous JSON response
+  - **Python processing**: Uses Polars for pivot table generation
+  - **Performance**: Optimized for large data volumes
+  - **Permissions**: Automatically applied according to user configuration
+
+- **Complete `pivotConfig` Example:**
+
+  ```json
+  {
+    "rows": [
+      { "field": "status" },
+      { "field": "priority", "order": "DESC" }
+    ],
+    "columns": [
+      { "field": "type" }
+    ],
+    "values": [
+      { "field": "value", "aggregator": "sum" },
+      { "field": "_id", "aggregator": "count" }
+    ]
+  }
+  ```
+
+- **Multi-level Columns Example (Date Buckets with Status):**
+
+  For multi-level columns, the `columnHeaders` will be hierarchical:
+
+  ```json
+  {
+    "columns": [
+      { "field": "createdAt", "aggregator": "M" },
+      { "field": "status" }
+    ]
+  }
+  ```
+
+  This creates a hierarchical column structure where:
+  - Level 0: Month values (e.g., "2024-01", "2024-02")
+  - Level 1: Status values under each month (e.g., "New", "In Progress")
+  - Column keys use `|` separator: `"2024-01|New"` for cells lookup
+
+- **Important notes:**
+
+  - `rows` is required and must contain at least one field
+  - `values` is required and must contain at least one field
+  - `columns` is optional
+  - Processing is done internally with streaming, but response is synchronous JSON
+  - Requires `uv` installed on server (already included in Docker image)
+  - **Hierarchical structure**: Multi-level rows create nested `children` arrays
+  - **Lookup formatting**: Lookup fields without sub-fields are formatted using `descriptionFields` (e.g., "Name (Active)")
+  - **Nested field labels**: Labels for nested fields are concatenated (e.g., "Group > Name" for `_user.group.name`)
+  - **Subtotals**: Each hierarchy level includes `totals` for that level
+  - **Grand totals**: Root-level `grandTotals` contains aggregates for all data
+  - **Column headers**: Hierarchical structure for multi-level columns (e.g., date buckets with status)
+  - **Multilingual**: Labels respect `Accept-Language` header (defaults to `pt_BR`)
+  - **Record limit**: Default limit of 100,000 records (configurable via `PIVOT_MAX_RECORDS` env var). If limit is reached, response includes `limitInfo`:
+    ```json
+    {
+      "limitInfo": {
+        "limited": true,
+        "limit": 100000,
+        "total": 150000
+      }
+    }
+    ```
+
+#### Generate Graph
+
+- **GET** `/rest/data/:document/graph`
+- **Parameters:**
+  - `:document` — Module name (e.g., `Opportunity`)
+  - Query parameters (optional): `filter`, `sort`, `limit`, `start`, `fields`, `displayName`, `displayType`, `withDetailFields` (same as `find` endpoint)
+  - `graphConfig` (required) — Graph configuration in JSON format
+- **Response:**
+  - **Success:** `200 OK` with `Content-Type: image/svg+xml` and SVG body
+  - **Error:** `400 Bad Request` with JSON error
+- **Characteristics:**
+  - **Internal processing**: Uses internal streaming for efficiency
+  - **Python processing**: Uses Polars for aggregations (performance) and pandas/matplotlib for visualization
+  - **Performance**: Polars is 3-10x faster than Pandas for groupby/aggregations
+  - **Permissions**: Automatically applied according to user configuration
+  - **SVG format**: Returns SVG directly as HTTP response (scalable, no quality loss)
+  - **Supported types**: bar, line, pie, scatter, histogram, timeSeries
+- **`graphConfig` structure:**
+  ```typescript
+  {
+    type: 'bar' | 'line' | 'pie' | 'scatter' | 'histogram' | 'timeSeries';
+    xAxis?: {
+      field: string;      // Field for X axis
+      label?: string;     // Custom label
+      format?: string;     // Value format
+    };
+    yAxis?: {
+      field: string;      // Field for Y axis
+      label?: string;     // Custom label
+      format?: string;     // Value format
+    };
+    categoryField?: string;  // Field to group by (e.g., status, type)
+    aggregation?: 'count' | 'sum' | 'avg' | 'min' | 'max';  // Aggregation type
+    title?: string;       // Chart title
+    width?: number;       // Width in pixels (default: 800)
+    height?: number;      // Height in pixels (default: 600)
+    colors?: string[];    // Custom colors
+    showLegend?: boolean; // Show legend (default: true)
+    showGrid?: boolean;   // Show grid (default: true)
+  }
+  ```
+- **Usage examples:**
+  - **Bar chart by status (count):**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "status",
+      "aggregation": "count",
+      "xAxis": { "field": "status", "label": "Status" },
+      "yAxis": { "field": "code", "label": "Quantity" },
+      "title": "Opportunities by Status"
+    }
+    ```
+  - **Bar chart by status (sum of values):**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "status",
+      "aggregation": "sum",
+      "xAxis": { "field": "status", "label": "Status" },
+      "yAxis": { "field": "amount.value", "label": "Total Value" },
+      "title": "Total Value by Status"
+    }
+    ```
+  - **Bar chart by director:**
+    ```json
+    {
+      "type": "bar",
+      "categoryField": "_user.director.nickname",
+      "aggregation": "count",
+      "xAxis": { "field": "_user.director.nickname", "label": "Director" },
+      "yAxis": { "field": "code", "label": "Quantity" },
+      "title": "Opportunities by Director"
+    }
+    ```
+  - **Pie chart:**
+    ```json
+    {
+      "type": "pie",
+      "categoryField": "status",
+      "aggregation": "count",
+      "yAxis": { "field": "code" },
+      "title": "Distribution by Status"
+    }
+    ```
+- **Important notes:**
+  - `type` is required
+  - For `bar`, `line`, `scatter`, `timeSeries` charts: `xAxis.field` and `yAxis.field` are required
+  - For `histogram` charts: `yAxis.field` is required
+  - For `pie` charts: `categoryField` is required
+  - When `categoryField` and `aggregation` are specified, data is grouped and aggregated using Polars (faster)
+  - Processing is done internally with streaming, but response is synchronous SVG
+  - Requires `uv`, `polars`, `pandas`, `matplotlib`, and `pyarrow` installed (already included in Docker image)
+  - Total: Record total can be calculated in parallel (doesn't block stream)
+
 #### Create Record
 
 🚧 Under construction

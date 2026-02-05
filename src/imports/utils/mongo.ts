@@ -65,6 +65,32 @@ export function getDuplicateKeyField(error: DuplicateKeyError): string {
 }
 
 /**
+ * Checks if there are secondary nodes available in the replica set
+ * @returns true if at least one secondary node is available, false otherwise
+ */
+export async function hasSecondaryNodes(): Promise<boolean> {
+	try {
+		const status = await db.admin().replSetGetStatus();
+		if (status == null || !status.members) {
+			return false;
+		}
+
+		// Check if there's at least one member with stateStr 'SECONDARY'
+		const hasSecondary = status.members.some(
+			(member: { stateStr?: string }) => member.stateStr === 'SECONDARY',
+		);
+
+		return hasSecondary;
+	} catch (error) {
+		if ((error as MongoServerError).codeName === 'NoReplicationEnabled') {
+			return false;
+		}
+		logger.debug('Error checking for secondary nodes:', error);
+		return false;
+	}
+}
+
+/**
  * Handles common MongoDB errors and converts them into a standardized KonectyResult object.
  * @param error - The error object to handle
  * @returns A KonectyResult object with appropriate error messages for common MongoDB errors

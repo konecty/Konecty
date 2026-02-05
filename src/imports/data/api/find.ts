@@ -134,8 +134,13 @@ export default async function find<AsStream extends boolean = false>({
 
 		const emptyFields = Object.keys(fieldsObject).length === 0;
 
+		// Special case: limit === -1 means "no limit" (used by pivot tables that need all data)
+		const parsedLimit = parseInt(String(limit), 10);
+		const noLimit = parsedLimit === -1;
+		const effectiveLimit = noLimit ? undefined : (_isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parsedLimit);
+
 		const queryOptions: FindOptions & { projection: Document } = {
-			limit: _isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parseInt(String(limit), 10),
+			limit: effectiveLimit,
 			skip: parseInt(String(start ?? 0), 10),
 			projection: {},
 			...applyIfMongoVersionGreaterThanOrEqual(6, () => ({ allowDiskUse: true })),
