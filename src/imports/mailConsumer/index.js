@@ -151,8 +151,11 @@ async function send(record) {
 		return sendEmail(record);
 	}
 
-	if (/.+\.hbs$/.test(record.template) === true) {
-		set(record, 'template', `email/${record.template}`);
+	if (/.+\.(hbs|html)$/.test(record.template) === true) {
+		// Only add 'email/' prefix if template doesn't already start with it
+		if (!record.template.startsWith('email/')) {
+			set(record, 'template', `email/${record.template}`);
+		}
 	} else {
 		const templateRecord = await MetaObject.Collections['Template'].findOne({ _id: record.template }, { projection: { subject: 1 } });
 
@@ -168,7 +171,13 @@ async function send(record) {
 		record.subject = Mustache.render(templateRecord.subject, record.data);
 	}
 
-	record.body = await renderTemplate(record.template, extend({ message: { _id: record._id } }, record.data));
+	try {
+		record.body = await renderTemplate(record.template, extend({ message: { _id: record._id } }, record.data));
+	} catch (error) {
+		logger.error({ template: record.template, error: error.message }, 'Error rendering template');
+		await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: { message: error.message } } });
+		return errorReturn(error.message);
+	}
 
 	await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { body: record.body, subject: record.subject } });
 	return sendEmail(record);
@@ -217,7 +226,7 @@ async function consume() {
 		} catch (error) {
 			logger.error(error, `📧 Email error ${JSON.stringify(query, null, 2)}`);
 
-			return errorReturn("message" in error ? error.message : "Unknown error");
+			return errorReturn('message' in error ? error.message : 'Unknown error');
 		}
 	});
 

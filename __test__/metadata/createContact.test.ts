@@ -15,7 +15,7 @@ describe('Contact', () => {
 			const requiredFields = {};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Contact`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Contact`, {
 				method: 'POST',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -37,7 +37,7 @@ describe('Contact', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Contact`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Contact`, {
 				method: 'POST',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -63,7 +63,7 @@ describe('Contact', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Contact`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Contact`, {
 				method: 'POST',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -103,7 +103,7 @@ describe('Contact', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Contact`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Contact`, {
 				method: 'POST',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

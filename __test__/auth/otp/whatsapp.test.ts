@@ -1,5 +1,3 @@
-// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { sendOtpViaWhatsApp, WhatsAppConfig } from '@imports/auth/otp/whatsapp';
 
 // Mock fetch globally

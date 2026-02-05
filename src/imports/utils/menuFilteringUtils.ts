@@ -53,5 +53,9 @@ export function getMenuSorterFromAccess(access: MetaAccess, moduleName: string, 
 	if (!access.menuSorter) {
 		return originalMenuSorter;
 	}
+	if (typeof access.menuSorter === 'object' && access.menuSorter !== null) {
+		const override = access.menuSorter[moduleName];
+		return override !== undefined ? override : originalMenuSorter;
+	}
 	return access.menuSorter;
 }

@@ -654,9 +654,21 @@ function collectGeolocation(callback) {
 					}),
 				})
 					.then(function (response) {
-						return response.json().then(function (data) {
-							return { status: response.status, data: data };
-						});
+						// Try to parse JSON, but handle non-JSON responses
+						return response
+							.json()
+							.then(function (data) {
+								return { status: response.status, data: data };
+							})
+							.catch(function () {
+								// If JSON parsing fails, return the response with error info
+								return {
+									status: response.status,
+									data: {
+										errors: [{ message: 'Erro ao processar resposta do servidor' }],
+									},
+								};
+							});
 					})
 					.then(function (result) {
 						hideLoading();
@@ -670,13 +682,20 @@ function collectGeolocation(callback) {
 								otpCodeInput.focus();
 							}
 						} else {
-							var errorMsg = result.data.message || result.data.error || 'Failed to send OTP';
+							// Extract error message from backend response
+							// Backend returns: { success: false, errors: [{ message: "..." }] }
+							var errorMsg =
+								(result.data.errors && result.data.errors[0] && result.data.errors[0].message) ||
+								result.data.message ||
+								result.data.error ||
+								'Não foi possível enviar o código. Tente novamente em alguns instantes.';
 							showError('otp-email-error', errorMsg);
 						}
 					})
 					.catch(function (error) {
 						hideLoading();
-						showError('otp-email-error', 'An error occurred. Please try again.');
+						// Show a more user-friendly error message in Portuguese
+						showError('otp-email-error', 'Não foi possível enviar o código. Tente novamente em alguns instantes.');
 						console.error('OTP email error:', error);
 					});
 			});
@@ -932,9 +951,21 @@ function collectGeolocation(callback) {
 					}),
 				})
 					.then(function (response) {
-						return response.json().then(function (data) {
-							return { status: response.status, data: data };
-						});
+						// Try to parse JSON, but handle non-JSON responses
+						return response
+							.json()
+							.then(function (data) {
+								return { status: response.status, data: data };
+							})
+							.catch(function () {
+								// If JSON parsing fails, return the response with error info
+								return {
+									status: response.status,
+									data: {
+										errors: [{ message: 'Erro ao processar resposta do servidor' }],
+									},
+								};
+							});
 					})
 					.then(function (result) {
 						hideLoading();
@@ -948,13 +979,20 @@ function collectGeolocation(callback) {
 								otpCodeInput.focus();
 							}
 						} else {
-							var errorMsg = result.data.message || result.data.error || 'Failed to send OTP';
+							// Extract error message from backend response
+							// Backend returns: { success: false, errors: [{ message: "..." }] }
+							var errorMsg =
+								(result.data.errors && result.data.errors[0] && result.data.errors[0].message) ||
+								result.data.message ||
+								result.data.error ||
+								'Não foi possível enviar o código. Tente novamente em alguns instantes.';
 							showError('otp-phone-error', errorMsg);
 						}
 					})
 					.catch(function (error) {
 						hideLoading();
-						showError('otp-phone-error', 'An error occurred. Please try again.');
+						// Show a more user-friendly error message in Portuguese
+						showError('otp-phone-error', 'Não foi possível enviar o código. Tente novamente em alguns instantes.');
 						console.error('OTP phone error:', error);
 					});
 			});

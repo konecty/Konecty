@@ -1,5 +1,3 @@
-// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect } from 'bun:test';
 import { generateOTP, hashOTP, verifyOTP } from '@imports/auth/otp';
 import { OTP_CODE_LENGTH } from '@imports/consts';
 

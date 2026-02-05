@@ -16,3 +16,10 @@ export type KonectyResultError = {
 	success: false;
 	errors: Array<KonectyError>;
 };
+
+export interface EmailToSend {
+	to: string;
+	subject: string;
+	body: string;
+	[key: string]: any;
+}

@@ -6,6 +6,11 @@ export interface WhatsAppConfig {
 	accessToken: string;
 	phoneNumberId: string;
 	businessAccountId?: string;
+	/**
+	 * Template name (not the numeric ID).
+	 * This should be the approved template name from Meta Business Manager (e.g., "hello_world", "otp_verification").
+	 * Do NOT use the numeric template ID (e.g., "751059698056406").
+	 */
 	templateId: string;
 	apiUrlTemplate?: string;
 	languageCode?: string;
@@ -15,6 +20,7 @@ export interface WhatsAppConfig {
 export interface WhatsAppResult {
 	success: boolean;
 	error?: string;
+	method?: 'whatsapp';
 }
 
 /**
@@ -81,6 +87,8 @@ export async function sendOtpViaWhatsApp(phoneNumber: string, otpCode: string, c
 			to: phoneNumber,
 			type: 'template',
 			template: {
+				// Note: templateId should be the template NAME (not numeric ID)
+				// e.g., "otp_verification" not "751059698056406"
 				name: whatsappConfig.templateId,
 				language: {
 					code: languageCode,

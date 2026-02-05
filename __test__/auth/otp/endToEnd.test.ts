@@ -1,6 +1,3 @@
-// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect } from 'bun:test';
-
 describe('OTP End-to-End Flow', () => {
 	it('should understand end-to-end flow structure', () => {
 		// End-to-end tests require server running via Jest globalSetup

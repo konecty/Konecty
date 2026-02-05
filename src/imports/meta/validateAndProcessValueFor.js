@@ -528,13 +528,13 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				if (emailObjectResult.success === false) {
 					return emailObjectResult;
 				}
+
 				const addressResult = mustBeString(value.address, `${fieldName}.address`);
 				if (addressResult.success === false) {
 					return addressResult;
 				}
 
 				const typeResult = mustBeStringOrNull(value.type, `${fieldName}.type`);
-
 				if (typeResult.success === false) {
 					return typeResult;
 				}

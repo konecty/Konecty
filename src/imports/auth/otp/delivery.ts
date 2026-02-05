@@ -1,12 +1,13 @@
 import get from 'lodash/get';
-import { randomId } from '@imports/utils/random';
 import { MetaObject } from '@imports/model/MetaObject';
 import { User } from '@imports/model/User';
-import { DataDocument } from '@imports/types/data';
 import { logger } from '@imports/utils/logger';
 import queueManager from '@imports/queue/QueueManager';
 import { sendOtpViaWhatsApp, WhatsAppConfig } from './whatsapp';
 import { OTP_DEFAULT_EXPIRATION_MINUTES } from '../../consts';
+import { create } from '@imports/data/data';
+import { renderTemplate } from '@imports/template';
+import { randomId } from '@imports/utils/random';
 
 export interface DeliveryResult {
 	success: boolean;
@@ -163,36 +164,73 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 	}
 
 	const expirationMinutes = MetaObject.Namespace.otpConfig?.expirationMinutes ?? OTP_DEFAULT_EXPIRATION_MINUTES;
-	const templateId = MetaObject.Namespace.otpConfig?.emailTemplateId ?? 'email/otp.html';
+	const templateId = MetaObject.Namespace.otpConfig?.emailTemplateId ?? 'email/otp.hbs';
 	const emailFrom = MetaObject.Namespace.otpConfig?.emailFrom ?? 'Konecty <support@konecty.com>';
 
-	// Fetch user name for email template
-	const user = (await MetaObject.Collections.User.findOne({ _id: userId }, { projection: { name: 1 } })) as Pick<User, 'name'> | null;
+	// Fetch user for contextUser and email template
+	const user = (await MetaObject.Collections.User.findOne({ _id: userId }, { projection: { _id: 1, name: 1 } })) as Pick<User, '_id' | 'name'> | null;
+
+	if (user == null) {
+		return {
+			success: false,
+			error: 'User not found',
+		};
+	}
+
+	// Prepare template data
+	const templateData = {
+		otpCode,
+		...(phoneNumber != null && { phoneNumber }),
+		...(emailAddress != null && { email: emailAddress }),
+		expirationMinutes,
+		expiresAt: expiresAt.toISOString(),
+		name: user.name,
+	};
+
+	// Process template to generate body before creating message
+	// This is required because email-service doesn't process templates
+	let emailBody: string;
+	const emailSubject = '[Konecty] Código de Verificação OTP';
+
+	try {
+		const messageId = randomId();
+		emailBody = await renderTemplate(templateId, { message: { _id: messageId }, ...templateData });
+	} catch (error) {
+		logger.error({ template: templateId, error: (error as Error).message }, 'Error rendering OTP email template');
+		return {
+			success: false,
+			error: `Failed to render email template: ${(error as Error).message}`,
+		};
+	}
 
 	const messageData = {
-		_id: randomId(),
 		from: emailFrom,
 		to: emailAddress,
-		subject: '[Konecty] Código de Verificação OTP',
+		subject: emailSubject,
 		type: 'Email',
 		status: 'Send',
-		template: templateId,
+		body: emailBody,
 		discard: true,
-		_createdAt: new Date(),
-		_updatedAt: new Date(),
-		data: {
-			otpCode,
-			...(phoneNumber != null && { phoneNumber }),
-			...(emailAddress != null && { email: emailAddress }),
-			expirationMinutes,
-			expiresAt: expiresAt.toISOString(),
-			name: user?.name,
-		},
+		_user: [{ _id: userId }],
+		data: templateData,
 	};
 
 	try {
-		await MetaObject.Collections.Message.insertOne(messageData as DataDocument);
-		return { success: true, method: 'email' };
+		// Use data.create() instead of insertOne() to trigger events
+		const result = await create({
+			document: 'Message',
+			data: messageData,
+			contextUser: user as User,
+		} as any);
+
+		if (result.success) {
+			return { success: true, method: 'email' };
+		}
+
+		return {
+			success: false,
+			error: Array.isArray(result.errors) ? result.errors.join(', ') : 'Failed to create message',
+		};
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via email');
 		return {
@@ -205,7 +243,7 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 /**
  * Main delivery function
  * If email is provided, sends directly via email only (no WhatsApp)
- * If phoneNumber is provided, tries: WhatsApp → RabbitMQ (no email fallback)
+ * If phoneNumber is provided, tries: WhatsApp → RabbitMQ → Email
  */
 export async function sendOtp(phoneNumber: string | undefined, email: string | undefined, otpCode: string, userId: string, expiresAt: Date): Promise<DeliveryResult> {
 	if (email != null) {
@@ -214,7 +252,7 @@ export async function sendOtp(phoneNumber: string | undefined, email: string | u
 	}
 
 	if (phoneNumber != null) {
-		// Requested by phone - try WhatsApp → RabbitMQ (no email fallback)
+		// Requested by phone - try WhatsApp → RabbitMQ → Email
 		const whatsappResult = await sendViaWhatsApp(phoneNumber, otpCode);
 		if (whatsappResult.success) {
 			return whatsappResult;
@@ -227,10 +265,17 @@ export async function sendOtp(phoneNumber: string | undefined, email: string | u
 			return rabbitmqResult;
 		}
 
-		logger.error(`All phone delivery methods failed. WhatsApp: ${whatsappResult.error}, RabbitMQ: ${rabbitmqResult.error}`);
+		logger.warn(`RabbitMQ delivery failed: ${rabbitmqResult.error}. Trying email...`);
+
+		const emailResult = await sendViaEmail(phoneNumber, otpCode, userId, expiresAt);
+		if (emailResult.success) {
+			return emailResult;
+		}
+
+		logger.error(`All delivery methods failed. WhatsApp: ${whatsappResult.error}, RabbitMQ: ${rabbitmqResult.error}, Email: ${emailResult.error}`);
 		return {
 			success: false,
-			error: `Failed to send OTP via phone: WhatsApp (${whatsappResult.error}), RabbitMQ (${rabbitmqResult.error})`,
+			error: emailResult.error ? `All delivery methods failed. ${emailResult.error}` : 'All delivery methods failed',
 		};
 	}
 

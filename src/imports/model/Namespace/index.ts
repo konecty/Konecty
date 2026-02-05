@@ -14,6 +14,10 @@ export const NamespaceSchema = z
 		sessionExpirationInSeconds: z.number().nonnegative().finite().optional(),
 		ns: z.string(),
 
+		onUpdate: z.string().or(z.array(z.string())).optional(),
+		onCreate: z.string().or(z.array(z.string())).optional(),
+		onDelete: z.string().or(z.array(z.string())).optional(),
+
 		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg]).optional(),
 		RocketChat: z
 			.object({
@@ -53,6 +57,11 @@ export const NamespaceSchema = z
 						accessToken: z.string(),
 						phoneNumberId: z.string(),
 						businessAccountId: z.string().optional(),
+						/**
+						 * Template name (not the numeric ID).
+						 * This should be the approved template name from Meta Business Manager.
+						 * Example: "otp_verification" (not "751059698056406")
+						 */
 						templateId: z.string(),
 						apiUrlTemplate: z.string().optional(),
 						languageCode: z.string().optional(),

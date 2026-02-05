@@ -49,6 +49,21 @@ export async function isReplicaSet() {
 	}
 }
 
+interface DuplicateKeyError extends MongoServerError {
+	keyPattern: Record<string, number>;
+	keyValue: Record<string, any>;
+}
+
+export function isDuplicateKeyError(error: unknown): error is DuplicateKeyError {
+	return error instanceof MongoServerError && error.code === 11000;
+}
+
+export function getDuplicateKeyField(error: DuplicateKeyError): string {
+	const keyPattern = Object.keys(error.keyPattern)[0];
+	const keyValue = error.keyValue[keyPattern];
+	return `${keyPattern}: ${keyValue}`;
+}
+
 /**
  * Checks if there are secondary nodes available in the replica set
  * @returns true if at least one secondary node is available, false otherwise

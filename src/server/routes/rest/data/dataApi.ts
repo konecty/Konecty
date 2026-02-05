@@ -7,7 +7,8 @@ import isString from 'lodash/isString';
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
 import { find, pivotStream, graphStream } from '@imports/data/api';
-import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead, update } from '@imports/data/data';
+import { update } from '@imports/data/api/update';
+import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead } from '@imports/data/data';
 import { PivotConfig } from '@imports/types/pivot';
 import { GraphConfig } from '@imports/types/graph';
 
@@ -39,7 +40,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		Querystring: { displayName: string; displayType: string; fields: string; filter: string; sort: string; limit: string; start: string; withDetailFields: string };
 	}>('/rest/data/:document/find', async (req, reply) => {
 		if (req.query.filter != null && isString(req.query.filter)) {
-			req.query.filter = JSON.parse(req.query.filter.replace(/\+/g, ' '));
+			req.query.filter = JSON.parse(decodeURIComponent(req.query.filter));
 		}
 
 		const { tracer } = req.openTelemetry();
@@ -158,15 +159,18 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		reply.send(result);
 	});
 
-	fastify.put<{ Params: { document: string }; Body: unknown }>('/rest/data/:document', async (req, reply) => {
+	fastify.put<{ Params: { document: string }; Body: unknown; Querystring: { abortAllOnError?: string } }>('/rest/data/:document', async (req, reply) => {
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('PUT update');
+
+		const { abortAllOnError = 'true' } = req.query;
 
 		const result = await update({
 			authTokenId: getAuthTokenIdFromReq(req),
 			document: req.params.document,
 			data: req.body,
 			tracingSpan,
+			abortAllOnError: /true/i.test(abortAllOnError),
 		} as any);
 
 		tracingSpan.end();

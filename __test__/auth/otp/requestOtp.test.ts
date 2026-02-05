@@ -1,6 +1,3 @@
-// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
-import { describe, it, expect } from 'bun:test';
-
 /**
  * Validate E.164 phone number format (same as in routes)
  */
