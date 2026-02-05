@@ -29,8 +29,11 @@ import fileUploadApi from './rest/file/upload';
 import file2Api from './rest/file2/file2Api';
 import healthApi from './rest/health';
 import menuApi from './rest/menu/menu';
+import notificationApi from './rest/notification/notificationApi';
 import processApi from './rest/process/processApi';
 import rocketchatApi from './rest/rocketchat/livechat';
+import subscriptionApi from './rest/subscription/subscriptionApi';
+import streamApi from './rest/stream/streamApi';
 import viewPaths from './rest/view/view';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
@@ -73,8 +76,11 @@ fastify.register(imageApi);
 fastify.register(fileUploadApi);
 fastify.register(file2Api);
 fastify.register(menuApi);
+fastify.register(notificationApi);
 fastify.register(processApi);
 fastify.register(rocketchatApi);
+fastify.register(subscriptionApi);
+fastify.register(streamApi);
 fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {
@@ -107,13 +113,9 @@ export async function serverStart() {
 			port: PORT,
 			host: HOST,
 		});
-		const addr = fastify.server.address();
-		if (addr && typeof addr === 'object' && addr.port) {
-			process.env.BASE_URL = `http://127.0.0.1:${addr.port}/rest`;
-		}
 	} catch (error) {
 		fastify.log.error(error);
-		throw error;
+		process.exit(1);
 	}
 }
 

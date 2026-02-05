@@ -65,6 +65,20 @@ export const DocumentListSchema = z.object({
 		}),
 	),
 	view: z.string().default('Default'),
+	calendars: z
+		.array(
+			z.object({
+				name: z.string(),
+				startAt: z.string(),
+				endAt: z.string().optional(),
+				title: z.string(),
+				descriminator: z.string().optional(),
+				label: z.record(z.unknown()).optional(),
+				itemType: z.enum(['event', 'task']).optional(),
+				colorField: z.string().optional(),
+			}),
+		)
+		.optional(),
 });
 
 export type DocumentList = z.infer<typeof DocumentListSchema>;

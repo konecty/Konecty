@@ -35,8 +35,15 @@ export const MetaAccessSchema = z.object({
 	// New properties for granular menu control
 	hideListsFromMenu: z.array(z.string()).optional(),
 	hidePivotsFromMenu: z.array(z.string()).optional(),
-	// New property for menu sorting override (number for legacy, record for per-document override)
-	menuSorter: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
+	// New property for menu sorting override
+	menuSorter: z.number().optional(),
+
+	// Export permissions
+	export: z.record(z.array(z.string())).optional(),
+	exportLarge: z.record(z.array(z.string())).optional(),
+
+	// Allow changing _user (e.g. reassigning records) in update
+	changeUser: z.boolean().optional(),
 });
 
 export type MetaAccess = z.infer<typeof MetaAccessSchema>;
