@@ -71,3 +71,6 @@ dist
 coverage
 .jestcache
 .dev-data
+dbtest
+# Docker Compose override (local development customization)
+docker-compose.override.yml

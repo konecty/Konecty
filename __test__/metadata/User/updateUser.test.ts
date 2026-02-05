@@ -11,7 +11,7 @@ async function createUserHelper(authId: string) {
 		locale: 'pt_BR',
 		username: faker.internet.userName(),
 	};
-	const data = (await fetch(`http://127.0.0.1:3000/rest/data/User`, {
+	const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/User`, {
 		method: 'POST',
 		headers: {
 			Cookie: `_authTokenId=${authId}`,
@@ -34,7 +34,7 @@ describe('Update User', () => {
 			const newPassword = 'test';
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/auth/setpassword/${user?._id}/${newPassword}`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/auth/setpassword/${user?._id}/${newPassword}`, {
 				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

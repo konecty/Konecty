@@ -1,123 +1,105 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang='pt-BR'>
 	<head>
 		<title>Konecty</title>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<meta http-equiv="Cache-Control" content="public" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="application-name" content="Konecty" />
-		<meta name="description" content="Konecty" />
-		<meta name="application-url" content="https://{{ env }}{{ host }}/" />
-		<meta name="google" content="notranslate" />
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<link rel="canonical" href="https://{{ env }}{{ host }}/" />
-		<link rel="stylesheet" type="text/css" href="//{{uiServer}}/resources/login/loading.css" />
-		<link rel="shortcut icon" href="//{{uiServer}}/favicon.ico" sizes="16x16" type="image/x-icon" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/16x16.png" sizes="16x16" type="image/png" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/57x57.png" sizes="57x57" type="image/png" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/75x75.png" sizes="75x75" type="image/png" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/128x128.png" sizes="128x128" type="image/png" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/icon.ico" sizes="32x32 48x48" type="image/vnd.microsoft.icon" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/icon.icns" sizes="128x128 512x512 8192x8192 32768x32768" />
-		<link rel="icon" href="//{{uiServer}}/resources/images/logo/icon.svg" sizes="any" type="image/svg+xml" />
-		<link rel="apple-touch-icon" href="//{{uiServer}}/resources/images/logo/57x57.png" sizes="57x57" />
-		<link rel="apple-touch-icon" href="//{{uiServer}}/resources/images/logo/72x72.png" sizes="72x72" />
-		<link rel="apple-touch-icon" href="//{{uiServer}}/resources/images/logo/114x114.png" sizes="114x114" />
-		<link rel="apple-touch-icon" href="//{{uiServer}}/resources/images/logo/144x144.png" sizes="144x144" />
-		<link rel="apple-touch-startup-image" href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-320x460.png" media="(device-width: 320px)" />
+		<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
+		<meta http-equiv='Cache-Control' content='public' />
+		<meta http-equiv='X-UA-Compatible' content='IE=edge' />
+		<meta name='application-name' content='Konecty' />
+		<meta name='description' content='Konecty' />
+		<meta name='application-url' content='https://{{env}}{{host}}/' />
+		<meta name='google' content='notranslate' />
+		<meta name='apple-mobile-web-app-capable' content='yes' />
+		<meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+		<link rel='canonical' href='https://{{env}}{{host}}/' />
+		<link rel='stylesheet' type='text/css' href='//{{uiServer}}/resources/login/loading.css' />
+		<link rel='shortcut icon' href='//{{uiServer}}/favicon.ico' sizes='16x16' type='image/x-icon' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/16x16.png' sizes='16x16' type='image/png' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/57x57.png' sizes='57x57' type='image/png' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/75x75.png' sizes='75x75' type='image/png' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/128x128.png' sizes='128x128' type='image/png' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/icon.ico' sizes='32x32 48x48' type='image/vnd.microsoft.icon' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/icon.icns' sizes='128x128 512x512 8192x8192 32768x32768' />
+		<link rel='icon' href='//{{uiServer}}/resources/images/logo/icon.svg' sizes='any' type='image/svg+xml' />
+		<link rel='apple-touch-icon' href='//{{uiServer}}/resources/images/logo/57x57.png' sizes='57x57' />
+		<link rel='apple-touch-icon' href='//{{uiServer}}/resources/images/logo/72x72.png' sizes='72x72' />
+		<link rel='apple-touch-icon' href='//{{uiServer}}/resources/images/logo/114x114.png' sizes='114x114' />
+		<link rel='apple-touch-icon' href='//{{uiServer}}/resources/images/logo/144x144.png' sizes='144x144' />
+		<link rel='apple-touch-startup-image' href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-320x460.png' media='(device-width: 320px)' />
 		<!-- iPhone SPLASHSCREEN-->
 		<link
-			rel="apple-touch-startup-image"
-			href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-640x920.png"
-			media="(device-width: 320px) and (-webkit-device-pixel-ratio: 2)"
+			rel='apple-touch-startup-image'
+			href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-640x920.png'
+			media='(device-width: 320px) and (-webkit-device-pixel-ratio: 2)'
 		/>
 		<!-- iPhone (Retina) SPLASHSCREEN-->
 		<link
-			rel="apple-touch-startup-image"
-			href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-768x1004.png"
-			media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait)"
+			rel='apple-touch-startup-image'
+			href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-768x1004.png'
+			media='screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait)'
 		/>
 		<!-- iPad (non-Retina) (Portrait) -->
 		<link
-			rel="apple-touch-startup-image"
-			href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-1024x748.png"
-			media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape)"
+			rel='apple-touch-startup-image'
+			href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-1024x748.png'
+			media='screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape)'
 		/>
 		<!-- iPad (non-Retina) (Landscape) -->
 		<link
-			rel="apple-touch-startup-image"
-			href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-1536x2008.png"
-			media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait) and (-webkit-min-device-pixel-ratio: 2)"
+			rel='apple-touch-startup-image'
+			href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-1536x2008.png'
+			media='screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait) and (-webkit-min-device-pixel-ratio: 2)'
 		/>
 		<!-- iPad (Retina) (Portrait) -->
 		<link
-			rel="apple-touch-startup-image"
-			href="//{{uiServer}}/resources/images/logo/apple-touch-startup-image-2048x1496.png"
-			media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape) and (-webkit-min-device-pixel-ratio: 2)"
+			rel='apple-touch-startup-image'
+			href='//{{uiServer}}/resources/images/logo/apple-touch-startup-image-2048x1496.png'
+			media='screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape) and (-webkit-min-device-pixel-ratio: 2)'
 		/>
 		<!-- iPad (Retina) (Landscape) -->
-		<link rel="stylesheet" href="//{{uiServer}}/resources/magnific-popup.css" />
-		<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+		<link rel='stylesheet' href='//{{uiServer}}/resources/magnific-popup.css' />
+		<meta name='viewport' content='initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />
 		<script
-			src="https://cdnjs.cloudflare.com/ajax/libs/loading-attribute-polyfill/1.5.4/loading-attribute-polyfill.min.js"
-			integrity="sha512-Kq3/MTxphzXJIRDWtrpLhhNnLDPiBXPMKkx/KogMYZO92Geor9j8sJguZ1OozBS+YVmVKo2HEx2gZfGOQBFM8A=="
-			crossorigin="anonymous"
+			src='https://cdnjs.cloudflare.com/ajax/libs/loading-attribute-polyfill/1.5.4/loading-attribute-polyfill.min.js'
+			integrity='sha512-Kq3/MTxphzXJIRDWtrpLhhNnLDPiBXPMKkx/KogMYZO92Geor9j8sJguZ1OozBS+YVmVKo2HEx2gZfGOQBFM8A=='
+			crossorigin='anonymous'
 		></script>
 		{{#if collectFingerprint}}
-		<script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
-		<script src="/fp.js"></script>
+			<script src='https://openfpcdn.io/fingerprintjs/v4/iife.min.js'></script>
+			<script src='/fp.js'></script>
 		{{/if}}
-		<script type="text/javascript">
-			window.BLOB_URL = '{{blobUrl}}';
-			window.PREVIEW_URL = '{{previewUrl}}';
-			window.LOCALE = '{{locale}}';
-			window.ENV = '';
-			window.HOST = '{{host}}';
-			window.UI_URL = '{{uiServer}}';
+		<script type='text/javascript'>
+			window.BLOB_URL = '{{blobUrl}}'; window.PREVIEW_URL = '{{previewUrl}}'; window.LOCALE = '{{locale}}'; window.ENV = ''; window.HOST = '{{host}}'; window.UI_URL = '{{uiServer}}';
 		</script>
 	</head>
 	<body>
 		<script>
-			(function (i, s, o, g, r, a, m) {
-				i['GoogleAnalyticsObject'] = r;
-				(i[r] =
-					i[r] ||
-					function () {
-						(i[r].q = i[r].q || []).push(arguments);
-					}),
-					(i[r].l = 1 * new Date());
-				(a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]);
-				a.async = 1;
-				a.src = g;
-				m.parentNode.insertBefore(a, m);
-			})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
-			ga('create', 'UA-47455751-1', 'konecty.com');
-			ga('send', 'pageview');
+			(function (i, s, o, g, r, a, m) { i['GoogleAnalyticsObject'] = r; (i[r] = i[r] || function () { (i[r].q = i[r].q || []).push(arguments); }), (i[r].l = 1 * new Date());
+			(a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]); a.async = 1; a.src = g; m.parentNode.insertBefore(a, m); })(window, document, 'script',
+			'//www.google-analytics.com/analytics.js', 'ga'); ga('create', 'UA-47455751-1', 'konecty.com'); ga('send', 'pageview');
 		</script>
-		<div id="loading_modal"></div>
-		<div id="loading" class="basic_top_box">
-			<span id="loading_text">
+		<div id='loading_modal'></div>
+		<div id='loading' class='basic_top_box'>
+			<span id='loading_text'>
 				<br />
-				{{ lbl_loading }}
+				{{lbl_loading}}
 				<br />
 				<br />
 				<br />
 			</span>
-			<div id="bottom_bar">
-				<div id="bottom_bar_loading"></div>
-				<button id="splash_close">{{ btn_close }}</button>
+			<div id='bottom_bar'>
+				<div id='bottom_bar_loading'></div>
+				<button id='splash_close'>{{btn_close}}</button>
 			</div>
 		</div>
 		<script>
 			document.getElementById('loading').style.top = '0px';
 		</script>
 		<script
-			src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.8.3/jquery.min.js"
-			integrity="sha512-J9QfbPuFlqGD2CYVCa6zn8/7PEgZnGpM5qtFOBZgwujjDnG5w5Fjx46YzqvIh/ORstcj7luStvvIHkisQi5SKw=="
-			crossorigin="anonymous"
+			src='https://cdnjs.cloudflare.com/ajax/libs/jquery/1.8.3/jquery.min.js'
+			integrity='sha512-J9QfbPuFlqGD2CYVCa6zn8/7PEgZnGpM5qtFOBZgwujjDnG5w5Fjx46YzqvIh/ORstcj7luStvvIHkisQi5SKw=='
+			crossorigin='anonymous'
 		></script>
-		<script src="//{{uiServer}}/resources/jquery.magnific-popup.js"></script>
-		<script type="text/javascript" src="//{{uiServer}}/startup.js?_dc={{ timeInMilis }}"></script>
+		<script src='//{{uiServer}}/resources/jquery.magnific-popup.js'></script>
+		<script type='text/javascript' src='//{{uiServer}}/startup.js?_dc={{timeInMilis}}'></script>
 	</body>
 </html>

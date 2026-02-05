@@ -17,7 +17,15 @@ export const Condition = z.object({
 			columns: z.number().optional(),
 			hideOnDisable: z.boolean().optional(),
 			customLabel: z.string().optional(),
+
+			// Configs related to the slider filter
+			minValue: z.number().optional(),
+			maxValue: z.number().optional(),
+			unlimitedMaxValue: z.boolean().optional(),
+			steps: z.number().optional(),
+			infinity: z.boolean().optional(),
 		})
+		.catchall(z.any())
 		.optional(),
 });
 

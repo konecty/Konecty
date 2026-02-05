@@ -20,11 +20,21 @@ export async function renderTemplate(templateId, data) {
 		return DateTime.fromISO(str).toFormat(format);
 	});
 
-	if (/.+\.hbs$/.test(templateId) === true) {
-		const templateFullPath = path.join(templatePath(), templateId);
-		const templateContent = await readFile(templateFullPath, 'utf-8');
-		const template = LocalHandlebars.compile(templateContent);
-		return template(data);
+	if (/.+\.(hbs|html)$/.test(templateId) === true) {
+		const basePath = templatePath();
+		const templateFullPath = path.join(basePath, templateId);
+		logger.debug({ templateId, basePath, templateFullPath }, 'Loading template file');
+		try {
+			const templateContent = await readFile(templateFullPath, 'utf-8');
+			const template = LocalHandlebars.compile(templateContent);
+			return template(data);
+		} catch (error) {
+			if (error.code === 'ENOENT') {
+				logger.error({ templateId, basePath, templateFullPath, cwd: process.cwd(), nodeEnv: process.env.NODE_ENV }, `Template file not found: ${templateId}`);
+				throw new Error(`Template ${templateId} not found`);
+			}
+			throw error;
+		}
 	}
 
 	const templateCollection = MetaObject.Collections['Template'];

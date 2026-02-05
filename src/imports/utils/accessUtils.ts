@@ -93,11 +93,15 @@ export function getAccessFor(documentName: string, user: User): MetaAccess | fal
 		user.access[documentName] = user.access.defaults;
 	}
 
-	let accessName: false | string | Array<string> = user.access[documentName];
+	let accessName: boolean | string | Array<string> = user.access[documentName];
 
 	// Return false to Deny if access is false
 	if (accessName === false) {
 		return false;
+	}
+
+	if (accessName === true) {
+		accessName = user.access.defaults;
 	}
 
 	// If accessName is String or Array, try to use it

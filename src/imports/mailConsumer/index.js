@@ -20,8 +20,10 @@ import { MetaObject } from '@imports/model/MetaObject';
 import { renderTemplate } from '../template';
 import { logger } from '../utils/logger';
 import { errorReturn, successReturn } from '../utils/return';
+import { withTimeout } from '../utils/timeout';
 
 const MAIL_CONSUME_SCHEDULE = process.env.MAIL_CONSUME_SCHEDULE || '*/1 * * * * *';
+const SEND_EMAIL_TIMEOUT = Number(process.env.SEND_EMAIL_TIMEOUT ?? 30e3);
 const TZ = process.env.TZ || 'America/Sao_Paulo';
 
 const consumeCronJob = new CronJob(MAIL_CONSUME_SCHEDULE, consume, null, false, TZ);
@@ -32,10 +34,10 @@ async function sendEmail(record) {
 	let user;
 	let server = transporters.default;
 	if (record.server) {
-		if (transporters[record.server] == null) {
+		if (transporters[record.server] != null) {
 			server = transporters[record.server];
 		} else {
-			logger.error(`Server ${record.server} not found`);
+			logger.error(`Server ${record.server} not found - Using default server`);
 		}
 	} else {
 		record.server = 'default';
@@ -107,6 +109,7 @@ async function sendEmail(record) {
 			if (server) {
 				var serverHost = get(server, 'transporter.options.host');
 				try {
+					logger.trace(`🔜 Sending email to ${mail.to} via [${serverHost || record.server}]`);
 					const response = await server.sendMail(mail);
 
 					if (get(response, 'accepted.length') > 0) {
@@ -148,8 +151,11 @@ async function send(record) {
 		return sendEmail(record);
 	}
 
-	if (/.+\.hbs$/.test(record.template) === true) {
-		set(record, 'template', `email/${record.template}`);
+	if (/.+\.(hbs|html)$/.test(record.template) === true) {
+		// Only add 'email/' prefix if template doesn't already start with it
+		if (!record.template.startsWith('email/')) {
+			set(record, 'template', `email/${record.template}`);
+		}
 	} else {
 		const templateRecord = await MetaObject.Collections['Template'].findOne({ _id: record.template }, { projection: { subject: 1 } });
 
@@ -165,7 +171,13 @@ async function send(record) {
 		record.subject = Mustache.render(templateRecord.subject, record.data);
 	}
 
-	record.body = await renderTemplate(record.template, extend({ message: { _id: record._id } }, record.data));
+	try {
+		record.body = await renderTemplate(record.template, extend({ message: { _id: record._id } }, record.data));
+	} catch (error) {
+		logger.error({ template: record.template, error: error.message }, 'Error rendering template');
+		await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { status: 'Falha no Envio', error: { message: error.message } } });
+		return errorReturn(error.message);
+	}
 
 	await MetaObject.Collections['Message'].updateOne({ _id: record._id }, { $set: { body: record.body, subject: record.subject } });
 	return sendEmail(record);
@@ -197,13 +209,25 @@ async function consume() {
 	}
 
 	await BluebirdPromise.each(range(0, mailCount), async () => {
-		const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
+		try {
+			await withTimeout(
+				async () => {
+					const updatedRecords = await MetaObject.Collections['Message'].findOneAndUpdate(query, update, options);
 
-		if (updatedRecords == null || updatedRecords._id == null) {
-			return;
+					if (updatedRecords == null || updatedRecords._id == null) {
+						return;
+					}
+
+					return send(updatedRecords);
+				},
+				SEND_EMAIL_TIMEOUT,
+				'consume->send',
+			);
+		} catch (error) {
+			logger.error(error, `📧 Email error ${JSON.stringify(query, null, 2)}`);
+
+			return errorReturn('message' in error ? error.message : 'Unknown error');
 		}
-
-		return send(updatedRecords);
 	});
 
 	return consumeCronJob.start();

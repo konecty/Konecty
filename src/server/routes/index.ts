@@ -15,6 +15,7 @@ import listViewApi from './api/list-view';
 import mainMenuApi from './api/menu/main';
 import metasByDocumentApi from './api/metas-by-document';
 import noAuth from './api/no-auth';
+import otpApi from './api/auth/otp';
 import translatioApi from './api/translation';
 import authApi from './rest/auth/authApi';
 import changeUserApi from './rest/changeUser/changeUserApi';
@@ -40,6 +41,8 @@ const fastify = Fastify({
 	logger,
 	maxParamLength: 250,
 	disableRequestLogging: DISABLE_REQUEST_LOGGING,
+	connectionTimeout: 120000, // 2 minutes
+	requestTimeout: 120000, // 2 minutes
 });
 
 fastify.register(initializeInstrumentation(), { ignoreRoutes: ['/liveness', '/readiness'] });
@@ -58,6 +61,7 @@ fastify.register(formApi);
 fastify.register(listViewApi);
 fastify.register(mainMenuApi);
 fastify.register(translatioApi);
+fastify.register(otpApi);
 fastify.register(authApi);
 fastify.register(changeUserApi);
 fastify.register(commentApi);
@@ -103,9 +107,13 @@ export async function serverStart() {
 			port: PORT,
 			host: HOST,
 		});
+		const addr = fastify.server.address();
+		if (addr && typeof addr === 'object' && addr.port) {
+			process.env.BASE_URL = `http://127.0.0.1:${addr.port}/rest`;
+		}
 	} catch (error) {
 		fastify.log.error(error);
-		process.exit(1);
+		throw error;
 	}
 }
 

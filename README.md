@@ -2,6 +2,12 @@
 
 # Konecty Open source Tech Business Platform
 
+> The Konecty documentation is available in:
+> - [Português (pt-BR)](docs/pt-BR/index.md)
+> - [English (en)](docs/en/index.md)
+>
+> The documentation covers main concepts, configuration, API, and usage examples for the Konecty platform.
+
 ## How to run local/development
 
 You will need a mongodb database (you can use a free account at cloud.mongodb.com or a local mongodb install)
@@ -20,6 +26,16 @@ yarn start
 If this is a empty database, basic metadata and starting collections will be automatically created.
 
 The UI will be running at `localhost:3000`
+
+### Modern Login Page Development
+
+If you're using the modern login page (`loginPageVariant: 'modern'`), the CSS will be automatically generated on first access in development mode. For faster development with CSS hot-reload, run in a separate terminal:
+
+```bash
+yarn dev:css
+```
+
+This will watch the Tailwind input file and regenerate CSS automatically when you modify the template.
 
 ## Konecty environment variables
 
@@ -42,6 +58,22 @@ The UI will be running at `localhost:3000`
 -   `UI_URL`: host for ui
 -   `LOG_LEVEL`: [Pino log levels](https://github.com/pinojs/pino/blob/HEAD/docs/api.md#level-string)
 -   `LOG_TO_FILE`: Optional file name to write all logs. Path relative to project root
+-   `DISABLE_SENDMAIL`: (optional) `true` to disable email processing
+
+### OTP Authentication (WhatsApp)
+
+-   `WHATSAPP_ACCESS_TOKEN`: WhatsApp Business API access token
+-   `WHATSAPP_PHONE_NUMBER_ID`: WhatsApp Business API phone number ID
+-   `WHATSAPP_BUSINESS_ACCOUNT_ID`: (optional) WhatsApp Business Account ID
+-   `WHATSAPP_TEMPLATE_ID`: WhatsApp template ID for OTP messages
+-   `HAS_COPY_BUTTON`: (optional) Set to `true` if the WhatsApp template has a URL button that requires the OTP code as parameter. When enabled, the OTP code will be sent as the URL button parameter. Default: `false`. Priority: Namespace → env var → default
+
+### Modern Login Page
+
+-   `LOGIN_PAGE_VARIANT`: (optional) Login page variant. Values: `classic` (default) or `modern`. Priority: Namespace → env var → default
+-   `OTP_EMAIL_ENABLED`: (optional) Enable OTP via email. Values: `true` or `false`. Priority: Namespace → env var → default `false`
+-   `OTP_WHATSAPP_ENABLED`: (optional) Enable OTP via WhatsApp. Values: `true` or `false`. Priority: Namespace → env var → default `false`
+-   `DEFAULT_LOCALE`: (optional) Default locale for login page. Values: `pt-BR` (default) or `en`. Priority: Namespace → env var → default `pt-BR`
 
 ## FILE STORAGE API
 
@@ -69,16 +101,12 @@ docker pull konecty/konecty
 docker run --name kondata -p 3000:3000 --link mongo --env MONGO_URL=mongodb://mongo:27017/konecty --env MONGO_OPLOG_URL=mongodb://mongo:27017/local konecty/konecty
 ```
 
-## REST API
-
-Examples of REST usage can be found here: [REST](REST.md)
-
 ## Namespace configuration
 
 The namespace is made of many parts, documented at:
 
--   [Storage api](docs/en/STORAGE.md)
--   [Resources and Events](docs/en/RESOURCES_AND_EVENTS.md)
+-   [Storage api](docs/en/internal/STORAGE.md)
+-   [Resources and Events](docs/en/internal/RESOURCES_AND_EVENTS.md)
 
 ## Logs
 

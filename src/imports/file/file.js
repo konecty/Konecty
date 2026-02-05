@@ -9,7 +9,7 @@ import { update } from '../data/api/update';
 import { logger } from '../utils/logger';
 
 /**
- * 
+ *
  * @param {object} payload
  * @param {string} payload.document
  * @param {string} payload.fieldName

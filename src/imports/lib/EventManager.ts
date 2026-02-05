@@ -73,7 +73,7 @@ class EventManager {
 			// eslint-disable-next-line @typescript-eslint/no-array-constructor
 			Array()
 				.concat(event.params.queue)
-				.map(queueName => queueManager.sendMessage(get(event.params, 'resource', ''), queueName, eventData, event.params.headers)),
+				.map(queueName => queueManager.sendMessage(get(event.params, 'resource', ''), queueName, eventData, event.params)),
 		);
 	}
 
@@ -101,7 +101,7 @@ class EventManager {
 
 function addMetaConditionToEvent(eventCfg: DocumentEvent, metaName: string) {
 	return {
-		name: eventCfg.name ?? `${eventCfg.event.type}:${metaName}`,
+		name: `${eventCfg.event.type}:${metaName}`,
 		...eventCfg,
 		conditions: {
 			all: [{ fact: 'metaName', operator: 'equal', value: metaName }, { ...eventCfg.conditions }],

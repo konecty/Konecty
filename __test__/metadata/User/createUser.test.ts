@@ -33,7 +33,7 @@ describe('Create User', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/User`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/User`, {
 				method: 'POST',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

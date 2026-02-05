@@ -19,10 +19,36 @@ spec:
     spec:
       containers:
         - name: konecty
-          image: konecty/konecty:2.0.0-dev.27
+          image: konecty/konecty:3.2.1
           env:
             - name: MONGO_URL
               value: "mongodb://localhost:27017/konecty"
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: LOG_PRETTY
+              value: "true"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DISABLE_REINDEX
+              value: 'true'
+            - name: DISABLE_TELEMETRY_LOGS
+              value: 'true'
+            - name: DISABLE_SENDMAIL
+              value: 'true'
+            - name: TZ
+              value: America/Sao_Paulo
+            - name: UI_URL
+              value: ui-v2.konecty.com
+            - name: BLOB_URL
+              value: https://konecty.com
+            - name: PREVIEW_URL
+              value: https://konecty.com
+            - name: KONECTY_RIA
+              value: legacy
+            - name: HOST
+              value: '::'
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
@@ -44,3 +70,10 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 250Mi
+            limits:
+              cpu: 300m
+              memory: 500Mi

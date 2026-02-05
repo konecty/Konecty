@@ -87,17 +87,17 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 									Object.entries(optionLabels).forEach(([lang, value]) => set(acc, [fixISO(lang), ...keyPath, 'options', field, option], value as string));
 								});
 							}
-							if (type === "lookup") {
-								const findLookupSubField: (lookup: {document: string, name: string}) => Field | null = ({document, name}) => {
-									if(name.includes('.')) {
-										const [subField, ... fieldParts] = name.split('.');
-										const subFieldDoc = findLookupSubField({document, name: subField});
-										return findLookupSubField({document: subFieldDoc?.document ?? '', name: fieldParts.join('.')});
+							if (type === 'lookup') {
+								const findLookupSubField: (lookup: { document: string; name: string }) => Field | null = ({ document, name }) => {
+									if (name.includes('.')) {
+										const [subField, ...fieldParts] = name.split('.');
+										const subFieldDoc = findLookupSubField({ document, name: subField });
+										return findLookupSubField({ document: subFieldDoc?.document ?? '', name: fieldParts.join('.') });
 									}
 									const lookupMeta = metas.find(meta => meta.name === document) ?? {};
 									const subFieldLabel = get(lookupMeta, `fields.${name}`, null);
 									return subFieldLabel as Field | null;
-								}
+								};
 								const fieldDocument = get(fieldLabel, 'document');
 								const descriptionFields = get(fieldLabel, 'descriptionFields', []) as string[];
 								const recursiveDescriptionFields = descriptionFields.reduce((acc, field) => {
@@ -107,16 +107,16 @@ export const buildI18N = async (user: User): Promise<Record<string, unknown>> =>
 								}, [] as string[]);
 								if (fieldDocument != null && Array.isArray(recursiveDescriptionFields)) {
 									recursiveDescriptionFields.forEach(subField => {
-										const subFieldLabel = findLookupSubField({document: fieldDocument, name: subField});
-										if(subFieldLabel != null) {
+										const subFieldLabel = findLookupSubField({ document: fieldDocument, name: subField });
+										if (subFieldLabel != null) {
 											const label: Label = get(subFieldLabel, 'label', {});
-											Object.entries(label).forEach(([lang, value]) => set(acc, [fixISO(lang), ...keyPath, 'fields', `${field}.${subField}`], value as string));
+											Object.entries(label).forEach(([lang, value]) =>
+												set(acc, [fixISO(lang), ...keyPath, 'fields', `${field}.${subField}`], value as string),
+											);
 										}
 									});
 								}
 							}
-
-							
 						}
 						if (label != null) {
 							Object.entries(label).forEach(([lang, value]) => {

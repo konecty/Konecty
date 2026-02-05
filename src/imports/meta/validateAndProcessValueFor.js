@@ -2,6 +2,7 @@ import { hash as bcryptHash } from 'bcryptjs';
 
 import { createHash } from 'crypto';
 
+import deburr from 'lodash/deburr';
 import has from 'lodash/has';
 import isArray from 'lodash/isArray';
 import isBoolean from 'lodash/isBoolean';
@@ -14,7 +15,6 @@ import isString from 'lodash/isString';
 import kebabCase from 'lodash/kebabCase';
 import omit from 'lodash/omit';
 import size from 'lodash/size';
-import deburr from 'lodash/deburr';
 
 import { DateTime } from 'luxon';
 
@@ -40,7 +40,7 @@ const regexUtils = {
 	url: /^http(?:s)?:\/\/(www\.)?[a-z0-9]+(?:[-.]{1}[a-z0-9]+)*(?::[0-9]{1,5})?(\/.*)?$/,
 };
 
-const slugify = (text) => {
+const slugify = text => {
 	if (text == null) return '';
 	return deburr(String(text).toLowerCase())
 		.replace(/[^a-z0-9]/g, '')
@@ -119,17 +119,6 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 		if (field.isAllowDuplicates === false && isArray(value)) {
 			if (value.some((itemA, indexA) => value.some((itemB, indexB) => indexA !== indexB && isEqual(itemA, itemB)))) {
 				return errorReturn(`Value for field ${fieldName} must be a list with no duplicated values`);
-			}
-		}
-	}
-
-	// Validate picklist min selected
-	if (field.type === 'picklist') {
-		if (isNumber(field.minSelected)) {
-			if (field.minSelected === 1) {
-				if (!value || (isArray(value) && value.length === 0)) {
-					return errorReturn(`Value for field ${fieldName} must be an array with at least 1 item`);
-				}
 			}
 		}
 	}
@@ -374,34 +363,59 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				if (isNumber(field.maxValue) && value > field.maxValue) {
-					return errorReturn(`Value for field ${fieldName} must be less than ${field.maxValue}`)
+					return errorReturn(`Value for field ${fieldName} must be less than ${field.maxValue}`);
 				}
 
 				if (isNumber(field.minValue) && value < field.minValue) {
-					return errorReturn(`Value for field ${fieldName} must be greater than ${field.minValue}`)
+					return errorReturn(`Value for field ${fieldName} must be greater than ${field.minValue}`);
 				}
 
 				return successReturn(value);
 
 			case 'picklist':
-				if (isNumber(field.maxSelected) && field.maxSelected > 1) {
-					const pickListResult = mustBeArray(value);
-					if (pickListResult.success === false) {
-						return pickListResult;
+				if (isArray(value)) {
+					value = value.filter(v => v && size(v) > 0);
+				} else if (isString(value) && size(value) === 0) {
+					value = null;
+				}
+
+				if (isNumber(field.maxSelected)) {
+					if (field.maxSelected > 1) {
+						const pickListResult = mustBeArray(value);
+						if (pickListResult.success === false) {
+							return pickListResult;
+						}
 					}
-					if (value.length > field.maxSelected) {
+					if (isArray(value) && value.length > field.maxSelected) {
 						return errorReturn(`Value for field ${fieldName} must be an array with max of ${field.maxSelected} item(s)`);
+					}
+
+					if (field.maxSelected === 1 && isArray(value)) {
+						value = value[0];
 					}
 				}
 
 				if (isNumber(field.minSelected) && field.minSelected > 0) {
-					if (value.length < field.minSelected) {
+					if (field.minSelected === 1 && (!value || (isArray(value) && value.length === 0))) {
 						return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
+					} else if (field.minSelected > 1) {
+						const pickListResult = mustBeArray(value);
+						if (pickListResult.success === false) {
+							return pickListResult;
+						}
+
+						if (value.length < field.minSelected) {
+							return errorReturn(`Value for field ${fieldName} must be an array with min of ${field.minSelected} item(s)`);
+						}
 					}
 				}
 
+				if (value == null) {
+					return successReturn(value);
+				}
+
 				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
-					return errorReturn(`Value ${value} for field ${fieldName} is invalid`)
+					return errorReturn(`Value ${value} for field ${fieldName} is invalid`);
 				}
 
 				return successReturn(value);
@@ -428,10 +442,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					}
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(size(value) > 0 ? value : null);
 
 			case 'dateTime':
 			case 'date':
@@ -517,13 +528,13 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				if (emailObjectResult.success === false) {
 					return emailObjectResult;
 				}
+
 				const addressResult = mustBeString(value.address, `${fieldName}.address`);
 				if (addressResult.success === false) {
 					return addressResult;
 				}
 
 				const typeResult = mustBeStringOrNull(value.type, `${fieldName}.type`);
-
 				if (typeResult.success === false) {
 					return typeResult;
 				}
@@ -563,10 +574,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					};
 				}
 
-				return {
-					success: true,
-					data: value,
-				};
+				return successReturn(size(value) > 0 ? value : null);
 
 			case 'personName':
 				const personObjectResult = mustBeObject(value);
@@ -584,16 +592,18 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 				}
 
 				value = keys.reduce((acc, key) => {
-					if (isString(value[key])) {
+					if (isString(value[key]) && size(value[key]) > 0) {
 						acc[key] = titleCase(value[key]);
 					}
 					return acc;
 				}, {});
 
-				value.full = value.full ?? keys
-					.map(key => value[key] ?? '')
-					.filter(v => v.length > 0)
-					.join(' ');
+				value.full =
+					value.full ??
+					keys
+						.map(key => value[key] ?? '')
+						.filter(v => v.length > 0)
+						.join(' ');
 
 				return {
 					success: true,
@@ -800,7 +810,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					.concat(optionalKeys)
 					.concat(extraKeys)
 					.reduce((acc, key) => {
-						if (value[key] == null) {
+						if (value[key] == null || size(value[key]) === 0) {
 							return acc;
 						}
 						if (isNumber(value[key])) {
@@ -879,7 +889,7 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 								actionType,
 								objectOriginalValues: value,
 								objectNewValues: value,
-								idsToUpdate
+								idsToUpdate,
 							};
 
 							const validationResult = await validateAndProcessValueFor(params, dbSession);
@@ -929,15 +939,18 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return errorReturn(`Record not found for field ${fieldName} with _id [${value._id}] on document [${field.document}]`);
 				}
 
-				const inheritedFieldsResult = await copyDescriptionAndInheritedFields({
-					field,
-					record,
-					meta,
-					actionType,
-					objectOriginalValues,
-					objectNewValues,
-					idsToUpdate,
-				}, dbSession);
+				const inheritedFieldsResult = await copyDescriptionAndInheritedFields(
+					{
+						field,
+						record,
+						meta,
+						actionType,
+						objectOriginalValues,
+						objectNewValues,
+						idsToUpdate,
+					},
+					dbSession,
+				);
 
 				return inheritedFieldsResult;
 

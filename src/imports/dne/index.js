@@ -1,29 +1,14 @@
-import isString from 'lodash/isString';
-import isNumber from 'lodash/isNumber';
 import first from 'lodash/first';
-import unset from 'lodash/unset';
+import isNumber from 'lodash/isNumber';
+import isString from 'lodash/isString';
 import set from 'lodash/set';
 import sortBy from 'lodash/sortBy';
-import toLower from 'lodash/toLower';
+import unset from 'lodash/unset';
 
 import { MetaObject } from '@imports/model/MetaObject';
 
 import { dneDB } from '../database';
-
-const accentToRegex = function (str) {
-	return toLower(str)
-		.replace(/a/g, '[aàáâãäåæ]')
-		.replace(/c/g, '[cç]')
-		.replace(/d/g, '[DÐ]')
-		.replace(/e/g, '[eèéêëẽ]')
-		.replace(/i/g, '[iìíîïĩ]')
-		.replace(/o/g, '[oœðñòóôõöø]')
-		.replace(/u/g, '[uµùúûü]')
-		.replace(/s/g, '[sšß]')
-		.replace(/z/g, '[zž]')
-		.replace(/y/g, '[yýÿY¥]')
-		.replace(/\\/g, '\\\\');
-};
+import { accentToRegex } from '../utils/strUtils';
 
 export async function DNE_CEP_List(cep) {
 	const placeCollection = dneDB.collection('utils.address.BRA.place');

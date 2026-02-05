@@ -33,7 +33,7 @@ import { runNamespaceWebhook } from './namespace';
 
 import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
-import { find } from "@imports/data/api";
+import { find } from '@imports/data/api';
 import { client } from '@imports/database';
 import { Konsistent } from '@imports/konsistent';
 import eventManager from '@imports/lib/EventManager';
@@ -497,401 +497,415 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 	try {
-		const transactionResult = await retryMongoTransaction(() => dbSession.withTransaction(async function createTransaction() {
-			tracingSpan?.addEvent('Processing login');
-			const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
-			if (processLoginResult.success === false) {
-				return processLoginResult;
-			}
+		const transactionResult = await retryMongoTransaction(() =>
+			dbSession.withTransaction(async function createTransaction() {
+				tracingSpan?.addEvent('Processing login');
+				const processLoginResult = await processCollectionLogin({ meta: metaObject, data });
+				if (processLoginResult.success === false) {
+					return processLoginResult;
+				}
 
-			const cleanedData = Object.keys(data).reduce((acc, key) => {
-				if (data[key] == null || data[key] === '') {
+				const cleanedData = Object.keys(data).reduce((acc, key) => {
+					if (data[key] == null || data[key] === '') {
+						return acc;
+					}
+					acc[key] = data[key];
 					return acc;
-				}
-				acc[key] = data[key];
-				return acc;
-			}, {});
+				}, {});
 
-			const newRecordId = get(cleanedData, '_id', randomId());
-			cleanedData._id = newRecordId;
+				const newRecordId = get(cleanedData, '_id', randomId());
+				cleanedData._id = newRecordId;
 
-			if (cleanedData._user == null) {
-				cleanedData._user = { _id: user._id };
+				if (cleanedData._user == null) {
+					cleanedData._user = { _id: user._id };
 
-				if (metaObject.name !== 'QueueUser' && isString(data?.queue?._id)) {
-					tracingSpan?.addEvent('Deriving _user from passed queue', { queueId: data.queue._id });
+					if (metaObject.name !== 'QueueUser' && isString(data?.queue?._id)) {
+						tracingSpan?.addEvent('Deriving _user from passed queue', { queueId: data.queue._id });
 
-					const userQueueResult = await getNextUserFromQueue({ document, queueId: data.queue._id, contextUser: user });
-					if (userQueueResult.success == false) {
-						return userQueueResult;
-					}
-					cleanedData._user = { _id: userQueueResult.data.user };
-				}
-
-				if (metaObject.fields._user?.isList === true) {
-					cleanedData._user = [cleanedData._user];
-				}
-			}
-
-			tracingSpan?.addEvent('Validating _user');
-			const validateUserResult = await validateAndProcessValueFor({
-				meta: metaObject,
-				fieldName: '_user',
-				value: cleanedData._user,
-				actionType: 'insert',
-				objectOriginalValues: data,
-				objectNewValues: cleanedData,
-			}, dbSession);
-
-			if (validateUserResult.success === false) {
-				return validateUserResult;
-			}
-
-			if (validateUserResult.data != null) {
-				cleanedData._user = validateUserResult.data;
-			}
-
-			tracingSpan?.addEvent('Calculating create permissions');
-			const fieldPermissionResult = Object.keys(cleanedData).map(fieldName => {
-				const accessField = getFieldPermissions(access, fieldName);
-				if (accessField.isCreatable !== true) {
-					return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
-				}
-
-				const accessFieldConditions = getFieldConditions(access, fieldName);
-				if (accessFieldConditions.CREATE != null) {
-					const getConditionFilterResult = filterConditionToFn(accessFieldConditions.CREATE, metaObject, { user });
-
-					if (getConditionFilterResult.success === false) {
-						return getConditionFilterResult;
+						const userQueueResult = await getNextUserFromQueue({ document, queueId: data.queue._id, contextUser: user });
+						if (userQueueResult.success == false) {
+							return userQueueResult;
+						}
+						cleanedData._user = { _id: userQueueResult.data.user._id };
 					}
 
-					const isAllowToCreateField = getConditionFilterResult.data(cleanedData);
-
-					if (isAllowToCreateField === false) {
-						return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+					if (metaObject.fields._user?.isList === true) {
+						cleanedData._user = [cleanedData._user];
 					}
 				}
 
-				return successReturn();
-			});
-
-			if (fieldPermissionResult.some(result => result.success === false)) {
-				await dbSession.abortTransaction();
-				return errorReturn(
-					fieldPermissionResult
-						.filter(result => result.success === false)
-						.map(result => result.errors ?? result.reason ?? result.message ?? result)
-						.flat(),
-				);
-			}
-
-			const emailsToSend = [];
-
-			tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
-			const validationResults = await BluebirdPromise.mapSeries(
-				Object.keys(metaObject.fields).filter(k => metaObject.fields[k]?.type === 'lookup'),
-				async key => {
-					const fieldToValidate = metaObject.fields[key];
-
-					const value = data[fieldToValidate.name];
-					const result = await validateAndProcessValueFor({
+				tracingSpan?.addEvent('Validating _user');
+				const validateUserResult = await validateAndProcessValueFor(
+					{
 						meta: metaObject,
-						fieldName: key,
-						value,
+						fieldName: '_user',
+						value: cleanedData._user,
 						actionType: 'insert',
 						objectOriginalValues: data,
 						objectNewValues: cleanedData,
-					}, dbSession);
+					},
+					dbSession,
+				);
+
+				if (validateUserResult.success === false) {
+					return validateUserResult;
+				}
+
+				if (validateUserResult.data != null) {
+					cleanedData._user = validateUserResult.data;
+				}
+
+				tracingSpan?.addEvent('Calculating create permissions');
+				const fieldPermissionResult = Object.keys(cleanedData).map(fieldName => {
+					const accessField = getFieldPermissions(access, fieldName);
+					if (accessField.isCreatable !== true) {
+						return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+					}
+
+					const accessFieldConditions = getFieldConditions(access, fieldName);
+					if (accessFieldConditions.CREATE != null) {
+						const getConditionFilterResult = filterConditionToFn(accessFieldConditions.CREATE, metaObject, { user });
+
+						if (getConditionFilterResult.success === false) {
+							return getConditionFilterResult;
+						}
+
+						const isAllowToCreateField = getConditionFilterResult.data(cleanedData);
+
+						if (isAllowToCreateField === false) {
+							return errorReturn(`[${document}] You don't have permission to create field ${fieldName}`);
+						}
+					}
+
+					return successReturn();
+				});
+
+				if (fieldPermissionResult.some(result => result.success === false)) {
+					await dbSession.abortTransaction();
+					return errorReturn(
+						fieldPermissionResult
+							.filter(result => result.success === false)
+							.map(result => result.errors ?? result.reason ?? result.message ?? result)
+							.flat(),
+					);
+				}
+
+				const emailsToSend = [];
+
+				tracingSpan?.addEvent('Validate&ProcessValueFor lookups');
+				const validationResults = await BluebirdPromise.mapSeries(
+					Object.keys(metaObject.fields).filter(k => metaObject.fields[k]?.type === 'lookup'),
+					async key => {
+						const fieldToValidate = metaObject.fields[key];
+
+						const value = data[fieldToValidate.name];
+						const result = await validateAndProcessValueFor(
+							{
+								meta: metaObject,
+								fieldName: key,
+								value,
+								actionType: 'insert',
+								objectOriginalValues: data,
+								objectNewValues: cleanedData,
+							},
+							dbSession,
+						);
+						if (result.success === false) {
+							return result;
+						}
+						if (result.data != null) {
+							cleanedData[key] = result.data;
+						}
+
+						return successReturn();
+					},
+				);
+
+				if (validationResults.some(result => result.success === false)) {
+					await dbSession.abortTransaction();
+					return errorReturn(
+						validationResults
+							.filter(result => result.success === false)
+							.map(result => result.errors ?? result.reason ?? result.message ?? result)
+							.flat(),
+					);
+				}
+
+				if (metaObject.scriptBeforeValidation != null) {
+					tracingSpan?.addEvent('Running scriptBeforeValidation');
+					const scriptResult = await runScriptBeforeValidation({
+						script: metaObject.scriptBeforeValidation,
+						data: cleanedData,
+						user,
+						meta: metaObject,
+						extraData: { original: {}, request: data, validated: cleanedData },
+					});
+
+					if (scriptResult.success === false) {
+						return scriptResult;
+					}
+
+					if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
+						Object.assign(cleanedData, scriptResult.data.result);
+					}
+
+					if (scriptResult.data?.emailsToSend != null && isArray(scriptResult.data.emailsToSend)) {
+						emailsToSend.push(...scriptResult.data.emailsToSend);
+					}
+				}
+
+				// Pega os valores padrão dos campos que não foram informados
+				Object.entries(metaObject.fields).forEach(([key, field]) => {
+					if (field.type !== 'autoNumber' && cleanedData[key] == null) {
+						if (field.defaultValue != null || (field.defaultValues != null && field.defaultValues.length > 0)) {
+							const getDefaultValue = () => {
+								if (field.defaultValue != null) {
+									return field.defaultValue;
+								}
+
+								if (field.defaultValues != null && field.defaultValues.length > 0) {
+									// Work around to fix picklist behavior
+									if (field.type === 'picklist') {
+										const value = get(field, 'defaultValues.0.pt_BR');
+										if (value == null) {
+											const lang = first(Object.keys(first(field.defaultValues)));
+											return get(first(field.defaultValues), lang);
+										}
+										return value;
+									} else {
+										return field.defaultValues;
+									}
+								}
+							};
+
+							cleanedData[key] = getDefaultValue();
+						}
+					}
+				});
+
+				tracingSpan?.addEvent('Validate&processValueFor all fields');
+				const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
+					const value = cleanedData[key];
+					const field = metaObject.fields[key];
+
+					if (field.type === 'autoNumber' && (ignoreAutoNumber || value != null)) {
+						return successReturn();
+					}
+
+					const result = await validateAndProcessValueFor(
+						{
+							meta: metaObject,
+							fieldName: key,
+							value,
+							actionType: 'insert',
+							objectOriginalValues: data,
+							objectNewValues: cleanedData,
+						},
+						dbSession,
+					);
+
 					if (result.success === false) {
 						return result;
 					}
 					if (result.data != null) {
 						cleanedData[key] = result.data;
 					}
-
 					return successReturn();
-				},
-			);
-
-			if (validationResults.some(result => result.success === false)) {
-				await dbSession.abortTransaction();
-				return errorReturn(
-					validationResults
-						.filter(result => result.success === false)
-						.map(result => result.errors ?? result.reason ?? result.message ?? result)
-						.flat(),
-				);
-			}
-
-			if (metaObject.scriptBeforeValidation != null) {
-				tracingSpan?.addEvent('Running scriptBeforeValidation');
-				const scriptResult = await runScriptBeforeValidation({
-					script: metaObject.scriptBeforeValidation,
-					data: cleanedData,
-					user,
-					meta: metaObject,
-					extraData: { original: {}, request: data, validated: cleanedData },
 				});
 
-				if (scriptResult.success === false) {
-					return scriptResult;
-				}
-
-				if (scriptResult.data?.result != null && isObject(scriptResult.data.result)) {
-					Object.assign(cleanedData, scriptResult.data.result);
-				}
-
-				if (scriptResult.data?.emailsToSend != null && isArray(scriptResult.data.emailsToSend)) {
-					emailsToSend.push(...scriptResult.data.emailsToSend);
-				}
-			}
-
-			// Pega os valores padrão dos campos que não foram informados
-			Object.entries(metaObject.fields).forEach(([key, field]) => {
-				if (field.type !== 'autoNumber' && cleanedData[key] == null) {
-					if (field.defaultValue != null || (field.defaultValues != null && field.defaultValues.length > 0)) {
-						const getDefaultValue = () => {
-							if (field.defaultValue != null) {
-								return field.defaultValue;
-							}
-
-							if (field.defaultValues != null && field.defaultValues.length > 0) {
-								// Work around to fix picklist behavior
-								if (field.type === 'picklist') {
-									const value = get(field, 'defaultValues.0.pt_BR');
-									if (value == null) {
-										const lang = first(Object.keys(first(field.defaultValues)));
-										return get(first(field.defaultValues), lang);
-									}
-									return value;
-								} else {
-									return field.defaultValues;
-								}
-							}
-						};
-
-						cleanedData[key] = getDefaultValue();
-					}
-				}
-			});
-
-			tracingSpan?.addEvent('Validate&processValueFor all fields');
-			const validateAllFieldsResult = await BluebirdPromise.mapSeries(Object.keys(metaObject.fields), async key => {
-				const value = cleanedData[key];
-				const field = metaObject.fields[key];
-
-				if (field.type === 'autoNumber' && (ignoreAutoNumber || value != null)) {
-					return successReturn();
-				}
-
-				const result = await validateAndProcessValueFor({
-					meta: metaObject,
-					fieldName: key,
-					value,
-					actionType: 'insert',
-					objectOriginalValues: data,
-					objectNewValues: cleanedData,
-				}, dbSession);
-
-				if (result.success === false) {
-					return result;
-				}
-				if (result.data != null) {
-					cleanedData[key] = result.data;
-				}
-				return successReturn();
-			});
-
-			if (validateAllFieldsResult.some(result => result.success === false)) {
-				await dbSession.abortTransaction();
-				return errorReturn(
-					validateAllFieldsResult
-						.filter(result => result.success === false)
-						.map(result => result.errors ?? result.reason ?? result.message ?? result)
-						.flat(),
-				);
-			}
-
-			if (metaObject.validationScript != null) {
-				tracingSpan?.addEvent('Running validation script');
-
-				const validation = await processValidationScript({ script: metaObject.validationScript, validationData: metaObject.validationData, fullData: extend({}, data, cleanedData), user });
-				if (validation.success === false) {
+				if (validateAllFieldsResult.some(result => result.success === false)) {
 					await dbSession.abortTransaction();
-					logger.debug(`Create - Script Validation Error - ${validation.reason}`);
-					return errorReturn(`[${document}] ${validation.reason}`);
-				}
-			}
-
-			if (Object.keys(cleanedData).length > 0) {
-				const insertedQuery = {};
-
-				const now = DateTime.local().toJSDate();
-
-				const newRecord = Object.assign({}, cleanedData, {
-					_id: newRecordId,
-					_createdAt: get(cleanedData, '_createdAt', now),
-					_createdBy: get(cleanedData, '_createdBy', pick(user, ['_id', 'name', 'group'])),
-					_updatedAt: get(cleanedData, '_updatedAt', now),
-					_updatedBy: get(cleanedData, '_updatedBy', pick(user, ['_id', 'name', 'group'])),
-				});
-
-				const walResult = await Konsistent.writeAheadLog(document, 'create', newRecord, user, dbSession);
-				if (walResult.success === false) {
-					await dbSession.abortTransaction();
-					return walResult;
-				}
-
-
-				try {
-					if (processLoginResult.data != null) {
-						await MetaObject.Collections['User'].insertOne({
-							_id: newRecord._id,
-							...processLoginResult.data,
-						}, { session: dbSession });
-
-						const loginFieldResult = await validateAndProcessValueFor({
-							meta: metaObject,
-							fieldName: get(metaObject, 'login.field', 'login'),
-							value: processLoginResult.data,
-							actionType: 'insert',
-							objectOriginalValues: data,
-							objectNewValues: cleanedData,
-						}, dbSession);
-
-						if (loginFieldResult.success === false) {
-							await dbSession.abortTransaction();
-							return loginFieldResult;
-						}
-
-						set(newRecord, get(metaObject, 'login.field', 'login'), loginFieldResult.data);
-					}
-
-					if (upsert != null && isObject(upsert)) {
-						const updateOperation = {
-							$setOnInsert: {},
-							$set: {},
-						};
-						if (updateOnUpsert != null && isObject(updateOnUpsert)) {
-							Object.keys(newRecord).forEach(key => {
-								if (updateOnUpsert[key] != null) {
-									set(updateOperation, `$set.${key}`, newRecord[key]);
-								} else {
-									set(updateOperation, `$setOnInsert.${key}`, newRecord[key]);
-								}
-							});
-						} else {
-							set(updateOperation, '$setOnInsert', newRecord);
-						}
-
-						if (isEmpty(updateOperation.$set)) {
-							unset(updateOperation, '$set');
-						}
-
-						if (isEmpty(updateOperation.$setOnInsert)) {
-							unset(updateOperation, '$setOnInsert');
-						}
-
-						tracingSpan?.addEvent('Upserting record');
-						const upsertResult = await collection.updateOne(stringToDate(upsert), stringToDate(updateOperation), {
-							upsert: true,
-							session: dbSession,
-						});
-
-						// If upsertedId is not null, get the affected record _id
-						if (upsertResult.upsertedId != null) {
-							set(insertedQuery, '_id', upsertResult.upsertedId);
-							tracingSpan?.addEvent('Record upserted', { upsertedId: upsertResult.upsertedId });
-						}
-
-						// If upsertedId is null, search for the affected record
-						if (upsertResult.upsertedId == null) {
-							const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: "primary" });
-							if (upsertedRecord != null) {
-								set(insertedQuery, '_id', upsertedRecord._id);
-								tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
-							}
-						}
-					} else {
-						const insertResult = await collection.insertOne(stringToDate(newRecord), { session: dbSession });
-						set(insertedQuery, '_id', insertResult.insertedId);
-						tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
-					}
-				} catch (e) {
-					await handleTransactionError(e, dbSession);
-					const mongoErrorResult = handleCommonMongoError(e, document);
-					if (mongoErrorResult.success === false) {
-						return mongoErrorResult;
-					}
-
-					logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
-					tracingSpan?.addEvent('Error on insert', { error: e.message });
-					tracingSpan?.setAttribute({ error: e.message });
-
-					if (isDuplicateKeyError(e)) {
-						const duplicateField = getDuplicateKeyField(e);
-						return errorReturn(`[${document}] Campo único não respeitado: ${duplicateField}`);
-					}
-					return errorReturn(`[${document}] ${e.message}`);
-				}
-
-				if (insertedQuery._id == null) {
-					tracingSpan?.setAttribute({ error: 'InsertedQuery id is null' });
-					return errorReturn(`[${document}] Error on insert, there is no affected record`);
-				}
-
-				const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: "primary" });
-				const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
-
-				await runNamespaceWebhook({ action: 'create', ids: [insertedQuery._id], metaName: document, user });
-
-				if (metaObject.scriptAfterSave != null) {
-					tracingSpan?.addEvent('Running scriptAfterSave');
-					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [affectedRecord], user });
-				}
-
-				if (emailsToSend.length > 0) {
-					tracingSpan?.addEvent('Sending emails');
-					const messagesCollection = MetaObject.Collections['Message'];
-					const now = DateTime.local().toJSDate();
-					await messagesCollection.insertMany(
-						emailsToSend.map(email =>
-							Object.assign(
-								{},
-								{
-									_id: randomId(),
-									_createdAt: now,
-									_createdBy: pick(user, ['_id', 'name', 'group']),
-									_updatedAt: now,
-									_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
-								},
-								email,
-							),
-						),
-						{ session: dbSession }
+					return errorReturn(
+						validateAllFieldsResult
+							.filter(result => result.success === false)
+							.map(result => result.errors ?? result.reason ?? result.message ?? result)
+							.flat(),
 					);
 				}
 
-				try {
-					await Konsistent.processChangeSync(document, 'create', user, { newRecord: affectedRecord }, dbSession);
-					if (walResult.data != null) {
-						await Konsistent.processChangeAsync(walResult.data);
+				if (metaObject.validationScript != null) {
+					tracingSpan?.addEvent('Running validation script');
+
+					const validation = await processValidationScript({
+						script: metaObject.validationScript,
+						validationData: metaObject.validationData,
+						fullData: extend({}, data, cleanedData),
+						user,
+					});
+					if (validation.success === false) {
+						await dbSession.abortTransaction();
+						logger.debug(`Create - Script Validation Error - ${validation.reason}`);
+						return errorReturn(`[${document}] ${validation.reason}`);
 					}
-				} catch (e) {
-					await handleTransactionError(e, dbSession);
-
-					tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
-					logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
-
-					return errorReturn(`[${document}] Error on sync Konsistent: ${e.message}`);
 				}
 
-				return successReturn([dateToString(resultRecord)]);
-			}
+				if (Object.keys(cleanedData).length > 0) {
+					const insertedQuery = {};
 
-			return errorReturn(`[${document}] Error on insert, there is no affected record`);
-		}));
+					const now = DateTime.local().toJSDate();
+
+					const newRecord = Object.assign({}, cleanedData, {
+						_id: newRecordId,
+						_createdAt: get(cleanedData, '_createdAt', now),
+						_createdBy: get(cleanedData, '_createdBy', pick(user, ['_id', 'name', 'group'])),
+						_updatedAt: get(cleanedData, '_updatedAt', now),
+						_updatedBy: get(cleanedData, '_updatedBy', pick(user, ['_id', 'name', 'group'])),
+					});
+
+					const walResult = await Konsistent.writeAheadLog(document, 'create', newRecord, user, dbSession);
+					if (walResult.success === false) {
+						await dbSession.abortTransaction();
+						return walResult;
+					}
+
+
+					try {
+						if (processLoginResult.data != null) {
+							await MetaObject.Collections['User'].insertOne({
+								_id: newRecord._id,
+								...processLoginResult.data,
+							}, { session: dbSession });
+
+							const loginFieldResult = await validateAndProcessValueFor({
+								meta: metaObject,
+								fieldName: get(metaObject, 'login.field', 'login'),
+								value: processLoginResult.data,
+								actionType: 'insert',
+								objectOriginalValues: data,
+								objectNewValues: cleanedData,
+							}, dbSession);
+
+							if (loginFieldResult.success === false) {
+								await dbSession.abortTransaction();
+								return loginFieldResult;
+							}
+
+							set(newRecord, get(metaObject, 'login.field', 'login'), loginFieldResult.data);
+						}
+
+						if (upsert != null && isObject(upsert)) {
+							const updateOperation = {
+								$setOnInsert: {},
+								$set: {},
+							};
+							if (updateOnUpsert != null && isObject(updateOnUpsert)) {
+								Object.keys(newRecord).forEach(key => {
+									if (updateOnUpsert[key] != null) {
+										set(updateOperation, `$set.${key}`, newRecord[key]);
+									} else {
+										set(updateOperation, `$setOnInsert.${key}`, newRecord[key]);
+									}
+								});
+							} else {
+								set(updateOperation, '$setOnInsert', newRecord);
+							}
+
+							if (isEmpty(updateOperation.$set)) {
+								unset(updateOperation, '$set');
+							}
+
+							if (isEmpty(updateOperation.$setOnInsert)) {
+								unset(updateOperation, '$setOnInsert');
+							}
+
+							tracingSpan?.addEvent('Upserting record');
+							const upsertResult = await collection.updateOne(stringToDate(upsert), stringToDate(updateOperation), {
+								upsert: true,
+								session: dbSession,
+							});
+
+							// If upsertedId is not null, get the affected record _id
+							if (upsertResult.upsertedId != null) {
+								set(insertedQuery, '_id', upsertResult.upsertedId);
+								tracingSpan?.addEvent('Record upserted', { upsertedId: upsertResult.upsertedId });
+							}
+
+							// If upsertedId is null, search for the affected record
+							if (upsertResult.upsertedId == null) {
+								const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: "primary" });
+								if (upsertedRecord != null) {
+									set(insertedQuery, '_id', upsertedRecord._id);
+									tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
+								}
+							}
+						} else {
+							const insertResult = await collection.insertOne(stringToDate(newRecord), { session: dbSession });
+							set(insertedQuery, '_id', insertResult.insertedId);
+							tracingSpan?.addEvent('Record inserted', { insertedId: insertResult.insertedId });
+						}
+					} catch (e) {
+						await handleTransactionError(e, dbSession);
+						const mongoErrorResult = handleCommonMongoError(e, document);
+						if (mongoErrorResult.success === false) {
+							return mongoErrorResult;
+						}
+
+						logger.error(e, `Error on insert ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
+						tracingSpan?.addEvent('Error on insert', { error: e.message });
+						tracingSpan?.setAttribute({ error: e.message });
+
+						if (isDuplicateKeyError(e)) {
+							const duplicateField = getDuplicateKeyField(e);
+							return errorReturn(`[${document}] Campo único não respeitado: ${duplicateField}`);
+						}
+						return errorReturn(`[${document}] ${e.message}`);
+					}
+
+					if (insertedQuery._id == null) {
+						tracingSpan?.setAttribute({ error: 'InsertedQuery id is null' });
+						return errorReturn(`[${document}] Error on insert, there is no affected record`);
+					}
+
+					const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: "primary" });
+					const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
+
+					await runNamespaceWebhook({ action: 'create', ids: [insertedQuery._id], metaName: document, user });
+
+					if (metaObject.scriptAfterSave != null) {
+						tracingSpan?.addEvent('Running scriptAfterSave');
+						await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [affectedRecord], user });
+					}
+
+					if (emailsToSend.length > 0) {
+						tracingSpan?.addEvent('Sending emails');
+						const messagesCollection = MetaObject.Collections['Message'];
+						const now = DateTime.local().toJSDate();
+						await messagesCollection.insertMany(
+							emailsToSend.map(email =>
+								Object.assign(
+									{},
+									{
+										_id: randomId(),
+										_createdAt: now,
+										_createdBy: pick(user, ['_id', 'name', 'group']),
+										_updatedAt: now,
+										_updatedBy: { ...pick(user, ['_id', 'name', 'group']), ts: now },
+									},
+									email,
+								),
+							),
+							{ session: dbSession }
+						);
+					}
+
+					try {
+						await Konsistent.processChangeSync(document, 'create', user, { newRecord: affectedRecord }, dbSession);
+						if (walResult.data != null) {
+							await Konsistent.processChangeAsync(walResult.data);
+						}
+					} catch (e) {
+						await handleTransactionError(e, dbSession);
+						tracingSpan?.addEvent('Error on sync Konsistent', { error: e.message });
+						logger.error(e, `Error on sync Konsistent ${document}: ${e.message}`);
+						return errorReturn(`[${document}] Error on sync Konsistent: ${e.message}`);
+					}
+
+					return successReturn([dateToString(resultRecord)]);
+				}
+
+				return errorReturn(`[${document}] Error on insert, there is no affected record`);
+			}),
+		);
 
 		if (transactionResult == null || transactionResult.success == null) {
 			return errorReturn(`[${document}] Transaction error`);
@@ -904,6 +918,10 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 			const record = transactionResult.data[0];
 
 			try {
+				if (metaObject.scriptAfterSave != null) {
+					tracingSpan?.addEvent('Running scriptAfterSave');
+					await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: [record], user });
+				}
 				await eventManager.sendEvent(document, 'create', { data: record, original: undefined, full: record });
 			} catch (e) {
 				logger.error(e, `Error sending event: ${e.message}`);
@@ -911,19 +929,19 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 		}
 
 		return transactionResult;
-
 	} catch (e) {
 		tracingSpan?.addEvent('Error on transaction', { error: e.message });
 		tracingSpan?.setAttribute({ error: e.message });
-		logger.error(e, "outer logger")
-	}
-	finally {
+		logger.error(e, 'outer logger');
+	} finally {
 		tracingSpan?.addEvent('Ending session');
 		dbSession.endSession();
 	}
 
 	return errorReturn(`[${document}] Unexpected error`);
 }
+
+/* update() is in ./api/update.ts */
 
 /* Delete records
 	@param authTokenId
@@ -1062,9 +1080,7 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 			if (foreignFoundIds.some(id => id != null)) {
 				const Meta = MetaObject.Meta[referenceName];
 				const moduleLabel = get(Meta, 'plurals.pt_BR', get(Meta, 'plurals.en', referenceName));
-				return errorReturn(
-					`[${document}] Cannot delete records ${foreignFoundIds.filter(id => id != null).join(', ')} because they are referenced by [${moduleLabel}]`,
-				);
+				return errorReturn(`[${document}] Cannot delete records ${foreignFoundIds.filter(id => id != null).join(', ')} because they are referenced by [${moduleLabel}]`);
 			}
 
 			return successReturn();
@@ -1092,9 +1108,7 @@ export async function deleteData({ authTokenId, document, data, contextUser }) {
 
 		await collection.deleteMany({ _id: { $in: idsToDelete } });
 
-		await BluebirdPromise.map(recordsToDelete, async recordId =>
-			eventManager.sendEvent(document, 'delete', { data: { _id: recordId }, full: { _id: recordId } })
-		);
+		await BluebirdPromise.map(recordsToDelete, async record => eventManager.sendEvent(document, 'delete', { data: { _id: record._id }, full: record }));
 	} catch (e) {
 		logger.error(e, `Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);
 		return errorReturn(`[${document}] Error on delete ${MetaObject.Namespace.ns}.${document}: ${e.message}`);

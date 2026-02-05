@@ -2,7 +2,6 @@ import { FastifyPluginCallback, RouteHandler } from 'fastify';
 import fp from 'fastify-plugin';
 
 import Multipart from '@fastify/multipart';
-import crypto from 'crypto';
 import path from 'path';
 import sharp from 'sharp';
 
@@ -20,6 +19,7 @@ import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import Bluebird from 'bluebird';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
+import getFileMD5 from '@imports/utils/getFileMD5';
 
 type RouteParams = {
 	Params: {
@@ -85,7 +85,6 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 
 		const contentType = data.mimetype;
 		const originalFileName = encodeURIComponent(sanitizeFilename(decodeURIComponent(data.filename)));
-		const fileName = crypto.createHash('md5').update(originalFileName).digest('hex');
 
 		let fileContent = await data.toBuffer();
 
@@ -93,10 +92,12 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			fileContent = Buffer.from(fileContent.toString('utf8'), data.encoding as BufferEncoding);
 		}
 
-		logger.trace({ contentType, originalFileName }, `Uploading file ${fileName}`);
+		const fileName = getFileMD5(fileContent);
+		logger.trace({ contentType, originalFileName }, `Uploading file ${originalFileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;
-		const key = `${directory}/${fileName}${path.extname(originalFileName) ?? ''}`;
+		const keyFileName = `${fileName}${path.extname(originalFileName) ?? ''}`;
+		const key = `${directory}/${keyFileName}`;
 
 		const fileData: FileData = {
 			key,
@@ -132,7 +133,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			});
 
 			const imageBuffer = await image.toBuffer();
-			filesToSave.push({ name: `${fileName}.jpeg`, content: imageBuffer });
+			filesToSave.push({ name: keyFileName, content: imageBuffer });
 			fileData.size = imageBuffer.length;
 
 			// Generate thumbnail for jpeg
@@ -149,7 +150,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			}
 		} else {
 			// Non-jpeg files
-			filesToSave.push({ name: fileData.key.split('/').at(-1) ?? '', content: fileContent });
+			filesToSave.push({ name: keyFileName, content: fileContent });
 
 			const thumbnailFile = await generateFileVersion({
 				filename: fileName,

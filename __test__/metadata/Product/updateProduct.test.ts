@@ -7,7 +7,7 @@ async function createProductHelper(authId: string) {
 	const requiredFields = {
 		name: 'Teste',
 	};
-	const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+	const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 		method: 'POST',
 		headers: {
 			Cookie: `_authTokenId=${authId}`,
@@ -48,7 +48,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -81,7 +81,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -114,7 +114,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -145,7 +145,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -176,7 +176,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -207,7 +207,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -240,7 +240,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -274,7 +274,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -318,7 +318,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -351,7 +351,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -385,7 +385,7 @@ describe('Update Product', () => {
 			};
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 				method: 'PUT',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

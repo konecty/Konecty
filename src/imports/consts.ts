@@ -16,3 +16,11 @@ export const ALLOWED_CORS_FILE_TYPES = ['png', 'jpg', 'gif', 'jpeg', 'webp'];
 
 export const WRITE_TIMEOUT = 3e4; // 30 seconds
 export const TRANSACTION_OPTIONS: TransactionOptions = { readConcern: { level: 'majority' }, writeConcern: { w: 'majority', wtimeoutMS: WRITE_TIMEOUT } };
+
+// OTP Authentication Constants
+export const OTP_CODE_LENGTH = 6;
+export const OTP_DEFAULT_EXPIRATION_MINUTES = 5;
+export const OTP_MAX_VERIFICATION_ATTEMPTS = 3;
+export const OTP_RATE_LIMIT_REQUESTS_PER_MINUTE = 5;
+export const OTP_EXPIRATION_BUFFER_SECONDS = 60; // Buffer for TTL index cleanup (1 minute after expiration)
+export const OTP_COUNTRY_CODE_SEARCH_CONCURRENCY = 3; // Maximum parallel country code searches

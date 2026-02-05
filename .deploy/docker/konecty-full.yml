@@ -11,18 +11,23 @@ services:
         ports:
             - '${MONGO_PORT:-27017}:27017'
         command: ['mongod', '--bind_ip_all', '--replSet', 'rs0', '--dbpath', '/data']
+        healthcheck:
+            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+            interval: 1m
+            timeout: 10s
+            retries: 3
+            start_period: 10s
 
     mongodb-init:
         image: mongo:6
         container_name: mongodb-init
         depends_on:
-            - mongodb
+            mongodb:
+                condition: service_healthy
         command:
             - /bin/bash
             - -c
             - |
-                echo 'Waiting 10 seconds before checking replica set status';
-                sleep 10;
                 echo 'Checking replica set status';
                 if ! mongosh --host mongodb --eval 'rs.status()' | grep "set: 'rs0'"; then
                     echo 'Initiating replica set';
@@ -38,7 +43,7 @@ services:
 
     konecty:
         container_name: konecty
-        image: konecty/konecty:3.0.0
+        image: konecty/konecty:3.2.3
         ports:
             - '${PORT:-3000}:${PORT:-3000}'
         env_file:
@@ -58,7 +63,7 @@ services:
             start_period: 20s
 
     rabbitmq:
-        image: rabbitmq:4.0-management
+        image: rabbitmq:4.1.0-management
         container_name: rabbitmq
         hostname: konecty-rabbitmq
         ports:

@@ -8,7 +8,7 @@ async function createProductHelper(authId: string) {
 		name: 'Teste',
 		status: 'draft',
 	};
-	const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product`, {
+	const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product`, {
 		method: 'POST',
 		headers: {
 			Cookie: `_authTokenId=${authId}`,
@@ -38,7 +38,7 @@ describe('Find Product', () => {
 			// Arrange
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product/find`, {
 				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -58,7 +58,7 @@ describe('Find Product', () => {
 			// Arrange
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/${product._id}`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product/${product._id}`, {
 				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,
@@ -78,7 +78,7 @@ describe('Find Product', () => {
 			// Arrange
 
 			// Act
-			const data = (await fetch(`http://127.0.0.1:3000/rest/data/Product/find?fields=name`, {
+			const data = (await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3000/rest'}/data/Product/find?fields=name`, {
 				method: 'GET',
 				headers: {
 					Cookie: `_authTokenId=${authId}`,

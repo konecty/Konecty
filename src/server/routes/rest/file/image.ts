@@ -69,10 +69,10 @@ async function imageApiFn(
 		const getImagePath = () => {
 			const maxDimension = Math.max(parseInt(width, 10), parseInt(height, 10));
 			if (maxDimension <= thumbnailSize) {
-				return path.join(document, recordId, fieldName, 'thumbnail', /\.jpe?g$/.test(fileName) ? fileName : `${filePathWithoutExtension(fileName)}.jpeg`);
+				return path.join(document, recordId, fieldName, 'thumbnail', `${filePathWithoutExtension(fileName)}.jpeg`);
 			}
 			if (preprocess != null) {
-				return path.join(document, recordId, fieldName, 'watermark', /\.jpe?g$/.test(fileName) ? fileName : `${filePathWithoutExtension(fileName)}.jpeg`);
+				return path.join(document, recordId, fieldName, 'watermark', `${filePathWithoutExtension(fileName)}.jpeg`);
 			}
 			return path.join(document, recordId, fieldName, fileName);
 		};

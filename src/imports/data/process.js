@@ -25,7 +25,7 @@ import unset from 'lodash/unset';
 import words from 'lodash/words';
 
 import { getUserSafe } from '@imports/auth/getUser';
-import { find } from "@imports/data/api";
+import { find } from '@imports/data/api';
 import { MetaObject } from '@imports/model/MetaObject';
 import { create, update } from '../data/data';
 import { metaDocument } from '../menu/legacy';
@@ -186,7 +186,7 @@ export async function processGeneric({ document, name, data, contextUser }) {
 	}
 
 	response.processData[name] = saveResult.data[0];
-	response.changes[document] = "created";
+	response.changes[document] = 'created';
 
 	return response;
 }
@@ -346,7 +346,6 @@ export async function processOpportunity({ data, contextUser }) {
 				const products = await MetaObject.Collections['Product'].find(productFilter).toArray();
 
 				products.forEach(product => {
-
 					if (product['type']) {
 						if (!createRequest.data['filterType']) {
 							createRequest.data['filterType'] = [];
@@ -596,7 +595,7 @@ export async function processMessage({ data, contextUser }) {
 		success: true,
 		processData: {},
 		errors: [],
-		changes: {}
+		changes: {},
 	};
 
 	const campaign = await findCampaign(data.campaign, contextUser);
@@ -1275,7 +1274,7 @@ export async function processContact({ data, options, contextUser }) {
 		}
 
 		result = await create(createRequest);
-		response.changes["contact"] = 'created';
+		response.changes['contact'] = 'created';
 	} else if (!isEmpty(contactData)) {
 		const updateRequest = {
 			document: 'Contact',
@@ -1287,7 +1286,7 @@ export async function processContact({ data, options, contextUser }) {
 		};
 
 		result = await update(updateRequest);
-		response.changes["contact"] = 'updated';
+		response.changes['contact'] = 'updated';
 	} else {
 		result = {
 			success: true,
