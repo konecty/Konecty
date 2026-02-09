@@ -11,23 +11,48 @@ const DEFAULT_VERSION = 1;
 
 // --- Widget Config Schemas ---
 
-// Phase 1: Only placeholder widget type.
-// Future phases will expand with 'kpi' | 'chart' | 'list' | 'table' via discriminatedUnion.
-const PlaceholderWidgetConfigSchema = z.object({
-	type: z.literal('placeholder'),
+// KPI widget (aggregation on a Konecty document)
+// ADR-0012: no-magic-numbers — default values as constants
+const DEFAULT_CACHE_TTL_SECONDS = 300;
+
+const KpiWidgetConfigSchema = z.object({
+	type: z.literal('kpi'),
+	document: z.string(),
+	filter: z.unknown().optional(), // KonFilter serialized
+	operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage']),
+	field: z.string().optional(), // required for all except count
+	fieldB: z.string().optional(), // required for percentage
+	displayName: z.string().optional(), // meta display name for filter context
+	displayType: z.string().optional(), // meta display type for filter context
+	title: z.string(),
+	subtitle: z.string().optional(),
+	icon: z.string().optional(),
+	iconColor: z.string().optional(),
+	format: z.enum(['number', 'currency', 'percent']).default('number'),
+	cacheTTL: z.number().default(DEFAULT_CACHE_TTL_SECONDS),
+	autoRefresh: z.number().optional(), // in seconds
 });
+
+// Widget config schema — extensible for future widget types (chart, list, table)
+// When adding new types, expand the discriminatedUnion array.
+const WidgetConfigSchema = z.discriminatedUnion('type', [
+	KpiWidgetConfigSchema,
+]);
+
+// Widget type enum — extend when adding new widget types
+const WidgetTypeSchema = z.enum(['kpi']);
 
 // Widget position and size in the grid
 export const DashboardWidgetSchema = z.object({
 	i: z.string(), // unique widget ID (uuid)
-	type: z.literal('placeholder'), // Phase 1 only; will become union in Phase 2
+	type: WidgetTypeSchema,
 	x: z.number(),
 	y: z.number(),
 	w: z.number().default(DEFAULT_WIDGET_WIDTH),
 	h: z.number().default(DEFAULT_WIDGET_HEIGHT),
 	minW: z.number().optional(),
 	minH: z.number().optional(),
-	config: PlaceholderWidgetConfigSchema,
+	config: WidgetConfigSchema,
 });
 
 // --- Dashboard Layout Schema ---

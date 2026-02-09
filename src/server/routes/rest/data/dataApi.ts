@@ -6,7 +6,7 @@ import isString from 'lodash/isString';
 
 import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 
-import { find, pivotStream, graphStream } from '@imports/data/api';
+import { find, pivotStream, graphStream, kpiStream } from '@imports/data/api';
 import { update } from '@imports/data/api/update';
 import { create, deleteData, findById, findByLookup, getNextUserFromQueue, historyFind, relationCreate, saveLead } from '@imports/data/data';
 import { PivotConfig } from '@imports/types/pivot';
@@ -19,6 +19,14 @@ import { KonFilter } from '@imports/model/Filter';
 import { getGraphErrorMessage } from '@imports/utils/graphErrors';
 import { MetaObject } from '@imports/model/MetaObject';
 import type { KonectyError } from '@imports/types/result';
+import { z } from 'zod';
+import {
+	buildCacheKey,
+	getCached,
+	setCached,
+	generateEtag,
+} from '@imports/dashboards/dashboardCache';
+import type { KpiConfig } from '@imports/data/api/kpiStream';
 
 import exportData from '@imports/data/export';
 
@@ -780,6 +788,172 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		reply.type('image/svg+xml');
 		reply.send(result.svg);
+	});
+
+	// --- KPI Aggregation Endpoint ---
+	// ADR-0012: Zod validation, no-magic-numbers, structured logging
+	// Follows the same pattern as /rest/data/:document/pivot and /rest/data/:document/graph
+
+	const KpiConfigSchema = z.object({
+		operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage']),
+		field: z.string().optional(),
+		fieldB: z.string().optional(),
+	});
+
+	const DEFAULT_CACHE_TTL_SECONDS = 300;
+	const STALE_WHILE_REVALIDATE_SECONDS = 60;
+	const HTTP_NOT_MODIFIED = 304;
+	const HTTP_BAD_REQUEST = 400;
+	const HTTP_INTERNAL_ERROR = 500;
+
+	fastify.get<{
+		Params: { document: string };
+		Querystring: {
+			displayName?: string;
+			displayType?: string;
+			fields?: string;
+			filter?: string | object;
+			sort?: string;
+			limit?: string;
+			start?: string;
+			withDetailFields?: string;
+			kpiConfig?: string;
+			cacheTTL?: string;
+		};
+	}>('/rest/data/:document/kpi', async (req, reply) => {
+		const { tracer } = req.openTelemetry();
+		const tracingSpan = tracer.startSpan('GET kpi');
+
+		const authTokenId = getAuthTokenIdFromReq(req);
+		tracingSpan.setAttribute('authTokenId', authTokenId ?? 'undefined');
+		tracingSpan.setAttribute('document', req.params.document);
+
+		// Parse kpiConfig from query string
+		let kpiConfig: KpiConfig;
+		try {
+			const rawConfig = req.query.kpiConfig;
+			if (rawConfig == null) {
+				tracingSpan.end();
+				return reply.status(HTTP_BAD_REQUEST).send(errorReturn('kpiConfig query parameter is required'));
+			}
+
+			const parsed = isString(rawConfig) ? JSON.parse(rawConfig) : rawConfig;
+			const validated = KpiConfigSchema.parse(parsed);
+			kpiConfig = validated as KpiConfig;
+		} catch (error) {
+			tracingSpan.end();
+			return reply.status(HTTP_BAD_REQUEST).send(errorReturn(`Invalid kpiConfig: ${(error as Error).message}`));
+		}
+
+		// Parse filter
+		let parsedFilter: KonFilter | undefined;
+		if (req.query.filter != null) {
+			try {
+				parsedFilter = isString(req.query.filter)
+					? JSON.parse(decodeURIComponent(req.query.filter as string))
+					: (req.query.filter as unknown as KonFilter);
+			} catch {
+				tracingSpan.end();
+				return reply.status(HTTP_BAD_REQUEST).send(errorReturn('Invalid filter JSON'));
+			}
+		}
+
+		// Determine cache TTL
+		const cacheTTL = req.query.cacheTTL != null ? parseInt(req.query.cacheTTL, 10) : DEFAULT_CACHE_TTL_SECONDS;
+
+		// Get userId for user-scoped cache
+		const userResult = await getUserSafe(authTokenId);
+		if (userResult.success === false) {
+			tracingSpan.end();
+			return reply.status(HTTP_INTERNAL_ERROR).send(userResult);
+		}
+		const userId = userResult.data._id;
+
+		// Check cache
+		const cacheKey = buildCacheKey(
+			userId,
+			req.params.document,
+			kpiConfig.operation,
+			kpiConfig.field ?? null,
+			parsedFilter,
+		);
+
+		const cachedEntry = await getCached(cacheKey);
+		if (cachedEntry != null) {
+			// Check If-None-Match for 304
+			const clientEtag = req.headers['if-none-match'];
+			if (clientEtag != null && clientEtag === cachedEntry.etag) {
+				tracingSpan.addEvent('Cache hit with matching ETag, returning 304');
+				tracingSpan.end();
+				reply.header('ETag', cachedEntry.etag);
+				reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+				reply.header('Vary', 'Authorization, Cookie');
+				return reply.status(HTTP_NOT_MODIFIED).send();
+			}
+
+			tracingSpan.addEvent('Cache hit, returning cached value');
+			tracingSpan.end();
+			reply.header('ETag', cachedEntry.etag);
+			reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+			reply.header('Vary', 'Authorization, Cookie');
+			return reply.send({
+				success: true,
+				value: cachedEntry.value,
+				count: cachedEntry.count,
+			});
+		}
+
+		// Cache miss — check if client sent Cache-Control: no-cache (force refresh)
+		const clientCacheControl = req.headers['cache-control'];
+		const forceRefresh = clientCacheControl === 'no-cache';
+		if (forceRefresh) {
+			tracingSpan.addEvent('Client requested no-cache, bypassing cache');
+		}
+
+		// Execute KPI aggregation
+		const result = await kpiStream({
+			authTokenId,
+			document: req.params.document,
+			displayName: req.query.displayName,
+			displayType: req.query.displayType,
+			fields: req.query.fields,
+			filter: parsedFilter,
+			sort: req.query.sort,
+			limit: req.query.limit,
+			start: req.query.start,
+			withDetailFields: req.query.withDetailFields,
+			kpiConfig,
+			tracingSpan,
+		});
+
+		tracingSpan.end();
+
+		if (result.success === false) {
+			return reply.status(HTTP_INTERNAL_ERROR).send(result);
+		}
+
+		// Store in cache
+		const cacheEntry = await setCached(
+			userId,
+			req.params.document,
+			kpiConfig.operation,
+			kpiConfig.field ?? null,
+			parsedFilter,
+			result.value,
+			result.count,
+			cacheTTL,
+		);
+
+		// Set HTTP cache headers
+		reply.header('ETag', cacheEntry.etag);
+		reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+		reply.header('Vary', 'Authorization, Cookie');
+
+		return reply.send({
+			success: true,
+			value: result.value,
+			count: result.count,
+		});
 	});
 
 	done();

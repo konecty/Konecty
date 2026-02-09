@@ -8,20 +8,27 @@ import {
 
 describe('Dashboard Model', () => {
 	describe('DashboardWidgetSchema', () => {
-		it('parses a valid placeholder widget', () => {
+		it('parses a valid KPI widget', () => {
 			const widget = {
 				i: 'widget-1',
-				type: 'placeholder' as const,
+				type: 'kpi' as const,
 				x: 0,
 				y: 0,
 				w: 3,
 				h: 2,
-				config: { type: 'placeholder' as const },
+				config: {
+					type: 'kpi' as const,
+					document: 'Contact',
+					operation: 'count' as const,
+					title: 'Total Contacts',
+					format: 'number' as const,
+					cacheTTL: 300,
+				},
 			};
 
 			const result = DashboardWidgetSchema.parse(widget);
 			expect(result.i).toBe('widget-1');
-			expect(result.type).toBe('placeholder');
+			expect(result.type).toBe('kpi');
 			expect(result.w).toBe(3);
 			expect(result.h).toBe(2);
 		});
@@ -29,10 +36,15 @@ describe('Dashboard Model', () => {
 		it('applies default width and height', () => {
 			const widget = {
 				i: 'widget-2',
-				type: 'placeholder' as const,
+				type: 'kpi' as const,
 				x: 0,
 				y: 0,
-				config: { type: 'placeholder' as const },
+				config: {
+					type: 'kpi' as const,
+					document: 'Contact',
+					operation: 'count' as const,
+					title: 'Total Contacts',
+				},
 			};
 
 			const result = DashboardWidgetSchema.parse(widget);
@@ -43,10 +55,10 @@ describe('Dashboard Model', () => {
 		it('rejects invalid widget type', () => {
 			const widget = {
 				i: 'widget-3',
-				type: 'kpi',
+				type: 'invalid',
 				x: 0,
 				y: 0,
-				config: { type: 'kpi' },
+				config: { type: 'invalid' },
 			};
 
 			const result = DashboardWidgetSchema.safeParse(widget);
