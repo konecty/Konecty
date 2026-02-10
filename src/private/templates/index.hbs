@@ -1,5 +1,6 @@
 <html lang='pt-BR'>
 	<head>
+		{{#if gtmId}}
 		<!-- Google Tag Manager -->
 		<script>
 			(function (w, d, s, l, i) {
@@ -11,9 +12,10 @@
 				j.async = true;
 				j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
 				f.parentNode.insertBefore(j, f);
-			})(window, document, 'script', 'dataLayer', 'GTM-NDZ6VT2');
+			})(window, document, 'script', 'dataLayer', '{{gtmId}}');
 		</script>
 		<!-- End Google Tag Manager -->
+		{{/if}}
 		<title>Konecty</title>
 		<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
 		<meta http-equiv='Cache-Control' content='public' />
@@ -86,16 +88,18 @@
 		</script>
 	</head>
 	<body>
+		{{#if gtmId}}
 		<!-- Google Tag Manager (noscript) -->
 		<noscript>
 			<iframe
-				src='https://www.googletagmanager.com/ns.html?id=GTM-NDZ6VT2'
+				src='https://www.googletagmanager.com/ns.html?id={{gtmId}}'
 				height='0'
 				width='0'
 				style='display:none;visibility:hidden'
 			></iframe>
 		</noscript>
 		<!-- End Google Tag Manager (noscript) -->
+		{{/if}}
 		<script>
 			(function (i, s, o, g, r, a, m) { i['GoogleAnalyticsObject'] = r; (i[r] = i[r] || function () { (i[r].q = i[r].q || []).push(arguments); }), (i[r].l = 1 * new Date());
 			(a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]); a.async = 1; a.src = g; m.parentNode.insertBefore(a, m); })(window, document, 'script',
