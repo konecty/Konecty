@@ -18,14 +18,21 @@ export interface CacheEntry {
 	_id: string; // deterministic hash of cache key
 	userId: string; // user-scoped to prevent data leakage
 	document: string; // Konecty document name
-	operation: string; // count, sum, avg, min, max, percentage
+	operation: string; // count, sum, avg, min, max, percentage, graph, pivot
 	field: string | null;
 	filterHash: string; // SHA-256 of JSON.stringify(filter)
 	value: number;
 	count: number;
+	blob?: string; // ADR-0049: SVG or serialized JSON for chart/table widgets
 	etag: string; // hash of value for HTTP 304
 	expiresAt: Date; // MongoDB TTL auto-deletes
 	createdAt: Date;
+}
+
+/** Subset of CacheEntry returned by blob cache operations (chart/table widgets) */
+export interface BlobCacheEntry {
+	blob: string;
+	etag: string;
 }
 
 // --- Collection accessor ---
@@ -170,6 +177,89 @@ export const setCached = async (
 	}
 
 	return entry;
+};
+
+// --- Blob cache operations (ADR-0049: chart SVG, pivot JSON) ---
+
+/**
+ * Generates an ETag string from a blob (SVG or JSON string).
+ * Uses the same truncated SHA-256 pattern as generateEtag.
+ */
+export const generateBlobEtag = (data: string): string => {
+	const hash = createHash(HASH_ALGORITHM).update(data).digest(HASH_ENCODING);
+	return `"${hash.substring(0, ETAG_HASH_LENGTH)}"`;
+};
+
+/**
+ * Retrieves a cached blob entry by key. Returns null if not found or expired.
+ * Used for chart SVG and pivot JSON cache (ADR-0049).
+ */
+export const getCachedBlob = async (cacheKey: string): Promise<BlobCacheEntry | null> => {
+	const collection = getCollection();
+
+	try {
+		const entry = await collection.findOne({ _id: cacheKey });
+
+		if (entry == null || entry.blob == null) {
+			return null;
+		}
+
+		// Defensive check: TTL cleanup may lag
+		if (entry.expiresAt < new Date()) {
+			return null;
+		}
+
+		return { blob: entry.blob, etag: entry.etag };
+	} catch (error) {
+		logger.error(error, 'Error reading dashboard blob cache');
+		return null;
+	}
+};
+
+/**
+ * Stores or updates a blob cache entry with the given TTL.
+ * Uses upsert to handle both insert and update cases atomically.
+ * Reuses buildCacheKey, hashFilter, and existing indexes (Open/Closed principle).
+ */
+export const setCachedBlob = async (
+	userId: string,
+	document: string,
+	operation: string,
+	field: string | null,
+	filter: unknown,
+	blob: string,
+	ttlSeconds: number = DEFAULT_CACHE_TTL_SECONDS,
+): Promise<BlobCacheEntry> => {
+	const collection = getCollection();
+	const cacheKey = buildCacheKey(userId, document, operation, field, filter);
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + ttlSeconds * MILLISECONDS_PER_SECOND);
+	const etag = generateBlobEtag(blob);
+	const filterH = hashFilter(filter);
+
+	const entry: CacheEntry = {
+		_id: cacheKey,
+		userId,
+		document,
+		operation,
+		field,
+		filterHash: filterH,
+		value: 0,
+		count: 0,
+		blob,
+		etag,
+		expiresAt,
+		createdAt: now,
+	};
+
+	try {
+		await collection.replaceOne({ _id: cacheKey }, entry, { upsert: true });
+		logger.trace({ cacheKey, document, operation, ttlSeconds }, 'Dashboard blob cache entry stored');
+	} catch (error) {
+		logger.error(error, 'Error writing dashboard blob cache');
+	}
+
+	return { blob, etag };
 };
 
 /**

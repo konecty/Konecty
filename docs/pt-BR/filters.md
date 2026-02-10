@@ -287,10 +287,14 @@ Buscar contatos que são do Rio de Janeiro OU São Paulo:
 
 ### Valores Especiais
 - Use `$user` para referenciar o usuário atual
-- Use `$now` para a data atual
+- Use `$now` para a data e hora atual
 - Use `$group` para o grupo do usuário atual
 - Use `$groups` para os grupos do usuário atual
 - Use `$allgroups` para todos os grupos do usuário atual
+- Use `$today`, `$yesterday`, `$startOfMonth`, etc. para limites dinâmicos de data
+- Use `$endOfDay`, `$endOfMonth`, etc. para limites de fim de período
+- Use `$daysAgo:N`, `$hoursAgo:N`, `$monthsAgo:N` para datas relativas no passado
+- Use `$hoursFromNow:N`, `$daysFromNow:N`, `$monthsFromNow:N` para datas relativas no futuro
 
 ### Campos Aninhados
 Para acessar campos dentro de objetos, use ponto:
@@ -372,34 +376,127 @@ Sempre use o formato ISO para datas:
 
 ## Referências Rápidas
 
+### Todos os Operadores
+
+| Operador | Descrição |
+|----------|-----------|
+| `equals` | Igual a |
+| `not_equals` | Diferente de |
+| `contains` | Contém (substring) |
+| `not_contains` | Não contém |
+| `starts_with` | Começa com |
+| `end_with` | Termina com |
+| `less_than` | Menor que |
+| `greater_than` | Maior que |
+| `less_or_equals` | Menor ou igual a |
+| `greater_or_equals` | Maior ou igual a |
+| `between` | Entre dois valores |
+| `in` | Está na lista |
+| `not_in` | Não está na lista |
+| `exists` | Campo existe (true) ou não existe (false) |
+| `current_user` | Campo é o usuário atual |
+| `not_current_user` | Campo não é o usuário atual |
+| `current_user_group` | Campo é o grupo do usuário atual |
+| `not_current_user_group` | Campo não é o grupo do usuário atual |
+| `current_user_groups` | Campo está nos grupos do usuário atual |
+
 ### Operadores por Tipo de Campo
 
-#### Texto
-- `equals`
-- `not_equals`
-- `contains`
-- `starts_with`
-- `end_with`
+#### Texto (`text`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Números
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### URL (`url`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Datas
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### Email (`email.address`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Booleanos
-- `equals`
-- `not_equals`
+#### Número (`number`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
 
-#### Listas
-- `in`
-- `not_in`
+#### Auto-Número (`autoNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Percentual (`percentage`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Data (`date`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Data e Hora (`dateTime`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Hora (`time`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Dinheiro — Moeda (`money.currency`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Dinheiro — Valor (`money.value`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Booleano (`boolean`)
+`exists`, `equals`, `not_equals`
+
+#### Picklist (`picklist`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Lookup (`lookup`)
+`exists`
+
+#### Lookup ID (`lookup._id`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### ObjectId
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Endereço — País (`address.country`)
+`exists`, `equals`, `not_equals`
+
+#### Endereço — Cidade (`address.city`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Endereço — Estado (`address.state`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Endereço — Bairro (`address.district`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Endereço — Logradouro (`address.place`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Endereço — Número (`address.number`)
+`exists`, `equals`, `not_equals`
+
+#### Endereço — CEP (`address.postalCode`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Endereço — Complemento (`address.complement`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Endereço — Geolocalização (`address.geolocation.0`, `address.geolocation.1`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Nome de Pessoa (`personName.first`, `personName.last`, `personName.full`)
+`exists`, `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Telefone — Número (`phone.phoneNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Telefone — Código do País (`phone.countryCode`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Criptografado (`encrypted`)
+`exists`, `equals`, `not_equals`
+
+#### Filtro (`filter`)
+`exists`
+
+#### Texto Rico (`richText`)
+`exists`, `contains`
+
+#### Arquivo (`file`)
+`exists`
 
 ### Campos Comuns
 - `_id`: ID do registro
@@ -469,9 +566,86 @@ O Konecty oferece variáveis especiais que podem ser usadas nos filtros para ref
   }
   ```
 
+#### Variáveis Dinâmicas de Data
+
+O Konecty oferece variáveis dinâmicas de data que são resolvidas no momento da consulta. Essas variáveis funcionam em todos os contextos de filtro: listagens, tabelas dinâmicas, gráficos, widgets KPI e campos de filtro em formulários.
+
+**Início de período (00:00:00.000):**
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `$today` | Início do dia atual | `00:00:00.000` de hoje |
+| `$yesterday` | Início do dia anterior | `00:00:00.000` de ontem |
+| `$startOfWeek` | Segunda-feira da semana atual | Segunda às `00:00:00.000` |
+| `$startOfMonth` | Primeiro dia do mês atual | Dia 1 às `00:00:00.000` |
+| `$startOfYear` | 1º de janeiro do ano atual | 1/jan às `00:00:00.000` |
+
+**Fim de período (23:59:59.999):**
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `$endOfDay` | Fim do dia atual | `23:59:59.999` de hoje |
+| `$endOfWeek` | Domingo da semana atual | Domingo às `23:59:59.999` |
+| `$endOfMonth` | Último dia do mês atual | Último dia às `23:59:59.999` |
+| `$endOfYear` | 31 de dezembro do ano atual | 31/dez às `23:59:59.999` |
+
+**Relativas paramétricas (passado):**
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `$hoursAgo:N` | N horas atrás a partir de agora | `$hoursAgo:3` = 3 horas atrás |
+| `$daysAgo:N` | N dias atrás às `00:00:00.000` | `$daysAgo:7` = 7 dias atrás |
+| `$monthsAgo:N` | N meses atrás às `00:00:00.000` | `$monthsAgo:1` = mês passado |
+
+**Relativas paramétricas (futuro):**
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `$hoursFromNow:N` | Daqui N horas | `$hoursFromNow:3` = daqui 3 horas |
+| `$daysFromNow:N` | Daqui N dias às `00:00:00.000` | `$daysFromNow:1` = amanhã |
+| `$monthsFromNow:N` | Daqui N meses às `00:00:00.000` | `$monthsFromNow:1` = daqui 1 mês |
+
+##### Exemplos
+
+Registros criados neste mês:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_createdAt",
+    "value": "$startOfMonth"
+}
+```
+
+Registros com vencimento até o fim de hoje:
+```json
+{
+    "operator": "less_or_equals",
+    "term": "dataVencimento",
+    "value": "$endOfDay"
+}
+```
+
+Registros criados nos últimos 7 dias:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_createdAt",
+    "value": "$daysAgo:7"
+}
+```
+
+Registros atualizados nas últimas 3 horas:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_updatedAt",
+    "value": "$hoursAgo:3"
+}
+```
+
 #### Exemplo Combinando Variáveis Especiais
 
-Buscar registros que pertencem ao grupo do usuário atual e foram criados hoje:
+Buscar registros que pertencem ao grupo do usuário atual e foram criados neste mês:
 
 ```json
 {
@@ -484,10 +658,9 @@ Buscar registros que pertencem ao grupo do usuário atual e foram criados hoje:
         },
         {
             "operator": "greater_or_equals",
-            "term": "deliveryDate",
-            "value": "$now"
+            "term": "_createdAt",
+            "value": "$startOfMonth"
         }
     ]
 }
-```
 ``` 

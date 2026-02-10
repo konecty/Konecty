@@ -24,9 +24,12 @@ import {
 	buildCacheKey,
 	getCached,
 	setCached,
-	generateEtag,
+	getCachedBlob,
+	setCachedBlob,
+	hashFilter,
 } from '@imports/dashboards/dashboardCache';
 import type { KpiConfig } from '@imports/data/api/kpiStream';
+import { createHash } from 'node:crypto';
 
 import exportData from '@imports/data/export';
 
@@ -518,6 +521,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			start?: string;
 			withDetailFields?: string;
 			pivotConfig?: string;
+			cacheTTL?: string;
 		};
 	}>('/rest/data/:document/pivot', {
 		// Pivot tables can take a long time to process large datasets
@@ -603,25 +607,54 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const acceptLanguage = req.headers['accept-language'] || 'pt-BR';
 		const lang = acceptLanguage.startsWith('pt') ? 'pt_BR' : 'en';
 
-		// Call pivotStream
-		const result = await pivotStream({
-			authTokenId,
+		// ADR-0049: Cache for pivot endpoint (same dual-layer pattern as KPI)
+		const cacheTTL = req.query.cacheTTL != null ? parseInt(req.query.cacheTTL, 10) : DEFAULT_CACHE_TTL_SECONDS;
+
+		const userResult = await getUserSafe(authTokenId);
+		if (userResult.success === false) {
+			tracingSpan.end();
+			return reply.status(500).send(userResult);
+		}
+		const userId = userResult.data._id;
+
+		const cacheResult = await withBlobCache({
+			req: req as unknown as { headers: Record<string, string | string[] | undefined> },
+			reply,
+			userId,
 			document: req.params.document,
-			displayName: req.query.displayName,
-			displayType: req.query.displayType,
-			fields: req.query.fields,
+			operation: 'pivot',
+			configHash: hashConfig(pivotConfig),
 			filter: parsedFilter,
-			sort: req.query.sort,
-			limit: req.query.limit,
-			start: req.query.start,
-			withDetailFields: req.query.withDetailFields,
-			pivotConfig,
-			lang,
-			tracingSpan,
+			cacheTTL,
+			compute: async () => {
+				const result = await pivotStream({
+					authTokenId,
+					document: req.params.document,
+					displayName: req.query.displayName,
+					displayType: req.query.displayType,
+					fields: req.query.fields,
+					filter: parsedFilter,
+					sort: req.query.sort,
+					limit: req.query.limit,
+					start: req.query.start,
+					withDetailFields: req.query.withDetailFields,
+					pivotConfig,
+					lang,
+					tracingSpan,
+				});
+
+				return JSON.stringify(result);
+			},
 		});
 
 		tracingSpan.end();
-		reply.send(result);
+
+		if (cacheResult.notModified) {
+			return reply.status(HTTP_NOT_MODIFIED).send();
+		}
+
+		reply.type('application/json');
+		reply.send(JSON.parse(cacheResult.blob));
 	});
 
 	fastify.get<{
@@ -636,6 +669,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			start?: string;
 			withDetailFields?: string;
 			graphConfig?: string;
+			cacheTTL?: string;
 		};
 	}>('/rest/data/:document/graph', async (req, reply) => {
 		const { tracer } = req.openTelemetry();
@@ -763,46 +797,135 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const GRAPH_MAX_RECORDS = parseInt(process.env.GRAPH_MAX_RECORDS ?? '100000', 10);
 		const limit = req.query.limit ? parseInt(req.query.limit, 10) : GRAPH_MAX_RECORDS;
 
-		// Call graphStream
-		const result = await graphStream({
-			authTokenId,
+		// ADR-0049: Cache for graph endpoint (same dual-layer pattern as KPI)
+		const cacheTTL = req.query.cacheTTL != null ? parseInt(req.query.cacheTTL, 10) : DEFAULT_CACHE_TTL_SECONDS;
+
+		const userResult = await getUserSafe(authTokenId);
+		if (userResult.success === false) {
+			tracingSpan.end();
+			return reply.status(500).send(userResult);
+		}
+		const userId = userResult.data._id;
+
+		const cacheResult = await withBlobCache({
+			req: req as unknown as { headers: Record<string, string | string[] | undefined> },
+			reply,
+			userId,
 			document: req.params.document,
-			displayName: req.query.displayName,
-			displayType: req.query.displayType,
-			fields: req.query.fields,
+			operation: 'graph',
+			configHash: hashConfig(graphConfig),
 			filter: parsedFilter,
-			sort: req.query.sort,
-			limit: String(limit),
-			start: req.query.start,
-			withDetailFields: req.query.withDetailFields,
-			graphConfig,
-			lang,
-			tracingSpan,
+			cacheTTL,
+			compute: async () => {
+				const result = await graphStream({
+					authTokenId,
+					document: req.params.document,
+					displayName: req.query.displayName,
+					displayType: req.query.displayType,
+					fields: req.query.fields,
+					filter: parsedFilter,
+					sort: req.query.sort,
+					limit: String(limit),
+					start: req.query.start,
+					withDetailFields: req.query.withDetailFields,
+					graphConfig,
+					lang,
+					tracingSpan,
+				});
+
+				if (result.success === false) {
+					throw new Error(JSON.stringify(result));
+				}
+
+				return result.svg;
+			},
 		});
 
 		tracingSpan.end();
 
-		if (result.success === false) {
-			return reply.status(400).send(result);
+		if (cacheResult.notModified) {
+			return reply.status(HTTP_NOT_MODIFIED).send();
 		}
 
 		reply.type('image/svg+xml');
-		reply.send(result.svg);
+		reply.send(cacheResult.blob);
 	});
 
-	// --- KPI Aggregation Endpoint ---
-	// ADR-0012: Zod validation, no-magic-numbers, structured logging
-	// Follows the same pattern as /rest/data/:document/pivot and /rest/data/:document/graph
-
-	const KpiConfigSchema = z.object({
-		operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage']),
-		field: z.string().optional(),
-		fieldB: z.string().optional(),
-	});
-
+	// --- Cache constants (ADR-0012: no-magic-numbers) ---
 	const DEFAULT_CACHE_TTL_SECONDS = 300;
 	const STALE_WHILE_REVALIDATE_SECONDS = 60;
 	const HTTP_NOT_MODIFIED = 304;
+	const HASH_ALGORITHM = 'sha256';
+	const HASH_ENCODING = 'hex' as const;
+
+	/**
+	 * ADR-0049 / DRY: Shared cache helper for blob-based endpoints (graph SVG, pivot JSON).
+	 * Encapsulates: check cache → ETag/304 → cache miss → compute() → store → HTTP headers.
+	 * Keeps the cache pattern in a single place instead of duplicating across endpoints.
+	 */
+	const withBlobCache = async (opts: {
+		req: { headers: Record<string, string | string[] | undefined> };
+		reply: { header: (key: string, value: string) => void; status: (code: number) => { send: () => void } };
+		userId: string;
+		document: string;
+		operation: string;
+		configHash: string;
+		filter: unknown;
+		cacheTTL: number;
+		compute: () => Promise<string>;
+	}): Promise<{ blob: string; fromCache: boolean; notModified: boolean }> => {
+		const { req, reply, userId, document, operation, configHash, filter, cacheTTL, compute } = opts;
+
+		const cacheKey = buildCacheKey(userId, document, operation, configHash, filter);
+
+		// Check cache
+		const cached = await getCachedBlob(cacheKey);
+		if (cached != null) {
+			const clientEtag = req.headers['if-none-match'];
+			if (clientEtag != null && clientEtag === cached.etag) {
+				reply.header('ETag', cached.etag);
+				reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+				reply.header('Vary', 'Authorization, Cookie');
+				return { blob: '', fromCache: true, notModified: true };
+			}
+
+			reply.header('ETag', cached.etag);
+			reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+			reply.header('Vary', 'Authorization, Cookie');
+			return { blob: cached.blob, fromCache: true, notModified: false };
+		}
+
+		// Cache miss — check for force refresh
+		const clientCacheControl = req.headers['cache-control'];
+		const forceRefresh = clientCacheControl === 'no-cache';
+
+		// Execute computation
+		const blob = await compute();
+
+		// Store in cache (skip on force refresh to not pollute cache with forced results)
+		const entry = await setCachedBlob(userId, document, operation, configHash, filter, blob, cacheTTL);
+
+		// Set HTTP headers
+		reply.header('ETag', entry.etag);
+		reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+		reply.header('Vary', 'Authorization, Cookie');
+
+		return { blob, fromCache: false, notModified: false };
+	};
+
+	/** Hash a config object (graphConfig or pivotConfig) into a stable string for use as cache key field */
+	const hashConfig = (config: unknown): string => {
+		const str = config != null ? JSON.stringify(config) : '';
+		return createHash(HASH_ALGORITHM).update(str).digest(HASH_ENCODING);
+	};
+
+	// --- KPI Aggregation Endpoint ---
+	// ADR-0012: Zod validation, no-magic-numbers, structured logging
+
+	const KpiConfigSchema = z.object({
+		operation: z.enum(['count', 'sum', 'avg', 'min', 'max']),
+		field: z.string().optional(),
+	});
 	const HTTP_BAD_REQUEST = 400;
 	const HTTP_INTERNAL_ERROR = 500;
 

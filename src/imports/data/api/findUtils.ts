@@ -70,7 +70,7 @@ function buildAccessConditionsForField(
 		if (accessFieldConditions.READ != null) {
 			const condition = filterConditionToFn(accessFieldConditions.READ, metaObject, { user });
 			if (condition.success === false) {
-				return condition;
+				return condition as KonectyResultError;
 			}
 			if ((emptyFields === true && fieldsObject[fieldName] === 0) || (emptyFields !== true && fieldsObject[fieldName] === 1)) {
 				Object.keys(condition.data).reduce((acc, conditionField) => {

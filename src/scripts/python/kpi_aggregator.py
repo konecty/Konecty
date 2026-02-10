@@ -12,7 +12,7 @@
 import sys
 import json
 import polars as pl
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from datetime import datetime
 import os
 
@@ -22,7 +22,6 @@ RPC_ERROR_METHOD_NOT_FOUND = -32601
 RPC_ERROR_INVALID_PARAMS = -32602
 RPC_ERROR_INTERNAL = -32603
 VALID_OPERATIONS = ('sum', 'avg', 'min', 'max')
-PERCENTAGE_MULTIPLIER = 100
 
 # Debug log file
 DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), 'kpi_debug.log')
@@ -70,21 +69,17 @@ def extract_nested_value(record: Dict[str, Any], field_path: str) -> Any:
     return current
 
 
-def flatten_records(records: list, field: str, field_b: Optional[str] = None) -> list:
+def flatten_records(records: list, field: str) -> list:
     """Flatten nested field paths into top-level keys for Polars ingestion."""
-    needs_flatten = '.' in field or (field_b is not None and '.' in field_b)
-    if not needs_flatten:
+    if '.' not in field:
         return records
 
     flattened = []
     flat_field = field.replace('.', '_')
-    flat_field_b = field_b.replace('.', '_') if field_b else None
 
     for record in records:
         flat = dict(record)
         flat[flat_field] = extract_nested_value(record, field)
-        if field_b is not None and flat_field_b is not None:
-            flat[flat_field_b] = extract_nested_value(record, field_b)
         flattened.append(flat)
 
     return flattened
@@ -94,12 +89,12 @@ def compute_aggregation(
     df: pl.DataFrame,
     operation: str,
     field: str,
-    field_b: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Compute the requested aggregation on the dataframe."""
+    """Compute the requested aggregation on the dataframe.
+    Supports: sum, avg, min, max.
+    Percentage is handled client-side via two parallel calls."""
     # Use flattened column names (dots replaced with underscores)
     col_name = field.replace('.', '_') if '.' in field else field
-    col_name_b = field_b.replace('.', '_') if field_b and '.' in field_b else field_b
 
     row_count = len(df)
 
@@ -122,18 +117,6 @@ def compute_aggregation(
         result = series.min()
     elif operation == 'max':
         result = series.max()
-    elif operation == 'percentage':
-        if col_name_b is None or col_name_b not in df.columns:
-            debug_log(f'fieldB column {col_name_b} not found for percentage')
-            return {'result': 0, 'count': row_count, 'error': f'fieldB {field_b} not found'}
-
-        series_b = df[col_name_b].cast(pl.Float64, strict=False).drop_nulls()
-        denominator = series_b.sum()
-
-        if denominator == 0:
-            return {'result': 0, 'count': row_count, 'validCount': valid_count}
-
-        result = (series.sum() / denominator) * PERCENTAGE_MULTIPLIER
     else:
         return {'result': 0, 'count': row_count, 'error': f'Unknown operation: {operation}'}
 
@@ -172,21 +155,16 @@ if method != 'aggregate':
 config = params.get('config', {})
 operation = config.get('operation')
 field = config.get('field')
-field_b = config.get('fieldB')
 
-debug_log(f'Config: operation={operation}, field={field}, fieldB={field_b}')
+debug_log(f'Config: operation={operation}, field={field}')
 
 # Validate operation
-if operation not in VALID_OPERATIONS and operation != 'percentage':
-    send_error(RPC_ERROR_INVALID_PARAMS, f'Invalid operation: {operation}. Must be one of: {", ".join(VALID_OPERATIONS)}, percentage')
+if operation not in VALID_OPERATIONS:
+    send_error(RPC_ERROR_INVALID_PARAMS, f'Invalid operation: {operation}. Must be one of: {", ".join(VALID_OPERATIONS)}')
 
 # Validate field is present for all operations
 if not field:
     send_error(RPC_ERROR_INVALID_PARAMS, 'field is required for aggregation')
-
-# Validate fieldB for percentage
-if operation == 'percentage' and not field_b:
-    send_error(RPC_ERROR_INVALID_PARAMS, 'fieldB is required for percentage operation')
 
 # 2. Read NDJSON data from remaining stdin
 data = []
@@ -205,14 +183,14 @@ if len(data) == 0:
     sys.exit(0)
 
 # 3. Flatten nested fields if needed
-flattened_data = flatten_records(data, field, field_b)
+flattened_data = flatten_records(data, field)
 
 # 4. Create Polars DataFrame and compute aggregation
 try:
     df = pl.DataFrame(flattened_data)
     debug_log(f'DataFrame created: {len(df)} rows, columns: {df.columns}')
 
-    result = compute_aggregation(df, operation, field, field_b)
+    result = compute_aggregation(df, operation, field)
     debug_log(f'Aggregation result: {result}')
 
     send_result(result)

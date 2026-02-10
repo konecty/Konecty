@@ -16,7 +16,6 @@ EXPECTED_SUM = 60.0  # 10 + 20 + 30
 EXPECTED_AVG = 20.0  # 60 / 3
 EXPECTED_MIN = 10.0
 EXPECTED_MAX = 30.0
-EXPECTED_PERCENTAGE = 60.0  # (60 / 100) * 100
 SAMPLE_COUNT = 3
 DECIMAL_PLACES = 4
 
@@ -86,15 +85,6 @@ def test_max():
     assert result['result'] == EXPECTED_MAX
 
 
-def test_percentage():
-    result = run_kpi_aggregator(
-        {'method': 'aggregate', 'params': {'config': {'operation': 'percentage', 'field': 'amount', 'fieldB': 'total'}}},
-        SAMPLE_DATA,
-    )
-    assert result['result'] == EXPECTED_PERCENTAGE
-    assert result['count'] == SAMPLE_COUNT
-
-
 def test_nested_fields():
     nested_data = [
         {'_id': '1', 'value': {'amount': 100}},
@@ -137,7 +127,6 @@ if __name__ == '__main__':
     test_avg()
     test_min()
     test_max()
-    test_percentage()
     test_nested_fields()
     test_empty_data()
     test_null_values()

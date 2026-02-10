@@ -15,13 +15,62 @@ const DEFAULT_VERSION = 1;
 // ADR-0012: no-magic-numbers — default values as constants
 const DEFAULT_CACHE_TTL_SECONDS = 300;
 
+/** Sub-query schema for percentage numerator/denominator — same document as parent */
+const KpiSubQuerySchema = z.object({
+	operation: z.enum(['count', 'sum', 'avg', 'min', 'max']),
+	field: z.string().optional(), // required for non-count
+	filter: z.unknown().optional(), // KonFilter independente
+});
+
+// Graph config schema for chart widgets — matches @imports/types/graph GraphConfig
+const GraphConfigSchema = z
+	.object({
+		type: z.enum(['bar', 'line', 'pie', 'scatter', 'histogram', 'timeSeries']),
+		xAxis: z
+			.object({ field: z.string(), label: z.string().optional(), bucket: z.string().optional() })
+			.optional(),
+		yAxis: z
+			.object({ field: z.string(), label: z.string().optional(), bucket: z.string().optional() })
+			.optional(),
+		series: z
+			.array(
+				z.object({
+					field: z.string(),
+					label: z.string().optional(),
+					aggregation: z.enum(['count', 'sum', 'avg', 'min', 'max']).optional(),
+					color: z.string().optional(),
+					bucket: z.string().optional(),
+				}),
+			)
+			.optional(),
+		categoryField: z.string().optional(),
+		aggregation: z.enum(['count', 'sum', 'avg', 'min', 'max']).optional(),
+		colors: z.array(z.string()).optional(),
+		showLegend: z.boolean().optional(),
+		showGrid: z.boolean().optional(),
+		title: z.string().optional(),
+		width: z.number().optional(),
+		height: z.number().optional(),
+	})
+	.passthrough(); // allow histogram, categoryFieldBucket, etc.
+
+const ChartWidgetConfigSchema = z.object({
+	type: z.literal('chart'),
+	document: z.string().min(1),
+	filter: z.any().optional(),
+	graphConfig: GraphConfigSchema,
+	title: z.string().min(1),
+	subtitle: z.string().optional(),
+	cacheTTL: z.number().min(0).default(DEFAULT_CACHE_TTL_SECONDS),
+	autoRefresh: z.number().min(0).optional(),
+});
+
 const KpiWidgetConfigSchema = z.object({
 	type: z.literal('kpi'),
 	document: z.string(),
-	filter: z.unknown().optional(), // KonFilter serialized
+	filter: z.unknown().optional(), // KonFilter serialized (non-percentage)
 	operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage']),
-	field: z.string().optional(), // required for all except count
-	fieldB: z.string().optional(), // required for percentage
+	field: z.string().optional(), // required for all except count (non-percentage)
 	displayName: z.string().optional(), // meta display name for filter context
 	displayType: z.string().optional(), // meta display type for filter context
 	title: z.string(),
@@ -31,16 +80,104 @@ const KpiWidgetConfigSchema = z.object({
 	format: z.enum(['number', 'currency', 'percent']).default('number'),
 	cacheTTL: z.number().default(DEFAULT_CACHE_TTL_SECONDS),
 	autoRefresh: z.number().optional(), // in seconds
+	// For percentage: two sub-queries on the same document
+	numerator: KpiSubQuerySchema.optional(),
+	denominator: KpiSubQuerySchema.optional(),
 });
 
-// Widget config schema — extensible for future widget types (chart, list, table)
+// List widget column schema
+const ListWidgetColumnSchema = z.object({
+	field: z.string().min(1),
+	label: z.string().optional(),
+	width: z.number().optional(),
+});
+
+const DEFAULT_LIST_LIMIT = 10;
+const DEFAULT_LIST_CACHE_TTL_SECONDS = 60;
+
+const ListWidgetConfigSchema = z.object({
+	type: z.literal('list'),
+	document: z.string().min(1),
+	filter: z.any().optional(),
+	columns: z.array(ListWidgetColumnSchema).min(1),
+	sort: z.string().optional(),
+	limit: z.number().min(1).default(DEFAULT_LIST_LIMIT),
+	title: z.string().min(1),
+	subtitle: z.string().optional(),
+	cacheTTL: z.number().min(0).default(DEFAULT_LIST_CACHE_TTL_SECONDS),
+	autoRefresh: z.number().min(0).optional(),
+	displayName: z.string().optional(),
+	displayType: z.string().optional(),
+});
+
+// --- Table Widget (Pivot Table) Schemas ---
+
+// ADR-0012: no-magic-numbers
+const DEFAULT_TABLE_CACHE_TTL_SECONDS = 300;
+
+const PivotRowItemSchema = z.object({
+	field: z.string().min(1),
+	order: z.enum(['ASC', 'DESC']).default('ASC'),
+	showSubtotal: z.boolean().optional(),
+	width: z.number().optional(),
+});
+
+const PivotColumnItemSchema = z.object({
+	field: z.string().min(1),
+	aggregator: z.enum(['D', 'W', 'M', 'Q', 'Y']).optional(),
+	order: z.enum(['ASC', 'DESC']).default('ASC'),
+	width: z.number().optional(),
+});
+
+const PivotValueItemSchema = z.object({
+	field: z.string().min(1),
+	aggregator: z.enum(['count', 'sum', 'avg', 'min', 'max']),
+	format: z.string().optional(),
+	width: z.number().optional(),
+});
+
+const PivotOptionsSchema = z
+	.object({
+		showRowGrandTotals: z.boolean().optional(),
+		showColGrandTotals: z.boolean().optional(),
+		showRowSubtotals: z.boolean().optional(),
+		showColSubtotals: z.boolean().optional(),
+		enableGrouping: z.boolean().optional(),
+		hideGroupedLeftAxisCols: z.boolean().optional(),
+	})
+	.optional();
+
+const EditedPivotConfigSchema = z.object({
+	rows: z.array(PivotRowItemSchema).min(1),
+	columns: z.array(PivotColumnItemSchema).optional(),
+	values: z.array(PivotValueItemSchema).min(1),
+	options: PivotOptionsSchema,
+});
+
+const TableWidgetConfigSchema = z.object({
+	type: z.literal('table'),
+	document: z.string().min(1),
+	filter: z.any().optional(),
+	pivotConfig: EditedPivotConfigSchema,
+	title: z.string().default(''),
+	subtitle: z.string().optional(),
+	cacheTTL: z.number().min(0).default(DEFAULT_TABLE_CACHE_TTL_SECONDS),
+	autoRefresh: z.number().min(0).optional(),
+	displayName: z.string().optional(),
+	displayType: z.string().optional(),
+});
+
+// Widget config schema — extensible for future widget types
 // When adding new types, expand the discriminatedUnion array.
 const WidgetConfigSchema = z.discriminatedUnion('type', [
 	KpiWidgetConfigSchema,
+	ChartWidgetConfigSchema,
+	ListWidgetConfigSchema,
+	TableWidgetConfigSchema,
 ]);
 
 // Widget type enum — extend when adding new widget types
-const WidgetTypeSchema = z.enum(['kpi']);
+const WidgetTypeSchema = z.enum(['kpi', 'chart', 'list', 'table']);
 
 // Widget position and size in the grid
 export const DashboardWidgetSchema = z.object({

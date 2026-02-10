@@ -33,9 +33,8 @@ const PYTHON_KPI_SCRIPT_PATH_DOCKER = path.join('/app', 'scripts', 'python', 'kp
 // --- Types ---
 
 export interface KpiConfig {
-	operation: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'percentage';
+	operation: 'count' | 'sum' | 'avg' | 'min' | 'max';
 	field?: string; // required for all except count
-	fieldB?: string; // required for percentage
 }
 
 export type KpiStreamParams = BuildFindQueryParams & {
@@ -129,7 +128,8 @@ const sendDataToPython = async (pythonProcess: ChildProcess, documents: Record<s
  * Executes a KPI aggregation following the pivotStream/graphStream pattern.
  *
  * Count: uses find() with getTotal:true (fast, no Python needed).
- * Sum/avg/min/max/percentage: findStream → field permissions → Python/Polars.
+ * Sum/avg/min/max: findStream → field permissions → Python/Polars.
+ * Percentage is handled client-side via two parallel calls (no backend support needed).
  */
 export default async function kpiStream({
 	kpiConfig,
@@ -140,7 +140,7 @@ export default async function kpiStream({
 
 	try {
 		tracingSpan?.addEvent('Starting KPI stream processing');
-		const { operation, field, fieldB } = kpiConfig;
+		const { operation, field } = kpiConfig;
 
 		// --- COUNT: use find() directly, no Python ---
 		if (operation === 'count') {
@@ -175,22 +175,15 @@ export default async function kpiStream({
 			};
 		}
 
-		// --- SUM/AVG/MIN/MAX/PERCENTAGE: findStream → Python ---
+		// --- SUM/AVG/MIN/MAX: findStream → Python ---
 
 		// Validate field is present
 		if (field == null || field.length === 0) {
 			return errorReturn(`KPI aggregation '${operation}' requires a field`);
 		}
 
-		if (operation === 'percentage' && (fieldB == null || fieldB.length === 0)) {
-			return errorReturn('KPI percentage requires both field and fieldB');
-		}
-
-		// Build fields for projection: only the field(s) we need
+		// Build fields for projection: only the field we need
 		const projectionFields = [field];
-		if (fieldB != null) {
-			projectionFields.push(fieldB);
-		}
 
 		// Merge with existing fields if any
 		const existingFields = findParams.fields ? findParams.fields.split(',').map((f) => f.trim()) : [];
@@ -243,7 +236,7 @@ export default async function kpiStream({
 		// Send RPC request with KPI config
 		tracingSpan?.addEvent('Sending RPC request to Python');
 		await sendRPCRequest(pythonProcess, 'aggregate', {
-			config: { operation, field, fieldB },
+			config: { operation, field },
 		} as any);
 
 		// Send data to Python
