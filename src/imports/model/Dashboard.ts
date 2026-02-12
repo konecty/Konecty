@@ -167,6 +167,74 @@ const TableWidgetConfigSchema = z.object({
 	displayType: z.string().optional(),
 });
 
+// --- Card List Widget Schema (ADR-0052) ---
+
+const DEFAULT_CARDLIST_LIMIT = 10;
+const DEFAULT_CARDLIST_CACHE_TTL_SECONDS = 60;
+
+const TypographyStyleSchema = z.object({
+	preset: z.enum(['title', 'subtitle', 'body', 'caption', 'overline']).optional(),
+	bold: z.boolean().optional(),
+	italic: z.boolean().optional(),
+	underline: z.boolean().optional(),
+	strikethrough: z.boolean().optional(),
+	align: z.enum(['left', 'center', 'right']).optional(),
+	color: z.string().optional(),
+});
+
+const CardCellElementSchema = z.discriminatedUnion('kind', [
+	z.object({ kind: z.literal('field'), field: z.string(), typography: TypographyStyleSchema.optional(), wrap: z.boolean().optional() }),
+	z.object({ kind: z.literal('image'), field: z.string(), aspectRatio: z.enum(['1:1', '4:3', '16:9', '3:4', '3:2', '2:1']).optional() }),
+	z.object({ kind: z.literal('text'), value: z.string(), typography: TypographyStyleSchema.optional() }),
+	z.object({ kind: z.literal('link'), text: z.string(), url: z.string(), alt: z.string().optional(), typography: TypographyStyleSchema.optional() }),
+	z.object({ kind: z.literal('button'), text: z.string(), url: z.string(), icon: z.string().optional(), color: z.string().optional(), variant: z.enum(['solid', 'outline']).optional() }),
+	z.object({ kind: z.literal('formula'), expression: z.string(), label: z.string().optional(), typography: TypographyStyleSchema.optional() }),
+	z.object({ kind: z.literal('badge'), field: z.string(), colorMap: z.record(z.string()).optional() }),
+	z.object({ kind: z.literal('separator') }),
+	z.object({ kind: z.literal('spacer'), height: z.number().optional() }),
+]);
+
+const CardTemplateCellSchema = z.object({
+	id: z.string(),
+	width: z.union([z.literal(25), z.literal(50), z.literal(75), z.literal(100)]),
+	element: CardCellElementSchema,
+});
+
+const CardTemplateRowSchema = z.object({
+	id: z.string(),
+	cells: z.array(CardTemplateCellSchema),
+});
+
+const CardTemplateSchema = z.object({
+	rows: z.array(CardTemplateRowSchema),
+	background: z.union([
+		z.object({ type: z.literal('color'), value: z.string() }),
+		z.object({ type: z.literal('image'), field: z.string() }),
+	]).optional(),
+	borderRadius: z.number().optional(),
+	padding: z.number().optional(),
+});
+
+const CardListWidgetConfigSchema = z.object({
+	type: z.literal('cardList'),
+	document: z.string().min(1),
+	filter: z.any().optional(),
+	columns: z.array(z.string()),
+	sort: z.string().optional(),
+	limit: z.number().min(1).default(DEFAULT_CARDLIST_LIMIT),
+	title: z.string().min(1),
+	subtitle: z.string().optional(),
+	cacheTTL: z.number().min(0).default(DEFAULT_CARDLIST_CACHE_TTL_SECONDS),
+	autoRefresh: z.number().min(0).optional(),
+	displayName: z.string().optional(),
+	displayType: z.string().optional(),
+	form: z.string().optional(),
+	template: CardTemplateSchema,
+	layoutMode: z.enum(['grid', 'list']),
+	gridColumns: z.number().optional(),
+	cardMinWidth: z.number().optional(),
+});
+
 // --- Content Widget Schema (ADR-0050) ---
 
 const ContentImageSchema = z.object({
@@ -201,10 +269,11 @@ const WidgetConfigSchema = z.discriminatedUnion('type', [
 	ListWidgetConfigSchema,
 	TableWidgetConfigSchema,
 	ContentWidgetConfigSchema,
+	CardListWidgetConfigSchema,
 ]);
 
 // Widget type enum — extend when adding new widget types
-const WidgetTypeSchema = z.enum(['kpi', 'chart', 'list', 'table', 'content']);
+const WidgetTypeSchema = z.enum(['kpi', 'chart', 'list', 'table', 'content', 'cardList']);
 
 // Widget position and size in the grid
 export const DashboardWidgetSchema = z.object({
