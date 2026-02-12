@@ -167,6 +167,32 @@ const TableWidgetConfigSchema = z.object({
 	displayType: z.string().optional(),
 });
 
+// --- Content Widget Schema (ADR-0050) ---
+
+const ContentImageSchema = z.object({
+	url: z.string(),
+	alt: z.string().optional(),
+});
+
+const ContentWidgetConfigSchema = z.object({
+	type: z.literal('content'),
+	contentType: z.enum(['html', 'markdown']),
+	content: z.string().default(''),
+	title: z.string().default(''),
+	subtitle: z.string().optional(),
+	// Optional link
+	link: z.string().optional(),
+	linkLabel: z.string().optional(),
+	linkTarget: z.enum(['_blank', '_self', '_parent', '_top']).optional(),
+	// Optional images (CDN URLs)
+	images: z.array(ContentImageSchema).optional(),
+	// Visibility scheduling (optional — when absent, always visible)
+	startAt: z.string().datetime().optional(),
+	endAt: z.string().datetime().optional(),
+	// Provenance (informational only, not used at render time)
+	webElementId: z.string().optional(),
+});
+
 // Widget config schema — extensible for future widget types
 // When adding new types, expand the discriminatedUnion array.
 const WidgetConfigSchema = z.discriminatedUnion('type', [
@@ -174,10 +200,11 @@ const WidgetConfigSchema = z.discriminatedUnion('type', [
 	ChartWidgetConfigSchema,
 	ListWidgetConfigSchema,
 	TableWidgetConfigSchema,
+	ContentWidgetConfigSchema,
 ]);
 
 // Widget type enum — extend when adding new widget types
-const WidgetTypeSchema = z.enum(['kpi', 'chart', 'list', 'table']);
+const WidgetTypeSchema = z.enum(['kpi', 'chart', 'list', 'table', 'content']);
 
 // Widget position and size in the grid
 export const DashboardWidgetSchema = z.object({
