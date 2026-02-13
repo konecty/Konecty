@@ -301,15 +301,23 @@ const DashboardLayoutSchema = z
 
 const DashboardScopeEnum = z.enum(['global', 'group', 'user']);
 
+// --- Default Widget Position ---
+
+const DefaultWidgetPositionSchema = z.enum(['before', 'after']);
+
 // --- Main Dashboard Schema ---
 
 export const DashboardSchema = z.object({
 	_id: z.string().optional(),
 	scope: DashboardScopeEnum,
 	isDefault: z.boolean().default(false),
-	group: z.string().optional(), // for scope=group: group/role identifier
+	group: z.string().optional(), // DEPRECATED: kept for backward compat; prefer groups/roles
+	groups: z.array(z.string()).optional(), // for scope=group: Group names
+	roles: z.array(z.string()).optional(), // for scope=group: Role names
 	owner: z.string().optional(), // for scope=user: userId
 	parentDashboard: z.string().optional(), // references default dashboard _id
+	inheritsDefault: z.boolean().default(true), // scope=group: merge widgets from default
+	defaultWidgetPosition: DefaultWidgetPositionSchema.default('before'), // scope=group: default widgets before or after extension widgets
 	label: LabelSchema,
 	description: LabelSchema.optional(),
 	layout: DashboardLayoutSchema,
@@ -331,9 +339,12 @@ export const CreateDashboardInputSchema = DashboardSchema.omit({
 	_updatedAt: true,
 }).refine(
 	(data) => {
-		// scope=group requires group field
-		if (data.scope === 'group' && (data.group == null || data.group.length === 0)) {
-			return false;
+		if (data.scope === 'group') {
+			// scope=group requires at least one group or role
+			const hasGroups = Array.isArray(data.groups) && data.groups.length > 0;
+			const hasRoles = Array.isArray(data.roles) && data.roles.length > 0;
+			const hasLegacyGroup = data.group != null && data.group.length > 0;
+			return hasGroups || hasRoles || hasLegacyGroup;
 		}
 		// scope=user requires owner field
 		if (data.scope === 'user' && (data.owner == null || data.owner.length === 0)) {
@@ -342,7 +353,7 @@ export const CreateDashboardInputSchema = DashboardSchema.omit({
 		return true;
 	},
 	{
-		message: 'Group extensions require group field; user dashboards require owner field',
+		message: 'Group extensions require at least one group or role; user dashboards require owner field',
 	},
 );
 
@@ -351,6 +362,10 @@ export const UpdateDashboardInputSchema = z.object({
 	description: LabelSchema.optional(),
 	layout: DashboardLayoutSchema.optional(),
 	widgets: z.array(DashboardWidgetSchema).optional(),
+	groups: z.array(z.string()).optional(),
+	roles: z.array(z.string()).optional(),
+	inheritsDefault: z.boolean().optional(),
+	defaultWidgetPosition: DefaultWidgetPositionSchema.optional(),
 });
 
 // --- Inferred Types (DRY: single source of truth via z.infer) ---
@@ -373,7 +388,8 @@ export interface ComposedWidget extends DashboardWidget {
 
 export interface ComposedDashboard {
 	defaultDashboard: Dashboard | null;
-	groupExtensions: Dashboard[];
+	groupExtension: Dashboard | null; // single most-specific extension (priority: group+role > group > role)
+	groupExtensions: Dashboard[]; // all matching extensions (for admin reference)
 	userPersonal: Dashboard | null;
 	widgets: ComposedWidget[];
 	layout: DashboardLayout;

@@ -13,6 +13,7 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 const HTTP_INTERNAL_ERROR = 500;
 
 const dashboardsApi: FastifyPluginCallback = async (fastify) => {
@@ -47,11 +48,12 @@ const dashboardsApi: FastifyPluginCallback = async (fastify) => {
 				return reply.status(HTTP_UNAUTHORIZED).send({ success: false, errors: [{ message: 'Unauthorized' }] });
 			}
 
-			// Collect user groups: group name + role name
-			const userGroups: string[] = [user.group?.name, user.role?.name].filter((g): g is string => g != null && g.length > 0);
+			// ADR-0053: pass group and role separately for priority-based composition
+			const userGroup = user.group?.name ?? null;
+			const userRole = user.role?.name ?? null;
 
 			const userId = user._id;
-			const composed = await dashboardsRepo.getComposedDashboard(userId, userGroups);
+			const composed = await dashboardsRepo.getComposedDashboard(userId, userGroup, userRole);
 			return reply.status(HTTP_OK).send({ success: true, data: composed });
 		} catch (error) {
 			if (/^\[get-user\]/.test((error as Error).message)) {
@@ -114,6 +116,11 @@ const dashboardsApi: FastifyPluginCallback = async (fastify) => {
 			if (/^\[get-user\]/.test((error as Error).message)) {
 				return reply.status(HTTP_UNAUTHORIZED).send({ success: false, errors: [{ message: 'Unauthorized' }] });
 			}
+			// ADR-0053: overlap detection returns 409
+			const statusCode = (error as Error & { statusCode?: number }).statusCode;
+			if (statusCode === HTTP_CONFLICT) {
+				return reply.status(HTTP_CONFLICT).send({ success: false, errors: [{ message: (error as Error).message }] });
+			}
 			logger.error(error, 'Error creating dashboard');
 			return reply.status(HTTP_INTERNAL_ERROR).send({ success: false, errors: [{ message: 'Internal server error' }] });
 		}
@@ -152,6 +159,11 @@ const dashboardsApi: FastifyPluginCallback = async (fastify) => {
 		} catch (error) {
 			if (/^\[get-user\]/.test((error as Error).message)) {
 				return reply.status(HTTP_UNAUTHORIZED).send({ success: false, errors: [{ message: 'Unauthorized' }] });
+			}
+			// ADR-0053: overlap detection returns 409
+			const statusCode = (error as Error & { statusCode?: number }).statusCode;
+			if (statusCode === HTTP_CONFLICT) {
+				return reply.status(HTTP_CONFLICT).send({ success: false, errors: [{ message: (error as Error).message }] });
 			}
 			logger.error(error, `Error updating dashboard ${req.params.id}`);
 			return reply.status(HTTP_INTERNAL_ERROR).send({ success: false, errors: [{ message: 'Internal server error' }] });
@@ -199,8 +211,18 @@ const dashboardsApi: FastifyPluginCallback = async (fastify) => {
 		}
 	});
 
-	// --- POST /api/dashboards/:id/extend --- Create group extension from a dashboard (admin)
-	fastify.post<{ Params: { id: string }; Body: { group: string } }>('/api/dashboards/:id/extend', async (req, reply) => {
+	// --- POST /api/dashboards/:id/extend --- Create group/role extension from a dashboard (admin)
+	fastify.post<{
+		Params: { id: string };
+		Body: {
+			groups?: string[];
+			roles?: string[];
+			inheritsDefault?: boolean;
+			defaultWidgetPosition?: 'before' | 'after';
+			name?: string;
+			group?: string; // backward compat
+		};
+	}>('/api/dashboards/:id/extend', async (req, reply) => {
 		try {
 			const user = await getUserFromRequest(req);
 			if (user == null) {
@@ -211,16 +233,35 @@ const dashboardsApi: FastifyPluginCallback = async (fastify) => {
 				return reply.status(HTTP_FORBIDDEN).send({ success: false, errors: [{ message: 'Admin access required' }] });
 			}
 
-			const { group } = req.body ?? {};
-			if (group == null || group.length === 0) {
-				return reply.status(HTTP_BAD_REQUEST).send({ success: false, errors: [{ message: 'Group name is required' }] });
+			const body = req.body ?? {};
+			// ADR-0053: support new groups/roles fields; backward compat with legacy { group }
+			const groups = body.groups ?? (body.group != null ? [body.group] : []);
+			const roles = body.roles ?? [];
+
+			if (groups.length === 0 && roles.length === 0) {
+				return reply.status(HTTP_BAD_REQUEST).send({ success: false, errors: [{ message: 'At least one group or role is required' }] });
 			}
 
-			const extension = await dashboardsRepo.createGroupExtension(group, req.params.id, user._id);
+			const extension = await dashboardsRepo.createGroupExtension(
+				{
+					groups,
+					roles,
+					inheritsDefault: body.inheritsDefault,
+					defaultWidgetPosition: body.defaultWidgetPosition,
+					name: body.name,
+				},
+				req.params.id,
+				user._id,
+			);
 			return reply.status(HTTP_CREATED).send({ success: true, data: extension });
 		} catch (error) {
 			if (/^\[get-user\]/.test((error as Error).message)) {
 				return reply.status(HTTP_UNAUTHORIZED).send({ success: false, errors: [{ message: 'Unauthorized' }] });
+			}
+			// ADR-0053: overlap detection returns 409
+			const statusCode = (error as Error & { statusCode?: number }).statusCode;
+			if (statusCode === HTTP_CONFLICT) {
+				return reply.status(HTTP_CONFLICT).send({ success: false, errors: [{ message: (error as Error).message }] });
 			}
 			logger.error(error, `Error creating group extension for dashboard ${req.params.id}`);
 			return reply.status(HTTP_INTERNAL_ERROR).send({ success: false, errors: [{ message: 'Internal server error' }] });
