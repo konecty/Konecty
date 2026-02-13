@@ -1,6 +1,6 @@
 # RFC-0001: Cross-Module Query API (Konecty Advanced Query Language)
 
-> A new API for cross-module queries with joins, aggregations, and a SQL interface -- API-only, no UI.
+> A new API for cross-module queries with recursive relations, aggregations, and a SQL interface -- API-only, no UI.
 
 ---
 
@@ -11,7 +11,7 @@
 | **Status**    | DRAFT                                          |
 | **Authors**   | Konecty Team                                   |
 | **Created**   | 2026-02-10                                     |
-| **Updated**   | 2026-02-10                                     |
+| **Updated**   | 2026-02-13                                     |
 | **Reviewers** | TBD                                            |
 | **Related**   | ADR-0001 through ADR-0010, especially ADR-0005 (secondary reads), ADR-0006 (Python integration), ADR-0008 (Polars/Pandas), ADR-0010 (code patterns) |
 
@@ -23,9 +23,9 @@
 
 The Konecty `find` API (`/rest/data/:document/find` and `/rest/stream/:document/findStream`) only allows querying **a single module** at a time, with no support for:
 
-- **Cross-module joins**: Cannot query Product and its related ProductsPerOpportunities in a single request.
+- **Cross-module relations**: Cannot query Contact and its related Opportunities in a single request.
 - **Cross-module aggregations**: Cannot count opportunities per contact, or sum sales per campaign.
-- **Arbitrary multi-module projections**: `withDetailFields` only brings lookup `descriptionFields`/`detailFields`, not arbitrary cross-module queries with custom projections.
+- **Arbitrary multi-module projections**: `withDetailFields` only brings lookup `descriptionFields`/`detailFields`, not arbitrary cross-module queries with custom projections and aggregations.
 
 ### Impact
 
@@ -40,18 +40,20 @@ Clients must make **N+1 API calls** for related data and perform joins client-si
 
 Provide a secure, streaming, cross-module query API accessible via REST that:
 
-1. Supports 1-to-N module joins (INNER, LEFT, RIGHT, CROSS)
-2. Supports aggregations (COUNT, SUM, AVG, MIN, MAX, COLLECT)
-3. Offers both a structured JSON interface and an ANSI SQL subset interface
-4. **Never bypasses** the existing 6-layer security model
-5. Uses streaming and secondary reads for performance
-6. Leverages the existing Python bridge (Polars) for join processing
+1. Extends the existing `find` API with recursive nested **relations** (mirroring the MetaObject `relations` pattern)
+2. Infers join conditions from **lookup** fields already defined in metadata
+3. Supports aggregations (`count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`)
+4. Offers both a structured JSON interface (find-compatible) and an ANSI SQL subset interface
+5. Uses the same `filter`/`fields`/`sort`/`limit`/`start` naming as the current find API
+6. Applies security per module with **graceful degradation** for unauthorized relations
+7. Uses streaming and secondary reads for performance
+8. Leverages the existing Python bridge (Polars) for join and aggregation processing
 
 ---
 
 ## 2. Proposed Solution: Two New Endpoints
 
-### Endpoint 1 -- JSON Query
+### Endpoint 1 -- JSON Query (Relations-Based)
 
 ```
 POST /rest/query/json
@@ -59,7 +61,40 @@ Content-Type: application/json
 Authorization: <auth token>
 ```
 
-Accepts a structured JSON body defining documents, joins, projections, filters, and aggregations.
+Accepts a structured JSON body that is a **standard find call with an added `relations` array**. Uses the exact same parameter names as the current find API (`filter`, `fields`, `sort`, `limit`, `start`).
+
+Example body:
+
+```json
+{
+  "document": "Contact",
+  "filter": {
+    "match": "and",
+    "conditions": [{ "term": "status", "operator": "equals", "value": "active" }]
+  },
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 100,
+  "start": 0,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [{ "term": "status", "operator": "in", "value": ["Nova", "Em Visitacao"] }]
+      },
+      "fields": "code,status",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 50,
+      "aggregators": {
+        "activeOpportunities": { "aggregator": "count" },
+        "opportunities": { "aggregator": "push" }
+      }
+    }
+  ]
+}
+```
 
 ### Endpoint 2 -- SQL Query
 
@@ -69,11 +104,11 @@ Content-Type: application/json
 Authorization: <auth token>
 
 {
-  "sql": "SELECT Product.code, COUNT(ProductsPerOpportunities._id) AS offers FROM Product INNER JOIN ProductsPerOpportunities ON Product._id = ProductsPerOpportunities.product._id WHERE Product._id = 'fFaJkGaWAdDhvcPH6' GROUP BY Product.code"
+  "sql": "SELECT c.code, c.name, COUNT(o._id) AS activeOpportunities FROM Contact c INNER JOIN Opportunity o ON c._id = o.contact._id WHERE o.status IN ('Nova', 'Em Visitacao') GROUP BY c.code, c.name ORDER BY c.name ASC LIMIT 100"
 }
 ```
 
-Accepts an ANSI SQL subset string that gets parsed to the same Internal Query Representation (IQR).
+Accepts an ANSI SQL subset string that gets parsed and translated to the same Internal Query Representation (IQR) -- the recursive relations format.
 
 ### Response Format
 
@@ -81,27 +116,27 @@ Both endpoints return **NDJSON** streaming responses:
 
 ```
 Content-Type: application/x-ndjson
-X-Total-Count: 42  (optional, if requested)
+X-Total-Count: 42  (optional, if requested via includeTotal)
 ```
 
 First line (optional metadata):
 
 ```json
-{"_meta":{"modules":["Product","ProductsPerOpportunities"],"warnings":[],"executionTimeMs":234}}
+{"_meta":{"document":"Contact","relations":["Opportunity"],"warnings":[],"executionTimeMs":234}}
 ```
 
-Subsequent lines (data records):
+Subsequent lines (data records with aggregator results merged in):
 
 ```json
-{"code":123,"offers":[{"_id":"xyz","status":"Ofertado"},{"_id":"zxy","status":"Visitado"}]}
-{"code":456,"offers":[{"_id":"abc","status":"Nova"}]}
+{"code":1001,"name":{"full":"Alice Santos"},"activeOpportunities":3,"opportunities":[{"code":5001,"status":"Nova"},{"code":5002,"status":"Em Visitacao"}]}
+{"code":1002,"name":{"full":"Bruno Silva"},"activeOpportunities":1,"opportunities":[{"code":5003,"status":"Nova"}]}
 ```
 
 ---
 
-## 3. Security Architecture (Critical -- 6 Security Layers)
+## 3. Security Architecture (6 Layers with Graceful Degradation)
 
-Every module referenced in a query **independently** goes through ALL 6 security layers from `find.ts`, `findUtils.ts`, `data.js`, and `accessUtils.ts`. **No layer may be bypassed.**
+The security model applies **all 6 existing layers** but with a key difference from the original find: **only the primary document must be fully authorized; unauthorized relations degrade gracefully to empty/null values instead of rejecting the entire query**.
 
 ### Layer 1 -- User Authentication
 
@@ -112,26 +147,31 @@ Every module referenced in a query **independently** goes through ALL 6 security
 - If invalid, returns error immediately
 - Called **once** per request, shared across all modules in the query
 
-### Layer 2 -- Document-Level Access
+### Layer 2 -- Document-Level Access (Soft for Relations)
 
 **Function**: `getAccessFor(document, user)` in `accessUtils.ts:80-134`
 
-- Resolves user's access profile for each module: `user.access[documentName]` -> `MetaObject.Access[name]`
+- Resolves user's access profile: `user.access[documentName]` -> `MetaObject.Access[name]`
 - Checks `access.isReadable === true`
 - Returns `MetaAccess` object or `false` (deny)
-- **Each module** in the query must independently pass this check
-- If ANY module fails, the entire query is rejected with a clear error
+
+**Behavior difference for cross-module queries**:
+
+- **Primary document** (`document` field): MUST pass this check. If it fails, the **entire query is rejected**.
+- **Relation documents**: If a relation's document fails this check, the relation's **aggregator result fields are set to `null`**. The query continues. A warning is added to `_meta.warnings`: `{ "type": "RELATION_ACCESS_DENIED", "document": "Product", "message": "User lacks read access" }`.
+
+**Benefit**: The same endpoint serves more users. A user without access to Product still gets their Contact + Opportunity data; the product-related aggregators simply return null.
 
 ### Layer 3 -- Document-Level Read Filter (Row-Level Security)
 
 **Source**: `access.readFilter` (a KonFilter object)
 
 - Each `MetaAccess` may define a `readFilter`
-- This filter is **always merged** with the user's filter via `$and`
+- This filter is **always merged** with the relation's filter via `$and`
 - Restricts which **records** the user can see
 - Example: a broker can only see opportunities assigned to them
 - Applied in `find.ts:114-116`: `if (isObject(access.readFilter)) queryFilter.filters.push(access.readFilter)`
-- **Critical**: In cross-module queries, each module's readFilter is applied to its own collection query independently
+- **Critical**: Each module's readFilter is applied to its own sub-query independently
 
 ### Layer 4 -- Field-Level Permissions
 
@@ -140,7 +180,7 @@ Every module referenced in a query **independently** goes through ALL 6 security
 - For each field in the module metadata, checks if `access.fields[fieldName].READ.allow === true`
 - Falls back to `metaAccess.fieldDefaults.isReadable`
 - If a field is NOT readable: it is **removed from the MongoDB projection** (never fetched from DB)
-- Applied in `find.ts:179-210` and `findUtils.ts:314-316`
+- Applied per-module: relation fields are checked against the relation module's access profile
 
 ### Layer 5 -- Field-Level Conditional Access
 
@@ -150,112 +190,155 @@ Every module referenced in a query **independently** goes through ALL 6 security
 - Converted to runtime functions via `filterConditionToFn()`
 - After MongoDB returns data, each record is evaluated against these conditions
 - If condition returns `false` for a record, the field is **stripped from that specific record**
-- In `findStream.ts`: handled by `ApplyFieldPermissionsTransform` stream transform
-- In `find.ts:284-297`: `conditionsKeys.reduce(... if (accessConditions[key](record) === false) delete acc[key])`
+- Applied via `ApplyFieldPermissionsTransform` on each relation's data **BEFORE** aggregation
 
 ### Layer 6 -- `removeUnauthorizedDataForRead()`
 
 **Function**: `removeUnauthorizedDataForRead()` in `accessUtils.ts:136-162`
 
 - Final safety net (defense-in-depth)
-- Iterates all fields in result data
-- Re-checks `getFieldPermissions()` and `getFieldConditions()` for each field
-- Only copies authorized fields to a new object (whitelist approach)
+- Re-checks all field permissions as whitelist
+- Applied as last step before aggregator processing
 
-### Security Invariant for Cross-Module Query
+### Security Invariant
 
-The cross-module query engine MUST decompose the query into per-module operations where each module independently goes through Layers 1-5:
+The cross-module query engine MUST:
 
-1. Call `buildFindQuery()` (or equivalent) for **EACH** module involved
-2. Never allow a join to expose records filtered by `readFilter` of another module
+1. Call `buildFindQuery()` (or equivalent) for each authorized module
+2. Never allow a relation to expose records filtered by another module's `readFilter`
 3. Never allow a projection to include fields the user cannot read
-4. Apply field conditions (Layer 5) via Transform streams on each module's data **BEFORE** joining
-5. Log security-relevant decisions for audit purposes
+4. Apply field conditions (Layer 5) on each module's data BEFORE aggregation
+5. Set all aggregator fields to `null` for unauthorized relations (not expose partial data)
+6. Log security-relevant decisions for audit purposes
 
 ---
 
-## 4. JSON Query Format (with Zod-style Schema)
+## 4. JSON Query Format (Recursive Relations with Zod Schema)
 
-### Complete Schema
+### Design Principle
+
+The JSON query is a **standard find call** with an added `relations` array. Each relation is also a find-like sub-query with its own `filter`, `fields`, `sort`, `limit`, and `aggregators`. Relations can be **recursively nested** to follow chains of lookups.
+
+**Join conditions are inferred from lookup metadata.** The `lookup` field in a relation specifies which lookup field in the related document points to the parent. For example, if `Opportunity` has a field `contact` of type `lookup` pointing to `Contact`, then `"lookup": "contact"` tells the engine that `Opportunity.contact._id = Contact._id`. No explicit `on` clause is needed, though one can optionally be provided.
+
+### Complete Zod Schema
 
 ```typescript
 import { z } from 'zod';
+import { KonFilter } from '../model/Filter';
 
-// --- Enums ---
-const JoinTypeEnum = z.enum(['inner', 'left', 'right', 'cross']);
-const AggregateEnum = z.enum(['count', 'sum', 'avg', 'min', 'max', 'collect']);
-const DirectionEnum = z.enum(['asc', 'desc']);
-const OperatorEnum = z.enum([
-  'equals', 'not_equals', 'contains', 'starts_with', 'end_with',
-  'in', 'not_in', 'less_than', 'greater_than', 'less_or_equals',
-  'greater_or_equals', 'between', 'exists', 'current_user',
+// --- Aggregator ---
+const AggregatorEnum = z.enum([
+  'count', 'sum', 'avg', 'min', 'max',
+  'first', 'last', 'push', 'addToSet',
 ]);
 
-// --- Join Condition ---
-const JoinConditionSchema = z.object({
-  left: z.string().describe('Module-qualified field: "Product._id"'),
-  operator: OperatorEnum,
-  right: z.string().describe('Module-qualified field: "ProductsPerOpportunities.product._id"'),
+const AggregatorSchema = z.object({
+  aggregator: AggregatorEnum,
+  field: z.string().optional()
+    .describe('Source field for non-count aggregators. For push/first/last, omit to use full record.'),
 });
 
-// --- Join ---
-const JoinSchema = z.object({
-  document: z.string().describe('Target module name, e.g. "ProductsPerOpportunities"'),
-  type: JoinTypeEnum.default('inner'),
-  on: JoinConditionSchema,
-});
+// --- Optional explicit join condition (normally inferred from lookup) ---
+const ExplicitJoinCondition = z.object({
+  left: z.string().describe('Field path in parent module, e.g. "_id"'),
+  right: z.string().describe('Field path in relation module, e.g. "contact._id"'),
+}).optional().describe('Override automatic lookup-based join. Normally not needed.');
 
-// --- Select Field ---
-const SelectFieldSchema = z.object({
-  field: z.string().describe('Module-qualified field or wildcard: "Product.code" or "ProductsPerOpportunities.*"'),
-  alias: z.string().describe('Output field name in the result'),
-  aggregate: AggregateEnum.optional().describe('Aggregation function to apply'),
-});
+// --- Relation (recursive) ---
+const RelationSchema: z.ZodType<any> = z.object({
+  document: z.string().describe('Related module name, e.g. "Opportunity"'),
+  lookup: z.string().describe('Lookup field in the related document that points to parent, e.g. "contact"'),
+  on: ExplicitJoinCondition,
 
-// --- Where Condition (reuses KonFilter structure) ---
-const WhereConditionSchema = z.object({
-  term: z.string().describe('Module-qualified field: "Product._id"'),
-  operator: OperatorEnum,
-  value: z.any(),
-});
+  // Sub-find parameters (same names as find API)
+  filter: KonFilter.optional().describe('KonFilter for this relation (exact same syntax as find)'),
+  fields: z.string().optional().describe('Comma-separated field names, same as find'),
+  sort: z.union([
+    z.string(),
+    z.array(z.object({
+      property: z.string(),
+      direction: z.enum(['ASC', 'DESC']).default('ASC'),
+    })),
+  ]).optional(),
+  limit: z.number().int().min(1).max(100_000).optional()
+    .describe('Max records for this relation. Default: 1000'),
+  start: z.number().int().min(0).optional(),
 
-const WhereSchema: z.ZodType<any> = z.object({
-  match: z.enum(['and', 'or']).default('and'),
-  conditions: z.array(WhereConditionSchema).optional(),
-  filters: z.lazy(() => z.array(WhereSchema)).optional(),
-  textSearch: z.string().optional(),
-});
+  // Aggregators
+  aggregators: z.record(z.string(), AggregatorSchema).min(1)
+    .describe('Map of output field name -> aggregator config'),
 
-// --- Sort ---
-const SortSchema = z.object({
-  field: z.string().describe('Module-qualified field: "Product.code"'),
-  direction: DirectionEnum.default('asc'),
+  // Recursive nesting
+  relations: z.lazy(() => z.array(RelationSchema)).optional()
+    .describe('Nested sub-relations for recursive lookup chains'),
 });
 
 // --- Main Query Schema ---
 const CrossModuleQuerySchema = z.object({
-  from: z.string().describe('Primary/driving module name'),
-  join: z.array(JoinSchema).min(1).max(10).describe('Join definitions, 1-N modules'),
-  select: z.array(SelectFieldSchema).min(1).describe('Fields to return with optional aggregations'),
-  where: WhereSchema.optional().describe('Filter conditions using module-qualified fields'),
-  sort: z.array(SortSchema).optional(),
+  // Primary document (same names as find API)
+  document: z.string().describe('Primary module name, e.g. "Contact"'),
+  filter: KonFilter.optional().describe('KonFilter for primary document (exact same syntax as find)'),
+  fields: z.string().optional().describe('Comma-separated field names for primary document'),
+  sort: z.union([
+    z.string(),
+    z.array(z.object({
+      property: z.string(),
+      direction: z.enum(['ASC', 'DESC']).default('ASC'),
+    })),
+  ]).optional(),
   limit: z.number().int().min(1).max(100_000).default(1000),
   start: z.number().int().min(0).default(0),
+
+  // Relations
+  relations: z.array(RelationSchema).min(1).max(10)
+    .describe('Cross-module relations with aggregators'),
+
+  // Response options
   includeTotal: z.boolean().default(false),
-  includeMeta: z.boolean().default(true).describe('Include _meta first line in NDJSON response'),
+  includeMeta: z.boolean().default(true),
 });
 ```
+
+### How Lookup Resolution Works
+
+When the engine receives `"lookup": "contact"` in a relation with `"document": "Opportunity"`:
+
+1. Read `Opportunity` metadata from `MetaObject.Meta`
+2. Find field `contact` -- it has `type: "lookup"`, `document: "Contact"`
+3. The join condition is: `Opportunity.contact._id = <parent record>._id`
+4. For each batch of parent records, build: `{ "contact._id": { "$in": [parentId1, parentId2, ...] } }`
+5. Merge with relation's `filter` and `readFilter` via `$and`
+
+This is the same join pattern that already exists in the MetaObject `relations` definition (see `Contact.json` relations, `relationReference.ts`).
+
+### Aggregator Semantics
+
+| Aggregator | Input | Output | Description |
+|-----------|-------|--------|-------------|
+| `count` | -- | `number` | Count of matching records |
+| `sum` | `field` | `number` | Sum of numeric field |
+| `avg` | `field` | `number` | Average of numeric field |
+| `min` | `field` | `any` | Minimum value of field |
+| `max` | `field` | `any` | Maximum value of field |
+| `first` | `field` (optional) | `object` or `any` | First record (per `sort`); if `field` given, returns that field only |
+| `last` | `field` (optional) | `object` or `any` | Last record (per `sort`); if `field` given, returns that field only |
+| `push` | `field` (optional) | `array` | All records (or field values) as array. Respects `limit`. |
+| `addToSet` | `field` | `array` | Unique values of field |
 
 ### Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| `from` as primary module | Clear driving table for query planner |
-| Module-qualified field names (`Product.code`) | Unambiguous when multiple modules have same field names |
-| `collect` aggregate | Groups related records into arrays (e.g., all offers for a product) |
-| Reuse `KonFilter` structure for `where` | Consistency with existing API, reuse `parseFilterObject()` |
-| Max 10 joins | Prevent unbounded complexity; can be raised later |
-| Max 100,000 limit | Matches existing `PIVOT_MAX_RECORDS` pattern |
+| `document` (not `from`) | Consistent with find API |
+| `filter` (not `where`) | Exact same KonFilter syntax as find |
+| `fields` (not `select`) | Same name as find API |
+| `lookup` infers join condition | Metadata already defines relationships; DRY |
+| Optional `on` clause | Flexibility for non-standard joins |
+| `push` (not `collect`) | Matches MongoDB `$push` naming convention |
+| Recursive `relations` | Enables chains: Contact -> Opportunity -> PPO -> Product |
+| Per-relation `limit` | Each relation has independent result size control |
+| Per-relation `sort` | Critical for `first`/`last` aggregators |
 
 ---
 
@@ -271,10 +354,9 @@ select_item := aggregate_fn '(' field_ref ')' (AS alias)?
              | field_ref (AS alias)?
              | '*'
 
-aggregate_fn := COUNT | SUM | AVG | MIN | MAX | COLLECT
+aggregate_fn := COUNT | SUM | AVG | MIN | MAX | FIRST | LAST | PUSH | ADDTOSET
 
-field_ref := module_name '.' field_path
-           | field_path
+field_ref := module_name '.' field_path | field_path
 module_name := identifier
 field_path := identifier ('.' identifier)*
 
@@ -303,6 +385,21 @@ order_item := field_ref (ASC | DESC)?
 limit_clause := LIMIT number (OFFSET number)?
 ```
 
+### SQL to Relations Translation
+
+The SQL parser (`node-sql-parser`) produces an AST that is translated to the recursive relations IQR:
+
+1. `FROM` clause -> `document` (primary module)
+2. Each `JOIN` clause -> entry in `relations` array:
+   - `JOIN ... ON a._id = b.contact._id` -> engine finds the lookup field `contact` in module `b` that points to `a`, sets `lookup: "contact"`
+   - `WHERE` conditions referencing a relation module -> moved to that relation's `filter`
+   - `WHERE` conditions referencing the primary module -> stays in root `filter`
+3. Aggregate functions in `SELECT` -> `aggregators` in the appropriate relation
+4. Non-aggregate fields in `SELECT` -> `fields` at root or relation level
+5. `ORDER BY` -> `sort` at root level
+6. `LIMIT` / `OFFSET` -> `limit` / `start` at root level
+7. Nested JOINs (A JOIN B ON ... JOIN C ON B.x = C.y) -> nested `relations` (B has C as sub-relation)
+
 ### NOT Supported (Phase 1)
 
 | Feature | Reason |
@@ -317,25 +414,16 @@ limit_clause := LIMIT number (OFFSET number)?
 ### Parser: `node-sql-parser`
 
 - **Library**: `node-sql-parser` (npm) -- parses SQL into AST
-- **TypeScript alternative**: `@guanmingchiu/sqlparser-ts` for full typed AST
-- **Translation**: AST is traversed to produce the Internal Query Representation (IQR), identical to the JSON query format
+- **Translation**: AST is traversed to produce the Internal Query Representation (IQR), which is the recursive relations format
 - **Whitelist validation**: `parser.whiteListCheck()` ensures only allowed tables (Konecty modules) are referenced
 - **Security**: Only SELECT statements are accepted; any DDL/DML triggers an immediate error
-
-### Module and Field Mapping
-
-| SQL | Konecty |
-|-----|---------|
-| Table name | Module name (case-sensitive): `Product`, `ProductsPerOpportunities` |
-| Column name | Field path with dot notation: `Product.code`, `Product.sale.value` |
-| Table alias | Short name for module: `p` for `Product` |
-| `*` | All readable fields for that module |
+- **Lookup inference**: The translator uses module metadata to find the `lookup` field that connects two modules, rather than requiring the user to know the internal join path
 
 **Implementation reference**: Use Context7 for `node-sql-parser` documentation: `resolve-library-id("node-sql-parser")` then `query-docs("How to parse SQL SELECT with JOIN into AST")`.
 
 ---
 
-## 6. Execution Strategy
+## 6. Execution Strategy (Recursive)
 
 ### Execution Flow
 
@@ -351,34 +439,40 @@ limit_clause := LIMIT number (OFFSET number)?
                     +--------+---------+
                              |
                     +--------v---------+
-                    |  Security Check   |
-                    |  (per module)     |
-                    |  Layers 1-4       |
+                    |  Auth (Layer 1)   |
+                    |  getUserSafe()    |
+                    +--------+---------+
+                             |
+                    +--------v---------+
+                    |  Primary find()   |
+                    |  Layers 2-5       |
+                    |  (MUST authorize) |
+                    +--------+---------+
+                             |
+                    +--------v---------+
+                    |  Batch primary    |
+                    |  records          |
                     +--------+---------+
                              |
               +--------------+--------------+
-              |                             |
-    +---------v--------+          +---------v--------+
-    | findStream()     |          | findStream()     |
-    | Module A         |          | Module B         |
-    | (with readFilter,|          | (with readFilter,|
-    |  field perms,    |          |  field perms,    |
-    |  secondary read) |          |  secondary read) |
-    +---------+--------+          +---------+--------+
-              |                             |
-    +---------v--------+          +---------v--------+
-    | Layer 5:         |          | Layer 5:         |
-    | Field Conditions |          | Field Conditions |
-    | Transform        |          | Transform        |
-    +---------+--------+          +---------+--------+
-              |                             |
-              | Tag: _dataset="A"           | Tag: _dataset="B"
-              +--------------+--------------+
+              |              |              |
+    +---------v------+ +----v-------+ +----v-------+
+    | Relation A     | | Relation B | | Relation C |
+    | getAccessFor() | | (denied)   | | (ok)       |
+    | -> find()      | | -> null    | | -> find()  |
+    | -> aggregate   | |            | | -> recurse |
+    +----------------+ +------------+ +----+-------+
+                                           |
+                                    +------v-------+
+                                    | Sub-relation |
+                                    | C1: find()   |
+                                    | -> aggregate |
+                                    +--------------+
                              |
                     +--------v---------+
-                    | Python Process   |
-                    | (Polars join +   |
-                    |  aggregation)    |
+                    | Merge aggregator |
+                    | results into     |
+                    | primary records  |
                     +--------+---------+
                              |
                     +--------v---------+
@@ -387,27 +481,61 @@ limit_clause := LIMIT number (OFFSET number)?
                     +------------------+
 ```
 
-### Join Strategy: Python/Polars (Recommended)
+### Detailed Steps
 
-Following the established pattern from `pivotStream.ts`, `graphStream.ts`, and `kpiStream.ts`:
+1. **Parse & validate** the query (JSON directly or SQL -> AST -> IQR)
+2. **Authenticate** the user (Layer 1, once)
+3. **Primary document find**: call `buildFindQuery()` with full security (Layers 2-5), execute `findStream()` with secondary read preference
+4. **Batch processing**: collect primary records in batches of `STREAM_BATCH_SIZE` (1000)
+5. **For each relation** in the current level:
+   - a. Call `getAccessFor(relation.document, user)`. If **denied**: set all aggregator fields to `null` for this batch, log warning, **skip** this relation.
+   - b. Extract join keys from parent batch (e.g., all `_id` values)
+   - c. Build sub-query: `{ "contact._id": { "$in": [key1, key2, ...] } }` merged with relation's `filter` and the user's `readFilter` via `$and`
+   - d. Execute `findStream()` on relation document with its own `fields`, `sort`, `limit`
+   - e. Apply field permissions + conditions (Layers 4-5) via Transform streams
+   - f. If relation has **nested `relations`**: recurse (step 5) with current relation's results as the new "parent"
+   - g. Apply **aggregators** (`count`/`push`/`first`/etc.) to group results by parent record
+   - h. Merge aggregator values into each parent record
+6. **Stream** NDJSON response with enriched records
 
-1. For EACH module: call `buildFindQuery()` (enforces all 6 security layers)
-2. For EACH module: call `findStream()` to get a secure, permission-filtered stream
-3. Collect NDJSON data from each stream, tag records with `_dataset` field
-4. Populate lookup fields (batch `$in` fetch, same as `pivotStream.ts`)
-5. Spawn Python process with `cross_module_join.py`
-6. Send config + all datasets via JSON-RPC stdin protocol
-7. Read NDJSON results from stdout
-8. Stream to HTTP response
+### Batched `$in` Strategy
 
-### Alternative Strategy: MongoDB `$lookup` (Future Optimization)
+For large datasets, the engine processes in batches to avoid unbounded memory:
 
-For Phase 4, a direct `$lookup` pipeline strategy could be considered:
+```typescript
+const BATCH_SIZE = 1000;
 
-- Build a single aggregation pipeline with `$lookup` stages
-- More efficient (single database round-trip)
-- BUT: harder to enforce per-module field permissions and readFilter independently
-- Would require post-processing to apply security layers on joined data
+// Collect parent IDs in batches
+for (const batch of chunk(primaryRecords, BATCH_SIZE)) {
+  const parentIds = batch.map(r => r._id);
+
+  // One $in query per relation per batch
+  const relationFilter = {
+    match: 'and',
+    conditions: [
+      { term: `${lookup}._id`, operator: 'in', value: parentIds },
+      ...relation.filter?.conditions ?? [],
+    ],
+  };
+
+  const relationResults = await findStream({
+    document: relation.document,
+    filter: relationFilter,
+    fields: relation.fields,
+    sort: relation.sort,
+    limit: relation.limit,
+    // ... security layers applied inside findStream
+  });
+
+  // Group by parent ID and apply aggregators
+  const grouped = groupByParentId(relationResults, lookup);
+  batch.forEach(record => {
+    mergeAggregators(record, grouped[record._id], relation.aggregators);
+  });
+}
+```
+
+This is the same pattern used in `pivotStream.ts` for populating lookup fields.
 
 ---
 
@@ -435,117 +563,65 @@ Step 6: Send NDJSON data lines to stdin, then close stdin
 Step 7: Read JSON-RPC response + result from stdout
 ```
 
-### Existing Code References
+### When to Use the Python Bridge
 
-**Node.js bridge** (`src/imports/data/api/pythonStreamBridge.ts`):
+The Python bridge is used when:
 
-- `createPythonProcess(scriptPath)` -- spawns `uv run --script <path>`, stdio: pipe
-- `sendRPCRequest(process, method, params)` -- writes JSON-RPC first line to stdin
-- `streamToPython(nodeStream, process)` -- pipes NDJSON to stdin
-- `collectResultFromPython(process)` -- reads JSON-RPC response + result from stdout
+- The dataset is large enough that in-memory JS processing would be slow (> 10,000 records)
+- Complex aggregations are needed (GROUP BY with multiple aggregators)
+- Polars' columnar processing provides a significant performance advantage (3-10x per ADR-0008)
 
-**JSON-RPC Protocol** (shared by all Python scripts):
-
-```
-stdin line 1:  {"jsonrpc":"2.0","method":"<method>","params":{"config":{...}}}
-stdin line 2+: {"_id":"abc","field1":"value",...}\n  (NDJSON data)
-stdin EOF:     (close stdin)
-
-stdout line 1: {"jsonrpc":"2.0","result":"ok"}  (or {"jsonrpc":"2.0","error":{...}})
-stdout line 2+: result data (JSON or NDJSON)
-```
+For smaller datasets or simple aggregations (`count`, `first`), the Node.js orchestrator handles everything directly without spawning Python.
 
 ### Proposed: `cross_module_join.py`
 
 A new script at `src/scripts/python/cross_module_join.py` using Polars for:
 
 - **Receiving multiple datasets**: Each module's data arrives tagged with `_dataset` field
-- **Performing joins**: Polars `join()` with support for inner, left, right, cross
-- **Applying aggregations**: GROUP BY, COUNT, SUM, AVG, MIN, MAX, COLLECT
+- **Performing aggregations**: GROUP BY with COUNT, SUM, AVG, MIN, MAX, PUSH (list), ADDTOSET (unique)
 - **Returning results**: NDJSON streamed back to Node.js
 
 ### Proposed Protocol
 
 ```
-stdin line 1:  {"jsonrpc":"2.0","method":"join","params":{"config":{
-  "from": "Product",
-  "joins": [
-    {"document":"ProductsPerOpportunities","type":"inner","leftKey":"_id","rightKey":"product._id"}
-  ],
-  "select": [
-    {"field":"Product.code","alias":"code"},
-    {"field":"ProductsPerOpportunities.*","alias":"offers","aggregate":"collect"}
-  ],
-  "groupBy": ["Product.code"]
+stdin line 1:  {"jsonrpc":"2.0","method":"aggregate","params":{"config":{
+  "parentDataset": "Contact",
+  "relations": [
+    {
+      "dataset": "Opportunity",
+      "parentKey": "_id",
+      "childKey": "contact._id",
+      "aggregators": {
+        "activeOpportunities": {"aggregator":"count"},
+        "opportunities": {"aggregator":"push"}
+      }
+    }
+  ]
 }}}
 
-stdin line 2:  {"_dataset":"Product","_id":"abc","code":123,"type":"Apartamento"}\n
-stdin line 3:  {"_dataset":"Product","_id":"def","code":456,"type":"Casa"}\n
-stdin line 4:  {"_dataset":"ProductsPerOpportunities","_id":"x1","product":{"_id":"abc"},"status":"Ofertado"}\n
-stdin line 5:  {"_dataset":"ProductsPerOpportunities","_id":"x2","product":{"_id":"abc"},"status":"Visitado"}\n
+stdin line 2:  {"_dataset":"Contact","_id":"c1","code":1001,"name":{"full":"Alice"}}\n
+stdin line 3:  {"_dataset":"Contact","_id":"c2","code":1002,"name":{"full":"Bruno"}}\n
+stdin line 4:  {"_dataset":"Opportunity","_id":"o1","contact":{"_id":"c1"},"status":"Nova","code":5001}\n
+stdin line 5:  {"_dataset":"Opportunity","_id":"o2","contact":{"_id":"c1"},"status":"Em Visitacao","code":5002}\n
+stdin line 6:  {"_dataset":"Opportunity","_id":"o3","contact":{"_id":"c2"},"status":"Nova","code":5003}\n
 stdin EOF
 
 stdout line 1: {"jsonrpc":"2.0","result":"ok"}
-stdout line 2: {"code":123,"offers":[{"_id":"x1","status":"Ofertado"},{"_id":"x2","status":"Visitado"}]}\n
-stdout line 3: {"code":456,"offers":[]}\n
+stdout line 2: {"code":1001,"name":{"full":"Alice"},"activeOpportunities":2,"opportunities":[{"_id":"o1","status":"Nova","code":5001},{"_id":"o2","status":"Em Visitacao","code":5002}]}\n
+stdout line 3: {"code":1002,"name":{"full":"Bruno"},"activeOpportunities":1,"opportunities":[{"_id":"o3","status":"Nova","code":5003}]}\n
 ```
 
-### Key Design Decisions for Python Script
+### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
 | `_dataset` tag per record | Separates data from multiple modules in a single NDJSON stream |
-| Polars `join()` | 3-10x faster than pure JS for large datasets (ADR-0008) |
-| NDJSON output (not single JSON) | Allows streaming back to Node.js; memory-efficient |
-| `COLLECT` via Polars `list()` | Groups related records into arrays efficiently |
+| Polars for aggregation | 3-10x faster than pure JS for large datasets (ADR-0008) |
+| NDJSON output | Allows streaming back to Node.js; memory-efficient |
+| `push` via Polars `list()` | Groups related records into arrays efficiently |
 | PEP 723 inline metadata | No separate pyproject.toml needed (ADR-0006) |
-
-### Node.js Orchestration (`crossModuleQuery.ts`)
-
-```typescript
-// Pseudocode following pivotStream.ts pattern
-export default async function crossModuleQuery(params: CrossModuleQueryParams) {
-  // 1. Parse & validate (JSON or SQL -> IQR)
-  const iqr = params.sql
-    ? parseSqlToIQR(params.sql)
-    : validateJsonQuery(params.query);
-
-  // 2. Security check & data collection for EACH module
-  const allModules = [iqr.from, ...iqr.join.map(j => j.document)];
-  const datasets: TaggedRecord[] = [];
-
-  for (const moduleName of allModules) {
-    // 2a. buildFindQuery enforces Layers 1-4
-    const moduleFilter = extractModuleFilter(iqr.where, moduleName);
-    const streamResult = await findStream({
-      authTokenId: params.authTokenId,
-      document: moduleName,
-      filter: moduleFilter,
-      fields: extractModuleFields(iqr.select, moduleName),
-      limit: CROSS_QUERY_MAX_RECORDS,
-      transformDatesToString: true,
-    });
-
-    // 2b. Collect and tag with _dataset
-    const records = await collectDataFromStream(streamResult.data);
-    const tagged = records.map(r => ({ ...r, _dataset: moduleName }));
-    datasets.push(...tagged);
-  }
-
-  // 3. Spawn Python and send data
-  const pythonProcess = createPythonProcess(CROSS_MODULE_JOIN_SCRIPT);
-  await sendRPCRequest(pythonProcess, 'join', { config: iqr });
-
-  // 4. Send all tagged datasets
-  await sendDataToPython(pythonProcess, datasets);
-
-  // 5. Collect NDJSON results
-  const results = await collectNDJSONFromPython(pythonProcess);
-
-  // 6. Stream to HTTP response
-  return { success: true, data: results };
-}
-```
+| Reuses `pythonStreamBridge.ts` | No new bridge code needed |
+| Security before Python | Python never touches MongoDB; only pre-filtered data |
 
 ---
 
@@ -580,8 +656,9 @@ Per existing `streamConstants.ts`:
 
 | Strategy | Implementation |
 |----------|---------------|
-| Per-module streaming | Each module streamed via `findStream()` with `batchSize: 1000` |
-| Configurable limits | `CROSS_QUERY_MAX_RECORDS` env variable (default: 100,000) |
+| Batched processing | Primary records processed in batches of 1000 |
+| Per-relation limits | Each relation has its own `limit` (default: 1000) |
+| Configurable max | `CROSS_QUERY_MAX_RECORDS` env variable (default: 100,000) |
 | Python memory | Polars uses Apache Arrow columnar format (memory-efficient) |
 | Cleanup | Kill Python process on error (same pattern as `pivotStream.ts`) |
 
@@ -589,9 +666,9 @@ Per existing `streamConstants.ts`:
 
 The `_meta` first line should include warnings for:
 
-- `CROSS_JOIN_WARNING`: Cross joins can produce cartesian products
-- `LIMIT_REACHED`: Result was truncated due to `CROSS_QUERY_MAX_RECORDS`
-- `MISSING_INDEX`: Join key field lacks an index (query may be slow)
+- `RELATION_ACCESS_DENIED`: User lacks access to a relation module (fields set to null)
+- `LIMIT_REACHED`: Result was truncated due to `limit` or `CROSS_QUERY_MAX_RECORDS`
+- `MISSING_INDEX`: Lookup/join key field lacks an index (query may be slow)
 - `LARGE_DATASET`: One or more modules returned > 50,000 records
 
 ---
@@ -602,13 +679,13 @@ The `_meta` first line should include warnings for:
 
 | File | Purpose |
 |------|---------|
-| `src/imports/data/api/crossModuleQuery.ts` | Main query engine orchestrator |
+| `src/imports/data/api/crossModuleQuery.ts` | Main recursive query engine orchestrator |
 | `src/imports/data/api/crossModuleQueryValidator.ts` | Zod schema validation for JSON queries |
-| `src/imports/data/api/sqlParser.ts` | SQL-to-IQR translator using `node-sql-parser` |
-| `src/imports/data/api/crossModuleJoinTransforms.ts` | Transform streams for join post-processing |
+| `src/imports/data/api/sqlToRelationsParser.ts` | SQL-to-IQR translator using `node-sql-parser` |
+| `src/imports/data/api/relationAggregators.ts` | Aggregator logic (count, push, first, etc.) |
 | `src/imports/types/crossModuleQuery.ts` | TypeScript types for IQR and query format |
 | `src/server/routes/rest/query/queryApi.ts` | Fastify route definitions |
-| `src/scripts/python/cross_module_join.py` | Polars-based join + aggregation script |
+| `src/scripts/python/cross_module_join.py` | Polars-based aggregation script |
 
 ### Reused Existing Code
 
@@ -621,6 +698,7 @@ The `_meta` first line should include warnings for:
 | `src/imports/utils/accessUtils.ts` | `getAccessFor()`, `getFieldPermissions()`, `getFieldConditions()` |
 | `src/imports/data/filterUtils.js` | `parseFilterObject()`, `filterConditionToFn()` |
 | `src/imports/data/api/streamConstants.ts` | `STREAM_BATCH_SIZE`, `STREAM_MAX_TIME_MS` |
+| `src/imports/model/Relation.ts` | `RelationSchema` for reference |
 
 ### New Dependencies
 
@@ -633,258 +711,235 @@ The `_meta` first line should include warnings for:
 
 ## 10. Rich Real-World Examples
 
-All examples use actual metadata from `src/private/metadata` and `foxter-metas/MetaObjects/ProductsPerOpportunities`.
+All examples use actual metadata from `src/private/metadata` and `foxter-metas/MetaObjects`. Each example shows the JSON query (relations format) and its SQL equivalent.
 
-### Example 1: Product + ProductsPerOpportunities (INNER JOIN, COLLECT)
+### Example 1: Product + ProductsPerOpportunities (push aggregator)
 
 **Use case**: "Get Product fFaJkGaWAdDhvcPH6 and all its related offers"
 
-**Metadata basis**:
-- `ProductsPerOpportunities.product` is a lookup to `Product` with `descriptionFields: ["code", "type", "sale", "address"]`
-- `ProductsPerOpportunities` has fields: `status`, `situation`, `rating`, `contact`, `opportunity`
+**Metadata basis**: `ProductsPerOpportunities.product` is a lookup to `Product` with `descriptionFields: ["code", "type", "sale", "address"]`.
 
 **JSON Query**:
 
 ```json
 {
-  "from": "Product",
-  "join": [
-    {
-      "document": "ProductsPerOpportunities",
-      "type": "inner",
-      "on": {
-        "left": "Product._id",
-        "operator": "equals",
-        "right": "ProductsPerOpportunities.product._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Product.code", "alias": "code" },
-    { "field": "Product.type", "alias": "productType" },
-    { "field": "ProductsPerOpportunities.*", "alias": "offers", "aggregate": "collect" }
-  ],
-  "where": {
+  "document": "Product",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Product._id", "operator": "equals", "value": "fFaJkGaWAdDhvcPH6" }
+      { "term": "_id", "operator": "equals", "value": "fFaJkGaWAdDhvcPH6" }
     ]
   },
-  "limit": 100
+  "fields": "code,type",
+  "limit": 1,
+  "relations": [
+    {
+      "document": "ProductsPerOpportunities",
+      "lookup": "product",
+      "fields": "status,situation,rating,contact",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 100,
+      "aggregators": {
+        "offers": { "aggregator": "push" },
+        "offerCount": { "aggregator": "count" }
+      }
+    }
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT p.code AS code,
-       p.type AS productType,
-       COLLECT(ppo.*) AS offers
+SELECT p.code, p.type,
+       PUSH(ppo.*) AS offers,
+       COUNT(ppo._id) AS offerCount
   FROM Product p
- INNER JOIN ProductsPerOpportunities ppo
-    ON p._id = ppo.product._id
+ INNER JOIN ProductsPerOpportunities ppo ON p._id = ppo.product._id
  WHERE p._id = 'fFaJkGaWAdDhvcPH6'
  GROUP BY p.code, p.type
- LIMIT 100
+ LIMIT 1
 ```
 
-**Expected Response** (NDJSON):
+**Expected Response**:
 
 ```json
-{"code":123,"productType":"Apartamento","offers":[{"_id":"x1","status":"Ofertado","situation":"Visita","rating":4,"contact":{"_id":"c1","name":{"full":"John Doe"}}},{"_id":"x2","status":"Visitado","situation":"Proposta","rating":5,"contact":{"_id":"c2","name":{"full":"Jane Doe"}}}]}
+{"code":123,"type":"Apartamento","offers":[{"_id":"x1","status":"Ofertado","situation":"Visita","rating":4,"contact":{"_id":"c1","name":{"full":"John Doe"}}},{"_id":"x2","status":"Visitado","situation":"Proposta","rating":5,"contact":{"_id":"c2","name":{"full":"Jane Doe"}}}],"offerCount":2}
 ```
 
 ---
 
-### Example 2: Contact + Opportunity (INNER JOIN, COUNT)
+### Example 2: Contact + Opportunity (count aggregator)
 
 **Use case**: "How many active opportunities does each contact have?"
 
-**Metadata basis**:
-- `Opportunity.contact` is a lookup to `Contact` with `descriptionFields: ["code", "name.full"]`
-- `Opportunity.status` is a picklist: new, in-progress, done, canceled
-- Contact metadata defines this as a `relations` aggregator (`activeOpportunities: count`)
+**Metadata basis**: `Opportunity.contact` is a lookup to `Contact`. Contact metadata already defines this as a `relations` aggregator (`activeOpportunities: count`).
 
 **JSON Query**:
 
 ```json
 {
-  "from": "Contact",
-  "join": [
+  "document": "Contact",
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 1000,
+  "relations": [
     {
       "document": "Opportunity",
-      "type": "inner",
-      "on": {
-        "left": "Contact._id",
-        "operator": "equals",
-        "right": "Opportunity.contact._id"
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "status", "operator": "in", "value": ["Nova", "Ofertando Imveis", "Em Visitacao"] }
+        ]
+      },
+      "aggregators": {
+        "activeOpportunities": { "aggregator": "count" }
       }
     }
-  ],
-  "select": [
-    { "field": "Contact.code", "alias": "contactCode" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Opportunity._id", "alias": "activeOpportunities", "aggregate": "count" }
-  ],
-  "where": {
-    "match": "and",
-    "conditions": [
-      { "term": "Opportunity.status", "operator": "in", "value": ["Nova", "Ofertando Imveis", "Em Visitacao"] }
-    ]
-  },
-  "sort": [{ "field": "Contact.name.full", "direction": "asc" }],
-  "limit": 1000
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT ct.code AS contactCode,
-       ct.name.full AS contactName,
+SELECT ct.code, ct.name,
        COUNT(o._id) AS activeOpportunities
   FROM Contact ct
- INNER JOIN Opportunity o
-    ON ct._id = o.contact._id
+ INNER JOIN Opportunity o ON ct._id = o.contact._id
  WHERE o.status IN ('Nova', 'Ofertando Imveis', 'Em Visitacao')
- GROUP BY ct.code, ct.name.full
- ORDER BY ct.name.full ASC
+ GROUP BY ct.code, ct.name
+ ORDER BY ct.name ASC
  LIMIT 1000
 ```
 
 **Expected Response**:
 
 ```json
-{"contactCode":1001,"contactName":"Alice Santos","activeOpportunities":3}
-{"contactCode":1002,"contactName":"Bruno Silva","activeOpportunities":1}
+{"code":1001,"name":{"full":"Alice Santos"},"activeOpportunities":3}
+{"code":1002,"name":{"full":"Bruno Silva"},"activeOpportunities":1}
 ```
 
 ---
 
-### Example 3: Campaign + Opportunity + Contact (3-way JOIN)
+### Example 3: Contact + Opportunity + ProductsPerOpportunities (recursive relations, 3-level chain)
 
-**Use case**: "Which contacts came from Campaign X and their opportunity status?"
+**Use case**: "For each contact, get their opportunities with product offers -- a 3-level recursive chain"
 
-**Metadata basis**:
-- `Opportunity.campaign` is a lookup to `Campaign` with `descriptionFields: ["code", "name", "type"]`
-- `Opportunity.contact` is a lookup to `Contact` with `descriptionFields: ["code", "name.full"]`, `detailFields: ["email", "phone"]`
+**Lookup chain**: `Contact <- Opportunity.contact <- ProductsPerOpportunities.opportunity`
 
 **JSON Query**:
 
 ```json
 {
-  "from": "Campaign",
-  "join": [
-    {
-      "document": "Opportunity",
-      "type": "inner",
-      "on": {
-        "left": "Campaign._id",
-        "operator": "equals",
-        "right": "Opportunity.campaign._id"
-      }
-    },
-    {
-      "document": "Contact",
-      "type": "inner",
-      "on": {
-        "left": "Opportunity.contact._id",
-        "operator": "equals",
-        "right": "Contact._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Campaign.name", "alias": "campaignName" },
-    { "field": "Opportunity.code", "alias": "opportunityCode" },
-    { "field": "Opportunity.status", "alias": "opportunityStatus" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Contact.email", "alias": "contactEmail" }
-  ],
-  "where": {
+  "document": "Contact",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Campaign._id", "operator": "equals", "value": "campXYZ123" }
+      { "term": "status", "operator": "equals", "value": "active" }
     ]
   },
-  "limit": 500
+  "fields": "code,name",
+  "limit": 100,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "status", "operator": "in", "value": ["Nova", "Em Visitacao"] }
+        ]
+      },
+      "fields": "code,status,label",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 20,
+      "aggregators": {
+        "opportunities": { "aggregator": "push" },
+        "opportunityCount": { "aggregator": "count" }
+      },
+      "relations": [
+        {
+          "document": "ProductsPerOpportunities",
+          "lookup": "opportunity",
+          "fields": "status,rating,product",
+          "limit": 50,
+          "aggregators": {
+            "products": { "aggregator": "push" },
+            "productCount": { "aggregator": "count" }
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT c.name AS campaignName,
-       o.code AS opportunityCode,
-       o.status AS opportunityStatus,
-       ct.name.full AS contactName,
-       ct.email AS contactEmail
-  FROM Campaign c
- INNER JOIN Opportunity o ON c._id = o.campaign._id
- INNER JOIN Contact ct ON o.contact._id = ct._id
- WHERE c._id = 'campXYZ123'
- LIMIT 500
+SELECT ct.code, ct.name,
+       o.code AS opp_code, o.status AS opp_status, o.label,
+       ppo.status AS ppo_status, ppo.rating, ppo.product
+  FROM Contact ct
+ INNER JOIN Opportunity o ON ct._id = o.contact._id
+ INNER JOIN ProductsPerOpportunities ppo ON o._id = ppo.opportunity._id
+ WHERE ct.status = 'active'
+   AND o.status IN ('Nova', 'Em Visitacao')
+ ORDER BY o._createdAt DESC
+ LIMIT 100
 ```
 
-**Expected Response**:
+**Expected Response** (nested structure from recursive relations):
 
 ```json
-{"campaignName":"Summer 2026","opportunityCode":5001,"opportunityStatus":"Nova","contactName":"Carlos Mendes","contactEmail":[{"address":"carlos@example.com"}]}
-{"campaignName":"Summer 2026","opportunityCode":5002,"opportunityStatus":"Em Visitacao","contactName":"Diana Lima","contactEmail":[{"address":"diana@example.com"}]}
+{"code":1001,"name":{"full":"Alice Santos"},"opportunityCount":2,"opportunities":[{"code":5001,"status":"Nova","label":"Apt 301","productCount":2,"products":[{"status":"Ofertado","rating":4,"product":{"_id":"p1","code":123}},{"status":"Visitado","rating":5,"product":{"_id":"p2","code":456}}]},{"code":5002,"status":"Em Visitacao","label":"Casa 12","productCount":0,"products":[]}]}
 ```
 
 ---
 
-### Example 4: Activity + Product (LEFT JOIN with nulls)
+### Example 4: Activity + Product (with null lookup -- activities without product)
 
 **Use case**: "List all activities, including those without a linked product"
 
-**Metadata basis**:
-- `Activity.product` is a lookup to `Product` with `descriptionFields: ["code", "type", "sale", "_user"]`
-- Not all activities have a product linked
+**Metadata basis**: `Activity.product` is a lookup to `Product`. Not all activities have a product linked.
 
 **JSON Query**:
 
 ```json
 {
-  "from": "Activity",
-  "join": [
-    {
-      "document": "Product",
-      "type": "left",
-      "on": {
-        "left": "Activity.product._id",
-        "operator": "equals",
-        "right": "Product._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Activity.code", "alias": "activityCode" },
-    { "field": "Activity.subject", "alias": "subject" },
-    { "field": "Activity.status", "alias": "activityStatus" },
-    { "field": "Product.code", "alias": "productCode" },
-    { "field": "Product.sale", "alias": "productSale" }
-  ],
-  "where": {
+  "document": "Activity",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Activity.status", "operator": "in", "value": ["new", "in-progress"] }
+      { "term": "status", "operator": "in", "value": ["new", "in-progress"] }
     ]
   },
-  "sort": [{ "field": "Activity._createdAt", "direction": "desc" }],
-  "limit": 200
+  "fields": "code,subject,status",
+  "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+  "limit": 200,
+  "relations": [
+    {
+      "document": "Product",
+      "lookup": "product",
+      "fields": "code,sale",
+      "limit": 1,
+      "aggregators": {
+        "productCode": { "aggregator": "first", "field": "code" },
+        "productSale": { "aggregator": "first", "field": "sale" }
+      }
+    }
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT a.code AS activityCode,
-       a.subject AS subject,
-       a.status AS activityStatus,
-       p.code AS productCode,
-       p.sale AS productSale
+SELECT a.code, a.subject, a.status,
+       FIRST(p.code) AS productCode,
+       FIRST(p.sale) AS productSale
   FROM Activity a
   LEFT JOIN Product p ON a.product._id = p._id
  WHERE a.status IN ('new', 'in-progress')
@@ -892,180 +947,179 @@ SELECT a.code AS activityCode,
  LIMIT 200
 ```
 
-**Expected Response**:
+**Expected Response** (activities without product get `null` for product aggregators):
 
 ```json
-{"activityCode":8001,"subject":"Call about apartment","activityStatus":"in-progress","productCode":123,"productSale":{"value":450000,"currency":"BRL"}}
-{"activityCode":8002,"subject":"Follow-up email","activityStatus":"new","productCode":null,"productSale":null}
+{"code":8001,"subject":"Call about apartment","status":"in-progress","productCode":123,"productSale":{"value":450000,"currency":"BRL"}}
+{"code":8002,"subject":"Follow-up email","status":"new","productCode":null,"productSale":null}
 ```
 
 ---
 
-### Example 5: ProductsPerOpportunities Aggregations (GROUP BY, AVG)
+### Example 5: Campaign + Opportunity (count + first aggregators)
 
-**Use case**: "Average rating and count per status"
+**Use case**: "For each campaign, count opportunities and get the most recent one"
 
-**Metadata basis**:
-- `ProductsPerOpportunities.status` is a picklist: Nova, Ofertado, Visitado, Interessado, etc.
-- `ProductsPerOpportunities.rating` is a number (0-5)
+**Metadata basis**: `Opportunity.campaign` is a lookup to `Campaign` with `descriptionFields: ["code", "name", "type"]`.
 
 **JSON Query**:
 
 ```json
 {
-  "from": "ProductsPerOpportunities",
-  "join": [],
-  "select": [
-    { "field": "ProductsPerOpportunities.status", "alias": "status" },
-    { "field": "ProductsPerOpportunities._id", "alias": "count", "aggregate": "count" },
-    { "field": "ProductsPerOpportunities.rating", "alias": "avgRating", "aggregate": "avg" }
-  ],
-  "limit": 100
+  "document": "Campaign",
+  "filter": {
+    "match": "and",
+    "conditions": [
+      { "term": "status", "operator": "equals", "value": "Ativo" }
+    ]
+  },
+  "fields": "code,name,type",
+  "limit": 50,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "campaign",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "aggregators": {
+        "totalOpportunities": { "aggregator": "count" },
+        "newestOpportunity": { "aggregator": "first" },
+        "avgValue": { "aggregator": "avg", "field": "value" }
+      }
+    }
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT ppo.status AS status,
-       COUNT(ppo._id) AS count,
-       AVG(ppo.rating) AS avgRating
-  FROM ProductsPerOpportunities ppo
- GROUP BY ppo.status
- LIMIT 100
+SELECT c.code, c.name, c.type,
+       COUNT(o._id) AS totalOpportunities,
+       FIRST(o.*) AS newestOpportunity,
+       AVG(o.value) AS avgValue
+  FROM Campaign c
+ INNER JOIN Opportunity o ON c._id = o.campaign._id
+ WHERE c.status = 'Ativo'
+ GROUP BY c.code, c.name, c.type
+ ORDER BY o._createdAt DESC
+ LIMIT 50
 ```
 
 **Expected Response**:
 
 ```json
-{"status":"Nova","count":1234,"avgRating":0}
-{"status":"Ofertado","count":5678,"avgRating":3.2}
-{"status":"Visitado","count":890,"avgRating":4.1}
-{"status":"Interessado","count":234,"avgRating":4.7}
+{"code":301,"name":"Summer 2026","type":"Digital","totalOpportunities":45,"newestOpportunity":{"_id":"o99","code":5099,"status":"Nova","label":"Lead #5099"},"avgValue":250000}
 ```
-
-Note: When aggregation functions are used without explicit `GROUP BY` in JSON, the engine infers grouping from non-aggregated select fields.
 
 ---
 
-### Example 6: Contact + Message (LEFT JOIN, MAX aggregation)
+### Example 6: Contact + Message (max aggregator, mirrors existing relations)
 
 **Use case**: "Last email sent to each contact"
 
-**Metadata basis**:
-- `Message.contact` is a lookup to `Contact` with `descriptionFields: ["code", "name.full"]`
-- `Message.type` is a picklist, `Message.status` is a picklist
-- Contact metadata defines `lastTouch` as `MAX(Message._createdAt)` in relations
+**Metadata basis**: `Message.contact` is a lookup to `Contact`. Contact metadata already defines this as a `relations` aggregator: `lastTouch: { aggregator: "max", field: "_createdAt" }`.
 
 **JSON Query**:
 
 ```json
 {
-  "from": "Contact",
-  "join": [
+  "document": "Contact",
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 1000,
+  "relations": [
     {
       "document": "Message",
-      "type": "left",
-      "on": {
-        "left": "Contact._id",
-        "operator": "equals",
-        "right": "Message.contact._id"
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "type", "operator": "equals", "value": "Email" },
+          { "term": "status", "operator": "equals", "value": "Enviada" }
+        ]
+      },
+      "aggregators": {
+        "lastEmailSentAt": { "aggregator": "max", "field": "_createdAt" },
+        "totalEmailsSent": { "aggregator": "count" }
       }
     }
-  ],
-  "select": [
-    { "field": "Contact.code", "alias": "contactCode" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Message._createdAt", "alias": "lastEmailSent", "aggregate": "max" }
-  ],
-  "where": {
-    "match": "and",
-    "conditions": [
-      { "term": "Message.type", "operator": "equals", "value": "Email" },
-      { "term": "Message.status", "operator": "equals", "value": "Enviada" }
-    ]
-  },
-  "sort": [{ "field": "Contact.name.full", "direction": "asc" }],
-  "limit": 1000
+  ]
 }
 ```
 
 **SQL Equivalent**:
 
 ```sql
-SELECT ct.code AS contactCode,
-       ct.name.full AS contactName,
-       MAX(m._createdAt) AS lastEmailSent
+SELECT ct.code, ct.name,
+       MAX(m._createdAt) AS lastEmailSentAt,
+       COUNT(m._id) AS totalEmailsSent
   FROM Contact ct
   LEFT JOIN Message m ON ct._id = m.contact._id
  WHERE m.type = 'Email'
    AND m.status = 'Enviada'
- GROUP BY ct.code, ct.name.full
- ORDER BY ct.name.full ASC
+ GROUP BY ct.code, ct.name
+ ORDER BY ct.name ASC
  LIMIT 1000
 ```
 
 **Expected Response**:
 
 ```json
-{"contactCode":1001,"contactName":"Alice Santos","lastEmailSent":"2026-02-09T14:30:00.000Z"}
-{"contactCode":1002,"contactName":"Bruno Silva","lastEmailSent":"2026-01-15T09:00:00.000Z"}
-{"contactCode":1003,"contactName":"Carlos Mendes","lastEmailSent":null}
+{"code":1001,"name":{"full":"Alice Santos"},"lastEmailSentAt":"2026-02-09T14:30:00.000Z","totalEmailsSent":12}
+{"code":1002,"name":{"full":"Bruno Silva"},"lastEmailSentAt":"2026-01-15T09:00:00.000Z","totalEmailsSent":3}
+{"code":1003,"name":{"full":"Carlos Mendes"},"lastEmailSentAt":null,"totalEmailsSent":0}
 ```
 
 ---
 
-### Example 7: Security-Aware Example
+### Example 7: Security-Aware Example (Graceful Degradation)
 
-**Use case**: "A broker queries opportunities -- readFilter restricts to their own"
+**Use case**: "A broker queries their opportunities with product data -- but lacks access to Product module"
 
 **Scenario**:
 - User is a broker with access profile "Corretor"
 - `Opportunity:access:Corretor` defines `readFilter: { conditions: [{ term: "_user._id", operator: "equals", value: "$user" }] }`
-- `Product:access:Corretor` defines field condition: `sale` field only readable when `status = 'active'`
+- User has **no access** to `Product` module (`getAccessFor('Product', user)` returns `false`)
 
-**JSON Query** (same as Example 1 but from broker's perspective):
+**JSON Query**:
 
 ```json
 {
-  "from": "Opportunity",
-  "join": [
+  "document": "Opportunity",
+  "fields": "code,status,label",
+  "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+  "limit": 100,
+  "relations": [
     {
       "document": "Product",
-      "type": "left",
-      "on": {
-        "left": "Opportunity.product._id",
-        "operator": "equals",
-        "right": "Product._id"
+      "lookup": "product",
+      "fields": "code,sale",
+      "aggregators": {
+        "productCode": { "aggregator": "first", "field": "code" },
+        "productSale": { "aggregator": "first", "field": "sale" }
       }
     }
-  ],
-  "select": [
-    { "field": "Opportunity.code", "alias": "opportunityCode" },
-    { "field": "Opportunity.status", "alias": "status" },
-    { "field": "Product.code", "alias": "productCode" },
-    { "field": "Product.sale", "alias": "productSale" }
-  ],
-  "limit": 100
+  ]
 }
 ```
 
 **What happens internally**:
 
-1. **Layer 2**: `getAccessFor('Opportunity', user)` returns "Corretor" access; `getAccessFor('Product', user)` returns "Corretor" access
-2. **Layer 3**: Opportunity's `readFilter` is merged: the broker only sees their own opportunities (`_user._id = $user`)
-3. **Layer 4**: All fields are checked for readability on both modules
-4. **Layer 5**: Product's `sale` field has a condition: only readable if `Product.status = 'active'`. Applied via `ApplyFieldPermissionsTransform` BEFORE joining.
-5. **Result**: Broker only sees their opportunities, and `productSale` is `null` for inactive products even though the data exists in MongoDB
+1. **Layer 1**: User authenticated as "Corretor"
+2. **Layer 2 (primary)**: `getAccessFor('Opportunity', user)` returns "Corretor" access -- **OK, query proceeds**
+3. **Layer 3**: Opportunity's `readFilter` is merged -- broker only sees their own opportunities (`_user._id = $user`)
+4. **Layer 2 (relation)**: `getAccessFor('Product', user)` returns `false` -- **relation skipped, aggregators set to null**
+5. **Warning**: `_meta.warnings` includes `{ "type": "RELATION_ACCESS_DENIED", "document": "Product" }`
 
-**Expected Response** (broker sees only their data):
+**Expected Response** (broker sees their opportunities; product fields are null):
 
 ```json
-{"opportunityCode":5001,"status":"Nova","productCode":123,"productSale":{"value":450000,"currency":"BRL"}}
-{"opportunityCode":5002,"status":"Em Visitacao","productCode":456,"productSale":null}
+{"_meta":{"document":"Opportunity","relations":["Product"],"warnings":[{"type":"RELATION_ACCESS_DENIED","document":"Product","message":"User lacks read access to Product"}]}}
+{"code":5001,"status":"Nova","label":"Apt 301 - Centro","productCode":null,"productSale":null}
+{"code":5002,"status":"Em Visitacao","label":"Casa 12 - Praia","productCode":null,"productSale":null}
 ```
 
-In the second record, `productSale` is `null` because the product's status is not "active" -- the field condition stripped it.
+**Contrast with old behavior**: In the previous RFC design, this query would have been **entirely rejected** because the user lacked access to Product. With graceful degradation, the broker still gets their opportunity data.
 
 ---
 
@@ -1074,11 +1128,12 @@ In the second record, `productSale` is `null` because the product's status is no
 ### Phase 1 (MVP)
 
 - JSON query endpoint (`POST /rest/query/json`)
-- INNER JOIN only
-- Max 2 modules (1 from + 1 join)
-- Basic aggregations: `count`, `sum`, `avg`, `collect`
-- Full security enforcement (all 6 layers)
-- Python bridge with `cross_module_join.py`
+- Recursive relations with lookup-inferred joins
+- Max 2 levels of nesting, max 5 relations total
+- All aggregators: `count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`
+- Full security with graceful degradation
+- Per-relation `filter`, `fields`, `sort`, `limit`
+- Python bridge for large datasets
 - NDJSON streaming response
 - Zod validation for query input
 
@@ -1086,25 +1141,25 @@ In the second record, `productSale` is `null` because the product's status is no
 
 - SQL query endpoint (`POST /rest/query/sql`)
 - `node-sql-parser` integration
-- LEFT and RIGHT joins
-- Up to N modules (configurable, default 5)
-- GROUP BY / HAVING support
-- `min`, `max` aggregations
+- SQL-to-relations IQR translation
+- Unlimited nesting depth (configurable)
+- GROUP BY / HAVING support in SQL interface
+- Query plan logging for debugging
 
 ### Phase 3
 
-- CROSS JOIN with mandatory warnings
-- Subqueries (in WHERE clause)
-- UNION support
-- Python bridge for complex aggregations (statistical functions)
+- CROSS JOIN support with mandatory warnings
+- Subqueries (in SQL WHERE clause)
+- UNION support in SQL
+- Python bridge for complex statistical aggregations
 - Query timeout and cancellation
 
 ### Phase 4
 
 - Query plan caching
-- Query optimizer (join order optimization)
+- Query optimizer (relation order optimization based on cardinality)
 - Index suggestion warnings
-- MongoDB `$lookup` strategy as alternative to Python joins
+- MongoDB `$lookup` pipeline as alternative execution strategy
 - Performance dashboard / query analytics
 
 ---
@@ -1115,23 +1170,25 @@ Per ADR-0003 (Testing Strategy with Jest and Supertest):
 
 ### Unit Tests
 
-- **SQL parser**: AST translation for each SQL feature (SELECT, JOIN, WHERE, GROUP BY, etc.)
+- **SQL parser**: AST translation for each SQL feature -> relations IQR
 - **JSON query validator**: Zod schema validation for valid/invalid queries
-- **IQR builder**: Correct Internal Query Representation from both JSON and SQL inputs
-- **Module filter extraction**: Correct per-module filter splitting from cross-module WHERE clause
+- **Lookup resolution**: Correct join condition inference from metadata
+- **Aggregator logic**: Each aggregator produces correct results
+- **Filter extraction**: Correct per-module filter splitting
 
 ### Integration Tests (with MongoDB Memory Server)
 
 - **Full query execution**: End-to-end with actual MongoDB collections
-- **Security tests**: Verify unauthorized fields are stripped, readFilters applied per module
-- **Join correctness**: INNER, LEFT, RIGHT joins produce correct results
-- **Aggregation correctness**: COUNT, SUM, AVG, COLLECT produce correct values
+- **Security tests**: Verify unauthorized relation fields are null (not error), readFilters applied per module
+- **Recursive relations**: 2-3 level deep chains produce correct nested results
+- **Aggregation correctness**: All 9 aggregators produce correct values
+- **Edge cases**: Empty relations, null lookup fields, single-module queries with no relations
 
 ### Python Tests
 
 - **`cross_module_join.py`**: Unit tests with pytest
-- **Join operations**: Verify Polars join behavior matches expected SQL semantics
-- **Edge cases**: Empty datasets, null join keys, single-module queries
+- **Aggregation operations**: Verify Polars aggregation matches expected results
+- **Edge cases**: Empty datasets, null group keys
 
 ---
 
@@ -1157,18 +1214,19 @@ Use Perplexity for architectural research:
 2. "MongoDB $lookup cross-collection security RBAC streaming best practices 2026"
 3. "Node.js Transform stream backpressure cross-collection join patterns"
 4. "ANSI SQL subset safe parser whitelist validation security"
-5. "Polars Python DataFrame join inner left right cross performance large datasets"
+5. "Polars Python DataFrame aggregation group_by push list performance 2026"
 6. "NDJSON streaming API design best practices HTTP backpressure"
 
 ---
 
 ## 14. Open Questions
 
-1. **Max modules per query**: Should we allow more than 10 joins? What's a reasonable limit for Phase 1?
+1. **Max nesting depth**: Should we limit recursive relation depth to 3 levels in Phase 1?
 2. **Query timeout**: Should the cross-module query have a different `maxTimeMS` than findStream (currently 5 min)?
 3. **Audit logging**: Should we log the full IQR for audit purposes, or just the modules and user?
 4. **Rate limiting**: Should the query endpoints have stricter rate limits than regular find?
-5. **Caching**: Should we cache Python process instances for repeated queries with the same structure?
+5. **Python threshold**: At what dataset size should we switch from JS aggregation to Python bridge?
+6. **Relation without aggregator**: Should we allow a relation with only nested sub-relations and no aggregators of its own (pass-through)?
 
 ---
 
@@ -1182,6 +1240,8 @@ Use Perplexity for architectural research:
 - [ADR-0007: Hierarchical Pivot Output Format](../adr/0007-hierarchical-pivot-output-format.md)
 - [ADR-0008: Graph Endpoint with Polars and Pandas](../adr/0008-graph-endpoint-with-polars-pandas.md)
 - [ADR-0010: Code Patterns](../adr/0010-code-patterns.md)
+- [MetaObject Relations Pattern](../../src/private/metadata/Contact.json) (lines 339-403)
+- [Relation Schema](../../src/imports/model/Relation.ts)
 - [node-sql-parser (npm)](https://www.npmjs.com/package/node-sql-parser)
 - [Polars Documentation](https://pola.rs/)
 - [Fastify Streaming](https://fastify.dev/docs/latest/Reference/Reply/#streams)
@@ -1189,4 +1249,4 @@ Use Perplexity for architectural research:
 ---
 
 _Authors: Konecty Team_
-_Date: 2026-02-10_
+_Date: 2026-02-13_

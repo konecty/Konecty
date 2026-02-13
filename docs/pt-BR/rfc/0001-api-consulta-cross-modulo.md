@@ -1,6 +1,6 @@
 # RFC-0001: API de Consulta Cross-Module (Konecty Advanced Query Language)
 
-> Uma nova API para consultas cross-module com joins, agregacoes e interface SQL -- somente API, sem UI.
+> Uma nova API para consultas cross-module com relations recursivas, agregacoes e interface SQL -- somente API, sem UI.
 
 ---
 
@@ -11,9 +11,9 @@
 | **Status**      | RASCUNHO                                       |
 | **Autores**     | Equipe Konecty                                 |
 | **Criado em**   | 2026-02-10                                     |
-| **Atualizado**  | 2026-02-10                                     |
+| **Atualizado**  | 2026-02-13                                     |
 | **Revisores**   | A definir                                      |
-| **Relacionados**| ADR-0001 a ADR-0010, especialmente ADR-0005 (leituras no secundario), ADR-0006 (integracao Python), ADR-0008 (Polars/Pandas), ADR-0010 (padroes de codigo) |
+| **Relacionados**| ADR-0001 a ADR-0010, especialmente ADR-0005 (leitura no secundario), ADR-0006 (integracao Python), ADR-0008 (Polars/Pandas), ADR-0010 (padroes de codigo) |
 
 ---
 
@@ -23,9 +23,9 @@
 
 A API `find` do Konecty (`/rest/data/:document/find` e `/rest/stream/:document/findStream`) so permite consultar **um unico modulo** por vez, sem suporte para:
 
-- **Joins cross-module**: Nao e possivel consultar Product e seus ProductsPerOpportunities relacionados em uma unica requisicao.
+- **Relations cross-module**: Nao e possivel consultar Contact e suas Opportunities relacionadas em uma unica requisicao.
 - **Agregacoes cross-module**: Nao e possivel contar oportunidades por contato, ou somar vendas por campanha.
-- **Projecoes multi-modulo arbitrarias**: `withDetailFields` so traz `descriptionFields`/`detailFields` do lookup, nao consultas cross-module arbitrarias com projecoes customizadas.
+- **Projecoes multi-modulo arbitrarias**: `withDetailFields` so traz `descriptionFields`/`detailFields` do lookup, nao consultas cross-module arbitrarias com projecoes e agregacoes customizadas.
 
 ### Impacto
 
@@ -40,18 +40,20 @@ Clientes precisam fazer **N+1 chamadas de API** para dados relacionados e fazer 
 
 Fornecer uma API de consulta cross-module segura, com streaming, acessivel via REST que:
 
-1. Suporte joins de 1 a N modulos (INNER, LEFT, RIGHT, CROSS)
-2. Suporte agregacoes (COUNT, SUM, AVG, MIN, MAX, COLLECT)
-3. Ofereca tanto uma interface JSON estruturada quanto uma interface de subconjunto ANSI SQL
-4. **Nunca contorne** o modelo de seguranca existente de 6 camadas
-5. Use streaming e leituras no secundario para performance
-6. Aproveite a ponte Python existente (Polars) para processamento de joins
+1. Estenda a API `find` existente com **relations** recursivas aninhadas (espelhando o padrao `relations` do MetaObject)
+2. Infira condicoes de join a partir de campos **lookup** ja definidos nos metadados
+3. Suporte agregacoes (`count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`)
+4. Ofereca tanto interface JSON estruturada (compativel com find) quanto interface de subconjunto ANSI SQL
+5. Use os mesmos nomes `filter`/`fields`/`sort`/`limit`/`start` da API find atual
+6. Aplique seguranca por modulo com **degradacao graciosa** para relations nao autorizadas
+7. Use streaming e leituras no secundario para performance
+8. Aproveite a ponte Python existente (Polars) para processamento de joins e agregacoes
 
 ---
 
 ## 2. Solucao Proposta: Dois Novos Endpoints
 
-### Endpoint 1 -- Consulta JSON
+### Endpoint 1 -- Consulta JSON (Baseada em Relations)
 
 ```
 POST /rest/query/json
@@ -59,7 +61,40 @@ Content-Type: application/json
 Authorization: <auth token>
 ```
 
-Aceita um body JSON estruturado definindo documentos, joins, projecoes, filtros e agregacoes.
+Aceita um body JSON estruturado que e uma **chamada find padrao com um array `relations` adicionado**. Usa exatamente os mesmos nomes de parametros da API find atual (`filter`, `fields`, `sort`, `limit`, `start`).
+
+Exemplo de body:
+
+```json
+{
+  "document": "Contact",
+  "filter": {
+    "match": "and",
+    "conditions": [{ "term": "status", "operator": "equals", "value": "active" }]
+  },
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 100,
+  "start": 0,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [{ "term": "status", "operator": "in", "value": ["Nova", "Em Visitacao"] }]
+      },
+      "fields": "code,status",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 50,
+      "aggregators": {
+        "activeOpportunities": { "aggregator": "count" },
+        "opportunities": { "aggregator": "push" }
+      }
+    }
+  ]
+}
+```
 
 ### Endpoint 2 -- Consulta SQL
 
@@ -69,11 +104,11 @@ Content-Type: application/json
 Authorization: <auth token>
 
 {
-  "sql": "SELECT Product.code, COUNT(ProductsPerOpportunities._id) AS offers FROM Product INNER JOIN ProductsPerOpportunities ON Product._id = ProductsPerOpportunities.product._id WHERE Product._id = 'fFaJkGaWAdDhvcPH6' GROUP BY Product.code"
+  "sql": "SELECT c.code, c.name, COUNT(o._id) AS activeOpportunities FROM Contact c INNER JOIN Opportunity o ON c._id = o.contact._id WHERE o.status IN ('Nova', 'Em Visitacao') GROUP BY c.code, c.name ORDER BY c.name ASC LIMIT 100"
 }
 ```
 
-Aceita uma string de subconjunto ANSI SQL que e traduzida para a mesma Representacao Interna de Consulta (IQR).
+Aceita uma string de subconjunto ANSI SQL que e traduzida para a mesma Representacao Interna de Consulta (IQR) -- o formato recursivo de relations.
 
 ### Formato de Resposta
 
@@ -81,27 +116,27 @@ Ambos os endpoints retornam respostas **NDJSON** com streaming:
 
 ```
 Content-Type: application/x-ndjson
-X-Total-Count: 42  (opcional, se solicitado)
+X-Total-Count: 42  (opcional, se solicitado via includeTotal)
 ```
 
 Primeira linha (metadados opcionais):
 
 ```json
-{"_meta":{"modules":["Product","ProductsPerOpportunities"],"warnings":[],"executionTimeMs":234}}
+{"_meta":{"document":"Contact","relations":["Opportunity"],"warnings":[],"executionTimeMs":234}}
 ```
 
-Linhas subsequentes (registros de dados):
+Linhas subsequentes (registros de dados com resultados dos agregadores mesclados):
 
 ```json
-{"code":123,"offers":[{"_id":"xyz","status":"Ofertado"},{"_id":"zxy","status":"Visitado"}]}
-{"code":456,"offers":[{"_id":"abc","status":"Nova"}]}
+{"code":1001,"name":{"full":"Alice Santos"},"activeOpportunities":3,"opportunities":[{"code":5001,"status":"Nova"},{"code":5002,"status":"Em Visitacao"}]}
+{"code":1002,"name":{"full":"Bruno Silva"},"activeOpportunities":1,"opportunities":[{"code":5003,"status":"Nova"}]}
 ```
 
 ---
 
-## 3. Arquitetura de Seguranca (Critico -- 6 Camadas de Seguranca)
+## 3. Arquitetura de Seguranca (6 Camadas com Degradacao Graciosa)
 
-Cada modulo referenciado em uma consulta passa **independentemente** por TODAS as 6 camadas de seguranca de `find.ts`, `findUtils.ts`, `data.js` e `accessUtils.ts`. **Nenhuma camada pode ser contornada.**
+O modelo de seguranca aplica **todas as 6 camadas existentes** mas com uma diferenca chave do find original: **somente o documento primario precisa estar totalmente autorizado; relations nao autorizadas degradam graciosamente para valores vazios/null ao inves de rejeitar toda a consulta**.
 
 ### Camada 1 -- Autenticacao do Usuario
 
@@ -110,28 +145,32 @@ Cada modulo referenciado em uma consulta passa **independentemente** por TODAS a
 - Valida `authTokenId` ou `contextUser`
 - Retorna objeto `User` autenticado com mapa `user.access`
 - Se invalido, retorna erro imediatamente
-- Chamado **uma vez** por requisicao, compartilhado entre todos os modulos na consulta
+- Chamado **uma vez** por requisicao, compartilhado entre todos os modulos
 
-### Camada 2 -- Acesso em Nivel de Documento
+### Camada 2 -- Acesso em Nivel de Documento (Soft para Relations)
 
 **Funcao**: `getAccessFor(document, user)` em `accessUtils.ts:80-134`
 
-- Resolve o perfil de acesso do usuario para cada modulo: `user.access[documentName]` -> `MetaObject.Access[name]`
+- Resolve perfil de acesso do usuario: `user.access[documentName]` -> `MetaObject.Access[name]`
 - Verifica `access.isReadable === true`
 - Retorna objeto `MetaAccess` ou `false` (negado)
-- **Cada modulo** na consulta deve passar independentemente nesta verificacao
-- Se QUALQUER modulo falhar, toda a consulta e rejeitada com erro claro
+
+**Diferenca de comportamento para consultas cross-module**:
+
+- **Documento primario** (campo `document`): DEVE passar esta verificacao. Se falhar, a **consulta inteira e rejeitada**.
+- **Documentos de relation**: Se o documento de uma relation falhar nesta verificacao, os **campos de resultado dos agregadores sao definidos como `null`**. A consulta continua. Um aviso e adicionado a `_meta.warnings`: `{ "type": "RELATION_ACCESS_DENIED", "document": "Product", "message": "User lacks read access" }`.
+
+**Beneficio**: O mesmo endpoint serve mais usuarios. Um usuario sem acesso a Product ainda recebe seus dados de Contact + Opportunity; os agregadores relacionados a product simplesmente retornam null.
 
 ### Camada 3 -- Filtro de Leitura em Nivel de Documento (Seguranca em Nivel de Registro)
 
 **Origem**: `access.readFilter` (um objeto KonFilter)
 
 - Cada `MetaAccess` pode definir um `readFilter`
-- Este filtro e **sempre mesclado** com o filtro do usuario via `$and`
+- Este filtro e **sempre mesclado** com o filtro da relation via `$and`
 - Restringe quais **registros** o usuario pode ver
 - Exemplo: um corretor so pode ver oportunidades atribuidas a ele
-- Aplicado em `find.ts:114-116`: `if (isObject(access.readFilter)) queryFilter.filters.push(access.readFilter)`
-- **Critico**: Em consultas cross-module, o readFilter de cada modulo e aplicado a sua propria query de colecao independentemente
+- **Critico**: O readFilter de cada modulo e aplicado a sua propria sub-query independentemente
 
 ### Camada 4 -- Permissoes em Nivel de Campo
 
@@ -140,7 +179,7 @@ Cada modulo referenciado em uma consulta passa **independentemente** por TODAS a
 - Para cada campo nos metadados do modulo, verifica se `access.fields[fieldName].READ.allow === true`
 - Fallback para `metaAccess.fieldDefaults.isReadable`
 - Se um campo NAO for legivel: e **removido da projecao do MongoDB** (nunca buscado do BD)
-- Aplicado em `find.ts:179-210` e `findUtils.ts:314-316`
+- Aplicado por modulo: campos da relation sao verificados contra o perfil de acesso do modulo da relation
 
 ### Camada 5 -- Acesso Condicional em Nivel de Campo
 
@@ -149,101 +188,140 @@ Cada modulo referenciado em uma consulta passa **independentemente** por TODAS a
 - Alguns campos tem condicoes de READ: `access.fields[fieldName].READ.condition`
 - Convertidos em funcoes de runtime via `filterConditionToFn()`
 - Apos o MongoDB retornar os dados, cada registro e avaliado contra essas condicoes
-- Se a condicao retornar `false` para um registro, o campo e **removido daquele registro especifico**
-- Em `findStream.ts`: tratado pelo Transform `ApplyFieldPermissionsTransform`
+- Se a condicao retornar `false`, o campo e **removido daquele registro especifico**
+- Aplicado via `ApplyFieldPermissionsTransform` nos dados de cada relation **ANTES** da agregacao
 
 ### Camada 6 -- `removeUnauthorizedDataForRead()`
 
 **Funcao**: `removeUnauthorizedDataForRead()` em `accessUtils.ts:136-162`
 
 - Rede de seguranca final (defesa em profundidade)
-- Itera todos os campos nos dados de resultado
-- Re-verifica `getFieldPermissions()` e `getFieldConditions()` para cada campo
-- So copia campos autorizados para um novo objeto (abordagem whitelist)
+- Re-verifica todas as permissoes de campo como whitelist
+- Aplicado como ultimo passo antes do processamento de agregadores
 
-### Invariante de Seguranca para Consulta Cross-Module
+### Invariante de Seguranca
 
-O motor de consulta cross-module DEVE decompor a consulta em operacoes por modulo onde cada modulo passa independentemente pelas Camadas 1-5:
+O motor de consulta cross-module DEVE:
 
-1. Chamar `buildFindQuery()` (ou equivalente) para **CADA** modulo envolvido
-2. Nunca permitir que um join exponha registros filtrados pelo `readFilter` de outro modulo
+1. Chamar `buildFindQuery()` (ou equivalente) para cada modulo autorizado
+2. Nunca permitir que uma relation exponha registros filtrados pelo `readFilter` de outro modulo
 3. Nunca permitir que uma projecao inclua campos que o usuario nao pode ler
-4. Aplicar condicoes de campo (Camada 5) via Transform streams nos dados de cada modulo **ANTES** do join
-5. Registrar decisoes relevantes de seguranca para auditoria
+4. Aplicar condicoes de campo (Camada 5) nos dados de cada modulo ANTES da agregacao
+5. Definir todos os campos de agregadores como `null` para relations nao autorizadas (nao expor dados parciais)
+6. Registrar decisoes relevantes de seguranca para auditoria
 
 ---
 
-## 4. Formato de Consulta JSON (com Schema estilo Zod)
+## 4. Formato de Consulta JSON (Relations Recursivas com Schema Zod)
 
-### Schema Completo
+### Principio de Design
+
+A consulta JSON e uma **chamada find padrao** com um array `relations` adicionado. Cada relation tambem e uma sub-consulta tipo find com seus proprios `filter`, `fields`, `sort`, `limit` e `aggregators`. Relations podem ser **recursivamente aninhadas** para seguir cadeias de lookups.
+
+**Condicoes de join sao inferidas dos metadados de lookup.** O campo `lookup` em uma relation especifica qual campo de lookup no documento relacionado aponta para o pai. Por exemplo, se `Opportunity` tem um campo `contact` do tipo `lookup` apontando para `Contact`, entao `"lookup": "contact"` diz ao motor que `Opportunity.contact._id = Contact._id`. Nenhuma clausula `on` explicita e necessaria, embora uma possa ser opcionalmente fornecida.
+
+### Schema Zod Completo
 
 ```typescript
 import { z } from 'zod';
+import { KonFilter } from '../model/Filter';
 
-// --- Enums ---
-const JoinTypeEnum = z.enum(['inner', 'left', 'right', 'cross']);
-const AggregateEnum = z.enum(['count', 'sum', 'avg', 'min', 'max', 'collect']);
-const DirectionEnum = z.enum(['asc', 'desc']);
-const OperatorEnum = z.enum([
-  'equals', 'not_equals', 'contains', 'starts_with', 'end_with',
-  'in', 'not_in', 'less_than', 'greater_than', 'less_or_equals',
-  'greater_or_equals', 'between', 'exists', 'current_user',
+// --- Agregador ---
+const AggregatorEnum = z.enum([
+  'count', 'sum', 'avg', 'min', 'max',
+  'first', 'last', 'push', 'addToSet',
 ]);
 
-// --- Condicao de Join ---
-const JoinConditionSchema = z.object({
-  left: z.string().describe('Campo qualificado por modulo: "Product._id"'),
-  operator: OperatorEnum,
-  right: z.string().describe('Campo qualificado por modulo: "ProductsPerOpportunities.product._id"'),
+const AggregatorSchema = z.object({
+  aggregator: AggregatorEnum,
+  field: z.string().optional()
+    .describe('Campo fonte para agregadores nao-count. Para push/first/last, omitir para usar registro completo.'),
 });
 
-// --- Join ---
-const JoinSchema = z.object({
-  document: z.string().describe('Nome do modulo alvo, ex: "ProductsPerOpportunities"'),
-  type: JoinTypeEnum.default('inner'),
-  on: JoinConditionSchema,
-});
+// --- Condicao de join explicita opcional (normalmente inferida do lookup) ---
+const ExplicitJoinCondition = z.object({
+  left: z.string().describe('Caminho do campo no modulo pai, ex: "_id"'),
+  right: z.string().describe('Caminho do campo no modulo relation, ex: "contact._id"'),
+}).optional().describe('Sobrescreve join automatico baseado em lookup. Normalmente nao necessario.');
 
-// --- Campo de Selecao ---
-const SelectFieldSchema = z.object({
-  field: z.string().describe('Campo qualificado ou wildcard: "Product.code" ou "ProductsPerOpportunities.*"'),
-  alias: z.string().describe('Nome do campo no resultado'),
-  aggregate: AggregateEnum.optional().describe('Funcao de agregacao a aplicar'),
-});
+// --- Relation (recursiva) ---
+const RelationSchema: z.ZodType<any> = z.object({
+  document: z.string().describe('Nome do modulo relacionado, ex: "Opportunity"'),
+  lookup: z.string().describe('Campo lookup no documento relacionado que aponta para o pai, ex: "contact"'),
+  on: ExplicitJoinCondition,
 
-// --- Condicao Where (reutiliza estrutura KonFilter) ---
-const WhereConditionSchema = z.object({
-  term: z.string().describe('Campo qualificado por modulo: "Product._id"'),
-  operator: OperatorEnum,
-  value: z.any(),
-});
+  // Parametros de sub-find (mesmos nomes da API find)
+  filter: KonFilter.optional().describe('KonFilter para esta relation (mesma sintaxe exata do find)'),
+  fields: z.string().optional().describe('Nomes de campos separados por virgula, igual ao find'),
+  sort: z.union([
+    z.string(),
+    z.array(z.object({
+      property: z.string(),
+      direction: z.enum(['ASC', 'DESC']).default('ASC'),
+    })),
+  ]).optional(),
+  limit: z.number().int().min(1).max(100_000).optional()
+    .describe('Max registros para esta relation. Padrao: 1000'),
+  start: z.number().int().min(0).optional(),
 
-const WhereSchema: z.ZodType<any> = z.object({
-  match: z.enum(['and', 'or']).default('and'),
-  conditions: z.array(WhereConditionSchema).optional(),
-  filters: z.lazy(() => z.array(WhereSchema)).optional(),
-  textSearch: z.string().optional(),
-});
+  // Agregadores
+  aggregators: z.record(z.string(), AggregatorSchema).min(1)
+    .describe('Mapa de nome do campo de saida -> config do agregador'),
 
-// --- Ordenacao ---
-const SortSchema = z.object({
-  field: z.string().describe('Campo qualificado por modulo: "Product.code"'),
-  direction: DirectionEnum.default('asc'),
+  // Aninhamento recursivo
+  relations: z.lazy(() => z.array(RelationSchema)).optional()
+    .describe('Sub-relations aninhadas para cadeias recursivas de lookup'),
 });
 
 // --- Schema Principal da Consulta ---
 const CrossModuleQuerySchema = z.object({
-  from: z.string().describe('Nome do modulo primario/condutor'),
-  join: z.array(JoinSchema).min(1).max(10).describe('Definicoes de join, 1-N modulos'),
-  select: z.array(SelectFieldSchema).min(1).describe('Campos a retornar com agregacoes opcionais'),
-  where: WhereSchema.optional().describe('Condicoes de filtro com campos qualificados por modulo'),
-  sort: z.array(SortSchema).optional(),
+  // Documento primario (mesmos nomes da API find)
+  document: z.string().describe('Nome do modulo primario, ex: "Contact"'),
+  filter: KonFilter.optional().describe('KonFilter para documento primario (mesma sintaxe do find)'),
+  fields: z.string().optional().describe('Nomes de campos separados por virgula para documento primario'),
+  sort: z.union([
+    z.string(),
+    z.array(z.object({
+      property: z.string(),
+      direction: z.enum(['ASC', 'DESC']).default('ASC'),
+    })),
+  ]).optional(),
   limit: z.number().int().min(1).max(100_000).default(1000),
   start: z.number().int().min(0).default(0),
+
+  // Relations
+  relations: z.array(RelationSchema).min(1).max(10)
+    .describe('Relations cross-module com agregadores'),
+
+  // Opcoes de resposta
   includeTotal: z.boolean().default(false),
-  includeMeta: z.boolean().default(true).describe('Incluir _meta na primeira linha da resposta NDJSON'),
+  includeMeta: z.boolean().default(true),
 });
 ```
+
+### Como a Resolucao de Lookup Funciona
+
+Quando o motor recebe `"lookup": "contact"` em uma relation com `"document": "Opportunity"`:
+
+1. Le metadados de `Opportunity` do `MetaObject.Meta`
+2. Encontra campo `contact` -- tem `type: "lookup"`, `document: "Contact"`
+3. A condicao de join e: `Opportunity.contact._id = <registro pai>._id`
+4. Para cada lote de registros pai, constroi: `{ "contact._id": { "$in": [parentId1, parentId2, ...] } }`
+5. Mescla com `filter` da relation e `readFilter` via `$and`
+
+### Semantica dos Agregadores
+
+| Agregador | Entrada | Saida | Descricao |
+|-----------|---------|-------|-----------|
+| `count` | -- | `number` | Contagem de registros correspondentes |
+| `sum` | `field` | `number` | Soma de campo numerico |
+| `avg` | `field` | `number` | Media de campo numerico |
+| `min` | `field` | `any` | Valor minimo do campo |
+| `max` | `field` | `any` | Valor maximo do campo |
+| `first` | `field` (opcional) | `object` ou `any` | Primeiro registro (conforme `sort`); se `field` dado, retorna so aquele campo |
+| `last` | `field` (opcional) | `object` ou `any` | Ultimo registro (conforme `sort`); se `field` dado, retorna so aquele campo |
+| `push` | `field` (opcional) | `array` | Todos os registros (ou valores de campo) como array. Respeita `limit`. |
+| `addToSet` | `field` | `array` | Valores unicos do campo |
 
 ---
 
@@ -259,11 +337,9 @@ select_item := aggregate_fn '(' field_ref ')' (AS alias)?
              | field_ref (AS alias)?
              | '*'
 
-aggregate_fn := COUNT | SUM | AVG | MIN | MAX | COLLECT
+aggregate_fn := COUNT | SUM | AVG | MIN | MAX | FIRST | LAST | PUSH | ADDTOSET
 
-field_ref := module_name '.' field_path
-           | field_path
-
+field_ref := module_name '.' field_path | field_path
 table_ref := module_name (AS? alias)?
 
 join_clause := join_type JOIN module_name (AS? alias)? ON join_condition
@@ -277,10 +353,22 @@ operator := '=' | '!=' | '<>' | '<' | '>' | '<=' | '>='
 
 group_clause := GROUP BY field_ref (',' field_ref)*
 having_clause := HAVING condition
-
 order_clause := ORDER BY order_item (',' order_item)*
 limit_clause := LIMIT number (OFFSET number)?
 ```
+
+### Traducao SQL para Relations
+
+O parser SQL (`node-sql-parser`) produz uma AST que e traduzida para o IQR recursivo de relations:
+
+1. Clausula `FROM` -> `document` (modulo primario)
+2. Cada clausula `JOIN` -> entrada no array `relations`:
+   - `JOIN ... ON a._id = b.contact._id` -> motor encontra o campo lookup `contact` no modulo `b` que aponta para `a`, define `lookup: "contact"`
+   - Condicoes `WHERE` referenciando modulo de relation -> movidas para `filter` daquela relation
+   - Condicoes `WHERE` referenciando modulo primario -> ficam no `filter` raiz
+3. Funcoes de agregacao no `SELECT` -> `aggregators` na relation apropriada
+4. Campos nao-agregados no `SELECT` -> `fields` na raiz ou nivel de relation
+5. JOINs aninhados -> `relations` recursivas aninhadas
 
 ### NAO Suportado (Fase 1)
 
@@ -295,13 +383,14 @@ limit_clause := LIMIT number (OFFSET number)?
 ### Parser: `node-sql-parser`
 
 - **Biblioteca**: `node-sql-parser` (npm) -- faz parse de SQL para AST
-- **Traducao**: AST e percorrido para produzir a Representacao Interna de Consulta (IQR), identica ao formato de consulta JSON
+- **Traducao**: AST e percorrido para produzir a IQR, que e o formato recursivo de relations
 - **Validacao whitelist**: `parser.whiteListCheck()` garante que somente tabelas permitidas (modulos Konecty) sao referenciadas
 - **Seguranca**: Somente sentencas SELECT sao aceitas; qualquer DDL/DML dispara erro imediato
+- **Inferencia de lookup**: O tradutor usa metadados do modulo para encontrar o campo `lookup` que conecta dois modulos
 
 ---
 
-## 6. Estrategia de Execucao
+## 6. Estrategia de Execucao (Recursiva)
 
 ### Fluxo de Execucao
 
@@ -317,36 +406,40 @@ limit_clause := LIMIT number (OFFSET number)?
                     +--------+---------+
                              |
                     +--------v---------+
-                    |  Verificacao      |
-                    |  Seguranca        |
-                    |  (por modulo)     |
-                    |  Camadas 1-4      |
+                    |  Auth (Camada 1)  |
+                    |  getUserSafe()    |
+                    +--------+---------+
+                             |
+                    +--------v---------+
+                    |  find() primario  |
+                    |  Camadas 2-5      |
+                    |  (DEVE autorizar) |
+                    +--------+---------+
+                             |
+                    +--------v---------+
+                    |  Lote registros   |
+                    |  primarios        |
                     +--------+---------+
                              |
               +--------------+--------------+
-              |                             |
-    +---------v--------+          +---------v--------+
-    | findStream()     |          | findStream()     |
-    | Modulo A         |          | Modulo B         |
-    | (com readFilter, |          | (com readFilter, |
-    |  perms campo,    |          |  perms campo,    |
-    |  leitura         |          |  leitura         |
-    |  secundario)     |          |  secundario)     |
-    +---------+--------+          +---------+--------+
-              |                             |
-    +---------v--------+          +---------v--------+
-    | Camada 5:        |          | Camada 5:        |
-    | Condicoes Campo  |          | Condicoes Campo  |
-    | Transform        |          | Transform        |
-    +---------+--------+          +---------+--------+
-              |                             |
-              | Tag: _dataset="A"           | Tag: _dataset="B"
-              +--------------+--------------+
+              |              |              |
+    +---------v------+ +----v-------+ +----v-------+
+    | Relation A     | | Relation B | | Relation C |
+    | getAccessFor() | | (negado)   | | (ok)       |
+    | -> find()      | | -> null    | | -> find()  |
+    | -> agregar     | |            | | -> recursar|
+    +----------------+ +------------+ +----+-------+
+                                           |
+                                    +------v-------+
+                                    | Sub-relation |
+                                    | C1: find()   |
+                                    | -> agregar   |
+                                    +--------------+
                              |
                     +--------v---------+
-                    | Processo Python  |
-                    | (Polars join +   |
-                    |  agregacao)      |
+                    | Mesclar          |
+                    | resultados dos   |
+                    | agregadores      |
                     +--------+---------+
                              |
                     +--------v---------+
@@ -355,9 +448,30 @@ limit_clause := LIMIT number (OFFSET number)?
                     +------------------+
 ```
 
+### Passos Detalhados
+
+1. **Parse & validar** a consulta (JSON direto ou SQL -> AST -> IQR)
+2. **Autenticar** o usuario (Camada 1, uma vez)
+3. **Find do documento primario**: chamar `buildFindQuery()` com seguranca completa (Camadas 2-5), executar `findStream()` com preferencia de leitura no secundario
+4. **Processamento em lote**: coletar registros primarios em lotes de `STREAM_BATCH_SIZE` (1000)
+5. **Para cada relation** no nivel atual:
+   - a. Chamar `getAccessFor(relation.document, user)`. Se **negado**: definir todos os campos de agregadores como `null` para este lote, registrar aviso, **pular** esta relation.
+   - b. Extrair chaves de join do lote pai (ex: todos os valores `_id`)
+   - c. Construir sub-query: `{ "contact._id": { "$in": [key1, key2, ...] } }` mesclado com `filter` da relation e `readFilter` do usuario via `$and`
+   - d. Executar `findStream()` no documento da relation com seus proprios `fields`, `sort`, `limit`
+   - e. Aplicar permissoes de campo + condicoes (Camadas 4-5) via Transform streams
+   - f. Se relation tem **`relations` aninhadas**: recursar (passo 5) com resultados da relation atual como novo "pai"
+   - g. Aplicar **agregadores** (`count`/`push`/`first`/etc.) para agrupar resultados por registro pai
+   - h. Mesclar valores dos agregadores em cada registro pai
+6. **Stream** resposta NDJSON com registros enriquecidos
+
+### Estrategia `$in` em Lote
+
+Para grandes datasets, o motor processa em lotes para evitar uso ilimitado de memoria (mesmo padrao de `pivotStream.ts` para popular campos de lookup).
+
 ---
 
-## 7. Ponte Python para Processamento de Joins
+## 7. Ponte Python para Processamento
 
 ### Padrao Estabelecido
 
@@ -369,59 +483,49 @@ O backend Konecty tem uma arquitetura de ponte Python comprovada documentada nas
 | `graphStream.ts` | `graph_generator.py` (915 linhas) | Graficos SVG com Polars + Pandas/matplotlib |
 | `kpiStream.ts` | `kpi_aggregator.py` (222 linhas) | Agregacoes KPI com Polars |
 
-Todas seguem a mesma orquestracao de 7 passos:
+### Quando Usar a Ponte Python
 
-```
-Passo 1: findStream() por modulo (seguranca, permissoes de campo, leitura no secundario)
-Passo 2: Coletar dados NDJSON do stream em array
-Passo 3: Popular campos de lookup (busca em lote por _id)
-Passo 4: Iniciar processo Python via uv run --script
-Passo 5: Enviar config JSON-RPC como primeira linha no stdin
-Passo 6: Enviar linhas de dados NDJSON no stdin, fechar stdin
-Passo 7: Ler resposta JSON-RPC + resultado do stdout
-```
+A ponte Python e usada quando:
+
+- O dataset e grande o suficiente para que processamento JS em memoria seria lento (> 10.000 registros)
+- Agregacoes complexas sao necessarias (GROUP BY com multiplos agregadores)
+- Processamento colunar do Polars fornece vantagem significativa de performance (3-10x conforme ADR-0008)
+
+Para datasets menores ou agregacoes simples (`count`, `first`), o orquestrador Node.js trata tudo diretamente sem iniciar Python.
 
 ### Proposto: `cross_module_join.py`
 
 Novo script em `src/scripts/python/cross_module_join.py` usando Polars para:
 
 - **Receber multiplos datasets**: Dados de cada modulo chegam tagueados com campo `_dataset`
-- **Realizar joins**: Polars `join()` com suporte para inner, left, right, cross
-- **Aplicar agregacoes**: GROUP BY, COUNT, SUM, AVG, MIN, MAX, COLLECT
+- **Realizar agregacoes**: GROUP BY com COUNT, SUM, AVG, MIN, MAX, PUSH (list), ADDTOSET (unique)
 - **Retornar resultados**: NDJSON de volta para Node.js
 
 ### Protocolo Proposto
 
 ```
-stdin linha 1:  {"jsonrpc":"2.0","method":"join","params":{"config":{
-  "from": "Product",
-  "joins": [
-    {"document":"ProductsPerOpportunities","type":"inner","leftKey":"_id","rightKey":"product._id"}
-  ],
-  "select": [...],
-  "groupBy": ["Product.code"]
+stdin linha 1:  {"jsonrpc":"2.0","method":"aggregate","params":{"config":{
+  "parentDataset": "Contact",
+  "relations": [
+    {
+      "dataset": "Opportunity",
+      "parentKey": "_id",
+      "childKey": "contact._id",
+      "aggregators": {
+        "activeOpportunities": {"aggregator":"count"},
+        "opportunities": {"aggregator":"push"}
+      }
+    }
+  ]
 }}}
 
-stdin linha 2:  {"_dataset":"Product","_id":"abc","code":123,"type":"Apartamento"}\n
-stdin linha 3:  {"_dataset":"Product","_id":"def","code":456,"type":"Casa"}\n
-stdin linha 4:  {"_dataset":"ProductsPerOpportunities","_id":"x1","product":{"_id":"abc"},"status":"Ofertado"}\n
-stdin linha 5:  {"_dataset":"ProductsPerOpportunities","_id":"x2","product":{"_id":"abc"},"status":"Visitado"}\n
+stdin linha 2:  {"_dataset":"Contact","_id":"c1","code":1001,"name":{"full":"Alice"}}\n
+stdin linha 3:  {"_dataset":"Opportunity","_id":"o1","contact":{"_id":"c1"},"status":"Nova","code":5001}\n
 stdin EOF
 
 stdout linha 1: {"jsonrpc":"2.0","result":"ok"}
-stdout linha 2: {"code":123,"offers":[{"_id":"x1","status":"Ofertado"},{"_id":"x2","status":"Visitado"}]}\n
-stdout linha 3: {"code":456,"offers":[]}\n
+stdout linha 2: {"code":1001,"name":{"full":"Alice"},"activeOpportunities":1,"opportunities":[{"_id":"o1","status":"Nova","code":5001}]}\n
 ```
-
-### Decisoes de Design Chave
-
-| Decisao | Justificativa |
-|---------|--------------|
-| Tag `_dataset` por registro | Separa dados de multiplos modulos em um unico stream NDJSON |
-| Polars `join()` | 3-10x mais rapido que JS puro para grandes datasets (ADR-0008) |
-| Saida NDJSON (nao JSON unico) | Permite streaming de volta para Node.js; eficiente em memoria |
-| `COLLECT` via Polars `list()` | Agrupa registros relacionados em arrays eficientemente |
-| PEP 723 metadados inline | Sem necessidade de pyproject.toml separado (ADR-0006) |
 
 ---
 
@@ -442,32 +546,36 @@ Conforme `streamConstants.ts` existente:
 
 | Constante | Valor | Proposito |
 |-----------|-------|-----------|
-| `STREAM_BATCH_SIZE` | 1000 | Tamanho otimo de batch para streaming de cursor |
+| `STREAM_BATCH_SIZE` | 1000 | Tamanho otimo de batch para streaming |
 | `STREAM_MAX_TIME_MS` | 300.000 (5 min) | Tempo maximo de execucao da query |
-| `allowDiskUse` | `true` | Habilita ordenacao em disco para grandes conjuntos de resultados |
-
-### Backpressure
-
-- Mecanismo `pipe()` do Node.js trata backpressure automaticamente entre cursor stream do MongoDB e Transform streams
-- stdin/stdout do processo Python tambem respeita buffering de pipe do SO
-- `highWaterMark` pode ser ajustado nos Transform streams se necessario
+| `allowDiskUse` | `true` | Habilita ordenacao em disco para grandes conjuntos |
 
 ### Gerenciamento de Memoria
 
 | Estrategia | Implementacao |
 |-----------|--------------|
-| Streaming por modulo | Cada modulo streamed via `findStream()` com `batchSize: 1000` |
-| Limites configuraveis | Variavel de ambiente `CROSS_QUERY_MAX_RECORDS` (padrao: 100.000) |
+| Processamento em lote | Registros primarios processados em lotes de 1000 |
+| Limites por relation | Cada relation tem seu proprio `limit` (padrao: 1000) |
+| Max configuravel | Variavel de ambiente `CROSS_QUERY_MAX_RECORDS` (padrao: 100.000) |
 | Memoria Python | Polars usa formato colunar Apache Arrow (eficiente em memoria) |
 | Limpeza | Matar processo Python em caso de erro (mesmo padrao do `pivotStream.ts`) |
+
+### Avisos
+
+A primeira linha `_meta` deve incluir avisos para:
+
+- `RELATION_ACCESS_DENIED`: Usuario sem acesso a um modulo de relation (campos definidos como null)
+- `LIMIT_REACHED`: Resultado truncado devido a `limit` ou `CROSS_QUERY_MAX_RECORDS`
+- `MISSING_INDEX`: Campo de chave de lookup/join sem indice (query pode ser lenta)
+- `LARGE_DATASET`: Um ou mais modulos retornaram > 50.000 registros
 
 ---
 
 ## 9. Exemplos Reais Detalhados
 
-Todos os exemplos usam metadados reais de `src/private/metadata` e `foxter-metas/MetaObjects/ProductsPerOpportunities`. Cada exemplo mostra tanto a consulta JSON quanto o equivalente SQL.
+Todos os exemplos usam metadados reais de `src/private/metadata` e `foxter-metas/MetaObjects`. Cada exemplo mostra a consulta JSON (formato relations) e seu equivalente SQL.
 
-### Exemplo 1: Product + ProductsPerOpportunities (INNER JOIN, COLLECT)
+### Exemplo 1: Product + ProductsPerOpportunities (agregador push)
 
 **Caso de uso**: "Obter Product fFaJkGaWAdDhvcPH6 e todas as suas ofertas relacionadas"
 
@@ -475,48 +583,47 @@ Todos os exemplos usam metadados reais de `src/private/metadata` e `foxter-metas
 
 ```json
 {
-  "from": "Product",
-  "join": [
-    {
-      "document": "ProductsPerOpportunities",
-      "type": "inner",
-      "on": {
-        "left": "Product._id",
-        "operator": "equals",
-        "right": "ProductsPerOpportunities.product._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Product.code", "alias": "code" },
-    { "field": "Product.type", "alias": "productType" },
-    { "field": "ProductsPerOpportunities.*", "alias": "offers", "aggregate": "collect" }
-  ],
-  "where": {
+  "document": "Product",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Product._id", "operator": "equals", "value": "fFaJkGaWAdDhvcPH6" }
+      { "term": "_id", "operator": "equals", "value": "fFaJkGaWAdDhvcPH6" }
     ]
   },
-  "limit": 100
+  "fields": "code,type",
+  "limit": 1,
+  "relations": [
+    {
+      "document": "ProductsPerOpportunities",
+      "lookup": "product",
+      "fields": "status,situation,rating,contact",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 100,
+      "aggregators": {
+        "offers": { "aggregator": "push" },
+        "offerCount": { "aggregator": "count" }
+      }
+    }
+  ]
 }
 ```
 
 **SQL**:
 
 ```sql
-SELECT p.code AS code,
-       p.type AS productType,
-       COLLECT(ppo.*) AS offers
+SELECT p.code, p.type,
+       PUSH(ppo.*) AS offers,
+       COUNT(ppo._id) AS offerCount
   FROM Product p
- INNER JOIN ProductsPerOpportunities ppo
-    ON p._id = ppo.product._id
+ INNER JOIN ProductsPerOpportunities ppo ON p._id = ppo.product._id
  WHERE p._id = 'fFaJkGaWAdDhvcPH6'
  GROUP BY p.code, p.type
- LIMIT 100
+ LIMIT 1
 ```
 
-### Exemplo 2: Contact + Opportunity (INNER JOIN, COUNT)
+---
+
+### Exemplo 2: Contact + Opportunity (agregador count)
 
 **Caso de uso**: "Quantas oportunidades ativas cada contato tem?"
 
@@ -524,110 +631,97 @@ SELECT p.code AS code,
 
 ```json
 {
-  "from": "Contact",
-  "join": [
+  "document": "Contact",
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 1000,
+  "relations": [
     {
       "document": "Opportunity",
-      "type": "inner",
-      "on": {
-        "left": "Contact._id",
-        "operator": "equals",
-        "right": "Opportunity.contact._id"
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "status", "operator": "in", "value": ["Nova", "Ofertando Imveis", "Em Visitacao"] }
+        ]
+      },
+      "aggregators": {
+        "activeOpportunities": { "aggregator": "count" }
       }
     }
-  ],
-  "select": [
-    { "field": "Contact.code", "alias": "contactCode" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Opportunity._id", "alias": "activeOpportunities", "aggregate": "count" }
-  ],
-  "where": {
-    "match": "and",
-    "conditions": [
-      { "term": "Opportunity.status", "operator": "in", "value": ["Nova", "Ofertando Imveis", "Em Visitacao"] }
-    ]
-  },
-  "sort": [{ "field": "Contact.name.full", "direction": "asc" }],
-  "limit": 1000
+  ]
 }
 ```
 
 **SQL**:
 
 ```sql
-SELECT ct.code AS contactCode,
-       ct.name.full AS contactName,
+SELECT ct.code, ct.name,
        COUNT(o._id) AS activeOpportunities
   FROM Contact ct
  INNER JOIN Opportunity o ON ct._id = o.contact._id
  WHERE o.status IN ('Nova', 'Ofertando Imveis', 'Em Visitacao')
- GROUP BY ct.code, ct.name.full
- ORDER BY ct.name.full ASC
+ GROUP BY ct.code, ct.name
+ ORDER BY ct.name ASC
  LIMIT 1000
 ```
 
-### Exemplo 3: Campaign + Opportunity + Contact (JOIN de 3 vias)
+---
 
-**Caso de uso**: "Quais contatos vieram da Campanha X e qual o status de suas oportunidades?"
+### Exemplo 3: Contact + Opportunity + ProductsPerOpportunities (relations recursivas, cadeia de 3 niveis)
+
+**Caso de uso**: "Para cada contato, obter suas oportunidades com ofertas de produtos -- cadeia recursiva de 3 niveis"
 
 **JSON**:
 
 ```json
 {
-  "from": "Campaign",
-  "join": [
-    {
-      "document": "Opportunity",
-      "type": "inner",
-      "on": {
-        "left": "Campaign._id",
-        "operator": "equals",
-        "right": "Opportunity.campaign._id"
-      }
-    },
-    {
-      "document": "Contact",
-      "type": "inner",
-      "on": {
-        "left": "Opportunity.contact._id",
-        "operator": "equals",
-        "right": "Contact._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Campaign.name", "alias": "campaignName" },
-    { "field": "Opportunity.code", "alias": "opportunityCode" },
-    { "field": "Opportunity.status", "alias": "opportunityStatus" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Contact.email", "alias": "contactEmail" }
-  ],
-  "where": {
+  "document": "Contact",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Campaign._id", "operator": "equals", "value": "campXYZ123" }
+      { "term": "status", "operator": "equals", "value": "active" }
     ]
   },
-  "limit": 500
+  "fields": "code,name",
+  "limit": 100,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "status", "operator": "in", "value": ["Nova", "Em Visitacao"] }
+        ]
+      },
+      "fields": "code,status,label",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "limit": 20,
+      "aggregators": {
+        "opportunities": { "aggregator": "push" },
+        "opportunityCount": { "aggregator": "count" }
+      },
+      "relations": [
+        {
+          "document": "ProductsPerOpportunities",
+          "lookup": "opportunity",
+          "fields": "status,rating,product",
+          "limit": 50,
+          "aggregators": {
+            "products": { "aggregator": "push" },
+            "productCount": { "aggregator": "count" }
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
 
-**SQL**:
+---
 
-```sql
-SELECT c.name AS campaignName,
-       o.code AS opportunityCode,
-       o.status AS opportunityStatus,
-       ct.name.full AS contactName,
-       ct.email AS contactEmail
-  FROM Campaign c
- INNER JOIN Opportunity o ON c._id = o.campaign._id
- INNER JOIN Contact ct ON o.contact._id = ct._id
- WHERE c._id = 'campXYZ123'
- LIMIT 500
-```
-
-### Exemplo 4: Activity + Product (LEFT JOIN com nulls)
+### Exemplo 4: Activity + Product (com lookup null -- atividades sem produto)
 
 **Caso de uso**: "Listar todas as atividades, incluindo aquelas sem produto vinculado"
 
@@ -635,82 +729,75 @@ SELECT c.name AS campaignName,
 
 ```json
 {
-  "from": "Activity",
-  "join": [
-    {
-      "document": "Product",
-      "type": "left",
-      "on": {
-        "left": "Activity.product._id",
-        "operator": "equals",
-        "right": "Product._id"
-      }
-    }
-  ],
-  "select": [
-    { "field": "Activity.code", "alias": "activityCode" },
-    { "field": "Activity.subject", "alias": "subject" },
-    { "field": "Activity.status", "alias": "activityStatus" },
-    { "field": "Product.code", "alias": "productCode" },
-    { "field": "Product.sale", "alias": "productSale" }
-  ],
-  "where": {
+  "document": "Activity",
+  "filter": {
     "match": "and",
     "conditions": [
-      { "term": "Activity.status", "operator": "in", "value": ["new", "in-progress"] }
+      { "term": "status", "operator": "in", "value": ["new", "in-progress"] }
     ]
   },
-  "sort": [{ "field": "Activity._createdAt", "direction": "desc" }],
-  "limit": 200
+  "fields": "code,subject,status",
+  "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+  "limit": 200,
+  "relations": [
+    {
+      "document": "Product",
+      "lookup": "product",
+      "fields": "code,sale",
+      "limit": 1,
+      "aggregators": {
+        "productCode": { "aggregator": "first", "field": "code" },
+        "productSale": { "aggregator": "first", "field": "sale" }
+      }
+    }
+  ]
 }
 ```
 
-**SQL**:
+**Resposta esperada** (atividades sem produto recebem `null` nos agregadores):
 
-```sql
-SELECT a.code AS activityCode,
-       a.subject AS subject,
-       a.status AS activityStatus,
-       p.code AS productCode,
-       p.sale AS productSale
-  FROM Activity a
-  LEFT JOIN Product p ON a.product._id = p._id
- WHERE a.status IN ('new', 'in-progress')
- ORDER BY a._createdAt DESC
- LIMIT 200
+```json
+{"code":8001,"subject":"Ligacao sobre apartamento","status":"in-progress","productCode":123,"productSale":{"value":450000,"currency":"BRL"}}
+{"code":8002,"subject":"Email de follow-up","status":"new","productCode":null,"productSale":null}
 ```
 
-### Exemplo 5: Agregacoes ProductsPerOpportunities (GROUP BY, AVG)
+---
 
-**Caso de uso**: "Media de avaliacao e contagem por status"
+### Exemplo 5: Campaign + Opportunity (count + first)
+
+**Caso de uso**: "Para cada campanha, contar oportunidades e obter a mais recente"
 
 **JSON**:
 
 ```json
 {
-  "from": "ProductsPerOpportunities",
-  "join": [],
-  "select": [
-    { "field": "ProductsPerOpportunities.status", "alias": "status" },
-    { "field": "ProductsPerOpportunities._id", "alias": "count", "aggregate": "count" },
-    { "field": "ProductsPerOpportunities.rating", "alias": "avgRating", "aggregate": "avg" }
-  ],
-  "limit": 100
+  "document": "Campaign",
+  "filter": {
+    "match": "and",
+    "conditions": [
+      { "term": "status", "operator": "equals", "value": "Ativo" }
+    ]
+  },
+  "fields": "code,name,type",
+  "limit": 50,
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "campaign",
+      "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+      "aggregators": {
+        "totalOpportunities": { "aggregator": "count" },
+        "newestOpportunity": { "aggregator": "first" },
+        "avgValue": { "aggregator": "avg", "field": "value" }
+      }
+    }
+  ]
 }
 ```
 
-**SQL**:
+---
 
-```sql
-SELECT ppo.status AS status,
-       COUNT(ppo._id) AS count,
-       AVG(ppo.rating) AS avgRating
-  FROM ProductsPerOpportunities ppo
- GROUP BY ppo.status
- LIMIT 100
-```
-
-### Exemplo 6: Contact + Message (LEFT JOIN, MAX)
+### Exemplo 6: Contact + Message (agregador max, espelha relations existentes)
 
 **Caso de uso**: "Ultimo email enviado para cada contato"
 
@@ -718,66 +805,80 @@ SELECT ppo.status AS status,
 
 ```json
 {
-  "from": "Contact",
-  "join": [
+  "document": "Contact",
+  "fields": "code,name",
+  "sort": [{ "property": "name.full", "direction": "ASC" }],
+  "limit": 1000,
+  "relations": [
     {
       "document": "Message",
-      "type": "left",
-      "on": {
-        "left": "Contact._id",
-        "operator": "equals",
-        "right": "Message.contact._id"
+      "lookup": "contact",
+      "filter": {
+        "match": "and",
+        "conditions": [
+          { "term": "type", "operator": "equals", "value": "Email" },
+          { "term": "status", "operator": "equals", "value": "Enviada" }
+        ]
+      },
+      "aggregators": {
+        "lastEmailSentAt": { "aggregator": "max", "field": "_createdAt" },
+        "totalEmailsSent": { "aggregator": "count" }
       }
     }
-  ],
-  "select": [
-    { "field": "Contact.code", "alias": "contactCode" },
-    { "field": "Contact.name.full", "alias": "contactName" },
-    { "field": "Message._createdAt", "alias": "lastEmailSent", "aggregate": "max" }
-  ],
-  "where": {
-    "match": "and",
-    "conditions": [
-      { "term": "Message.type", "operator": "equals", "value": "Email" },
-      { "term": "Message.status", "operator": "equals", "value": "Enviada" }
-    ]
-  },
-  "sort": [{ "field": "Contact.name.full", "direction": "asc" }],
-  "limit": 1000
+  ]
 }
 ```
 
-**SQL**:
+---
 
-```sql
-SELECT ct.code AS contactCode,
-       ct.name.full AS contactName,
-       MAX(m._createdAt) AS lastEmailSent
-  FROM Contact ct
-  LEFT JOIN Message m ON ct._id = m.contact._id
- WHERE m.type = 'Email'
-   AND m.status = 'Enviada'
- GROUP BY ct.code, ct.name.full
- ORDER BY ct.name.full ASC
- LIMIT 1000
-```
+### Exemplo 7: Exemplo com Seguranca (Degradacao Graciosa)
 
-### Exemplo 7: Exemplo com Seguranca
-
-**Caso de uso**: "Corretor consultando oportunidades -- readFilter restringe as suas proprias"
+**Caso de uso**: "Corretor consulta suas oportunidades com dados de produto -- mas nao tem acesso ao modulo Product"
 
 **Cenario**:
-- Usuario e um corretor com perfil de acesso "Corretor"
+- Usuario e corretor com perfil de acesso "Corretor"
 - `Opportunity:access:Corretor` define `readFilter: { conditions: [{ term: "_user._id", operator: "equals", value: "$user" }] }`
-- `Product:access:Corretor` define condicao de campo: campo `sale` so legivel quando `status = 'active'`
+- Usuario **nao tem acesso** ao modulo `Product` (`getAccessFor('Product', user)` retorna `false`)
+
+**JSON**:
+
+```json
+{
+  "document": "Opportunity",
+  "fields": "code,status,label",
+  "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+  "limit": 100,
+  "relations": [
+    {
+      "document": "Product",
+      "lookup": "product",
+      "fields": "code,sale",
+      "aggregators": {
+        "productCode": { "aggregator": "first", "field": "code" },
+        "productSale": { "aggregator": "first", "field": "sale" }
+      }
+    }
+  ]
+}
+```
 
 **O que acontece internamente**:
 
-1. **Camada 2**: `getAccessFor('Opportunity', user)` retorna acesso "Corretor"; `getAccessFor('Product', user)` retorna acesso "Corretor"
-2. **Camada 3**: `readFilter` da Opportunity e mesclado: corretor so ve suas proprias oportunidades (`_user._id = $user`)
-3. **Camada 4**: Todos os campos sao verificados quanto a legibilidade em ambos os modulos
-4. **Camada 5**: Campo `sale` do Product tem condicao: so legivel se `Product.status = 'active'`. Aplicado via `ApplyFieldPermissionsTransform` ANTES do join.
-5. **Resultado**: Corretor so ve suas oportunidades, e `productSale` e `null` para produtos inativos mesmo que os dados existam no MongoDB
+1. **Camada 1**: Usuario autenticado como "Corretor"
+2. **Camada 2 (primario)**: `getAccessFor('Opportunity', user)` retorna acesso "Corretor" -- **OK, consulta prossegue**
+3. **Camada 3**: `readFilter` da Opportunity e mesclado -- corretor so ve suas proprias oportunidades
+4. **Camada 2 (relation)**: `getAccessFor('Product', user)` retorna `false` -- **relation ignorada, agregadores definidos como null**
+5. **Aviso**: `_meta.warnings` inclui `{ "type": "RELATION_ACCESS_DENIED", "document": "Product" }`
+
+**Resposta esperada** (corretor ve suas oportunidades; campos de produto sao null):
+
+```json
+{"_meta":{"document":"Opportunity","relations":["Product"],"warnings":[{"type":"RELATION_ACCESS_DENIED","document":"Product","message":"User lacks read access to Product"}]}}
+{"code":5001,"status":"Nova","label":"Apt 301 - Centro","productCode":null,"productSale":null}
+{"code":5002,"status":"Em Visitacao","label":"Casa 12 - Praia","productCode":null,"productSale":null}
+```
+
+**Contraste com comportamento anterior**: No design anterior da RFC, esta consulta teria sido **inteiramente rejeitada** porque o usuario nao tinha acesso a Product. Com degradacao graciosa, o corretor ainda recebe seus dados de oportunidade.
 
 ---
 
@@ -786,37 +887,37 @@ SELECT ct.code AS contactCode,
 ### Fase 1 (MVP)
 
 - Endpoint de consulta JSON (`POST /rest/query/json`)
-- Somente INNER JOIN
-- Maximo 2 modulos (1 from + 1 join)
-- Agregacoes basicas: `count`, `sum`, `avg`, `collect`
-- Aplicacao completa de seguranca (todas as 6 camadas)
-- Ponte Python com `cross_module_join.py`
+- Relations recursivas com joins inferidos por lookup
+- Max 2 niveis de aninhamento, max 5 relations total
+- Todos os agregadores: `count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`
+- Seguranca completa com degradacao graciosa
+- `filter`, `fields`, `sort`, `limit` por relation
+- Ponte Python para grandes datasets
 - Resposta streaming NDJSON
-- Validacao Zod para entrada de consulta
+- Validacao Zod para entrada da consulta
 
 ### Fase 2
 
 - Endpoint de consulta SQL (`POST /rest/query/sql`)
 - Integracao `node-sql-parser`
-- Joins LEFT e RIGHT
-- Ate N modulos (configuravel, padrao 5)
-- Suporte GROUP BY / HAVING
-- Agregacoes `min`, `max`
+- Traducao SQL para IQR de relations
+- Profundidade de aninhamento ilimitada (configuravel)
+- Suporte GROUP BY / HAVING na interface SQL
 
 ### Fase 3
 
-- CROSS JOIN com avisos obrigatorios
-- Subqueries (na clausula WHERE)
-- Suporte UNION
-- Ponte Python para agregacoes complexas (funcoes estatisticas)
+- Suporte CROSS JOIN com avisos obrigatorios
+- Subqueries (na clausula WHERE do SQL)
+- Suporte UNION no SQL
+- Ponte Python para agregacoes estatisticas complexas
 - Timeout e cancelamento de consulta
 
 ### Fase 4
 
 - Cache de plano de consulta
-- Otimizador de consulta (otimizacao de ordem de join)
+- Otimizador de consulta (otimizacao de ordem de relation baseada em cardinalidade)
 - Avisos de sugestao de indice
-- Estrategia `$lookup` do MongoDB como alternativa aos joins Python
+- Pipeline `$lookup` do MongoDB como estrategia alternativa de execucao
 - Dashboard de performance / analytics de consulta
 
 ---
@@ -827,23 +928,24 @@ Conforme ADR-0003 (Estrategia de Testes com Jest e Supertest):
 
 ### Testes Unitarios
 
-- **Parser SQL**: Traducao de AST para cada funcionalidade SQL
+- **Parser SQL**: Traducao de AST para IQR de relations
 - **Validador de consulta JSON**: Validacao de schema Zod para consultas validas/invalidas
-- **Construtor IQR**: Representacao Interna de Consulta correta de ambos JSON e SQL
-- **Extracao de filtro por modulo**: Divisao correta de filtro por modulo a partir da clausula WHERE cross-module
+- **Resolucao de lookup**: Inferencia correta de condicao de join a partir dos metadados
+- **Logica de agregadores**: Cada agregador produz resultados corretos
+- **Extracao de filtro**: Divisao correta de filtro por modulo
 
 ### Testes de Integracao (com MongoDB Memory Server)
 
-- **Execucao completa de consulta**: End-to-end com colecoes MongoDB reais
-- **Testes de seguranca**: Verificar que campos nao autorizados sao removidos, readFilters aplicados por modulo
-- **Corretude de joins**: INNER, LEFT, RIGHT produzem resultados corretos
-- **Corretude de agregacoes**: COUNT, SUM, AVG, COLLECT produzem valores corretos
+- **Execucao completa**: End-to-end com colecoes MongoDB reais
+- **Testes de seguranca**: Verificar que campos de relations nao autorizadas sao null (nao erro), readFilters aplicados por modulo
+- **Relations recursivas**: Cadeias de 2-3 niveis produzem resultados aninhados corretos
+- **Corretude de agregacoes**: Todos os 9 agregadores produzem valores corretos
 
 ### Testes Python
 
 - **`cross_module_join.py`**: Testes unitarios com pytest
-- **Operacoes de join**: Verificar que comportamento de join do Polars corresponde a semantica SQL esperada
-- **Casos limite**: Datasets vazios, chaves de join nulas, consultas de modulo unico
+- **Operacoes de agregacao**: Verificar que agregacao do Polars corresponde a resultados esperados
+- **Casos limite**: Datasets vazios, chaves de grupo nulas
 
 ---
 
@@ -851,21 +953,29 @@ Conforme ADR-0003 (Estrategia de Testes com Jest e Supertest):
 
 ### Context7
 
-Usar Context7 (`resolve-library-id` + `query-docs`) para documentacao atualizada:
-
 1. **`node-sql-parser`**: "How to parse SQL SELECT with JOIN into AST in node-sql-parser"
 2. **MongoDB Node.js Driver**: "How to use $lookup in aggregation pipeline with readPreference secondary"
 3. **Zod**: "How to create recursive schemas with z.lazy for nested filter conditions"
 4. **Fastify**: "How to stream NDJSON responses in Fastify with proper Content-Type"
-5. **Polars (Python)**: "How to perform DataFrame join with different join types in Polars"
+5. **Polars (Python)**: "How to perform DataFrame aggregation with group_by in Polars"
 
 ### Pesquisas Perplexity
 
 1. "node-sql-parser SQL to AST translation TypeScript examples 2026"
 2. "MongoDB $lookup cross-collection security RBAC streaming best practices 2026"
 3. "Node.js Transform stream backpressure cross-collection join patterns"
-4. "ANSI SQL subset safe parser whitelist validation security"
-5. "Polars Python DataFrame join inner left right cross performance large datasets"
+4. "Polars Python DataFrame aggregation group_by push list performance 2026"
+
+---
+
+## 13. Perguntas Abertas
+
+1. **Profundidade maxima de aninhamento**: Devemos limitar a profundidade de relations recursivas a 3 niveis na Fase 1?
+2. **Timeout de consulta**: A consulta cross-module deve ter um `maxTimeMS` diferente do findStream (atualmente 5 min)?
+3. **Log de auditoria**: Devemos registrar o IQR completo para auditoria, ou somente os modulos e usuario?
+4. **Rate limiting**: Os endpoints de consulta devem ter rate limits mais restritos que o find regular?
+5. **Limiar do Python**: Em qual tamanho de dataset devemos alternar de agregacao JS para ponte Python?
+6. **Relation sem agregador**: Devemos permitir uma relation com apenas sub-relations aninhadas e sem agregadores proprios (pass-through)?
 
 ---
 
@@ -879,6 +989,8 @@ Usar Context7 (`resolve-library-id` + `query-docs`) para documentacao atualizada
 - [ADR-0007: Formato Hierarquico Saida Pivot](../adr/0007-formato-hierarquico-saida-pivot.md)
 - [ADR-0008: Graph Endpoint com Polars e Pandas](../adr/0008-graph-endpoint-com-polars-pandas.md)
 - [ADR-0010: Padroes de Codigo](../adr/0010-padroes-codigo.md)
+- [Padrao Relations do MetaObject](../../src/private/metadata/Contact.json) (linhas 339-403)
+- [Schema Relation](../../src/imports/model/Relation.ts)
 - [node-sql-parser (npm)](https://www.npmjs.com/package/node-sql-parser)
 - [Polars Documentation](https://pola.rs/)
 - [Fastify Streaming](https://fastify.dev/docs/latest/Reference/Reply/#streams)
@@ -886,4 +998,4 @@ Usar Context7 (`resolve-library-id` + `query-docs`) para documentacao atualizada
 ---
 
 _Autores: Equipe Konecty_
-_Data: 2026-02-10_
+_Data: 2026-02-13_
