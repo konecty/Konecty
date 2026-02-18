@@ -67,8 +67,8 @@ export const CrossModuleQuerySchema = z.object({
 	limit: z.number().int().min(1).max(MAX_RELATION_LIMIT).default(DEFAULT_PRIMARY_LIMIT),
 	start: z.number().int().min(0).default(0),
 	relations: z.array(RelationSchema).min(1).max(MAX_RELATIONS),
-	includeTotal: z.boolean().default(false),
-	includeMeta: z.boolean().default(true),
+	includeTotal: z.boolean().default(true),
+	includeMeta: z.boolean().default(false),
 });
 
 export type CrossModuleQuery = z.infer<typeof CrossModuleQuerySchema>;
@@ -115,6 +115,7 @@ export interface CrossModuleMeta {
 	relations: string[];
 	warnings: CrossModuleWarning[];
 	executionTimeMs?: number;
+	total?: number;
 }
 
 export { MAX_RELATIONS, MAX_NESTING_DEPTH, MAX_RELATION_LIMIT, DEFAULT_RELATION_LIMIT, DEFAULT_PRIMARY_LIMIT };
