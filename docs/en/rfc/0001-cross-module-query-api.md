@@ -8,10 +8,10 @@
 
 | Field         | Value                                          |
 | ------------- | ---------------------------------------------- |
-| **Status**    | DRAFT                                          |
+| **Status**    | Phase 1: IMPLEMENTED, Phase 2: IN PROGRESS     |
 | **Authors**   | Konecty Team                                   |
 | **Created**   | 2026-02-10                                     |
-| **Updated**   | 2026-02-13                                     |
+| **Updated**   | 2026-02-18                                     |
 | **Reviewers** | TBD                                            |
 | **Related**   | ADR-0001 through ADR-0010, especially ADR-0005 (secondary reads), ADR-0006 (Python integration), ADR-0008 (Polars/Pandas), ADR-0010 (code patterns) |
 
@@ -1219,14 +1219,14 @@ Use Perplexity for architectural research:
 
 ---
 
-## 14. Open Questions
+## 14. Open Questions (Resolved)
 
-1. **Max nesting depth**: Should we limit recursive relation depth to 3 levels in Phase 1?
-2. **Query timeout**: Should the cross-module query have a different `maxTimeMS` than findStream (currently 5 min)?
-3. **Audit logging**: Should we log the full IQR for audit purposes, or just the modules and user?
-4. **Rate limiting**: Should the query endpoints have stricter rate limits than regular find?
+1. ~~**Max nesting depth**~~: **Resolved** -- Keep `MAX_NESTING_DEPTH = 2` for Phase 2. Sufficient for 3-level chains (Contact → Opportunity → PPO). Revisit in Phase 3 if needed.
+2. ~~**Query timeout**~~: **Resolved** -- Same as findStream (5 min via `STREAM_MAX_TIME_MS`). The cross-module query calls findStream per module, each subject to the same timeout. No separate timeout needed.
+3. ~~**Audit logging**~~: **Resolved** -- Log at debug level: document names, relation names, user ID, execution time. Do NOT log full IQR or SQL at info level (PII risk in WHERE values). The existing OpenTelemetry tracing spans already capture the request flow for audit purposes.
+4. ~~**Rate limiting**~~: **Resolved** -- No additional rate limiting for Phase 2. The query endpoints use the same Fastify instance and are subject to the same connection/request timeouts. Revisit if abuse is observed.
 5. ~~**Python threshold**~~: **Resolved** -- Always use Python/Polars (YAGNI/DRY). No JS aggregation layer. See Section 7.
-6. **Relation without aggregator**: Should we allow a relation with only nested sub-relations and no aggregators of its own (pass-through)?
+6. ~~**Relation without aggregator**~~: **Resolved** -- Not supported. The Zod schema requires at least one aggregator per relation (`aggregators.refine(obj => Object.keys(obj).length > 0)`). A relation without aggregation is not useful in the IQR model. Pass-through relations (with only sub-relations) should still have at least a `count` aggregator.
 
 ---
 

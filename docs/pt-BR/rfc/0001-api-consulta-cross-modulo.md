@@ -8,10 +8,10 @@
 
 | Campo           | Valor                                          |
 | --------------- | ---------------------------------------------- |
-| **Status**      | RASCUNHO                                       |
+| **Status**      | Fase 1: IMPLEMENTADA, Fase 2: EM PROGRESSO     |
 | **Autores**     | Equipe Konecty                                 |
 | **Criado em**   | 2026-02-10                                     |
-| **Atualizado**  | 2026-02-13                                     |
+| **Atualizado**  | 2026-02-18                                     |
 | **Revisores**   | A definir                                      |
 | **Relacionados**| ADR-0001 a ADR-0010, especialmente ADR-0005 (leitura no secundario), ADR-0006 (integracao Python), ADR-0008 (Polars/Pandas), ADR-0010 (padroes de codigo) |
 
@@ -969,14 +969,14 @@ Conforme ADR-0003 (Estrategia de Testes com Jest e Supertest):
 
 ---
 
-## 13. Perguntas Abertas
+## 13. Perguntas Abertas (Resolvidas)
 
-1. **Profundidade maxima de aninhamento**: Devemos limitar a profundidade de relations recursivas a 3 niveis na Fase 1?
-2. **Timeout de consulta**: A consulta cross-module deve ter um `maxTimeMS` diferente do findStream (atualmente 5 min)?
-3. **Log de auditoria**: Devemos registrar o IQR completo para auditoria, ou somente os modulos e usuario?
-4. **Rate limiting**: Os endpoints de consulta devem ter rate limits mais restritos que o find regular?
+1. ~~**Profundidade maxima de aninhamento**~~: **Resolvido** -- Manter `MAX_NESTING_DEPTH = 2` para Fase 2. Suficiente para cadeias de 3 niveis (Contact → Opportunity → PPO). Revisar na Fase 3 se necessario.
+2. ~~**Timeout de consulta**~~: **Resolvido** -- Mesmo que findStream (5 min via `STREAM_MAX_TIME_MS`). A consulta cross-module chama findStream por modulo, cada um sujeito ao mesmo timeout. Nenhum timeout separado necessario.
+3. ~~**Log de auditoria**~~: **Resolvido** -- Log em nivel debug: nomes dos documentos, nomes das relations, ID do usuario, tempo de execucao. NAO registrar IQR completo ou SQL em nivel info (risco de PII nos valores do WHERE). Os spans OpenTelemetry existentes ja capturam o fluxo da requisicao para fins de auditoria.
+4. ~~**Rate limiting**~~: **Resolvido** -- Sem rate limiting adicional para Fase 2. Os endpoints de consulta usam a mesma instancia Fastify e estao sujeitos aos mesmos timeouts de conexao/requisicao. Revisar se abusos forem observados.
 5. ~~**Limiar do Python**~~: **Resolvido** -- Sempre usar Python/Polars (YAGNI/DRY). Sem camada de agregacao JS. Ver Secao 7.
-6. **Relation sem agregador**: Devemos permitir uma relation com apenas sub-relations aninhadas e sem agregadores proprios (pass-through)?
+6. ~~**Relation sem agregador**~~: **Resolvido** -- Nao suportado. O schema Zod exige pelo menos um agregador por relation (`aggregators.refine(obj => Object.keys(obj).length > 0)`). Uma relation sem agregacao nao e util no modelo IQR. Relations de passagem (com apenas sub-relations) devem ter pelo menos um agregador `count`.
 
 ---
 

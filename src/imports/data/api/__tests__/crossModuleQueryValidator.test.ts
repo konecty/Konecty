@@ -186,6 +186,18 @@ describe('CrossModuleQuerySchema (Zod)', () => {
 			expect(result.data.start).toBe(0);
 		}
 	});
+
+	it('should default includeTotal to true and includeMeta to false', () => {
+		const result = CrossModuleQuerySchema.safeParse({
+			document: 'Contact',
+			relations: [{ document: 'Opportunity', lookup: 'contact', aggregators: { c: { aggregator: 'count' } } }],
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.includeTotal).toBe(true);
+			expect(result.data.includeMeta).toBe(false);
+		}
+	});
 });
 
 describe('validateCrossModuleQuery', () => {
