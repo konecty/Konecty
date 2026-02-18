@@ -20,14 +20,7 @@ import { getGraphErrorMessage } from '@imports/utils/graphErrors';
 import { MetaObject } from '@imports/model/MetaObject';
 import type { KonectyError } from '@imports/types/result';
 import { z } from 'zod';
-import {
-	buildCacheKey,
-	getCached,
-	setCached,
-	getCachedBlob,
-	setCachedBlob,
-	hashFilter,
-} from '@imports/dashboards/dashboardCache';
+import { buildCacheKey, getCached, setCached, getCachedBlob, setCachedBlob } from '@imports/dashboards/dashboardCache';
 import type { KpiConfig } from '@imports/data/api/kpiStream';
 import { createHash } from 'node:crypto';
 
@@ -258,7 +251,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		const user = userResult.data;
 		const { document, listName, type } = req.params;
-		
+
 		tracingSpan.setAttributes({ document, listName, type });
 
 		// Get export threshold from namespace config (default: 1000)
@@ -269,7 +262,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		if (access === false || access.isReadable !== true) {
 			const durationMs = Date.now() - exportStartTime;
 			tracingSpan.end();
-			
+
 			// Log denied access
 			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 			await logExportToAccessLog(authTokenId, {
@@ -283,7 +276,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 				reason: 'No read permission on document',
 				durationMs,
 			});
-			
+
 			const errorResult = errorReturn([
 				{
 					code: 'export.error.readPermission.denied',
@@ -299,7 +292,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		if (!['csv', 'xlsx', 'json'].includes(normalizedType)) {
 			const durationMs = Date.now() - exportStartTime;
 			tracingSpan.end();
-			
+
 			// Log invalid type
 			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 			await logExportToAccessLog(authTokenId, {
@@ -313,7 +306,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 				reason: `Invalid export type: ${normalizedType}`,
 				durationMs,
 			});
-			
+
 			const errorResult = errorReturn([
 				{
 					code: 'export.error.invalidType',
@@ -329,14 +322,12 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const isAdmin = user.admin === true;
 		if (!isAdmin) {
 			// For xlsx, also check xls (legacy format) in metadata
-			const exportPermissions = normalizedType === 'xlsx' && !access?.export?.[normalizedType]
-				? access?.export?.xls
-				: access?.export?.[normalizedType];
-			
+			const exportPermissions = normalizedType === 'xlsx' && !access?.export?.[normalizedType] ? access?.export?.xls : access?.export?.[normalizedType];
+
 			if (!exportPermissions || !exportPermissions.includes('list')) {
 				const durationMs = Date.now() - exportStartTime;
 				tracingSpan.end();
-				
+
 				// Log denied export permission
 				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 				await logExportToAccessLog(authTokenId, {
@@ -345,12 +336,12 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					type: normalizedType as 'csv' | 'xlsx' | 'json',
 					start: req.query.start ?? 0,
 					limit: req.query.limit ?? 0,
-				threshold: DEFAULT_EXPORT_LARGE_THRESHOLD,
-				status: 'denied',
-				reason: `No export permission for type: ${normalizedType}`,
+					threshold: DEFAULT_EXPORT_LARGE_THRESHOLD,
+					status: 'denied',
+					reason: `No export permission for type: ${normalizedType}`,
 					durationMs,
 				});
-				
+
 				const errorResult = errorReturn([
 					{
 						code: 'export.error.permission.denied',
@@ -368,14 +359,12 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		// Admin users bypass permission checks
 		if (requestLimit > threshold && !isAdmin) {
 			// For xlsx, also check xls (legacy format) in metadata
-			const exportLargePermissions = normalizedType === 'xlsx' && !access?.exportLarge?.[normalizedType]
-				? access?.exportLarge?.xls
-				: access?.exportLarge?.[normalizedType];
-			
+			const exportLargePermissions = normalizedType === 'xlsx' && !access?.exportLarge?.[normalizedType] ? access?.exportLarge?.xls : access?.exportLarge?.[normalizedType];
+
 			if (!exportLargePermissions || !exportLargePermissions.includes('list')) {
 				const durationMs = Date.now() - exportStartTime;
 				tracingSpan.end();
-				
+
 				// Log denied large export
 				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 				await logExportToAccessLog(authTokenId, {
@@ -389,7 +378,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					reason: `No exportLarge permission for type: ${normalizedType} (limit ${requestLimit} exceeds threshold ${threshold})`,
 					durationMs,
 				});
-				
+
 				const errorResult = errorReturn([
 					{
 						code: 'export.error.largeDataset.denied',
@@ -402,19 +391,20 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		}
 
 		// Parse filter from query string
-		const parsedFilter: KonFilter | undefined = req.query.filter != null
-			? isString(req.query.filter)
-				? (() => {
-						try {
-							return JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-						} catch {
-							return undefined;
-						}
-					})()
-				: isObject(req.query.filter)
-					? (req.query.filter as KonFilter)
-					: undefined
-			: undefined;
+		const parsedFilter: KonFilter | undefined =
+			req.query.filter != null
+				? isString(req.query.filter)
+					? (() => {
+							try {
+								return JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+							} catch {
+								return undefined;
+							}
+						})()
+					: isObject(req.query.filter)
+						? (req.query.filter as KonFilter)
+						: undefined
+				: undefined;
 
 		try {
 			const result = await exportData({
@@ -434,7 +424,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			if (result.success === false) {
 				const durationMs = Date.now() - exportStartTime;
-				
+
 				// Log export error
 				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 				await logExportToAccessLog(authTokenId, {
@@ -448,13 +438,13 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					reason: result.errors?.[0]?.message ?? 'Unknown export error',
 					durationMs,
 				});
-				
+
 				tracingSpan.end();
 				return reply.status(500).type('application/json').send(result);
 			}
 
 			const durationMs = Date.now() - exportStartTime;
-			
+
 			// Log successful export
 			const { logExportToAccessLog, sanitizeFieldsForLog } = await import('@imports/audit/accessLogExport');
 			await logExportToAccessLog(authTokenId, {
@@ -482,7 +472,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		} catch (error) {
 			const durationMs = Date.now() - exportStartTime;
 			const errorMsg = error instanceof Error ? error.message : String(error);
-			
+
 			// Log export exception
 			const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
 			await logExportToAccessLog(authTokenId, {
@@ -496,7 +486,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 				reason: `Exception: ${errorMsg}`,
 				durationMs,
 			});
-			
+
 			tracingSpan.end();
 			const errorResult = errorReturn([
 				{
@@ -523,139 +513,145 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			pivotConfig?: string;
 			cacheTTL?: string;
 		};
-	}>('/rest/data/:document/pivot', {
-		// Pivot tables can take a long time to process large datasets
-		config: {
-			// 10 minutes timeout for pivot operations
-			timeout: 600000,
-		},
-	}, async (req, reply) => {
-		const { tracer } = req.openTelemetry();
-		const tracingSpan = tracer.startSpan('GET pivot');
-
-		const authTokenId = getAuthTokenIdFromReq(req);
-		tracingSpan.setAttribute('authTokenId', authTokenId ?? 'undefined');
-		tracingSpan.setAttribute('document', req.params.document);
-
-		// Parse filter from query string
-		const { logger } = await import('@imports/utils/logger');
-		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
-		
-		const parsedFilter: KonFilter | undefined = req.query.filter != null
-			? isString(req.query.filter)
-				? (() => {
-						try {
-							const parsed = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-							logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsed)}`);
-							return parsed;
-						} catch (error) {
-							logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
-							return undefined;
-						}
-					})()
-				: isObject(req.query.filter)
-					? (() => {
-							const parsed = req.query.filter as KonFilter;
-							logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsed)}`);
-							return parsed;
-						})()
-					: undefined
-			: (() => {
-					logger.warn(`[dataApi] No filter in query string!`);
-					return undefined;
-				})();
-
-		// Parse pivotConfig from query string
-		let pivotConfigParseError: string | undefined;
-		const pivotConfig: PivotConfig | undefined = req.query.pivotConfig != null
-			? isString(req.query.pivotConfig)
-				? (() => {
-						try {
-							return JSON.parse(req.query.pivotConfig.replace(/\+/g, ' ')) as PivotConfig;
-						} catch (error) {
-							pivotConfigParseError = `[${req.params.document}] Invalid pivotConfig format: ${(error as Error).message}`;
-							return undefined;
-						}
-					})()
-				: isObject(req.query.pivotConfig)
-					? (req.query.pivotConfig as PivotConfig)
-					: undefined
-			: undefined;
-
-		// Validate pivotConfig
-		if (pivotConfigParseError != null) {
-			tracingSpan.end();
-			return errorReturn(pivotConfigParseError);
-		}
-
-		if (pivotConfig == null) {
-			tracingSpan.end();
-			return errorReturn(`[${req.params.document}] pivotConfig is required`);
-		}
-
-		if (!Array.isArray(pivotConfig.rows) || pivotConfig.rows.length === 0) {
-			tracingSpan.end();
-			return errorReturn(`[${req.params.document}] pivotConfig.rows is required and must be a non-empty array`);
-		}
-
-		if (!Array.isArray(pivotConfig.values) || pivotConfig.values.length === 0) {
-			tracingSpan.end();
-			return errorReturn(`[${req.params.document}] pivotConfig.values is required and must be a non-empty array`);
-		}
-
-		// Extract language from Accept-Language header (default to pt_BR)
-		const acceptLanguage = req.headers['accept-language'] || 'pt-BR';
-		const lang = acceptLanguage.startsWith('pt') ? 'pt_BR' : 'en';
-
-		// ADR-0049: Cache for pivot endpoint (same dual-layer pattern as KPI)
-		const cacheTTL = req.query.cacheTTL != null ? parseInt(req.query.cacheTTL, 10) : DEFAULT_CACHE_TTL_SECONDS;
-
-		const userResult = await getUserSafe(authTokenId);
-		if (userResult.success === false) {
-			tracingSpan.end();
-			return reply.status(500).send(userResult);
-		}
-		const userId = userResult.data._id;
-
-		const cacheResult = await withBlobCache({
-			req: req as unknown as { headers: Record<string, string | string[] | undefined> },
-			reply,
-			userId,
-			document: req.params.document,
-			operation: 'pivot',
-			configHash: hashConfig(pivotConfig),
-			filter: parsedFilter,
-			cacheTTL,
-			compute: async () => {
-				const result = await pivotStream({
-					authTokenId,
-					document: req.params.document,
-					displayName: req.query.displayName,
-					displayType: req.query.displayType,
-					fields: req.query.fields,
-					filter: parsedFilter,
-					sort: req.query.sort,
-					limit: req.query.limit,
-					start: req.query.start,
-					withDetailFields: req.query.withDetailFields,
-					pivotConfig,
-					lang,
-					tracingSpan,
-				});
-
-				return JSON.stringify(result);
+	}>(
+		'/rest/data/:document/pivot',
+		{
+			// Pivot tables can take a long time to process large datasets
+			config: {
+				// 10 minutes timeout for pivot operations
+				timeout: 600000,
 			},
-		});
+		},
+		async (req, reply) => {
+			const { tracer } = req.openTelemetry();
+			const tracingSpan = tracer.startSpan('GET pivot');
 
-		tracingSpan.end();
+			const authTokenId = getAuthTokenIdFromReq(req);
+			tracingSpan.setAttribute('authTokenId', authTokenId ?? 'undefined');
+			tracingSpan.setAttribute('document', req.params.document);
 
-		if (cacheResult.notModified) {
-			return reply.status(HTTP_NOT_MODIFIED).send();
-		}
+			// Parse filter from query string
+			const { logger } = await import('@imports/utils/logger');
+			logger.debug({ filterLength: isString(req.query.filter) ? req.query.filter.length : 0 }, '[dataApi] Raw filter from query');
 
-		reply.type('application/json');
-		reply.send(JSON.parse(cacheResult.blob));
-	});
+			const parsedFilter: KonFilter | undefined =
+				req.query.filter != null
+					? isString(req.query.filter)
+						? (() => {
+								try {
+									const parsed = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
+									logger.debug('[dataApi] Parsed filter (string)');
+									return parsed;
+								} catch (error) {
+									logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
+									return undefined;
+								}
+							})()
+						: isObject(req.query.filter)
+							? (() => {
+									const parsed = req.query.filter as KonFilter;
+									logger.debug('[dataApi] Parsed filter (object)');
+									return parsed;
+								})()
+							: undefined
+					: (() => {
+							logger.warn('[dataApi] No filter in query string');
+							return undefined;
+						})();
+
+			// Parse pivotConfig from query string
+			let pivotConfigParseError: string | undefined;
+			const pivotConfig: PivotConfig | undefined =
+				req.query.pivotConfig != null
+					? isString(req.query.pivotConfig)
+						? (() => {
+								try {
+									return JSON.parse(req.query.pivotConfig.replace(/\+/g, ' ')) as PivotConfig;
+								} catch (error) {
+									pivotConfigParseError = `[${req.params.document}] Invalid pivotConfig format: ${(error as Error).message}`;
+									return undefined;
+								}
+							})()
+						: isObject(req.query.pivotConfig)
+							? (req.query.pivotConfig as PivotConfig)
+							: undefined
+					: undefined;
+
+			// Validate pivotConfig
+			if (pivotConfigParseError != null) {
+				tracingSpan.end();
+				return errorReturn(pivotConfigParseError);
+			}
+
+			if (pivotConfig == null) {
+				tracingSpan.end();
+				return errorReturn(`[${req.params.document}] pivotConfig is required`);
+			}
+
+			if (!Array.isArray(pivotConfig.rows) || pivotConfig.rows.length === 0) {
+				tracingSpan.end();
+				return errorReturn(`[${req.params.document}] pivotConfig.rows is required and must be a non-empty array`);
+			}
+
+			if (!Array.isArray(pivotConfig.values) || pivotConfig.values.length === 0) {
+				tracingSpan.end();
+				return errorReturn(`[${req.params.document}] pivotConfig.values is required and must be a non-empty array`);
+			}
+
+			// Extract language from Accept-Language header (default to pt_BR)
+			const acceptLanguage = req.headers['accept-language'] || 'pt-BR';
+			const lang = acceptLanguage.startsWith('pt') ? 'pt_BR' : 'en';
+
+			// ADR-0049: Cache for pivot endpoint (same dual-layer pattern as KPI)
+			const cacheTTL = req.query.cacheTTL != null ? parseInt(req.query.cacheTTL, 10) : DEFAULT_CACHE_TTL_SECONDS;
+
+			const userResult = await getUserSafe(authTokenId);
+			if (userResult.success === false) {
+				tracingSpan.end();
+				return reply.status(500).send(userResult);
+			}
+			const userId = userResult.data._id;
+
+			const cacheResult = await withBlobCache({
+				req: req as unknown as { headers: Record<string, string | string[] | undefined> },
+				reply,
+				userId,
+				document: req.params.document,
+				operation: 'pivot',
+				configHash: hashConfig(pivotConfig),
+				filter: parsedFilter,
+				cacheTTL,
+				compute: async () => {
+					const result = await pivotStream({
+						authTokenId,
+						document: req.params.document,
+						displayName: req.query.displayName,
+						displayType: req.query.displayType,
+						fields: req.query.fields,
+						filter: parsedFilter,
+						sort: req.query.sort,
+						limit: req.query.limit,
+						start: req.query.start,
+						withDetailFields: req.query.withDetailFields,
+						pivotConfig,
+						lang,
+						tracingSpan,
+					});
+
+					return JSON.stringify(result);
+				},
+			});
+
+			tracingSpan.end();
+
+			if (cacheResult.notModified) {
+				return reply.status(HTTP_NOT_MODIFIED).send();
+			}
+
+			reply.type('application/json');
+			reply.send(JSON.parse(cacheResult.blob));
+		},
+	);
 
 	fastify.get<{
 		Params: { document: string };
@@ -681,24 +677,24 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 
 		// Parse filter from query string
 		const { logger } = await import('@imports/utils/logger');
-		logger.info(`[dataApi] Raw filter from query: ${JSON.stringify(req.query.filter)}`);
+		logger.debug({ filterLength: isString(req.query.filter) ? req.query.filter.length : 0 }, '[dataApi] Raw filter from query');
 
 		const parseFilterResult = (() => {
 			if (req.query.filter == null) {
-				logger.warn(`[dataApi] No filter in query string!`);
+				logger.warn('[dataApi] No filter in query string');
 				return { success: true as const, data: undefined as KonFilter | undefined };
 			}
 			if (isString(req.query.filter)) {
 				try {
 					const parsed = JSON.parse(req.query.filter.replace(/\+/g, ' ')) as KonFilter;
-					logger.info(`[dataApi] Parsed filter (string): ${JSON.stringify(parsed)}`);
+					logger.debug('[dataApi] Parsed filter (string)');
 					return { success: true as const, data: parsed };
 				} catch (error) {
 					logger.error(`[dataApi] Error parsing filter: ${(error as Error).message}`);
 					tracingSpan.end();
 					const errorMsg = getGraphErrorMessage('GRAPH_FILTER_INVALID', {
 						document: req.params.document,
-						details: (error as Error).message
+						details: (error as Error).message,
 					});
 					return {
 						success: false as const,
@@ -708,7 +704,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			}
 			if (isObject(req.query.filter)) {
 				const parsed = req.query.filter as KonFilter;
-				logger.info(`[dataApi] Parsed filter (object): ${JSON.stringify(parsed)}`);
+				logger.debug('[dataApi] Parsed filter (object)');
 				return { success: true as const, data: parsed };
 			}
 			return { success: true as const, data: undefined as KonFilter | undefined };
@@ -731,7 +727,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 					tracingSpan.end();
 					const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_INVALID', {
 						document: req.params.document,
-						details: (error as Error).message
+						details: (error as Error).message,
 					});
 					return {
 						success: false as const,
@@ -895,11 +891,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			return { blob: cached.blob, fromCache: true, notModified: false };
 		}
 
-		// Cache miss — check for force refresh
-		const clientCacheControl = req.headers['cache-control'];
-		const forceRefresh = clientCacheControl === 'no-cache';
-
-		// Execute computation
+		// Cache miss — execute computation
 		const blob = await compute();
 
 		// Store in cache (skip on force refresh to not pollute cache with forced results)
@@ -972,9 +964,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		let parsedFilter: KonFilter | undefined;
 		if (req.query.filter != null) {
 			try {
-				parsedFilter = isString(req.query.filter)
-					? JSON.parse(decodeURIComponent(req.query.filter as string))
-					: (req.query.filter as unknown as KonFilter);
+				parsedFilter = isString(req.query.filter) ? JSON.parse(decodeURIComponent(req.query.filter as string)) : (req.query.filter as unknown as KonFilter);
 			} catch {
 				tracingSpan.end();
 				return reply.status(HTTP_BAD_REQUEST).send(errorReturn('Invalid filter JSON'));
@@ -993,13 +983,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const userId = userResult.data._id;
 
 		// Check cache
-		const cacheKey = buildCacheKey(
-			userId,
-			req.params.document,
-			kpiConfig.operation,
-			kpiConfig.field ?? null,
-			parsedFilter,
-		);
+		const cacheKey = buildCacheKey(userId, req.params.document, kpiConfig.operation, kpiConfig.field ?? null, parsedFilter);
 
 		const cachedEntry = await getCached(cacheKey);
 		if (cachedEntry != null) {
@@ -1056,16 +1040,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		}
 
 		// Store in cache
-		const cacheEntry = await setCached(
-			userId,
-			req.params.document,
-			kpiConfig.operation,
-			kpiConfig.field ?? null,
-			parsedFilter,
-			result.value,
-			result.count,
-			cacheTTL,
-		);
+		const cacheEntry = await setCached(userId, req.params.document, kpiConfig.operation, kpiConfig.field ?? null, parsedFilter, result.value, result.count, cacheTTL);
 
 		// Set HTTP cache headers
 		reply.header('ETag', cacheEntry.etag);

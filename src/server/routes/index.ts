@@ -34,6 +34,7 @@ import notificationApi from './rest/notification/notificationApi';
 import processApi from './rest/process/processApi';
 import subscriptionApi from './rest/subscription/subscriptionApi';
 import rocketchatApi from './rest/rocketchat/livechat';
+import queryApi from './rest/query/queryApi';
 import streamApi from './rest/stream/streamApi';
 import viewPaths from './rest/view/view';
 
@@ -83,6 +84,7 @@ fastify.register(processApi);
 fastify.register(subscriptionApi);
 fastify.register(rocketchatApi);
 fastify.register(streamApi);
+fastify.register(queryApi);
 fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {

@@ -10,7 +10,7 @@
 
 Data: 2026-02
 
-Origem: Adaptado do ADR-0012 do frontend (konecty-ui) para aplicar consistentemente em todo o stack.
+Origem: Adaptado do [ADR-0012 do frontend (konecty-ui)](https://github.com/konecty/konecty-ui/blob/main/docs/adr/0012-padroes-codigo.md) para aplicar consistentemente em todo o stack. **Cumprimento estrito** é exigido: revisões de código e regras de lint devem verificar conformidade.
 
 ---
 
@@ -273,16 +273,50 @@ Não use p-limit quando:
 -   Não há necessidade de limitar paralelismo
 -   Operações são rápidas e não bloqueiam recursos
 
+### 6. Nomes de variáveis e parâmetros
+
+**Regra**: Preferir **nomes descritivos** a variáveis de uma letra (ex.: `f`, `x`, `u`). Letras únicas são aceitáveis apenas em escopo muito limitado e contexto óbvio (ex.: índices `i`, `j` em laços `for`). Em callbacks de `map`, `filter`, `forEach`, etc., usar nomes que descrevam o elemento (ex.: `item`, `user`, `fieldToken`).
+
+**Motivação**: Nomes descritivos melhoram leitura e manutenção; callbacks como `.map(item => item.value)` deixam a intenção clara, enquanto `.map(f => f.value)` obriga o leitor a inferir o significado.
+
+**Exemplo -- Evitar**:
+
+```typescript
+const existingFields = findParams.fields ? findParams.fields.split(',').map(f => f.trim()) : [];
+const ids = items.map(x => x.id);
+```
+
+**Exemplo -- Preferir**:
+
+```typescript
+const existingFields = findParams.fields ? findParams.fields.split(',').map(fieldToken => fieldToken.trim()) : [];
+const ids = items.map(item => item.id);
+```
+
+**Exceção**: Índices em laços numéricos (`i`, `j`, `k`) continuam aceitáveis quando o escopo é de poucas linhas e o contexto é óbvio.
+
+---
+
+## Cumprimento Estrito
+
+-   **Code reviews**: Devem verificar prefer-const, ausência de números mágicos, estilo funcional, uso de p-limit em loops assíncronos, **ausência de variáveis/imports não utilizados** e **nomes descritivos em callbacks** (evitar parâmetros de uma letra como `f`, `x`, `u` exceto índices `i`, `j`).
+-   **Linting**: Usar regras ESLint:
+    -   `prefer-const` e `no-magic-numbers` (ou equivalente) quando aplicável.
+    -   **`@typescript-eslint/no-unused-vars`**: Nenhuma variável, parâmetro ou import pode ser definido e não utilizado; remover ou usar. Em tipos, preferir `import type` apenas quando o tipo for referenciado no arquivo.
+-   **Código novo**: Todo código novo no backend deve seguir estes padrões; código legado deve ser atualizado quando alterado.
+
 ---
 
 ## Referências
 
 -   [ESLint prefer-const rule](https://eslint.org/docs/latest/rules/prefer-const)
 -   [ESLint no-magic-numbers rule](https://eslint.org/docs/latest/rules/no-magic-numbers)
+-   [@typescript-eslint/no-unused-vars](https://typescript-eslint.io/rules/no-unused-vars): garantir que variáveis, parâmetros e imports não fiquem não utilizados.
 -   [ADR-0001: Deprecação Bluebird e Migração para p-limit](../../../docs/adr/0001-deprecacao-bluebird.md)
 -   [p-limit (npm)](https://www.npmjs.com/package/p-limit)
 -   [MDN Array Methods](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)
--   [Frontend ADR-0012: Padrões de Código](../../../../ui/docs/adr/0012-padroes-codigo.md)
+-   [MDN JavaScript code style guide](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Code_style_guide/JavaScript): nomes descritivos em callbacks
+-   Frontend ADR-0012: Padrões de Código (konecty-ui) — documento de origem deste ADR
 
 ---
 

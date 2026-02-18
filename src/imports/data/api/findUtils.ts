@@ -24,14 +24,14 @@ import { Collection, Document, Filter, FindOptions } from 'mongodb';
 import addDetailFieldsIntoAggregate from '../populateDetailFields/intoAggregate';
 
 function buildSortOptions(
-	metaObject: typeof MetaObject.Meta[string],
+	metaObject: (typeof MetaObject.Meta)[string],
 	sortArray: unknown,
 	fieldsObject: Record<string, number | { $meta: string }>,
 ): Record<string, number | { $meta: string }> {
 	const sortResult = parseSortArray(sortArray);
 
 	return Object.keys(sortResult.data).reduce<Record<string, number | { $meta: string }>>((acc, key) => {
-		const sortValue = typeof sortResult.data[key] === 'number' ? sortResult.data[key] : (sortResult.data[key] === 'asc' ? 1 : -1);
+		const sortValue = typeof sortResult.data[key] === 'number' ? sortResult.data[key] : sortResult.data[key] === 'asc' ? 1 : -1;
 
 		if (get(metaObject, `fields.${key}.type`) === 'money') {
 			acc[`${key}.value`] = sortValue;
@@ -54,7 +54,7 @@ function buildSortOptions(
 
 function buildAccessConditionsForField(
 	fieldName: string,
-	metaObject: typeof MetaObject.Meta[string],
+	metaObject: (typeof MetaObject.Meta)[string],
 	access: ReturnType<typeof getAccessFor>,
 	fieldsObject: Record<string, number | { $meta: string }>,
 	emptyFields: boolean,
@@ -127,11 +127,7 @@ function buildAccessConditionsMap(
 	}, {});
 }
 
-function calculateConditionsKeys(
-	accessConditions: Record<string, Function>,
-	projection: Record<string, unknown>,
-	emptyFields: boolean,
-): string[] {
+function calculateConditionsKeys(accessConditions: Record<string, Function>, projection: Record<string, unknown>, emptyFields: boolean): string[] {
 	const allKeys = Object.keys(accessConditions);
 
 	if (Object.keys(projection).length === 0) {
@@ -166,7 +162,7 @@ export type BuildFindQueryResult = {
 	accessConditions: Record<string, Function>;
 	conditionsKeys: string[];
 	queryOptions: FindOptions & { projection: Document };
-	metaObject: typeof MetaObject.Meta[string];
+	metaObject: (typeof MetaObject.Meta)[string];
 	user: User;
 	access: ReturnType<typeof getAccessFor>;
 	collection: Collection<DataDocument>;
@@ -190,7 +186,7 @@ export async function buildFindQuery({
 	try {
 		// Import logger at the top to use it throughout the function
 		const { logger } = await import('@imports/utils/logger');
-		
+
 		tracingSpan?.setAttribute('document', document);
 
 		tracingSpan?.addEvent('Get User', { authTokenId, contextUser: contextUser?._id });
@@ -233,7 +229,7 @@ export async function buildFindQuery({
 		if (!isObject(filter) && displayName != null && displayType != null) {
 			const displayMeta = MetaObject.DisplayMeta[`${document}:${displayType}:${displayName}`];
 			if (displayMeta && 'filter' in displayMeta && displayMeta.filter) {
-				logger.info(`[buildFindQuery] Applying display meta filter for ${document}:${displayType}:${displayName}`);
+				logger.debug(`[buildFindQuery] Applying display meta filter for ${document}:${displayType}:${displayName}`);
 				queryFilter.filters?.push(displayMeta.filter);
 			}
 		}
@@ -245,24 +241,22 @@ export async function buildFindQuery({
 		// Add user-provided filter if it exists
 		if (isObject(filter)) {
 			// Only add if filter has conditions or filters (not empty)
-			const hasConditions = (filter.conditions && (
-				(Array.isArray(filter.conditions) && filter.conditions.length > 0) ||
-				(isObject(filter.conditions) && Object.keys(filter.conditions).length > 0)
-			));
-			const hasFilters = (filter.filters && Array.isArray(filter.filters) && filter.filters.length > 0);
-			
+			const hasConditions =
+				filter.conditions &&
+				((Array.isArray(filter.conditions) && filter.conditions.length > 0) || (isObject(filter.conditions) && Object.keys(filter.conditions).length > 0));
+			const hasFilters = filter.filters && Array.isArray(filter.filters) && filter.filters.length > 0;
+
 			if (hasConditions || hasFilters) {
 				queryFilter.filters?.push(filter);
 			} else {
-				logger.info(`[buildFindQuery] Filter object is empty, skipping`);
+				logger.debug(`[buildFindQuery] Filter object is empty, skipping`);
 			}
 		}
 
 		// Parse filters
 		tracingSpan?.addEvent('Parsing filter');
-		logger.info(`[buildFindQuery] Original filter received: ${JSON.stringify(filter)}`);
-		logger.info(`[buildFindQuery] QueryFilter after merging: ${JSON.stringify(queryFilter)}`);
-		
+		logger.debug('[buildFindQuery] Original filter and QueryFilter merged (omit from logs to avoid data leakage)');
+
 		const readFilter = parseFilterObject(queryFilter, metaObject, { user });
 		if (readFilter.success === false) {
 			return readFilter as KonectyResultError;
@@ -273,8 +267,8 @@ export async function buildFindQuery({
 		// Note: This replicates a bug in find.ts where it uses the KonectyResult object instead of readFilter.data
 		// but we need to match the behavior for consistency
 		const query = (isObject(readFilter) && Object.keys(readFilter).length > 0 ? readFilter : {}) as Filter<DataDocument> & { $text?: { $search: string } };
-		
-		logger.info(`[buildFindQuery] Parsed MongoDB query: ${JSON.stringify(query)}`);
+
+		logger.debug('[buildFindQuery] Parsed MongoDB query (omit from logs to avoid data leakage)');
 
 		if (isObject(filter) && isString(filter.textSearch)) {
 			query.$text = { $search: filter.textSearch };
@@ -285,7 +279,7 @@ export async function buildFindQuery({
 		// Special case: limit === -1 means "no limit" (used by pivot tables that need all data)
 		const parsedLimit = parseInt(String(limit), 10);
 		const noLimit = parsedLimit === -1;
-		const effectiveLimit = noLimit ? undefined : (_isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parsedLimit);
+		const effectiveLimit = noLimit ? undefined : _isNaN(limit) || limit == null || Number(limit) <= 0 ? DEFAULT_PAGE_SIZE : parsedLimit;
 
 		const queryOptions: FindOptions & { projection: Document } = {
 			limit: effectiveLimit,
@@ -311,8 +305,8 @@ export async function buildFindQuery({
 		}
 
 		tracingSpan?.addEvent('Calculating field permissions');
-		const accessConditionsResult = Object.keys(metaObject.fields).map<KonectyResult<{ fieldName: string; condition: Function } | null>>(
-			fieldName => buildAccessConditionsForField(fieldName, metaObject, access, fieldsObject as Record<string, number | { $meta: string }>, emptyFields, user),
+		const accessConditionsResult = Object.keys(metaObject.fields).map<KonectyResult<{ fieldName: string; condition: Function } | null>>(fieldName =>
+			buildAccessConditionsForField(fieldName, metaObject, access, fieldsObject as Record<string, number | { $meta: string }>, emptyFields, user),
 		);
 
 		queryOptions.projection = clearProjectionPathCollision(fieldsObject);
@@ -376,4 +370,3 @@ export async function buildFindQuery({
 		};
 	}
 }
-

@@ -76,8 +76,8 @@ const collectDataFromStream = async (stream: Readable): Promise<Record<string, u
 			buffer = lines.pop() ?? '';
 
 			lines
-				.filter((line) => line.trim().length > 0)
-				.forEach((line) => {
+				.filter(line => line.trim().length > 0)
+				.forEach(line => {
 					try {
 						documents.push(JSON.parse(line));
 					} catch {
@@ -113,7 +113,7 @@ const sendDataToPython = async (pythonProcess: ChildProcess, documents: Record<s
 			return;
 		}
 
-		documents.forEach((doc) => {
+		documents.forEach(doc => {
 			pythonProcess.stdin!.write(JSON.stringify(doc) + NEWLINE_SEPARATOR);
 		});
 
@@ -131,11 +131,7 @@ const sendDataToPython = async (pythonProcess: ChildProcess, documents: Record<s
  * Sum/avg/min/max: findStream → field permissions → Python/Polars.
  * Percentage is handled client-side via two parallel calls (no backend support needed).
  */
-export default async function kpiStream({
-	kpiConfig,
-	tracingSpan,
-	...findParams
-}: KpiStreamParams): Promise<KpiStreamResult | KonectyResultError> {
+export default async function kpiStream({ kpiConfig, tracingSpan, ...findParams }: KpiStreamParams): Promise<KpiStreamResult | KonectyResultError> {
 	let pythonProcess: ChildProcess | null = null;
 
 	try {
@@ -186,10 +182,10 @@ export default async function kpiStream({
 		const projectionFields = [field];
 
 		// Merge with existing fields if any
-		const existingFields = findParams.fields ? findParams.fields.split(',').map((f) => f.trim()) : [];
+		const existingFields = findParams.fields ? findParams.fields.split(',').map(fieldToken => fieldToken.trim()) : [];
 		const allFields = [...new Set([...existingFields, ...projectionFields])];
 
-		logger.info(`KPI fields for MongoDB projection: ${allFields.join(', ')}`);
+		logger.debug({ fieldsCount: allFields.length }, 'KPI fields for MongoDB projection');
 
 		// Get configurable limit
 		const KPI_MAX_RECORDS = parseInt(process.env.KPI_MAX_RECORDS ?? String(KPI_MAX_RECORDS_DEFAULT), 10);
@@ -211,14 +207,14 @@ export default async function kpiStream({
 
 		const { data: mongoStream, total } = streamResult;
 
-		logger.info(`KPI total records from findStream: ${total ?? 'unknown'}`);
+		logger.debug({ total: total ?? null }, 'KPI total records from findStream');
 
 		// Collect data from stream
 		tracingSpan?.addEvent('Collecting KPI data from stream');
 		const startCollect = Date.now();
 		const documents = await collectDataFromStream(mongoStream);
 		const collectTime = Date.now() - startCollect;
-		logger.info(`KPI collected ${documents.length} documents in ${collectTime}ms`);
+		logger.debug({ count: documents.length, collectTimeMs: collectTime }, 'KPI collected documents');
 
 		if (documents.length === 0) {
 			return {
@@ -241,7 +237,6 @@ export default async function kpiStream({
 
 		// Send data to Python
 		tracingSpan?.addEvent('Sending data to Python');
-		logger.info(`Sending ${documents.length} documents to Python for KPI aggregation...`);
 		const startPython = Date.now();
 		await sendDataToPython(pythonProcess, documents);
 
@@ -249,7 +244,7 @@ export default async function kpiStream({
 		tracingSpan?.addEvent('Collecting result from Python');
 		const pythonResult = await collectResultFromPython(pythonProcess);
 		const pythonTime = Date.now() - startPython;
-		logger.info(`Python KPI aggregation completed in ${pythonTime}ms`);
+		logger.debug({ pythonTimeMs: pythonTime }, 'Python KPI aggregation completed');
 
 		// Extract numeric result from Python output
 		// pythonResult.data is the result array, but for KPI it's a single object

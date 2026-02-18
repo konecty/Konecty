@@ -10,7 +10,7 @@
 
 Date: 2026-02
 
-Origin: Adapted from frontend ADR-0012 (konecty-ui) to apply consistently across the full stack.
+Origin: Adapted from frontend [ADR-0012 (konecty-ui)](https://github.com/konecty/konecty-ui/blob/main/docs/adr/0012-padroes-codigo.md) to apply consistently across the full stack. **Strict compliance** is required: code reviews and lint rules must verify conformance.
 
 ---
 
@@ -273,6 +273,36 @@ Do not use p-limit when:
 - No need to limit parallelism
 - Operations are fast and do not block resources
 
+### 6. Variable and parameter names
+
+**Rule**: Prefer **descriptive names** over single-letter variables (e.g. `f`, `x`, `u`). Single letters are acceptable only in very limited scope and obvious context (e.g. loop indices `i`, `j`). In `map`, `filter`, `forEach` callbacks, use names that describe the element (e.g. `item`, `user`, `fieldToken`).
+
+**Rationale**: Descriptive names improve readability and maintainability; callbacks like `.map(item => item.value)` make intent clear, whereas `.map(f => f.value)` forces the reader to infer meaning.
+
+**Example — Avoid**:
+
+```typescript
+const existingFields = findParams.fields ? findParams.fields.split(',').map(f => f.trim()) : [];
+const ids = items.map(x => x.id);
+```
+
+**Example — Prefer**:
+
+```typescript
+const existingFields = findParams.fields ? findParams.fields.split(',').map(fieldToken => fieldToken.trim()) : [];
+const ids = items.map(item => item.id);
+```
+
+**Exception**: Loop indices (`i`, `j`, `k`) remain acceptable when scope is a few lines and context is obvious.
+
+---
+
+## Strict Compliance
+
+- **Code reviews**: Must verify prefer-const, no magic numbers, functional style, p-limit usage in async loops, **no unused variables/imports**, and **descriptive names in callbacks** (avoid single-letter parameters like `f`, `x`, `u` except indices `i`, `j`).
+- **Linting**: Use ESLint rules `prefer-const`, `no-magic-numbers` (or equivalent), and `@typescript-eslint/no-unused-vars` where applicable.
+- **New code**: All new backend code must follow these patterns; legacy code should be updated when touched.
+
 ---
 
 ## References
@@ -282,7 +312,8 @@ Do not use p-limit when:
 - [ADR-0001: Bluebird Deprecation and Migration to p-limit](../../../docs/adr/0001-deprecacao-bluebird.md)
 - [p-limit (npm)](https://www.npmjs.com/package/p-limit)
 - [MDN Array Methods](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)
-- [Frontend ADR-0012: Padroes de Codigo](../../../../ui/docs/adr/0012-padroes-codigo.md)
+- [MDN JavaScript code style guide](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Code_style_guide/JavaScript): descriptive names in callbacks
+- Frontend ADR-0012: Code Patterns (konecty-ui) — source document for this ADR
 
 ---
 

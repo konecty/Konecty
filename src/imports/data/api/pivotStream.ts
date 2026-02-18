@@ -72,7 +72,10 @@ function extractFieldsFromPivotConfig(document: string, pivotConfig: PivotConfig
 /**
  * Identify lookup fields in the pivot config
  */
-function getLookupFieldsInfo(document: string, pivotConfig: PivotConfig): Array<{
+function getLookupFieldsInfo(
+	document: string,
+	pivotConfig: PivotConfig,
+): Array<{
 	fieldName: string;
 	lookupDocument: string;
 	descriptionFields: string[];
@@ -191,10 +194,7 @@ async function collectAndPopulateData(
 		}
 
 		try {
-			const lookupDocs = await collection.find(
-				{ _id: { $in: Array.from(ids) } },
-				{ projection },
-			).toArray();
+			const lookupDocs = await collection.find({ _id: { $in: Array.from(ids) } }, { projection }).toArray();
 
 			const dataMap = new Map<string, Record<string, unknown>>();
 			for (const doc of lookupDocs) {
@@ -202,7 +202,7 @@ async function collectAndPopulateData(
 			}
 			lookupData.set(lookupField.fieldName, dataMap);
 
-			logger.info(`Populated ${dataMap.size} records for lookup field ${lookupField.fieldName}`);
+			logger.debug({ field: lookupField.fieldName, count: dataMap.size }, 'Populated records for lookup field');
 		} catch (err) {
 			logger.error(err, `Error fetching lookup data for ${lookupField.fieldName}`);
 		}
@@ -275,27 +275,25 @@ export default async function pivotStream({
 		// 0.1 Extract fields from pivot config for proper projection
 		const pivotFields = extractFieldsFromPivotConfig(findParams.document, pivotConfig);
 		tracingSpan?.addEvent('Extracted pivot fields', { fields: pivotFields.join(',') });
-		logger.info(`Pivot fields extracted: ${pivotFields.join(', ')}`);
+		logger.debug({ pivotFields }, 'Pivot fields extracted');
 
 		// 0.2 Identify lookup fields that need population
 		const lookupFields = getLookupFieldsInfo(findParams.document, pivotConfig);
-		logger.info(`Lookup fields to populate: ${lookupFields.map(l => `${l.fieldName} -> ${l.lookupDocument}`).join(', ')}`);
+		logger.debug({ lookupFields: lookupFields.map(l => ({ field: l.fieldName, doc: l.lookupDocument })) }, 'Lookup fields to populate');
 
 		// Merge with existing fields if any
 		const existingFields = findParams.fields ? findParams.fields.split(',').map(f => f.trim()) : [];
 		const allFields = [...new Set([...existingFields, ...pivotFields])];
-		logger.info(`All fields for MongoDB projection: ${allFields.join(', ')}`);
+		logger.debug({ allFieldsCount: allFields.length }, 'All fields for MongoDB projection');
 
 		// 1. Call findStream to get MongoDB data stream
 		// Use a configurable limit to prevent memory issues
 		// Default to 100,000 records which should be reasonable for most pivot tables
 		const PIVOT_MAX_RECORDS = parseInt(process.env.PIVOT_MAX_RECORDS ?? '100000', 10);
 		tracingSpan?.addEvent('Calling findStream to get data');
-		
-		// Log filter for debugging
-		logger.info(`Pivot query filter: ${JSON.stringify(findParams.filter)}`);
-		logger.info(`Pivot query limit: ${PIVOT_MAX_RECORDS}`);
-		
+
+		logger.debug({ limit: PIVOT_MAX_RECORDS }, 'Pivot query (filter omitted to avoid data leakage)');
+
 		const streamResult = await findStream({
 			...findParams,
 			fields: allFields.join(','),
@@ -304,8 +302,6 @@ export default async function pivotStream({
 			transformDatesToString,
 			tracingSpan,
 		});
-		
-		logger.info(`Pivot query with limit: ${PIVOT_MAX_RECORDS}`);
 
 		if (streamResult.success === false) {
 			return streamResult;
@@ -313,18 +309,15 @@ export default async function pivotStream({
 
 		const { data: mongoStream, total } = streamResult;
 
-		// Log total from findStream (after filters, before limit)
-		logger.info(`Total records from findStream (after filters, before limit): ${total ?? 'unknown'}`);
+		logger.debug({ total: total ?? null }, 'Total records from findStream (after filters, before limit)');
 
 		// 2. Collect data and populate lookups
 		tracingSpan?.addEvent('Collecting and populating lookup data');
-		logger.info('Starting to collect data from MongoDB stream...');
 		const startCollect = Date.now();
 		const populatedData = await collectAndPopulateData(mongoStream, lookupFields);
 		const collectTime = Date.now() - startCollect;
-		logger.info(`Collected ${populatedData.length} documents with populated lookups in ${collectTime}ms`);
-		logger.info(`Total records available (from findStream): ${total ?? 'unknown'}`);
-		
+		logger.debug({ count: populatedData.length, collectTimeMs: collectTime, total: total ?? null }, 'Collected documents with populated lookups');
+
 		// Check if limit was reached using total count from find
 		const totalRecords = total ?? populatedData.length;
 		const limitReached = totalRecords > PIVOT_MAX_RECORDS;
@@ -358,7 +351,6 @@ export default async function pivotStream({
 
 		// 5. Send populated data to Python
 		tracingSpan?.addEvent('Sending data to Python');
-		logger.info(`Sending ${populatedData.length} documents to Python for aggregation...`);
 		const startPython = Date.now();
 		await sendDataToPython(pythonProcess, populatedData);
 
@@ -366,7 +358,7 @@ export default async function pivotStream({
 		tracingSpan?.addEvent('Collecting result from Python');
 		const { data: hierarchyData, grandTotals, columnHeaders } = await collectResultFromPython(pythonProcess);
 		const pythonTime = Date.now() - startPython;
-		logger.info(`Python aggregation completed in ${pythonTime}ms, columnHeaders: ${columnHeaders?.length ?? 0}`);
+		logger.debug({ pythonTimeMs: pythonTime, columnHeadersCount: columnHeaders?.length ?? 0 }, 'Python aggregation completed');
 
 		// 7. Return enriched result
 		tracingSpan?.addEvent('Pivot processing completed', {
@@ -389,7 +381,7 @@ export default async function pivotStream({
 		if (total != null) {
 			result.total = total;
 		}
-		
+
 		// Add limit info if limit was reached
 		if (limitReached) {
 			(result as any).limitInfo = {

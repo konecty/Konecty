@@ -483,15 +483,16 @@ O backend Konecty tem uma arquitetura de ponte Python comprovada documentada nas
 | `graphStream.ts` | `graph_generator.py` (915 linhas) | Graficos SVG com Polars + Pandas/matplotlib |
 | `kpiStream.ts` | `kpi_aggregator.py` (222 linhas) | Agregacoes KPI com Polars |
 
-### Quando Usar a Ponte Python
+### Motor Unico de Agregacao (Decisao YAGNI/DRY)
 
-A ponte Python e usada quando:
+Por principios YAGNI e DRY, **toda agregacao e tratada exclusivamente pelo Python/Polars**. Nao ha camada de agregacao JS separada. Esta decisao:
 
-- O dataset e grande o suficiente para que processamento JS em memoria seria lento (> 10.000 registros)
-- Agregacoes complexas sao necessarias (GROUP BY com multiplos agregadores)
-- Processamento colunar do Polars fornece vantagem significativa de performance (3-10x conforme ADR-0008)
+- Elimina manter os mesmos 9 agregadores em duas linguagens
+- Fornece um unico caminho de codigo no orquestrador (sem logica condicional de threshold)
+- Garante consistencia: o mesmo motor de agregacao e usado para todos os tamanhos de dataset
+- Segue o padrao estabelecido ja usado por tabelas pivot, graficos e widgets KPI
 
-Para datasets menores ou agregacoes simples (`count`, `first`), o orquestrador Node.js trata tudo diretamente sem iniciar Python.
+O overhead do subprocesso para datasets pequenos (~200-500ms) e aceitavel dado os ganhos de simplicidade. Se profiling posterior revelar que e um gargalo, um caminho rapido em JS pode ser adicionado como otimizacao.
 
 ### Proposto: `cross_module_join.py`
 
@@ -892,7 +893,7 @@ SELECT ct.code, ct.name,
 - Todos os agregadores: `count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`
 - Seguranca completa com degradacao graciosa
 - `filter`, `fields`, `sort`, `limit` por relation
-- Ponte Python para grandes datasets
+- Ponte Python como motor unico de agregacao (YAGNI/DRY)
 - Resposta streaming NDJSON
 - Validacao Zod para entrada da consulta
 
@@ -974,7 +975,7 @@ Conforme ADR-0003 (Estrategia de Testes com Jest e Supertest):
 2. **Timeout de consulta**: A consulta cross-module deve ter um `maxTimeMS` diferente do findStream (atualmente 5 min)?
 3. **Log de auditoria**: Devemos registrar o IQR completo para auditoria, ou somente os modulos e usuario?
 4. **Rate limiting**: Os endpoints de consulta devem ter rate limits mais restritos que o find regular?
-5. **Limiar do Python**: Em qual tamanho de dataset devemos alternar de agregacao JS para ponte Python?
+5. ~~**Limiar do Python**~~: **Resolvido** -- Sempre usar Python/Polars (YAGNI/DRY). Sem camada de agregacao JS. Ver Secao 7.
 6. **Relation sem agregador**: Devemos permitir uma relation com apenas sub-relations aninhadas e sem agregadores proprios (pass-through)?
 
 ---

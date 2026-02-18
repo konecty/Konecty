@@ -5,6 +5,14 @@
 		"description": "Postman collection for Konecty API endpoints including OTP authentication",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{ "key": "key", "value": "Authorization", "type": "string" },
+			{ "key": "value", "value": "{{authToken}}", "type": "string" },
+			{ "key": "in", "value": "header", "type": "string" }
+		]
+	},
 	"item": [
 		{
 			"name": "Authentication",
@@ -12,6 +20,7 @@
 				{
 					"name": "Login",
 					"request": {
+						"auth": { "type": "noauth" },
 						"method": "POST",
 						"header": [
 							{
@@ -61,6 +70,7 @@
 						{
 							"name": "Request OTP - Phone",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -220,6 +230,7 @@
 						{
 							"name": "Request OTP - Email",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -271,6 +282,7 @@
 						{
 							"name": "Verify OTP - Phone",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -403,6 +415,7 @@
 						{
 							"name": "Verify OTP - Email",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -462,13 +475,7 @@
 					"name": "Find Stream",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{authToken}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100&sort=[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
 							"host": ["{{baseUrl}}"],
@@ -607,13 +614,7 @@
 					"name": "Find Stream - Contact",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{authToken}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Contact/findStream?limit=50",
 							"host": ["{{baseUrl}}"],
@@ -633,13 +634,7 @@
 					"name": "Find Stream - With Filter",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{authToken}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}&limit=1000",
 							"host": ["{{baseUrl}}"],
@@ -663,13 +658,7 @@
 				"name": "Pivot Table",
 				"request": {
 					"method": "GET",
-					"header": [
-						{
-							"key": "Authorization",
-							"value": "{{authToken}}",
-							"type": "text"
-						}
-					],
+					"header": [],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&pivotConfig={\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
 						"host": ["{{baseUrl}}"],
@@ -774,13 +763,7 @@
 				"name": "Graph - Bar Chart by Status",
 				"request": {
 					"method": "GET",
-					"header": [
-						{
-							"key": "Authorization",
-							"value": "{{authToken}}",
-							"type": "text"
-						}
-					],
+					"header": [],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
 						"host": ["{{baseUrl}}"],
@@ -806,13 +789,7 @@
 				"name": "Graph - Bar Chart by Status (Sum Values)",
 				"request": {
 					"method": "GET",
-					"header": [
-						{
-							"key": "Authorization",
-							"value": "{{authToken}}",
-							"type": "text"
-						}
-					],
+					"header": [],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
 						"host": ["{{baseUrl}}"],
@@ -838,13 +815,7 @@
 				"name": "Graph - Bar Chart by Director",
 				"request": {
 					"method": "GET",
-					"header": [
-						{
-							"key": "Authorization",
-							"value": "{{authToken}}",
-							"type": "text"
-						}
-					],
+					"header": [],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
 						"host": ["{{baseUrl}}"],
@@ -870,13 +841,7 @@
 				"name": "Graph - Pie Chart",
 				"request": {
 					"method": "GET",
-					"header": [
-						{
-							"key": "Authorization",
-							"value": "{{authToken}}",
-							"type": "text"
-						}
-					],
+					"header": [],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
 						"host": ["{{baseUrl}}"],
@@ -900,12 +865,289 @@
 			}
 		]
 	}
+,
+	{
+		"name": "Cross-Module Query",
+		"description": "RFC-0001: Cross-module query API with recursive relations and aggregations. Uses Python/Polars as single aggregation engine.",
+		"item": [
+			{
+				"name": "Example 1: Product + PPO (push + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Product\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"_id\", \"operator\": \"equals\", \"value\": \"fFaJkGaWAdDhvcPH6\" }]\n  },\n  \"fields\": \"code,type\",\n  \"limit\": 1,\n  \"relations\": [\n    {\n      \"document\": \"ProductsPerOpportunities\",\n      \"lookup\": \"product\",\n      \"fields\": \"status,situation,rating,contact\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 100,\n      \"aggregators\": {\n        \"offers\": { \"aggregator\": \"push\" },\n        \"offerCount\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 1: Get a product and all its related offers (ProductsPerOpportunities) using push and count aggregators."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Product\",\"relations\":[\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":234}}\n{\"code\":123,\"type\":\"Apartamento\",\"offers\":[{\"_id\":\"x1\",\"status\":\"Ofertado\",\"rating\":4,\"contact\":{\"_id\":\"c1\",\"name\":{\"full\":\"John Doe\"}}},{\"_id\":\"x2\",\"status\":\"Visitado\",\"rating\":5,\"contact\":{\"_id\":\"c2\",\"name\":{\"full\":\"Jane Doe\"}}}],\"offerCount\":2}"
+					}
+				]
+			},
+			{
+				"name": "Example 2: Contact + Opportunity (count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"name.full\", \"direction\": \"ASC\" }],\n  \"limit\": 1000,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [{ \"term\": \"status\", \"operator\": \"in\", \"value\": [\"Nova\", \"Ofertando Imveis\", \"Em Visitacao\"] }]\n      },\n      \"aggregators\": {\n        \"activeOpportunities\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 2: Count active opportunities per contact."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":156}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"activeOpportunities\":3}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"activeOpportunities\":1}"
+					}
+				]
+			},
+			{
+				"name": "Example 3: Recursive - Contact + Opportunity + PPO",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"status\", \"operator\": \"equals\", \"value\": \"active\" }]\n  },\n  \"fields\": \"code,name\",\n  \"limit\": 100,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [{ \"term\": \"status\", \"operator\": \"in\", \"value\": [\"Nova\", \"Em Visitacao\"] }]\n      },\n      \"fields\": \"code,status,label\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 20,\n      \"aggregators\": {\n        \"opportunities\": { \"aggregator\": \"push\" },\n        \"opportunityCount\": { \"aggregator\": \"count\" }\n      },\n      \"relations\": [\n        {\n          \"document\": \"ProductsPerOpportunities\",\n          \"lookup\": \"opportunity\",\n          \"fields\": \"status,rating,product\",\n          \"limit\": 50,\n          \"aggregators\": {\n            \"products\": { \"aggregator\": \"push\" },\n            \"productCount\": { \"aggregator\": \"count\" }\n          }\n        }\n      ]\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 3: 3-level recursive chain - Contact -> Opportunity -> ProductsPerOpportunities."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Contact\",\"relations\":[\"Opportunity\",\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":456}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"opportunityCount\":2,\"opportunities\":[{\"code\":5001,\"status\":\"Nova\",\"label\":\"Apt 301\",\"productCount\":2,\"products\":[{\"status\":\"Ofertado\",\"rating\":4,\"product\":{\"_id\":\"p1\",\"code\":123}},{\"status\":\"Visitado\",\"rating\":5,\"product\":{\"_id\":\"p2\",\"code\":456}}]},{\"code\":5002,\"status\":\"Em Visitacao\",\"label\":\"Casa 12\",\"productCount\":0,\"products\":[]}]}"
+					}
+				]
+			},
+			{
+				"name": "Example 4: Contact + Opportunity (first aggregator)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n  \"limit\": 200,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"fields\": \"code,status,label\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 1,\n      \"aggregators\": {\n        \"firstOpportunityCode\": { \"aggregator\": \"first\", \"field\": \"code\" },\n        \"firstOpportunityStatus\": { \"aggregator\": \"first\", \"field\": \"status\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 4: Contacts with their first (most recent) related opportunity (first aggregator). Uses Contact + Opportunity with lookup 'contact' (Opportunity.contact points to Contact), which is standard in Konecty. Contacts without opportunities get null for the aggregated fields."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":123}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"firstOpportunityCode\":5001,\"firstOpportunityStatus\":\"Nova\"}\n{\"code\":1002,\"name\":{\"full\":\"Bob Silva\"},\"firstOpportunityCode\":null,\"firstOpportunityStatus\":null}"
+					}
+				]
+			},
+			{
+				"name": "Example 5: Campaign + Opportunity (count + first + avg)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Campaign\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"status\", \"operator\": \"equals\", \"value\": \"Ativo\" }]\n  },\n  \"fields\": \"code,name,type\",\n  \"limit\": 50,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"campaign\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"aggregators\": {\n        \"totalOpportunities\": { \"aggregator\": \"count\" },\n        \"newestOpportunity\": { \"aggregator\": \"first\" },\n        \"avgValue\": { \"aggregator\": \"avg\", \"field\": \"value\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 5: Campaign performance with opportunity count, newest opportunity, and average value."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Campaign\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":200}}\n{\"code\":301,\"name\":\"Summer 2026\",\"type\":\"Digital\",\"totalOpportunities\":45,\"newestOpportunity\":{\"_id\":\"o99\",\"code\":5099,\"status\":\"Nova\",\"label\":\"Lead #5099\"},\"avgValue\":250000}"
+					}
+				]
+			},
+			{
+				"name": "Example 6: Contact + Message (max + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"name.full\", \"direction\": \"ASC\" }],\n  \"limit\": 1000,\n  \"relations\": [\n    {\n      \"document\": \"Message\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [\n          { \"term\": \"type\", \"operator\": \"equals\", \"value\": \"Email\" },\n          { \"term\": \"status\", \"operator\": \"equals\", \"value\": \"Enviada\" }\n        ]\n      },\n      \"aggregators\": {\n        \"lastEmailSentAt\": { \"aggregator\": \"max\", \"field\": \"_createdAt\" },\n        \"totalEmailsSent\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 6: Last email sent date and total email count per contact."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Contact\",\"relations\":[\"Message\"],\"warnings\":[],\"executionTimeMs\":178}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"lastEmailSentAt\":\"2026-02-09T14:30:00.000Z\",\"totalEmailsSent\":12}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"lastEmailSentAt\":\"2026-01-15T09:00:00.000Z\",\"totalEmailsSent\":3}\n{\"code\":1003,\"name\":{\"full\":\"Carlos Mendes\"},\"lastEmailSentAt\":null,\"totalEmailsSent\":0}"
+					}
+				]
+			},
+			{
+				"name": "Example 7: Security Degradation (broker without Product access)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Opportunity\",\n  \"fields\": \"code,status,label\",\n  \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n  \"limit\": 100,\n  \"relations\": [\n    {\n      \"document\": \"Product\",\n      \"lookup\": \"product\",\n      \"fields\": \"code,sale\",\n      \"aggregators\": {\n        \"productCode\": { \"aggregator\": \"first\", \"field\": \"code\" },\n        \"productSale\": { \"aggregator\": \"first\", \"field\": \"sale\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 7: Security degradation. When a broker has no access to Product module, product aggregators return null and a warning is included in _meta."
+				},
+				"response": [
+					{
+						"name": "Success (with access warning)",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"document\":\"Opportunity\",\"relations\":[\"Product\"],\"warnings\":[{\"type\":\"RELATION_ACCESS_DENIED\",\"document\":\"Product\",\"message\":\"User lacks read access to Product\"}],\"executionTimeMs\":98}}\n{\"code\":5001,\"status\":\"Nova\",\"label\":\"Apt 301 - Centro\",\"productCode\":null,\"productSale\":null}\n{\"code\":5002,\"status\":\"Em Visitacao\",\"label\":\"Casa 12 - Praia\",\"productCode\":null,\"productSale\":null}"
+					}
+				]
+			},
+			{
+				"name": "Invalid Query (validation error)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"aggregators\": {}\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "Negative test: Empty aggregators object should fail Zod validation."
+				},
+				"response": [
+					{
+						"name": "Validation Error",
+						"status": "Bad Request",
+						"code": 400,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": "{\"success\":false,\"errors\":[{\"message\":\"relations.0.aggregators: At least one aggregator is required per relation\"}]}"
+					}
+				]
+			},
+			{
+				"name": "Empty Result (no matching records)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"_id\", \"operator\": \"equals\", \"value\": \"nonexistent-id\" }]\n  },\n  \"fields\": \"code,name\",\n  \"limit\": 10,\n  \"includeTotal\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"aggregators\": {\n        \"count\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "Edge case: Query that matches no primary records returns empty NDJSON with _meta."
+				},
+				"response": [
+					{
+						"name": "Empty Result",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [
+							{ "key": "Content-Type", "value": "application/x-ndjson" },
+							{ "key": "X-Total-Count", "value": "0" }
+						],
+						"body": "{\"_meta\":{\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":45}}"
+					}
+				]
+			}
+		]
+	}
 ],
 	"variable": [
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:3000",
 			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string",
+			"description": "Token from Login response (authId). Set after running Login or paste your session token."
 		}
 	]
 }

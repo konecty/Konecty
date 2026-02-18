@@ -563,15 +563,16 @@ Step 6: Send NDJSON data lines to stdin, then close stdin
 Step 7: Read JSON-RPC response + result from stdout
 ```
 
-### When to Use the Python Bridge
+### Single Aggregation Engine (YAGNI/DRY Decision)
 
-The Python bridge is used when:
+Per YAGNI and DRY principles, **all aggregation is handled exclusively by Python/Polars**. There is no separate JS aggregation layer. This decision:
 
-- The dataset is large enough that in-memory JS processing would be slow (> 10,000 records)
-- Complex aggregations are needed (GROUP BY with multiple aggregators)
-- Polars' columnar processing provides a significant performance advantage (3-10x per ADR-0008)
+- Eliminates maintaining the same 9 aggregators in two languages
+- Provides a single code path in the orchestrator (no conditional threshold logic)
+- Ensures consistency: the same aggregation engine is used for all dataset sizes
+- Follows the established pattern already used by pivot tables, graphs, and KPI widgets
 
-For smaller datasets or simple aggregations (`count`, `first`), the Node.js orchestrator handles everything directly without spawning Python.
+The subprocess overhead for small datasets (~200-500ms) is acceptable given the simplicity gains. If profiling later reveals this is a bottleneck, a JS fast path can be added as an optimization.
 
 ### Proposed: `cross_module_join.py`
 
@@ -681,9 +682,8 @@ The `_meta` first line should include warnings for:
 |------|---------|
 | `src/imports/data/api/crossModuleQuery.ts` | Main recursive query engine orchestrator |
 | `src/imports/data/api/crossModuleQueryValidator.ts` | Zod schema validation for JSON queries |
-| `src/imports/data/api/sqlToRelationsParser.ts` | SQL-to-IQR translator using `node-sql-parser` |
-| `src/imports/data/api/relationAggregators.ts` | Aggregator logic (count, push, first, etc.) |
-| `src/imports/types/crossModuleQuery.ts` | TypeScript types for IQR and query format |
+| `src/imports/data/api/sqlToRelationsParser.ts` | SQL-to-IQR translator using `node-sql-parser` (Phase 2) |
+| `src/imports/types/crossModuleQuery.ts` | TypeScript types and Zod schemas for query format |
 | `src/server/routes/rest/query/queryApi.ts` | Fastify route definitions |
 | `src/scripts/python/cross_module_join.py` | Polars-based aggregation script |
 
@@ -1133,7 +1133,7 @@ SELECT ct.code, ct.name,
 - All aggregators: `count`, `sum`, `avg`, `min`, `max`, `first`, `last`, `push`, `addToSet`
 - Full security with graceful degradation
 - Per-relation `filter`, `fields`, `sort`, `limit`
-- Python bridge for large datasets
+- Python bridge as single aggregation engine (YAGNI/DRY)
 - NDJSON streaming response
 - Zod validation for query input
 
@@ -1225,7 +1225,7 @@ Use Perplexity for architectural research:
 2. **Query timeout**: Should the cross-module query have a different `maxTimeMS` than findStream (currently 5 min)?
 3. **Audit logging**: Should we log the full IQR for audit purposes, or just the modules and user?
 4. **Rate limiting**: Should the query endpoints have stricter rate limits than regular find?
-5. **Python threshold**: At what dataset size should we switch from JS aggregation to Python bridge?
+5. ~~**Python threshold**~~: **Resolved** -- Always use Python/Polars (YAGNI/DRY). No JS aggregation layer. See Section 7.
 6. **Relation without aggregator**: Should we allow a relation with only nested sub-relations and no aggregators of its own (pass-through)?
 
 ---
