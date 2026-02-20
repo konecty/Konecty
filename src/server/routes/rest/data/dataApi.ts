@@ -803,39 +803,55 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		}
 		const userId = userResult.data._id;
 
-		const cacheResult = await withBlobCache({
-			req: req as unknown as { headers: Record<string, string | string[] | undefined> },
-			reply,
-			userId,
-			document: req.params.document,
-			operation: 'graph',
-			configHash: hashConfig(graphConfig),
-			filter: parsedFilter,
-			cacheTTL,
-			compute: async () => {
-				const result = await graphStream({
-					authTokenId,
-					document: req.params.document,
-					displayName: req.query.displayName,
-					displayType: req.query.displayType,
-					fields: req.query.fields,
-					filter: parsedFilter,
-					sort: req.query.sort,
-					limit: String(limit),
-					start: req.query.start,
-					withDetailFields: req.query.withDetailFields,
-					graphConfig,
-					lang,
-					tracingSpan,
-				});
+		let cacheResult: { blob: string; fromCache: boolean; notModified: boolean };
+		try {
+			cacheResult = await withBlobCache({
+				req: req as unknown as { headers: Record<string, string | string[] | undefined> },
+				reply,
+				userId,
+				document: req.params.document,
+				operation: 'graph',
+				configHash: hashConfig(graphConfig),
+				filter: parsedFilter,
+				cacheTTL,
+				compute: async () => {
+					const result = await graphStream({
+						authTokenId,
+						document: req.params.document,
+						displayName: req.query.displayName,
+						displayType: req.query.displayType,
+						fields: req.query.fields,
+						filter: parsedFilter,
+						sort: req.query.sort,
+						limit: String(limit),
+						start: req.query.start,
+						withDetailFields: req.query.withDetailFields,
+						graphConfig,
+						lang,
+						tracingSpan,
+					});
 
-				if (result.success === false) {
-					throw new Error(JSON.stringify(result));
+					if (result.success === false) {
+						throw new Error(JSON.stringify(result));
+					}
+
+					return result.svg;
+				},
+			});
+		} catch (err) {
+			tracingSpan.end();
+			const errMessage = err instanceof Error ? err.message : String(err);
+			try {
+				const parsed = JSON.parse(errMessage) as { success?: false; errors?: Array<{ code?: string }> };
+				if (parsed.success === false && Array.isArray(parsed.errors)) {
+					const status = parsed.errors[0]?.code === 'GRAPH_FIELD_NOT_FOUND' ? 400 : 500;
+					return reply.status(status).type('application/json').send(parsed);
 				}
-
-				return result.svg;
-			},
-		});
+			} catch {
+				// not our JSON
+			}
+			return reply.status(500).type('application/json').send({ success: false, errors: [{ message: errMessage }] });
+		}
 
 		tracingSpan.end();
 
@@ -857,7 +873,7 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	/**
 	 * ADR-0049 / DRY: Shared cache helper for blob-based endpoints (graph SVG, pivot JSON).
 	 * Encapsulates: check cache → ETag/304 → cache miss → compute() → store → HTTP headers.
-	 * Keeps the cache pattern in a single place instead of duplicating across endpoints.
+	 * When client sends Cache-Control: no-cache (e.g. widget refresh), bypasses cache so compute() runs.
 	 */
 	const withBlobCache = async (opts: {
 		req: { headers: Record<string, string | string[] | undefined> };
@@ -873,25 +889,30 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		const { req, reply, userId, document, operation, configHash, filter, cacheTTL, compute } = opts;
 
 		const cacheKey = buildCacheKey(userId, document, operation, configHash, filter);
+		const clientCacheControl = req.headers['cache-control'];
+		const cacheControlStr = Array.isArray(clientCacheControl) ? clientCacheControl[0] : clientCacheControl;
+		const forceRefresh = typeof cacheControlStr === 'string' && cacheControlStr.toLowerCase().includes('no-cache');
 
-		// Check cache
-		const cached = await getCachedBlob(cacheKey);
-		if (cached != null) {
-			const clientEtag = req.headers['if-none-match'];
-			if (clientEtag != null && clientEtag === cached.etag) {
+		// When client requests force refresh (e.g. widget refresh button), skip cache lookup
+		if (!forceRefresh) {
+			const cached = await getCachedBlob(cacheKey);
+			if (cached != null) {
+				const clientEtag = req.headers['if-none-match'];
+				if (clientEtag != null && clientEtag === cached.etag) {
+					reply.header('ETag', cached.etag);
+					reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
+					reply.header('Vary', 'Authorization, Cookie');
+					return { blob: '', fromCache: true, notModified: true };
+				}
+
 				reply.header('ETag', cached.etag);
 				reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
 				reply.header('Vary', 'Authorization, Cookie');
-				return { blob: '', fromCache: true, notModified: true };
+				return { blob: cached.blob, fromCache: true, notModified: false };
 			}
-
-			reply.header('ETag', cached.etag);
-			reply.header('Cache-Control', `private, max-age=${cacheTTL}, stale-while-revalidate=${STALE_WHILE_REVALIDATE_SECONDS}`);
-			reply.header('Vary', 'Authorization, Cookie');
-			return { blob: cached.blob, fromCache: true, notModified: false };
 		}
 
-		// Cache miss — execute computation
+		// Cache miss or force refresh — execute computation
 		const blob = await compute();
 
 		// Store in cache (skip on force refresh to not pollute cache with forced results)

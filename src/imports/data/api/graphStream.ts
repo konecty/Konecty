@@ -66,33 +66,22 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 		if (field.type === 'lookup' || field.type === 'inheritLookup') {
 			// For lookups, we only need _id - we'll populate the rest later
 			fields.add(`${baseFieldName}._id`);
-		} else if (field.type === 'address') {
-			const addressFields = ['city', 'state', 'country', 'district', 'place', 'number', 'postalCode', 'complement', 'placeType'];
-			addressFields.forEach(af => {
-				fields.add(`${fieldPath}.${af}`);
-			});
-		} else if (field.type === 'money') {
-			fields.add(`${fieldPath}.value`);
-			fields.add(`${fieldPath}.currency`);
-		} else if (field.type === 'personName') {
-			fields.add(`${fieldPath}.full`);
-			fields.add(`${fieldPath}.first`);
-			fields.add(`${fieldPath}.last`);
-		} else if (field.type === 'phone') {
-			fields.add(`${fieldPath}.phoneNumber`);
-			fields.add(`${fieldPath}.countryCode`);
-		} else if (field.type === 'email') {
-			fields.add(`${fieldPath}.address`);
+		} else if (['address', 'money', 'personName', 'phone', 'email'].includes(field.type)) {
+			// Use the parent field name to avoid clearProjectionPathCollision stripping sibling subfields
+			fields.add(baseFieldName);
 		} else {
 			fields.add(fieldPath);
 		}
 	};
 
 	// Extract fields from xAxis, yAxis, categoryField, and series
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+
 	if (graphConfig.xAxis?.field) {
 		expandField(graphConfig.xAxis.field);
 	}
-	if (graphConfig.yAxis?.field) {
+	// yAxis is legacy — skip when series are present (series take precedence)
+	if (graphConfig.yAxis?.field && !hasSeries) {
 		expandField(graphConfig.yAxis.field);
 	}
 	if (graphConfig.categoryField) {
@@ -101,9 +90,8 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 		// System fields starting with _ are already handled by expandField, but ensure it's explicitly added
 		fields.add(graphConfig.categoryField);
 	}
-	// Extract fields from series
-	if (graphConfig.series) {
-		graphConfig.series.forEach(serie => {
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
 			if (serie.field) {
 				expandField(serie.field);
 			}
@@ -114,7 +102,8 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 	// This ensures _createdAt, _updatedAt, etc. are available even if projection filters them
 	// NOTE: System fields that are lookups are handled by expandField above (they get _id suffix)
 	// Here we only add non-lookup system fields (like _createdAt, _updatedAt, _id)
-	const systemFieldsToCheck = [graphConfig.categoryField, graphConfig.xAxis?.field, graphConfig.yAxis?.field];
+	const systemFieldsToCheck: (string | undefined)[] = [graphConfig.categoryField, graphConfig.xAxis?.field];
+	if (!hasSeries && graphConfig.yAxis?.field) systemFieldsToCheck.push(graphConfig.yAxis.field);
 	if (graphConfig.series) {
 		graphConfig.series.forEach(serie => {
 			if (serie.field) systemFieldsToCheck.push(serie.field);
@@ -137,6 +126,38 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 	});
 
 	return Array.from(fields);
+}
+
+/**
+ * Validate that every field path used in the graph config exists on the document meta.
+ * Prevents RPC "Field not found" from Python when the document has no such field.
+ */
+function validateGraphFieldsExist(
+	document: string,
+	graphConfig: GraphConfig,
+): { valid: true } | { valid: false; field: string } {
+	const meta = MetaObject.Meta[document];
+	if (meta == null) return { valid: true };
+
+	const fieldPaths: string[] = [];
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+	if (graphConfig.xAxis?.field) fieldPaths.push(graphConfig.xAxis.field);
+	// yAxis is legacy — skip validation when series are present (series take precedence)
+	if (graphConfig.yAxis?.field && !hasSeries) fieldPaths.push(graphConfig.yAxis.field);
+	if (graphConfig.categoryField) fieldPaths.push(graphConfig.categoryField);
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
+			if (serie.field) fieldPaths.push(serie.field);
+		});
+	}
+
+	const invalidField = fieldPaths.find(path => {
+		if (!path) return false;
+		const baseFieldName = path.split('.')[0];
+		if (baseFieldName.startsWith('_')) return false;
+		return meta.fields[baseFieldName] == null;
+	});
+	return invalidField != null ? { valid: false, field: invalidField } : { valid: true };
 }
 
 /**
@@ -177,19 +198,19 @@ function getLookupFieldsInfo(
 		}
 	};
 
-	// Process xAxis, yAxis, categoryField, and series
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+
 	if (graphConfig.xAxis?.field) {
 		processField(graphConfig.xAxis.field);
 	}
-	if (graphConfig.yAxis?.field) {
+	if (graphConfig.yAxis?.field && !hasSeries) {
 		processField(graphConfig.yAxis.field);
 	}
 	if (graphConfig.categoryField) {
 		processField(graphConfig.categoryField);
 	}
-	// Process series fields
-	if (graphConfig.series) {
-		graphConfig.series.forEach(serie => {
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
 			if (serie.field) {
 				processField(serie.field);
 			}
@@ -376,6 +397,16 @@ export default async function graphStream({
 		tracingSpan?.addEvent('Enriching graph config with metadata');
 		const enrichedConfig = enrichGraphConfig(findParams.document, graphConfig, findParams.lang || 'pt_BR');
 		logger.debug({ lang: findParams.lang || 'pt_BR' }, 'Enriched graph config');
+
+		const fieldValidation = validateGraphFieldsExist(findParams.document, enrichedConfig);
+		if (!fieldValidation.valid) {
+			tracingSpan?.end();
+			const errorMsg = getGraphErrorMessage('GRAPH_FIELD_NOT_FOUND', {
+				field: fieldValidation.field,
+				document: findParams.document,
+			});
+			return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
+		}
 
 		// 1.1 Extract fields from graph config for proper projection
 		const graphFields = extractFieldsFromGraphConfig(findParams.document, enrichedConfig);

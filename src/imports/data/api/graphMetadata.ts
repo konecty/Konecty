@@ -149,14 +149,18 @@ export function enrichGraphConfig(document: string, graphConfig: GraphConfig, la
 		};
 	}
 
-	// Enriquecer yAxis com label traduzido (legado)
-	if (graphConfig.yAxis?.field) {
+	// Enriquecer yAxis com label traduzido (legado — skip when series are present)
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+	if (graphConfig.yAxis?.field && !hasSeries) {
 		const fieldMeta = resolveFieldMeta(document, graphConfig.yAxis.field, lang);
 		const shouldUseMetaLabel = isUntranslatedLabel(graphConfig.yAxis.label, graphConfig.yAxis.field);
 		enrichedConfig.yAxis = {
 			...graphConfig.yAxis,
 			label: shouldUseMetaLabel ? fieldMeta.label : graphConfig.yAxis.label,
 		};
+	} else if (hasSeries && graphConfig.yAxis?.field) {
+		// Strip legacy yAxis when series are present to avoid downstream confusion
+		enrichedConfig.yAxis = undefined;
 	}
 
 	// Enriquecer series com labels traduzidos
