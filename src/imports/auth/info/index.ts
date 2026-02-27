@@ -39,6 +39,7 @@ export async function userInfo(authTokenId?: string | null | undefined): Promise
 		watermark: MetaObject.Namespace.watermark,
 		addressComplementValidation: MetaObject.Namespace.addressComplementValidation,
 		addressSource: MetaObject.Namespace.addressSource,
+		enableCustomThemes: (MetaObject.Namespace as { enableCustomThemes?: boolean }).enableCustomThemes !== false,
 	};
 
 	try {

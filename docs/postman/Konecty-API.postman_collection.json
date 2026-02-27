@@ -475,7 +475,13 @@
 					"name": "Find Stream",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\"]}}&limit=100&sort=[{\"property\":\"_id\",\"direction\":\"ASC\"}]",
 							"host": ["{{baseUrl}}"],
@@ -614,7 +620,13 @@
 					"name": "Find Stream - Contact",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Contact/findStream?limit=50",
 							"host": ["{{baseUrl}}"],
@@ -634,7 +646,13 @@
 					"name": "Find Stream - With Filter",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authToken}}",
+								"type": "text"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/rest/stream/Opportunity/findStream?filter={\"match\":\"and\",\"conditions\":[{\"field\":\"status\",\"operator\":\"in\",\"value\":[\"Nova\",\"Em Visitação\",\"Ofertando Imóveis\",\"Proposta\",\"Contrato\"]}]}&limit=1000",
 							"host": ["{{baseUrl}}"],
@@ -658,7 +676,13 @@
 				"name": "Pivot Table",
 				"request": {
 					"method": "GET",
-					"header": [],
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/pivot?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&pivotConfig={\"rows\":[{\"field\":\"_user.director.nickname\",\"sort\":\"ASC\"},{\"field\":\"_user.group.name\",\"sort\":\"ASC\"},{\"field\":\"_user.name\",\"sort\":\"ASC\"}],\"columns\":[{\"field\":\"status\"}],\"values\":[{\"field\":\"code\",\"aggregator\":\"count\"},{\"field\":\"amount.value\",\"aggregator\":\"sum\"}]}",
 						"host": ["{{baseUrl}}"],
@@ -763,7 +787,13 @@
 				"name": "Graph - Bar Chart by Status",
 				"request": {
 					"method": "GET",
-					"header": [],
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Status\"}",
 						"host": ["{{baseUrl}}"],
@@ -789,7 +819,13 @@
 				"name": "Graph - Bar Chart by Status (Sum Values)",
 				"request": {
 					"method": "GET",
-					"header": [],
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"status\",\"aggregation\":\"sum\",\"xAxis\":{\"field\":\"status\",\"label\":\"Status\"},\"yAxis\":{\"field\":\"amount.value\",\"label\":\"Valor Total\"},\"title\":\"Valor Total por Status\"}",
 						"host": ["{{baseUrl}}"],
@@ -815,7 +851,13 @@
 				"name": "Graph - Bar Chart by Director",
 				"request": {
 					"method": "GET",
-					"header": [],
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"bar\",\"categoryField\":\"_user.director.nickname\",\"aggregation\":\"count\",\"xAxis\":{\"field\":\"_user.director.nickname\",\"label\":\"Diretor\"},\"yAxis\":{\"field\":\"code\",\"label\":\"Quantidade\"},\"title\":\"Oportunidades por Diretor\"}",
 						"host": ["{{baseUrl}}"],
@@ -841,7 +883,13 @@
 				"name": "Graph - Pie Chart",
 				"request": {
 					"method": "GET",
-					"header": [],
+					"header": [
+						{
+							"key": "Authorization",
+							"value": "{{authToken}}",
+							"type": "text"
+						}
+					],
 					"url": {
 						"raw": "{{baseUrl}}/rest/data/Opportunity/graph?filter={\"status\":{\"$in\":[\"Nova\",\"Em Visitação\",\"Contrato\",\"Ofertando Imóveis\",\"Proposta\"]}}&graphConfig={\"type\":\"pie\",\"categoryField\":\"status\",\"aggregation\":\"count\",\"yAxis\":{\"field\":\"code\"},\"title\":\"Distribuição por Status\"}",
 						"host": ["{{baseUrl}}"],

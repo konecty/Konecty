@@ -307,7 +307,10 @@ async function collectAndPopulateData(
 		}
 
 		try {
-			const lookupDocs = await collection.find({ _id: { $in: Array.from(ids) } }, { projection }).toArray();
+			const lookupDocs = await collection.find(
+				{ _id: { $in: Array.from(ids) } },
+				{ projection },
+			).toArray();
 
 			const dataMap = new Map<string, Record<string, unknown>>();
 			for (const doc of lookupDocs) {
@@ -432,7 +435,6 @@ export default async function graphStream({
 		const GRAPH_MAX_RECORDS = parseInt(process.env.GRAPH_MAX_RECORDS ?? '100000', 10);
 		tracingSpan?.addEvent('Calling findStream to get data');
 		logger.debug({ limit: GRAPH_MAX_RECORDS }, 'Graph query (filter omitted to avoid data leakage)');
-
 		const streamResult = await findStream({
 			...findParams,
 			fields: allFields.length > 0 ? allFields.join(',') : findParams.fields,
@@ -456,7 +458,6 @@ export default async function graphStream({
 		const populatedData = await collectAndPopulateData(mongoStream, lookupFields);
 		const collectTime = Date.now() - startCollect;
 		logger.debug({ count: populatedData.length, collectTimeMs: collectTime, total: total ?? null }, 'Collected documents with populated lookups');
-
 		// Check if limit was reached using total count from find
 		const totalRecords = total ?? populatedData.length;
 		const limitReached = totalRecords > GRAPH_MAX_RECORDS;

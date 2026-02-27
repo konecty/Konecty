@@ -20,7 +20,6 @@ export interface WhatsAppConfig {
 export interface WhatsAppResult {
 	success: boolean;
 	error?: string;
-	method?: 'whatsapp';
 }
 
 /**

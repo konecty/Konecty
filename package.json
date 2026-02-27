@@ -10,7 +10,7 @@
 		"prebuild": "rimraf dist",
 		"build:login-css": "tailwindcss -i src/private/templates/login/modern-tailwind-input.css -o src/private/templates/login/modern-tailwind-output.css --minify",
 		"build": "yarn build:login-css && babel src --out-dir dist --no-copy-ignored --extensions '.ts,.js'",
-		"lint": "eslint src/**/*.ts src/**/*.js --fix",
+		"lint": "eslint src/**/*.ts --fix",
 		"prettier": "prettier --write src",
 		"test": "jest --detectOpenHandles --runInBand",
 		"prepare": "husky install"

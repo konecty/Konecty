@@ -752,7 +752,6 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_MISSING');
 			return errorReturn([{ message: errorMsg.message, code: errorMsg.code } as KonectyError]);
 		}
-
 		if (!graphConfig.type) {
 			tracingSpan.end();
 			const errorMsg = getGraphErrorMessage('GRAPH_CONFIG_TYPE_MISSING');
@@ -852,8 +851,6 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			}
 			return reply.status(500).type('application/json').send({ success: false, errors: [{ message: errMessage }] });
 		}
-
-		tracingSpan.end();
 
 		if (cacheResult.notModified) {
 			return reply.status(HTTP_NOT_MODIFIED).send();

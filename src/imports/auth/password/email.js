@@ -14,7 +14,8 @@ import { setPassword } from '@imports/auth/password';
 import { templatePath } from '../../utils/templatesPath';
 import { logger } from '../../utils/logger';
 
-export async function setRandomPasswordAndSendByEmail({ authTokenId, userIds, host }) {
+export async function setRandomPasswordAndSendByEmail({ authTokenId, userIds, host, isNewUser = false }) {
+	logger.debug(`[setRandomPasswordAndSendByEmail] isNewUser: ${isNewUser}, host: ${host}`);
 	if (Array.isArray(userIds) === false) {
 		return {
 			success: false,
@@ -87,11 +88,17 @@ export async function setRandomPasswordAndSendByEmail({ authTokenId, userIds, ho
 					url: loginUrl,
 				};
 
-				const resetPasswordTemplatePath = path.join(templatePath(), 'email/resetPassword.html');
+				// Seleciona o template apropriado baseado no contexto
+				const templateName = isNewUser ? 'email/newUserPassword.html' : 'email/resetPassword.html';
+				const emailSubject = isNewUser ? '[Auxiliadora Predial] Bem-vindo! Sua senha de acesso' : '[Konecty] Sua nova senha';
 
-				const resetPasswordTemplate = await fs.readFile(resetPasswordTemplatePath, 'utf8');
+				logger.debug(`[setRandomPasswordAndSendByEmail] Template: ${templateName}, Subject: ${emailSubject}, isNewUser: ${isNewUser}`);
 
-				const template = Handlebars.compile(resetPasswordTemplate);
+				const passwordTemplatePath = path.join(templatePath(), templateName);
+
+				const passwordTemplate = await fs.readFile(passwordTemplatePath, 'utf8');
+
+				const template = Handlebars.compile(passwordTemplate);
 
 				const html = template({
 					password,
@@ -102,7 +109,7 @@ export async function setRandomPasswordAndSendByEmail({ authTokenId, userIds, ho
 					_id: randomId(),
 					from: 'Konecty <support@konecty.com>',
 					to: get(userRecord, 'emails.0.address'),
-					subject: '[Konecty] Sua nova senha',
+					subject: emailSubject,
 					body: html,
 					type: 'Email',
 					status: 'Send',

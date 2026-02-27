@@ -1,9 +1,11 @@
+// @ts-expect-error bun:test é reconhecido apenas pelo runner do Bun
+import { describe, it, expect, beforeEach, vi } from 'bun:test';
 import { MetaObject } from '@imports/model/MetaObject';
 import queueManager from '@imports/queue/QueueManager';
 
 // Mock WhatsApp module BEFORE importing delivery
-const mockSendOtpViaWhatsApp = jest.fn();
-jest.mock('@imports/auth/otp/whatsapp', () => ({
+const mockSendOtpViaWhatsApp = vi.fn();
+vi.mock('@imports/auth/otp/whatsapp', () => ({
 	sendOtpViaWhatsApp: mockSendOtpViaWhatsApp,
 }));
 
@@ -23,17 +25,17 @@ describe('OTP Delivery Service', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock MetaObject.Collections
 		if (MetaObject.Collections == null) {
 			(MetaObject as any).Collections = {};
 		}
 		(MetaObject.Collections.User as any) = {
-			findOne: jest.fn().mockResolvedValue(mockUser),
+			findOne: vi.fn().mockResolvedValue(mockUser),
 		};
 		(MetaObject.Collections.Message as any) = {
-			insertOne: jest.fn().mockResolvedValue({}),
+			insertOne: vi.fn().mockResolvedValue({}),
 		};
 
 		// Mock Namespace with WhatsApp config
@@ -57,7 +59,7 @@ describe('OTP Delivery Service', () => {
 			mockSendOtpViaWhatsApp.mockResolvedValue({ success: false, error: 'WhatsApp API error' });
 
 			// RabbitMQ fails - configure QueueConfig
-			const mockSendMessage = jest.fn().mockResolvedValue({ success: false });
+			const mockSendMessage = vi.fn().mockResolvedValue({ success: false });
 			(queueManager.sendMessage as any) = mockSendMessage;
 
 			(MetaObject.Namespace as any).otpConfig = {
@@ -95,7 +97,7 @@ describe('OTP Delivery Service', () => {
 
 		it('should fallback to RabbitMQ if WhatsApp fails', async () => {
 			mockSendOtpViaWhatsApp.mockResolvedValue({ success: false, error: 'WhatsApp unavailable' });
-			const mockSendMessage = jest.fn().mockResolvedValue({ success: true });
+			const mockSendMessage = vi.fn().mockResolvedValue({ success: true });
 			(queueManager.sendMessage as any) = mockSendMessage;
 
 			(MetaObject.Namespace as any).otpConfig = {
@@ -129,8 +131,8 @@ describe('OTP Delivery Service', () => {
 
 		it('should return error if all delivery methods fail', async () => {
 			mockSendOtpViaWhatsApp.mockResolvedValue({ success: false, error: 'WhatsApp error' });
-			(queueManager.sendMessage as any) = jest.fn().mockResolvedValue({ success: false });
-			(MetaObject.Collections.Message.insertOne as any) = jest.fn().mockRejectedValue(new Error('Email error'));
+			(queueManager.sendMessage as any) = vi.fn().mockResolvedValue({ success: false });
+			(MetaObject.Collections.Message.insertOne as any) = vi.fn().mockRejectedValue(new Error('Email error'));
 
 			const result = await sendOtp('+5511999999999', undefined, '123456', 'test-user-id', mockOtpRequest.expiresAt);
 
@@ -140,9 +142,9 @@ describe('OTP Delivery Service', () => {
 
 		it('should handle user without email gracefully', async () => {
 			mockSendOtpViaWhatsApp.mockResolvedValue({ success: false, error: 'WhatsApp error' });
-			(queueManager.sendMessage as any) = jest.fn().mockResolvedValue({ success: false });
+			(queueManager.sendMessage as any) = vi.fn().mockResolvedValue({ success: false });
 
-			(MetaObject.Collections.User.findOne as any) = jest.fn().mockResolvedValue({
+			(MetaObject.Collections.User.findOne as any) = vi.fn().mockResolvedValue({
 				...mockUser,
 				emails: [],
 			});
@@ -154,7 +156,7 @@ describe('OTP Delivery Service', () => {
 		});
 
 		it('should send directly via email when requested by email', async () => {
-			(MetaObject.Collections.Message.insertOne as any) = jest.fn().mockResolvedValue({});
+			(MetaObject.Collections.Message.insertOne as any) = vi.fn().mockResolvedValue({});
 
 			const result = await sendOtp(undefined, 'user@example.com', '123456', 'test-user-id', mockOtpRequest.expiresAt);
 

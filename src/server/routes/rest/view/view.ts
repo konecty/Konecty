@@ -309,6 +309,7 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 				blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
 				previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
 				collectFingerprint: MetaObject.Namespace.trackUserFingerprint,
+				gtmId: process.env.GTM_ID || null,
 			};
 
 			const indexTemplatePath = path.join(templatePath(), 'index.hbs');

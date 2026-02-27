@@ -117,13 +117,9 @@ export async function serverStart() {
 			port: PORT,
 			host: HOST,
 		});
-		const addr = fastify.server.address();
-		if (addr && typeof addr === 'object' && addr.port) {
-			process.env.BASE_URL = `http://127.0.0.1:${addr.port}/rest`;
-		}
 	} catch (error) {
 		fastify.log.error(error);
-		throw error;
+		process.exit(1);
 	}
 }
 
