@@ -45,9 +45,8 @@
 			const callingCode = libphonenumber.getCountryCallingCode(countryCode);
 			const flag = countryCodeToUnicodeFlag(countryCode);
 			// Get country name from locale (if available) or use country code
-			const countryName = libphonenumber.getCountryName && typeof libphonenumber.getCountryName === 'function'
-				? libphonenumber.getCountryName(countryCode, 'en')
-				: countryCode;
+			const countryName =
+				libphonenumber.getCountryName && typeof libphonenumber.getCountryName === 'function' ? libphonenumber.getCountryName(countryCode, 'en') : countryCode;
 
 			return {
 				code: countryCode,
@@ -143,4 +142,3 @@
 		combineToE164: combineToE164,
 	};
 })();
-

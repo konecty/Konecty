@@ -291,11 +291,10 @@ export default async function pivotStream({
 		// Default to 100,000 records which should be reasonable for most pivot tables
 		const PIVOT_MAX_RECORDS = parseInt(process.env.PIVOT_MAX_RECORDS ?? '100000', 10);
 		tracingSpan?.addEvent('Calling findStream to get data');
-		
+
 		// Log filter for debugging
 		logger.info(`Pivot query filter: ${JSON.stringify(findParams.filter)}`);
 		logger.info(`Pivot query limit: ${PIVOT_MAX_RECORDS}`);
-		
 		const streamResult = await findStream({
 			...findParams,
 			fields: allFields.join(','),
@@ -304,8 +303,6 @@ export default async function pivotStream({
 			transformDatesToString,
 			tracingSpan,
 		});
-		
-		logger.info(`Pivot query with limit: ${PIVOT_MAX_RECORDS}`);
 
 		if (streamResult.success === false) {
 			return streamResult;
@@ -324,7 +321,6 @@ export default async function pivotStream({
 		const collectTime = Date.now() - startCollect;
 		logger.info(`Collected ${populatedData.length} documents with populated lookups in ${collectTime}ms`);
 		logger.info(`Total records available (from findStream): ${total ?? 'unknown'}`);
-		
 		// Check if limit was reached using total count from find
 		const totalRecords = total ?? populatedData.length;
 		const limitReached = totalRecords > PIVOT_MAX_RECORDS;
@@ -389,7 +385,6 @@ export default async function pivotStream({
 		if (total != null) {
 			result.total = total;
 		}
-		
 		// Add limit info if limit was reached
 		if (limitReached) {
 			(result as any).limitInfo = {

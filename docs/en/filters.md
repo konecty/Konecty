@@ -287,10 +287,14 @@ Search for contacts from Rio de Janeiro OR São Paulo:
 
 ### Special Values
 - Use `$user` to reference the current user
-- Use `$now` for the current date
+- Use `$now` for the current date and time
 - Use `$group` for the current user's group
 - Use `$groups` for the current user's groups
 - Use `$allgroups` for all groups of the current user
+- Use `$today`, `$yesterday`, `$startOfMonth`, etc. for dynamic date boundaries
+- Use `$endOfDay`, `$endOfMonth`, etc. for end-of-period boundaries
+- Use `$daysAgo:N`, `$hoursAgo:N`, `$monthsAgo:N` for relative past dates
+- Use `$hoursFromNow:N`, `$daysFromNow:N`, `$monthsFromNow:N` for relative future dates
 
 ### Nested Fields
 To access fields within objects, use dot notation:
@@ -372,34 +376,127 @@ Always use ISO format for dates:
 
 ## Quick References
 
+### All Operators
+
+| Operator | Description |
+|----------|-------------|
+| `equals` | Equal to |
+| `not_equals` | Not equal to |
+| `contains` | Contains (substring) |
+| `not_contains` | Does not contain |
+| `starts_with` | Starts with |
+| `end_with` | Ends with |
+| `less_than` | Less than |
+| `greater_than` | Greater than |
+| `less_or_equals` | Less than or equal to |
+| `greater_or_equals` | Greater than or equal to |
+| `between` | Between two values |
+| `in` | Is in list |
+| `not_in` | Is not in list |
+| `exists` | Field exists (true) or does not exist (false) |
+| `current_user` | Field is the current user |
+| `not_current_user` | Field is not the current user |
+| `current_user_group` | Field is the current user's group |
+| `not_current_user_group` | Field is not the current user's group |
+| `current_user_groups` | Field is in the current user's groups |
+
 ### Operators by Field Type
 
-#### Text
-- `equals`
-- `not_equals`
-- `contains`
-- `starts_with`
-- `end_with`
+#### Text (`text`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Numbers
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### URL (`url`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Dates
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### Email (`email.address`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Booleans
-- `equals`
-- `not_equals`
+#### Number (`number`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
 
-#### Lists
-- `in`
-- `not_in`
+#### Auto Number (`autoNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Percentage (`percentage`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Date (`date`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Date and Time (`dateTime`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Time (`time`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Money — Currency (`money.currency`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Money — Value (`money.value`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Boolean (`boolean`)
+`exists`, `equals`, `not_equals`
+
+#### Picklist (`picklist`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Lookup (`lookup`)
+`exists`
+
+#### Lookup ID (`lookup._id`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### ObjectId
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — Country (`address.country`)
+`exists`, `equals`, `not_equals`
+
+#### Address — City (`address.city`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Address — State (`address.state`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — District (`address.district`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — Place (`address.place`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Number (`address.number`)
+`exists`, `equals`, `not_equals`
+
+#### Address — Postal Code (`address.postalCode`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Complement (`address.complement`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Geolocation (`address.geolocation.0`, `address.geolocation.1`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Person Name (`personName.first`, `personName.last`, `personName.full`)
+`exists`, `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Phone — Number (`phone.phoneNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Phone — Country Code (`phone.countryCode`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Encrypted (`encrypted`)
+`exists`, `equals`, `not_equals`
+
+#### Filter (`filter`)
+`exists`
+
+#### Rich Text (`richText`)
+`exists`, `contains`
+
+#### File (`file`)
+`exists`
 
 ### Common Fields
 - `_id`: Record ID
@@ -469,9 +566,86 @@ Konecty offers special variables that can be used in filters for dynamic referen
   }
   ```
 
+#### Dynamic Date Variables
+
+Konecty provides dynamic date variables that are resolved at query time. These variables work in all filter contexts: listings, pivot tables, graphs, KPI widgets, and form filter fields.
+
+**Start of period (00:00:00.000):**
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `$today` | Start of the current day | `00:00:00.000` of today |
+| `$yesterday` | Start of the previous day | `00:00:00.000` of yesterday |
+| `$startOfWeek` | Monday of the current week | Monday at `00:00:00.000` |
+| `$startOfMonth` | First day of the current month | 1st at `00:00:00.000` |
+| `$startOfYear` | January 1st of the current year | Jan 1 at `00:00:00.000` |
+
+**End of period (23:59:59.999):**
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `$endOfDay` | End of the current day | `23:59:59.999` of today |
+| `$endOfWeek` | Sunday of the current week | Sunday at `23:59:59.999` |
+| `$endOfMonth` | Last day of the current month | Last day at `23:59:59.999` |
+| `$endOfYear` | December 31st of the current year | Dec 31 at `23:59:59.999` |
+
+**Parametric relative (past):**
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `$hoursAgo:N` | N hours ago from now | `$hoursAgo:3` = 3 hours ago |
+| `$daysAgo:N` | N days ago at `00:00:00.000` | `$daysAgo:7` = 7 days ago |
+| `$monthsAgo:N` | N months ago at `00:00:00.000` | `$monthsAgo:1` = last month |
+
+**Parametric relative (future):**
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `$hoursFromNow:N` | N hours from now | `$hoursFromNow:3` = in 3 hours |
+| `$daysFromNow:N` | N days from now at `00:00:00.000` | `$daysFromNow:1` = tomorrow |
+| `$monthsFromNow:N` | N months from now at `00:00:00.000` | `$monthsFromNow:1` = in 1 month |
+
+##### Examples
+
+Records created this month:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_createdAt",
+    "value": "$startOfMonth"
+}
+```
+
+Records due before end of today:
+```json
+{
+    "operator": "less_or_equals",
+    "term": "dueDate",
+    "value": "$endOfDay"
+}
+```
+
+Records created in the last 7 days:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_createdAt",
+    "value": "$daysAgo:7"
+}
+```
+
+Records updated in the last 3 hours:
+```json
+{
+    "operator": "greater_or_equals",
+    "term": "_updatedAt",
+    "value": "$hoursAgo:3"
+}
+```
+
 #### Example Combining Special Variables
 
-Search for records that belong to the current user's group and were created today:
+Search for records that belong to the current user's group and were created this month:
 
 ```json
 {
@@ -484,8 +658,8 @@ Search for records that belong to the current user's group and were created toda
         },
         {
             "operator": "greater_or_equals",
-            "term": "deliveryDate",
-            "value": "$now"
+            "term": "_createdAt",
+            "value": "$startOfMonth"
         }
     ]
 }

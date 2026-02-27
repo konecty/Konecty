@@ -91,7 +91,7 @@ export async function setRandomPasswordAndSendByEmail({ authTokenId, userIds, ho
 				// Seleciona o template apropriado baseado no contexto
 				const templateName = isNewUser ? 'email/newUserPassword.html' : 'email/resetPassword.html';
 				const emailSubject = isNewUser ? '[Auxiliadora Predial] Bem-vindo! Sua senha de acesso' : '[Konecty] Sua nova senha';
-				
+
 				logger.debug(`[setRandomPasswordAndSendByEmail] Template: ${templateName}, Subject: ${emailSubject}, isNewUser: ${isNewUser}`);
 
 				const passwordTemplatePath = path.join(templatePath(), templateName);

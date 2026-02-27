@@ -17,7 +17,7 @@ import { logger } from '../utils/logger';
 import { errorReturn, successReturn } from '../utils/return';
 
 /**
- * 
+ *
  * @returns {Promise<{ success: boolean, reason?: string, data?: { result?: Record<string, any>, emailsToSend?: EmailToSend[] } }>}
  */
 export async function runScriptBeforeValidation({ script, data, user, meta, extraData }) {
@@ -74,7 +74,7 @@ export async function runScriptBeforeValidation({ script, data, user, meta, extr
 }
 
 /**
- * 
+ *
  * @returns {Promise<{ success: boolean, reason?: string }>}
  */
 export async function processValidationScript({ script, validationData, fullData, user }) {

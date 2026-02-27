@@ -13,6 +13,8 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0007: Hierarchical Pivot Output Format](./0007-hierarchical-pivot-output-format.md)
 - [ADR-0008: Graph Endpoint with Polars and Pandas](./0008-graph-endpoint-with-polars-pandas.md)
 - [ADR-0009: Centralized Error Messages Structure in Backend](./0009-error-messages-structure-backend.md)
+- [ADR-0010: Code Patterns](./0010-code-patterns.md)
+- [ADR-0011: Avoid Technocentrism in User-Facing Communication](./0011-avoid-technocentrism-communication.md)
 
 ## Format
 

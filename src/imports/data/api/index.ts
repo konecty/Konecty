@@ -3,3 +3,4 @@ export { default as findStream } from './findStream';
 export { default as findObjectStream } from './findObjectStream';
 export { default as pivotStream } from './pivotStream';
 export { default as graphStream } from './graphStream';
+export { default as kpiStream } from './kpiStream';

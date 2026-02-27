@@ -14,7 +14,7 @@ import { enrichGraphConfig } from './graphMetadata';
 /**
  * Graph Stream Processing
  * Processa requisições de gráficos: extrai campos, popula lookups, envia para Python
- * 
+ *
  * ADR-0016: Processamento no backend (agregação e geração de SVG no Python)
  * ADR-0008: Mensagens de erro traduzidas (backend retorna em inglês, frontend traduz)
  */
@@ -66,33 +66,22 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 		if (field.type === 'lookup' || field.type === 'inheritLookup') {
 			// For lookups, we only need _id - we'll populate the rest later
 			fields.add(`${baseFieldName}._id`);
-		} else if (field.type === 'address') {
-			const addressFields = ['city', 'state', 'country', 'district', 'place', 'number', 'postalCode', 'complement', 'placeType'];
-			addressFields.forEach(af => {
-				fields.add(`${fieldPath}.${af}`);
-			});
-		} else if (field.type === 'money') {
-			fields.add(`${fieldPath}.value`);
-			fields.add(`${fieldPath}.currency`);
-		} else if (field.type === 'personName') {
-			fields.add(`${fieldPath}.full`);
-			fields.add(`${fieldPath}.first`);
-			fields.add(`${fieldPath}.last`);
-		} else if (field.type === 'phone') {
-			fields.add(`${fieldPath}.phoneNumber`);
-			fields.add(`${fieldPath}.countryCode`);
-		} else if (field.type === 'email') {
-			fields.add(`${fieldPath}.address`);
+		} else if (['address', 'money', 'personName', 'phone', 'email'].includes(field.type)) {
+			// Use the parent field name to avoid clearProjectionPathCollision stripping sibling subfields
+			fields.add(baseFieldName);
 		} else {
 			fields.add(fieldPath);
 		}
 	};
 
 	// Extract fields from xAxis, yAxis, categoryField, and series
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+
 	if (graphConfig.xAxis?.field) {
 		expandField(graphConfig.xAxis.field);
 	}
-	if (graphConfig.yAxis?.field) {
+	// yAxis is legacy — skip when series are present (series take precedence)
+	if (graphConfig.yAxis?.field && !hasSeries) {
 		expandField(graphConfig.yAxis.field);
 	}
 	if (graphConfig.categoryField) {
@@ -101,9 +90,8 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 		// System fields starting with _ are already handled by expandField, but ensure it's explicitly added
 		fields.add(graphConfig.categoryField);
 	}
-	// Extract fields from series
-	if (graphConfig.series) {
-		graphConfig.series.forEach(serie => {
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
 			if (serie.field) {
 				expandField(serie.field);
 			}
@@ -114,13 +102,14 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 	// This ensures _createdAt, _updatedAt, etc. are available even if projection filters them
 	// NOTE: System fields that are lookups are handled by expandField above (they get _id suffix)
 	// Here we only add non-lookup system fields (like _createdAt, _updatedAt, _id)
-	const systemFieldsToCheck = [graphConfig.categoryField, graphConfig.xAxis?.field, graphConfig.yAxis?.field];
+	const systemFieldsToCheck: (string | undefined)[] = [graphConfig.categoryField, graphConfig.xAxis?.field];
+	if (!hasSeries && graphConfig.yAxis?.field) systemFieldsToCheck.push(graphConfig.yAxis.field);
 	if (graphConfig.series) {
 		graphConfig.series.forEach(serie => {
 			if (serie.field) systemFieldsToCheck.push(serie.field);
 		});
 	}
-	
+
 	systemFieldsToCheck.forEach(field => {
 		if (field && field.startsWith('_')) {
 			// Check if this is a lookup field - if so, it was already handled by expandField
@@ -140,9 +129,44 @@ function extractFieldsFromGraphConfig(document: string, graphConfig: GraphConfig
 }
 
 /**
+ * Validate that every field path used in the graph config exists on the document meta.
+ * Prevents RPC "Field not found" from Python when the document has no such field.
+ */
+function validateGraphFieldsExist(
+	document: string,
+	graphConfig: GraphConfig,
+): { valid: true } | { valid: false; field: string } {
+	const meta = MetaObject.Meta[document];
+	if (meta == null) return { valid: true };
+
+	const fieldPaths: string[] = [];
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+	if (graphConfig.xAxis?.field) fieldPaths.push(graphConfig.xAxis.field);
+	// yAxis is legacy — skip validation when series are present (series take precedence)
+	if (graphConfig.yAxis?.field && !hasSeries) fieldPaths.push(graphConfig.yAxis.field);
+	if (graphConfig.categoryField) fieldPaths.push(graphConfig.categoryField);
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
+			if (serie.field) fieldPaths.push(serie.field);
+		});
+	}
+
+	const invalidField = fieldPaths.find(path => {
+		if (!path) return false;
+		const baseFieldName = path.split('.')[0];
+		if (baseFieldName.startsWith('_')) return false;
+		return meta.fields[baseFieldName] == null;
+	});
+	return invalidField != null ? { valid: false, field: invalidField } : { valid: true };
+}
+
+/**
  * Identify lookup fields in the graph config
  */
-function getLookupFieldsInfo(document: string, graphConfig: GraphConfig): Array<{
+function getLookupFieldsInfo(
+	document: string,
+	graphConfig: GraphConfig,
+): Array<{
 	fieldName: string;
 	lookupDocument: string;
 	descriptionFields: string[];
@@ -159,9 +183,8 @@ function getLookupFieldsInfo(document: string, graphConfig: GraphConfig): Array<
 		const baseFieldName = parts[0];
 		const field = meta.fields[baseFieldName];
 
-		// Debug: log field info for troubleshooting
 		if (baseFieldName.startsWith('_')) {
-			logger.info(`Processing field ${baseFieldName}: exists=${field != null}, type=${field?.type ?? 'undefined'}`);
+			logger.debug({ field: baseFieldName, exists: field != null, type: field?.type ?? 'undefined' }, 'Processing field');
 		}
 
 		if (field != null && (field.type === 'lookup' || field.type === 'inheritLookup') && field.document) {
@@ -175,19 +198,19 @@ function getLookupFieldsInfo(document: string, graphConfig: GraphConfig): Array<
 		}
 	};
 
-	// Process xAxis, yAxis, categoryField, and series
+	const hasSeries = Array.isArray(graphConfig.series) && graphConfig.series.length > 0;
+
 	if (graphConfig.xAxis?.field) {
 		processField(graphConfig.xAxis.field);
 	}
-	if (graphConfig.yAxis?.field) {
+	if (graphConfig.yAxis?.field && !hasSeries) {
 		processField(graphConfig.yAxis.field);
 	}
 	if (graphConfig.categoryField) {
 		processField(graphConfig.categoryField);
 	}
-	// Process series fields
-	if (graphConfig.series) {
-		graphConfig.series.forEach(serie => {
+	if (hasSeries) {
+		graphConfig.series!.forEach(serie => {
 			if (serie.field) {
 				processField(serie.field);
 			}
@@ -295,7 +318,7 @@ async function collectAndPopulateData(
 			}
 			lookupData.set(lookupField.fieldName, dataMap);
 
-			logger.info(`Populated ${dataMap.size} records for lookup field ${lookupField.fieldName}`);
+			logger.debug({ field: lookupField.fieldName, count: dataMap.size }, 'Populated records for lookup field');
 		} catch (err) {
 			logger.error(err, `Error fetching lookup data for ${lookupField.fieldName}`);
 		}
@@ -375,42 +398,43 @@ export default async function graphStream({
 
 		// 0. Enrich graph config with metadata (labels translated)
 		tracingSpan?.addEvent('Enriching graph config with metadata');
-		logger.info(`Original graphConfig: ${JSON.stringify(graphConfig)}`);
 		const enrichedConfig = enrichGraphConfig(findParams.document, graphConfig, findParams.lang || 'pt_BR');
-		logger.info(`Enriched graphConfig: ${JSON.stringify(enrichedConfig)}`);
-		logger.info(`Using lang: ${findParams.lang || 'pt_BR'}`);
+		logger.debug({ lang: findParams.lang || 'pt_BR' }, 'Enriched graph config');
+
+		const fieldValidation = validateGraphFieldsExist(findParams.document, enrichedConfig);
+		if (!fieldValidation.valid) {
+			tracingSpan?.end();
+			const errorMsg = getGraphErrorMessage('GRAPH_FIELD_NOT_FOUND', {
+				field: fieldValidation.field,
+				document: findParams.document,
+			});
+			return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
+		}
 
 		// 1.1 Extract fields from graph config for proper projection
 		const graphFields = extractFieldsFromGraphConfig(findParams.document, enrichedConfig);
 		tracingSpan?.addEvent('Extracted graph fields', { fields: graphFields.join(',') });
-		logger.info(`Graph fields extracted: ${graphFields.join(', ')}`);
+		logger.debug({ graphFieldsCount: graphFields.length }, 'Graph fields extracted');
 
 		// 1.2 Identify lookup fields that need population
 		const lookupFields = getLookupFieldsInfo(findParams.document, enrichedConfig);
-		logger.info(`Lookup fields to populate: ${lookupFields.map(l => `${l.fieldName} -> ${l.lookupDocument} (${l.descriptionFields.join(',')})`).join(', ')}`);
-		
-		// Debug: Check if xAxis.field is a lookup that was identified
+		logger.debug({ lookupCount: lookupFields.length }, 'Lookup fields to populate');
+
 		if (enrichedConfig.xAxis?.field) {
 			const xAxisField = enrichedConfig.xAxis.field;
 			const isXAxisLookup = lookupFields.some(l => l.fieldName === xAxisField);
-			logger.info(`xAxis.field=${xAxisField}, isLookup=${isXAxisLookup}`);
+			logger.debug({ xAxisField, isXAxisLookup }, 'xAxis field');
 		}
 
 		// Merge with existing fields if any
 		const existingFields = findParams.fields ? findParams.fields.split(',').map(f => f.trim()) : [];
 		const allFields = [...new Set([...existingFields, ...graphFields])];
-		logger.info(`All fields for MongoDB projection: ${allFields.join(', ')}`);
+		logger.debug({ allFieldsCount: allFields.length }, 'All fields for MongoDB projection');
 
 		// 2. Call findStream to get MongoDB data stream
-		// Use a configurable limit to prevent memory issues
-		// Default to 100,000 records which should be reasonable for most graphs
 		const GRAPH_MAX_RECORDS = parseInt(process.env.GRAPH_MAX_RECORDS ?? '100000', 10);
 		tracingSpan?.addEvent('Calling findStream to get data');
-		
-		// Log filter and limit for debugging
-		logger.info(`Graph query filter: ${JSON.stringify(findParams.filter)}`);
-		logger.info(`Graph query limit: ${GRAPH_MAX_RECORDS}`);
-		
+		logger.debug({ limit: GRAPH_MAX_RECORDS }, 'Graph query (filter omitted to avoid data leakage)');
 		const streamResult = await findStream({
 			...findParams,
 			fields: allFields.length > 0 ? allFields.join(',') : findParams.fields,
@@ -426,25 +450,14 @@ export default async function graphStream({
 
 		const { data: mongoStream, total } = streamResult;
 
-		// Log total from findStream (after filters, before limit)
-		logger.info(`Total records from findStream (after filters, before limit): ${total ?? 'unknown'}`);
+		logger.debug({ total: total ?? null }, 'Total records from findStream (after filters, before limit)');
 
 		// 3. Collect data and populate lookups
 		tracingSpan?.addEvent('Collecting and populating lookup data');
-		logger.info('Starting to collect data from MongoDB stream...');
 		const startCollect = Date.now();
 		const populatedData = await collectAndPopulateData(mongoStream, lookupFields);
 		const collectTime = Date.now() - startCollect;
-		logger.info(`Collected ${populatedData.length} documents with populated lookups in ${collectTime}ms`);
-		logger.info(`Total records available (from findStream): ${total ?? 'unknown'}`);
-		
-		// Log sample document keys for debugging field availability
-		if (populatedData.length > 0) {
-			const sampleDoc = populatedData[0];
-			const flatKeys = Object.keys(sampleDoc);
-			logger.info(`Sample document keys: ${flatKeys.join(', ')}`);
-		}
-		
+		logger.debug({ count: populatedData.length, collectTimeMs: collectTime, total: total ?? null }, 'Collected documents with populated lookups');
 		// Check if limit was reached using total count from find
 		const totalRecords = total ?? populatedData.length;
 		const limitReached = totalRecords > GRAPH_MAX_RECORDS;
@@ -467,12 +480,10 @@ export default async function graphStream({
 
 		// 5. Send RPC request with enriched graph config to Python stdin (first line)
 		tracingSpan?.addEvent('Sending RPC request to Python');
-		logger.info(`Sending enriched graph config to Python: ${JSON.stringify(enrichedConfig)}`);
 		await sendGraphRPCRequest(pythonProcess, 'graph', { config: enrichedConfig, lang: findParams.lang || 'pt_BR' });
 
 		// 6. Send populated data to Python
 		tracingSpan?.addEvent('Sending populated data to Python');
-		logger.info(`Sending ${populatedData.length} documents to Python for graph generation...`);
 		const startPython = Date.now();
 		await sendDataToPython(pythonProcess, populatedData);
 
@@ -480,7 +491,7 @@ export default async function graphStream({
 		tracingSpan?.addEvent('Collecting SVG from Python');
 		const svg = await collectSVGFromPython(pythonProcess);
 		const pythonTime = Date.now() - startPython;
-		logger.info(`Python graph generation completed in ${pythonTime}ms`);
+		logger.debug({ pythonTimeMs: pythonTime }, 'Python graph generation completed');
 
 		// 7. Return SVG string
 		tracingSpan?.addEvent('Graph processing completed', {
@@ -502,7 +513,7 @@ export default async function graphStream({
 		tracingSpan?.setAttribute('error', error.message);
 		logger.error(error, `Error executing graphStream: ${error.message}`, {
 			stack: error.stack,
-			document: findParams.document
+			document: findParams.document,
 		});
 
 		// Cleanup: kill Python process if it's still running
@@ -515,9 +526,8 @@ export default async function graphStream({
 		}
 
 		const errorMsg = getGraphErrorMessage('GRAPH_PROCESSING_ERROR', {
-			details: error.message
+			details: error.message,
 		});
 		return errorReturn([{ message: errorMsg.message, code: errorMsg.code, details: errorMsg.details } as KonectyError]);
 	}
 }
-

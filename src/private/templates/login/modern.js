@@ -776,8 +776,8 @@ function collectGeolocation(callback) {
 		}
 
 		// libphonenumber-js CDN exposes as libphonenumber_js
-		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : (typeof libphonenumber !== 'undefined' ? libphonenumber : null);
-		
+		const lib = typeof libphonenumber_js !== 'undefined' ? libphonenumber_js : typeof libphonenumber !== 'undefined' ? libphonenumber : null;
+
 		// If library not available, populate with basic countries
 		if (!lib || typeof window.CountryCodes === 'undefined') {
 			// Fallback: add basic countries manually
@@ -792,9 +792,9 @@ function collectGeolocation(callback) {
 				{ code: 'ES', flag: '🇪🇸', callingCode: '34' },
 				{ code: 'IT', flag: '🇮🇹', callingCode: '39' },
 			];
-			
+
 			var defaultCountry = countrySelect.getAttribute('data-default-country') || 'BR';
-			
+
 			basicCountries.forEach(function (country) {
 				var option = document.createElement('option');
 				option.value = country.code;
@@ -805,7 +805,7 @@ function collectGeolocation(callback) {
 				}
 				countrySelect.appendChild(option);
 			});
-			
+
 			updatePhoneInputPlaceholder();
 			return;
 		}
@@ -1044,14 +1044,14 @@ function collectGeolocation(callback) {
 					headers: {
 						'Content-Type': 'application/json',
 					},
-				body: JSON.stringify({
-					phoneNumber: fullPhoneNumber || phoneNumber,
-					otpCode: otpCode,
-					geolocation: clientInfo.geolocation,
-					resolution: clientInfo.resolution,
-					fingerprint: clientInfo.fingerprint,
-					source: clientInfo.source,
-				}),
+					body: JSON.stringify({
+						phoneNumber: fullPhoneNumber || phoneNumber,
+						otpCode: otpCode,
+						geolocation: clientInfo.geolocation,
+						resolution: clientInfo.resolution,
+						fingerprint: clientInfo.fingerprint,
+						source: clientInfo.source,
+					}),
 				})
 					.then(function (response) {
 						return response.json().then(function (data) {
@@ -1181,4 +1181,3 @@ function collectGeolocation(callback) {
 		}
 	});
 })();
-

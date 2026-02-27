@@ -9,6 +9,7 @@ import initializeInstrumentation from '@imports/telemetry';
 import { logger } from '@imports/utils/logger';
 
 import accessApi from '@server/routes/api/access';
+import dashboardsApi from './api/dashboards';
 import documentApi from './api/document';
 import formApi from './api/form';
 import listViewApi from './api/list-view';
@@ -31,8 +32,9 @@ import healthApi from './rest/health';
 import menuApi from './rest/menu/menu';
 import notificationApi from './rest/notification/notificationApi';
 import processApi from './rest/process/processApi';
-import rocketchatApi from './rest/rocketchat/livechat';
 import subscriptionApi from './rest/subscription/subscriptionApi';
+import rocketchatApi from './rest/rocketchat/livechat';
+import queryApi from './rest/query/queryApi';
 import streamApi from './rest/stream/streamApi';
 import viewPaths from './rest/view/view';
 
@@ -58,6 +60,7 @@ fastify.register(cookie, {
 fastify.register(cors, getCorsConfig());
 
 fastify.register(accessApi);
+fastify.register(dashboardsApi);
 fastify.register(metasByDocumentApi);
 fastify.register(documentApi);
 fastify.register(formApi);
@@ -78,9 +81,10 @@ fastify.register(file2Api);
 fastify.register(menuApi);
 fastify.register(notificationApi);
 fastify.register(processApi);
-fastify.register(rocketchatApi);
 fastify.register(subscriptionApi);
+fastify.register(rocketchatApi);
 fastify.register(streamApi);
+fastify.register(queryApi);
 fastify.register(noAuth);
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {

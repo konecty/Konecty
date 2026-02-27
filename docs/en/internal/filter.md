@@ -287,10 +287,14 @@ Search for contacts from California OR New York:
 
 ### Special Values
 - Use `$user` to reference the current user
-- Use `$now` for the current date
+- Use `$now` for the current date and time
 - Use `$group` for the current user's group
 - Use `$groups` for the current user's secondary groups
 - Use `$allgroups` for all user's groups (main and secondary)
+- Use `$today`, `$yesterday`, `$startOfWeek`, `$startOfMonth`, `$startOfYear` for start-of-period dates
+- Use `$endOfDay`, `$endOfWeek`, `$endOfMonth`, `$endOfYear` for end-of-period dates
+- Use `$hoursAgo:N`, `$daysAgo:N`, `$monthsAgo:N` for relative past dates
+- Use `$hoursFromNow:N`, `$daysFromNow:N`, `$monthsFromNow:N` for relative future dates
 
 ### Nested Fields
 To access fields within objects, use dots:
@@ -368,9 +372,33 @@ Konecty provides special variables that can be used in filters for dynamic refer
   }
   ```
 
+#### Dynamic Date Variables
+
+All resolved in `parseConditionValue` at `src/imports/data/filterUtils.js`:
+
+| Variable | Resolves to |
+|----------|-------------|
+| `$today` | Start of current day (00:00:00.000) |
+| `$yesterday` | Start of previous day (00:00:00.000) |
+| `$startOfWeek` | Monday of current week (00:00:00.000) |
+| `$startOfMonth` | 1st of current month (00:00:00.000) |
+| `$startOfYear` | Jan 1 of current year (00:00:00.000) |
+| `$endOfDay` | End of current day (23:59:59.999) |
+| `$endOfWeek` | Sunday of current week (23:59:59.999) |
+| `$endOfMonth` | Last day of current month (23:59:59.999) |
+| `$endOfYear` | Dec 31 of current year (23:59:59.999) |
+| `$hoursAgo:N` | N hours before now (exact time) |
+| `$hoursFromNow:N` | N hours after now (exact time) |
+| `$daysAgo:N` | N days ago at 00:00:00.000 |
+| `$daysFromNow:N` | N days from now at 00:00:00.000 |
+| `$monthsAgo:N` | N months ago at 00:00:00.000 |
+| `$monthsFromNow:N` | N months from now at 00:00:00.000 |
+
+These variables are available in all filter contexts (find, findStream, graphStream, pivotStream, kpiStream).
+
 #### Example Combining Special Variables
 
-Search for records that belong to the current user's group and were created today:
+Search for records that belong to the current user's group and were created this month:
 
 ```json
 {
@@ -383,8 +411,8 @@ Search for records that belong to the current user's group and were created toda
         },
         {
             "operator": "greater_or_equals",
-            "term": "deliveryDate",
-            "value": "$now"
+            "term": "_createdAt",
+            "value": "$startOfMonth"
         }
     ]
 }
@@ -452,34 +480,127 @@ Search for records that belong to the current user's group and were created toda
 
 ## Quick References
 
+### All Operators
+
+| Operator | Description |
+|----------|-------------|
+| `equals` | Equal to |
+| `not_equals` | Not equal to |
+| `contains` | Contains (substring) |
+| `not_contains` | Does not contain |
+| `starts_with` | Starts with |
+| `end_with` | Ends with |
+| `less_than` | Less than |
+| `greater_than` | Greater than |
+| `less_or_equals` | Less than or equal to |
+| `greater_or_equals` | Greater than or equal to |
+| `between` | Between two values |
+| `in` | Is in list |
+| `not_in` | Is not in list |
+| `exists` | Field exists (true) or does not exist (false) |
+| `current_user` | Field is the current user |
+| `not_current_user` | Field is not the current user |
+| `current_user_group` | Field is the current user's group |
+| `not_current_user_group` | Field is not the current user's group |
+| `current_user_groups` | Field is in the current user's groups |
+
 ### Operators by Field Type
 
-#### Text
-- `equals`
-- `not_equals`
-- `contains`
-- `starts_with`
-- `end_with`
+#### Text (`text`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Numbers
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### URL (`url`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Dates
-- `equals`
-- `greater_than`
-- `less_than`
-- `between`
+#### Email (`email.address`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
 
-#### Booleans
-- `equals`
-- `not_equals`
+#### Number (`number`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
 
-#### Lists
-- `in`
-- `not_in`
+#### Auto Number (`autoNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Percentage (`percentage`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Date (`date`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Date and Time (`dateTime`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Time (`time`)
+`exists`, `equals`, `not_equals`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Money — Currency (`money.currency`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Money — Value (`money.value`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Boolean (`boolean`)
+`exists`, `equals`, `not_equals`
+
+#### Picklist (`picklist`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Lookup (`lookup`)
+`exists`
+
+#### Lookup ID (`lookup._id`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### ObjectId
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — Country (`address.country`)
+`exists`, `equals`, `not_equals`
+
+#### Address — City (`address.city`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Address — State (`address.state`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — District (`address.district`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Address — Place (`address.place`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Number (`address.number`)
+`exists`, `equals`, `not_equals`
+
+#### Address — Postal Code (`address.postalCode`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Complement (`address.complement`)
+`exists`, `equals`, `not_equals`, `contains`
+
+#### Address — Geolocation (`address.geolocation.0`, `address.geolocation.1`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `less_than`, `greater_than`, `less_or_equals`, `greater_or_equals`, `between`
+
+#### Person Name (`personName.first`, `personName.last`, `personName.full`)
+`exists`, `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Phone — Number (`phone.phoneNumber`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`, `contains`, `not_contains`, `starts_with`, `end_with`
+
+#### Phone — Country Code (`phone.countryCode`)
+`exists`, `equals`, `not_equals`, `in`, `not_in`
+
+#### Encrypted (`encrypted`)
+`exists`, `equals`, `not_equals`
+
+#### Filter (`filter`)
+`exists`
+
+#### Rich Text (`richText`)
+`exists`, `contains`
+
+#### File (`file`)
+`exists`
 
 ### Common Fields
 - `_id`: Record ID
@@ -489,5 +610,4 @@ Search for records that belong to the current user's group and were created toda
 - `status`: Record status
 - `name`: Name
 - `email`: Email
-- `phone`: Phone
-``` 
+- `phone`: Phone 
