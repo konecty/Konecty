@@ -471,6 +471,24 @@ Search for records that belong to the current user's group and were created this
 }
 ```
 
+### 4. Operator exists and Empty Arrays
+
+The `exists` operator maps directly to MongoDB `$exists` in `parseFilterCondition` (`src/imports/data/filterUtils.js`): `queryCondition[term] = { $exists: conditionValue }`.
+
+- `exists: false` returns **only** documents where the field is **absent**.
+- Documents where the field exists with `[]` (empty array) or `null` are **not** returned.
+
+| Document value | `exists: true` matches | `exists: false` matches |
+|----------------|------------------------|--------------------------|
+| Field absent   | No                     | Yes                      |
+| Field is `null`| Yes                    | No                       |
+| Field is `[]`  | Yes                    | No                       |
+| Field has value| Yes                    | No                       |
+
+**Workaround** (for fields that support `equals`): use OR with `exists: false` and `equals: []` to match "absent or empty".
+
+**Implementation note**: The `file` type in `operatoresByType` accepts only `exists`; no filter workaround exists for "absent or empty" file fields. Consider a boolean field (e.g. `picturesExists`) populated in `scriptBeforeValidation`, then filter with `equals: false`.
+
 ## Next Steps
 
 1. Start with simple filters and gradually increase complexity

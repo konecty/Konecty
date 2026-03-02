@@ -367,6 +367,46 @@ Always use ISO format for dates:
 }
 ```
 
+### 4. Operator exists and Empty Arrays
+
+The `exists` operator maps directly to MongoDB `$exists`. This has an important implication:
+
+- `exists: false` returns **only** documents where the field is **absent** (not present).
+- Documents where the field exists with value `[]` (empty array) or `null` are **not** returned, because the field exists—it is simply empty.
+
+| Document value | `exists: true` matches | `exists: false` matches |
+|----------------|------------------------|--------------------------|
+| Field absent   | No                     | Yes                      |
+| Field is `null`| Yes                    | No                       |
+| Field is `[]`  | Yes                    | No                       |
+| Field has value| Yes                    | No                       |
+
+**Workaround** (for fields that support `equals`): to match "field absent OR empty array", use an OR filter combining both conditions:
+
+```json
+{
+    "match": "or",
+    "filters": [
+        {
+            "match": "and",
+            "conditions": [
+                { "term": "myListField", "operator": "exists", "value": false }
+            ]
+        },
+        {
+            "match": "and",
+            "conditions": [
+                { "term": "myListField", "operator": "equals", "value": [] }
+            ]
+        }
+    ]
+}
+```
+
+**Limitation**: The `file` field type supports only the `exists` operator. There is no filter workaround to match "absent or empty" for file fields.
+
+**Alternative approach**: Create a boolean field (e.g. `picturesExists`) and populate it in `scriptBeforeValidation` based on whether the array has elements. Then filter with `{ "term": "picturesExists", "operator": "equals", "value": false }` to match records where the field is absent or empty.
+
 ## Next Steps
 
 1. Try creating simple filters and gradually increase complexity

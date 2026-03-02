@@ -367,6 +367,46 @@ Sempre use o formato ISO para datas:
 }
 ```
 
+### 4. Operador exists e Arrays Vazios
+
+O operador `exists` é mapeado diretamente para o `$exists` do MongoDB. Isso implica em uma limitação importante:
+
+- `exists: false` retorna **somente** documentos em que o campo **não existe** (ausente).
+- Documentos em que o campo existe com valor `[]` (array vazio) ou `null` **não** são retornados, pois o campo existe—apenas está vazio.
+
+| Valor no documento | `exists: true` retorna | `exists: false` retorna |
+|--------------------|------------------------|-------------------------|
+| Campo ausente      | Não                    | Sim                     |
+| Campo é `null`     | Sim                    | Não                     |
+| Campo é `[]`       | Sim                    | Não                     |
+| Campo tem valor    | Sim                    | Não                     |
+
+**Alternativa** (para campos que suportam `equals`): para retornar "campo ausente OU array vazio", use um filtro OR combinando as duas condições:
+
+```json
+{
+    "match": "or",
+    "filters": [
+        {
+            "match": "and",
+            "conditions": [
+                { "term": "myListField", "operator": "exists", "value": false }
+            ]
+        },
+        {
+            "match": "and",
+            "conditions": [
+                { "term": "myListField", "operator": "equals", "value": [] }
+            ]
+        }
+    ]
+}
+```
+
+**Limitação**: O tipo de campo `file` suporta apenas o operador `exists`. Não há workaround via filtros para retornar "ausente ou vazio" em campos do tipo arquivo.
+
+**Abordagem alternativa**: Crie um campo booleano (ex.: `picturesExists`) e preencha-o no `scriptBeforeValidation` conforme o array tenha elementos ou não. Depois filtre com `{ "term": "picturesExists", "operator": "equals", "value": false }` para retornar registros em que o campo está ausente ou vazio.
+
 ## Próximos Passos
 
 1. Experimente criar filtros simples e vá aumentando a complexidade
