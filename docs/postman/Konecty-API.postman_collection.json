@@ -5,6 +5,14 @@
 		"description": "Postman collection for Konecty API endpoints including OTP authentication",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{ "key": "key", "value": "Authorization", "type": "string" },
+			{ "key": "value", "value": "{{authToken}}", "type": "string" },
+			{ "key": "in", "value": "header", "type": "string" }
+		]
+	},
 	"item": [
 		{
 			"name": "Authentication",
@@ -12,6 +20,7 @@
 				{
 					"name": "Login",
 					"request": {
+						"auth": { "type": "noauth" },
 						"method": "POST",
 						"header": [
 							{
@@ -61,6 +70,7 @@
 						{
 							"name": "Request OTP - Phone",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -220,6 +230,7 @@
 						{
 							"name": "Request OTP - Email",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -271,6 +282,7 @@
 						{
 							"name": "Verify OTP - Phone",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -403,6 +415,7 @@
 						{
 							"name": "Verify OTP - Email",
 							"request": {
+								"auth": { "type": "noauth" },
 								"method": "POST",
 								"header": [
 									{
@@ -900,12 +913,511 @@
 			}
 		]
 	}
+,
+	{
+		"name": "Cross-Module Query",
+		"description": "RFC-0001: Cross-module query API with recursive relations and aggregations. Uses Python/Polars as single aggregation engine. Defaults: includeTotal=true (sends X-Total-Count header), includeMeta=false (omits _meta NDJSON line). Set includeMeta=true to receive _meta with total, warnings, and execution info. Errors always use _meta wrapper.",
+		"item": [
+			{
+				"name": "Example 1: Product + PPO (push + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Product\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"_id\", \"operator\": \"equals\", \"value\": \"fFaJkGaWAdDhvcPH6\" }]\n  },\n  \"fields\": \"code,type\",\n  \"limit\": 1,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"ProductsPerOpportunities\",\n      \"lookup\": \"product\",\n      \"fields\": \"status,situation,rating,contact\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 100,\n      \"aggregators\": {\n        \"offers\": { \"aggregator\": \"push\" },\n        \"offerCount\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 1: Get a product and all its related offers (ProductsPerOpportunities) using push and count aggregators."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "1" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Product\",\"relations\":[\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":234,\"total\":1}}\n{\"code\":123,\"type\":\"Apartamento\",\"offers\":[{\"_id\":\"x1\",\"status\":\"Ofertado\",\"rating\":4,\"contact\":{\"_id\":\"c1\",\"name\":{\"full\":\"John Doe\"}}},{\"_id\":\"x2\",\"status\":\"Visitado\",\"rating\":5,\"contact\":{\"_id\":\"c2\",\"name\":{\"full\":\"Jane Doe\"}}}],\"offerCount\":2}"
+					}
+				]
+			},
+			{
+				"name": "Example 2: Contact + Opportunity (count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"name.full\", \"direction\": \"ASC\" }],\n  \"limit\": 1000,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [{ \"term\": \"status\", \"operator\": \"in\", \"value\": [\"Nova\", \"Ofertando Imveis\", \"Em Visitacao\"] }]\n      },\n      \"aggregators\": {\n        \"activeOpportunities\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 2: Count active opportunities per contact."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "42" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":156,\"total\":42}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"activeOpportunities\":3}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"activeOpportunities\":1}"
+					}
+				]
+			},
+			{
+				"name": "Example 3: Recursive - Contact + Opportunity + PPO",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"status\", \"operator\": \"equals\", \"value\": \"active\" }]\n  },\n  \"fields\": \"code,name\",\n  \"limit\": 100,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [{ \"term\": \"status\", \"operator\": \"in\", \"value\": [\"Nova\", \"Em Visitacao\"] }]\n      },\n      \"fields\": \"code,status,label\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 20,\n      \"aggregators\": {\n        \"opportunities\": { \"aggregator\": \"push\" },\n        \"opportunityCount\": { \"aggregator\": \"count\" }\n      },\n      \"relations\": [\n        {\n          \"document\": \"ProductsPerOpportunities\",\n          \"lookup\": \"opportunity\",\n          \"fields\": \"status,rating,product\",\n          \"limit\": 50,\n          \"aggregators\": {\n            \"products\": { \"aggregator\": \"push\" },\n            \"productCount\": { \"aggregator\": \"count\" }\n          }\n        }\n      ]\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 3: 3-level recursive chain - Contact -> Opportunity -> ProductsPerOpportunities."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "1" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\",\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":456,\"total\":1}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"opportunityCount\":2,\"opportunities\":[{\"code\":5001,\"status\":\"Nova\",\"label\":\"Apt 301\",\"productCount\":2,\"products\":[{\"status\":\"Ofertado\",\"rating\":4,\"product\":{\"_id\":\"p1\",\"code\":123}},{\"status\":\"Visitado\",\"rating\":5,\"product\":{\"_id\":\"p2\",\"code\":456}}]},{\"code\":5002,\"status\":\"Em Visitacao\",\"label\":\"Casa 12\",\"productCount\":0,\"products\":[]}]}"
+					}
+				]
+			},
+			{
+				"name": "Example 4: Contact + Opportunity (first aggregator)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n  \"limit\": 200,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"fields\": \"code,status,label\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"limit\": 1,\n      \"aggregators\": {\n        \"firstOpportunityCode\": { \"aggregator\": \"first\", \"field\": \"code\" },\n        \"firstOpportunityStatus\": { \"aggregator\": \"first\", \"field\": \"status\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 4: Contacts with their first (most recent) related opportunity (first aggregator). Uses Contact + Opportunity with lookup 'contact' (Opportunity.contact points to Contact), which is standard in Konecty. Contacts without opportunities get null for the aggregated fields."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "2" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":123,\"total\":2}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"firstOpportunityCode\":5001,\"firstOpportunityStatus\":\"Nova\"}\n{\"code\":1002,\"name\":{\"full\":\"Bob Silva\"},\"firstOpportunityCode\":null,\"firstOpportunityStatus\":null}"
+					}
+				]
+			},
+			{
+				"name": "Example 5: Campaign + Opportunity (count + first + avg)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Campaign\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"status\", \"operator\": \"equals\", \"value\": \"Ativo\" }]\n  },\n  \"fields\": \"code,name,type\",\n  \"limit\": 50,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"campaign\",\n      \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n      \"aggregators\": {\n        \"totalOpportunities\": { \"aggregator\": \"count\" },\n        \"newestOpportunity\": { \"aggregator\": \"first\" },\n        \"avgValue\": { \"aggregator\": \"avg\", \"field\": \"value\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 5: Campaign performance with opportunity count, newest opportunity, and average value."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "3" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Campaign\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":200,\"total\":3}}\n{\"code\":301,\"name\":\"Summer 2026\",\"type\":\"Digital\",\"totalOpportunities\":45,\"newestOpportunity\":{\"_id\":\"o99\",\"code\":5099,\"status\":\"Nova\",\"label\":\"Lead #5099\"},\"avgValue\":250000}"
+					}
+				]
+			},
+			{
+				"name": "Example 6: Contact + Message (max + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"fields\": \"code,name\",\n  \"sort\": [{ \"property\": \"name.full\", \"direction\": \"ASC\" }],\n  \"limit\": 1000,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Message\",\n      \"lookup\": \"contact\",\n      \"filter\": {\n        \"match\": \"and\",\n        \"conditions\": [\n          { \"term\": \"type\", \"operator\": \"equals\", \"value\": \"Email\" },\n          { \"term\": \"status\", \"operator\": \"equals\", \"value\": \"Enviada\" }\n        ]\n      },\n      \"aggregators\": {\n        \"lastEmailSentAt\": { \"aggregator\": \"max\", \"field\": \"_createdAt\" },\n        \"totalEmailsSent\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 6: Last email sent date and total email count per contact."
+				},
+				"response": [
+					{
+						"name": "Success",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "3" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Message\"],\"warnings\":[],\"executionTimeMs\":178,\"total\":3}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"lastEmailSentAt\":\"2026-02-09T14:30:00.000Z\",\"totalEmailsSent\":12}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"lastEmailSentAt\":\"2026-01-15T09:00:00.000Z\",\"totalEmailsSent\":3}\n{\"code\":1003,\"name\":{\"full\":\"Carlos Mendes\"},\"lastEmailSentAt\":null,\"totalEmailsSent\":0}"
+					}
+				]
+			},
+			{
+				"name": "Example 7: Security Degradation (broker without Product access)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Opportunity\",\n  \"fields\": \"code,status,label\",\n  \"sort\": [{ \"property\": \"_createdAt\", \"direction\": \"DESC\" }],\n  \"limit\": 100,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Product\",\n      \"lookup\": \"product\",\n      \"fields\": \"code,sale\",\n      \"aggregators\": {\n        \"productCode\": { \"aggregator\": \"first\", \"field\": \"code\" },\n        \"productSale\": { \"aggregator\": \"first\", \"field\": \"sale\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "RFC-0001 Example 7: Security degradation. When a broker has no access to Product module, product aggregators return null and a warning is included in _meta."
+				},
+				"response": [
+					{
+						"name": "Success (with access warning)",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }, { "key": "X-Total-Count", "value": "2" }],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Opportunity\",\"relations\":[\"Product\"],\"warnings\":[{\"type\":\"RELATION_ACCESS_DENIED\",\"document\":\"Product\",\"message\":\"User lacks read access to Product\"}],\"executionTimeMs\":98,\"total\":2}}\n{\"code\":5001,\"status\":\"Nova\",\"label\":\"Apt 301 - Centro\",\"productCode\":null,\"productSale\":null}\n{\"code\":5002,\"status\":\"Em Visitacao\",\"label\":\"Casa 12 - Praia\",\"productCode\":null,\"productSale\":null}"
+					}
+				]
+			},
+			{
+				"name": "Invalid Query (validation error)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"aggregators\": {}\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "Negative test: Empty aggregators object should fail Zod validation."
+				},
+				"response": [
+					{
+						"name": "Validation Error",
+						"status": "Bad Request",
+						"code": 400,
+						"_postman_previewlanguage": "json",
+						"header": [{ "key": "Content-Type", "value": "application/x-ndjson" }],
+						"body": "{\"_meta\":{\"success\":false,\"errors\":[{\"message\":\"relations.0.aggregators: At least one aggregator is required per relation\"}]}}"
+					}
+				]
+			},
+			{
+				"name": "Empty Result (no matching records)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\",\n  \"filter\": {\n    \"match\": \"and\",\n    \"conditions\": [{ \"term\": \"_id\", \"operator\": \"equals\", \"value\": \"nonexistent-id\" }]\n  },\n  \"fields\": \"code,name\",\n  \"limit\": 10,\n  \"includeTotal\": true,\n  \"includeMeta\": true,\n  \"relations\": [\n    {\n      \"document\": \"Opportunity\",\n      \"lookup\": \"contact\",\n      \"aggregators\": {\n        \"count\": { \"aggregator\": \"count\" }\n      }\n    }\n  ]\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/json",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "json"]
+					},
+					"description": "Edge case: Query that matches no primary records returns empty NDJSON with _meta."
+				},
+				"response": [
+					{
+						"name": "Empty Result",
+						"status": "OK",
+						"code": 200,
+						"_postman_previewlanguage": "json",
+						"header": [
+							{ "key": "Content-Type", "value": "application/x-ndjson" },
+							{ "key": "X-Total-Count", "value": "0" }
+						],
+						"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":45,\"total\":0}}"
+					}
+				]
+			}
+		]
+	},
+	{
+		"name": "Cross-Module Query (SQL)",
+		"description": "RFC-0001 Phase 2: Same cross-module queries via ANSI SQL subset. Endpoint: POST /rest/query/sql. Body: { \"sql\": \"SELECT ...\", \"includeTotal\": true, \"includeMeta\": false }. Defaults: includeTotal=true (sends X-Total-Count header), includeMeta=false (omits _meta NDJSON line). Set includeMeta=true to receive _meta with total, warnings, and execution info. Errors always use _meta wrapper. Response: NDJSON as per JSON endpoint. SQL is parsed and translated to the Internal Query Representation (IQR), then executed by the same engine as the JSON endpoint.",
+		"item": [
+			{
+				"name": "SQL Example 1: Product + PPO (push + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT p.code, p.type, PUSH(ppo.*) AS offers, COUNT(ppo._id) AS offerCount FROM Product p INNER JOIN ProductsPerOpportunities ppo ON p._id = ppo.product._id WHERE p._id = 'fFaJkGaWAdDhvcPH6' GROUP BY p.code, p.type LIMIT 1\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 1: Product with related offers (ProductsPerOpportunities). Same result as JSON Example 1."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "1" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Product\",\"relations\":[\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":120,\"total\":1}}\n{\"code\":123,\"type\":\"Apartamento\",\"offers\":[{\"_id\":\"x1\",\"status\":\"Ofertado\",\"situation\":\"Visita\",\"rating\":4,\"contact\":{\"_id\":\"c1\",\"name\":{\"full\":\"John Doe\"}}},{\"_id\":\"x2\",\"status\":\"Visitado\",\"situation\":\"Proposta\",\"rating\":5,\"contact\":{\"_id\":\"c2\",\"name\":{\"full\":\"Jane Doe\"}}}],\"offerCount\":2}\n"
+				}
+			]
+		},
+			{
+				"name": "SQL Example 2: Contact + Opportunity (count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT c.code, c.name, COUNT(o._id) AS activeOpportunities FROM Contact c INNER JOIN Opportunity o ON c._id = o.contact._id WHERE o.status IN ('Nova', 'Ofertando Imveis', 'Em Visitacao') GROUP BY c.code, c.name ORDER BY c.name ASC LIMIT 1000\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 2: Count active opportunities per contact."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "42" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":234,\"total\":42}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"activeOpportunities\":3}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"activeOpportunities\":1}\n"
+				}
+			]
+		},
+			{
+				"name": "SQL Example 3: Contact + Opportunity + PPO (recursive)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT ct.code, ct.name, o.code AS opp_code, o.status AS opp_status, o.label, ppo.status AS ppo_status, ppo.rating, ppo.product FROM Contact ct INNER JOIN Opportunity o ON ct._id = o.contact._id INNER JOIN ProductsPerOpportunities ppo ON o._id = ppo.opportunity._id WHERE ct.status = 'active' AND o.status IN ('Nova', 'Em Visitacao') ORDER BY o._createdAt DESC LIMIT 100\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 3: 3-level chain Contact -> Opportunity -> ProductsPerOpportunities."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON (nested)",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "1" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Opportunity\",\"ProductsPerOpportunities\"],\"warnings\":[],\"executionTimeMs\":450,\"total\":1}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"opportunityCount\":2,\"opportunities\":[{\"code\":5001,\"status\":\"Nova\",\"label\":\"Apt 301\",\"productCount\":2,\"products\":[{\"status\":\"Ofertado\",\"rating\":4},{\"status\":\"Visitado\",\"rating\":5}]},{\"code\":5002,\"status\":\"Em Visitacao\",\"label\":\"Casa 12\",\"productCount\":0,\"products\":[]}]}\n"
+				}
+			]
+		},
+			{
+				"name": "SQL Example 4: Activity + Product (LEFT JOIN)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT a.code, a.subject, a.status, FIRST(p.code) AS productCode, FIRST(p.sale) AS productSale FROM Activity a LEFT JOIN Product p ON a.product._id = p._id WHERE a.status IN ('new', 'in-progress') ORDER BY a._createdAt DESC LIMIT 200\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 4: Activities with optional product (LEFT JOIN). Activities without product get null for product aggregators."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON (nulls for missing product)",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "2" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Activity\",\"relations\":[\"Product\"],\"warnings\":[],\"executionTimeMs\":85,\"total\":2}}\n{\"code\":8001,\"subject\":\"Call about apartment\",\"status\":\"in-progress\",\"productCode\":123,\"productSale\":{\"value\":450000,\"currency\":\"BRL\"}}\n{\"code\":8002,\"subject\":\"Follow-up email\",\"status\":\"new\",\"productCode\":null,\"productSale\":null}\n"
+				}
+			]
+		},
+			{
+				"name": "SQL Example 5: Campaign + Opportunity (count + first + avg)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT c.code, c.name, c.type, COUNT(o._id) AS totalOpportunities, FIRST(o.*) AS newestOpportunity, AVG(o.value) AS avgValue FROM Campaign c INNER JOIN Opportunity o ON c._id = o.campaign._id WHERE c.status = 'Ativo' GROUP BY c.code, c.name, c.type ORDER BY o._createdAt DESC LIMIT 50\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 5: Campaign performance with count, first, and avg aggregators."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "3" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Campaign\",\"relations\":[\"Opportunity\"],\"warnings\":[],\"executionTimeMs\":180,\"total\":3}}\n{\"code\":301,\"name\":\"Summer 2026\",\"type\":\"Digital\",\"totalOpportunities\":45,\"newestOpportunity\":{\"_id\":\"o99\",\"code\":5099,\"status\":\"Nova\",\"label\":\"Lead #5099\"},\"avgValue\":250000}\n"
+				}
+			]
+		},
+			{
+				"name": "SQL Example 6: Contact + Message (max + count)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT ct.code, ct.name, MAX(m._createdAt) AS lastEmailSentAt, COUNT(m._id) AS totalEmailsSent FROM Contact ct LEFT JOIN Message m ON ct._id = m.contact._id WHERE m.type = 'Email' AND m.status = 'Enviada' GROUP BY ct.code, ct.name ORDER BY ct.name ASC LIMIT 1000\",\n  \"includeMeta\": true\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "RFC-0001 SQL equivalent of Example 6: Last email sent and total emails per contact."
+			},
+			"response": [
+				{
+					"name": "200 OK - NDJSON",
+					"status": "OK",
+					"code": 200,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" },
+						{ "key": "X-Total-Count", "value": "3" }
+					],
+					"body": "{\"_meta\":{\"success\":true,\"document\":\"Contact\",\"relations\":[\"Message\"],\"warnings\":[],\"executionTimeMs\":150,\"total\":3}}\n{\"code\":1001,\"name\":{\"full\":\"Alice Santos\"},\"lastEmailSentAt\":\"2026-02-09T14:30:00.000Z\",\"totalEmailsSent\":12}\n{\"code\":1002,\"name\":{\"full\":\"Bruno Silva\"},\"lastEmailSentAt\":\"2026-01-15T09:00:00.000Z\",\"totalEmailsSent\":3}\n{\"code\":1003,\"name\":{\"full\":\"Carlos Mendes\"},\"lastEmailSentAt\":null,\"totalEmailsSent\":0}\n"
+				}
+			]
+		},
+			{
+				"name": "Invalid SQL (syntax error)",
+				"request": {
+					"method": "POST",
+					"header": [
+						{ "key": "Content-Type", "value": "application/json" }
+					],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"sql\": \"SELECT c.code FROM Contact c WHERE c INVALID\"\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/rest/query/sql",
+						"host": ["{{baseUrl}}"],
+						"path": ["rest", "query", "sql"]
+					},
+				"description": "Negative test: Invalid SQL should return 400 with parser/validation error."
+			},
+			"response": [
+				{
+					"name": "400 Bad Request - Parse error",
+					"status": "Bad Request",
+					"code": 400,
+					"header": [
+						{ "key": "Content-Type", "value": "application/x-ndjson" }
+					],
+					"body": "{\"_meta\":{\"success\":false,\"errors\":[{\"message\":\"SQL syntax error: ...\"}]}}"
+				}
+			]
+		}
+		]
+	}
 ],
 	"variable": [
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:3000",
 			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string",
+			"description": "Token from Login response (authId). Set after running Login or paste your session token."
 		}
 	]
 }

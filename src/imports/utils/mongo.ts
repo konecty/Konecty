@@ -49,6 +49,21 @@ export async function isReplicaSet() {
 	}
 }
 
+interface DuplicateKeyError extends MongoServerError {
+	keyPattern: Record<string, number>;
+	keyValue: Record<string, any>;
+}
+
+export function isDuplicateKeyError(error: unknown): error is DuplicateKeyError {
+	return error instanceof MongoServerError && error.code === 11000;
+}
+
+export function getDuplicateKeyField(error: DuplicateKeyError): string {
+	const keyPattern = Object.keys(error.keyPattern)[0];
+	const keyValue = error.keyValue[keyPattern];
+	return `${keyPattern}: ${keyValue}`;
+}
+
 /**
  * Checks if there are secondary nodes available in the replica set
  * @returns true if at least one secondary node is available, false otherwise
@@ -135,26 +150,4 @@ function getIndexInfo(errorMessage: string): { name: string; fields: string[] } 
 		name: indexName,
 		fields: Object.keys(dupKey),
 	};
-}
-
-/**
- * Returns true if the error is a MongoDB duplicate key error (code 11000).
- */
-export function isDuplicateKeyError(error: unknown): error is MongoServerError {
-	return error instanceof MongoServerError && error.code === 11000;
-}
-
-/**
- * Returns the index name or first duplicate key field from a MongoDB duplicate key error.
- */
-export function getDuplicateKeyField(error: unknown): string {
-	if (!(error instanceof MongoServerError) || error.code !== 11000) {
-		return '';
-	}
-	try {
-		const { name, fields } = getIndexInfo(error.message);
-		return fields.length > 0 ? fields.join(', ') : name;
-	} catch {
-		return (error as MongoServerError).message;
-	}
 }
