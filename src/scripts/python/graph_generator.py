@@ -165,7 +165,7 @@ if not flattened_data:
     print(error_response, flush=True)
     sys.exit(1)
 
-df_polars = pl.DataFrame(flattened_data)
+df_polars = pl.DataFrame(flattened_data, strict=False)
 
 # 6. Extract configuration
 graph_type = graph_config.get('type')
