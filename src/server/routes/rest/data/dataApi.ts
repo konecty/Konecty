@@ -932,10 +932,15 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	// --- KPI Aggregation Endpoint ---
 	// ADR-0012: Zod validation, no-magic-numbers, structured logging
 
-	const KpiConfigSchema = z.object({
-		operation: z.enum(['count', 'sum', 'avg', 'min', 'max']),
-		field: z.string().optional(),
-	});
+	const KpiConfigSchema = z
+		.object({
+			operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'countDistinct']),
+			field: z.string().optional(),
+		})
+		.refine(
+			data => data.operation !== 'countDistinct' || (data.field != null && data.field.length > 0),
+			{ message: 'field is required when operation is countDistinct', path: ['field'] },
+		);
 	const HTTP_BAD_REQUEST = 400;
 	const HTTP_INTERNAL_ERROR = 500;
 

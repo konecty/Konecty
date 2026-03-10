@@ -69,7 +69,7 @@ const KpiWidgetConfigSchema = z.object({
 	type: z.literal('kpi'),
 	document: z.string(),
 	filter: z.unknown().optional(), // KonFilter serialized (non-percentage)
-	operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage']),
+	operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'percentage', 'countDistinct']),
 	field: z.string().optional(), // required for all except count (non-percentage)
 	displayName: z.string().optional(), // meta display name for filter context
 	displayType: z.string().optional(), // meta display type for filter context
