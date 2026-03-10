@@ -468,6 +468,38 @@ elif aggregation and not category_field:
 else:
     df_agg = df_polars
 
+# 7.5 Apply Top-N limits (xAxisLimit / yAxisLimit / limitOrder)
+x_axis_limit = graph_config.get('xAxisLimit')
+y_axis_limit = graph_config.get('yAxisLimit')
+limit_order = graph_config.get('limitOrder', 'desc')
+limit_ascending = limit_order == 'asc'
+
+x_limit_valid = isinstance(x_axis_limit, int) and x_axis_limit > 0
+y_limit_valid = isinstance(y_axis_limit, int) and y_axis_limit > 0
+
+effective_cat_limit = x_axis_limit if x_limit_valid else None
+
+if effective_cat_limit and len(df_agg) > effective_cat_limit:
+    x_col_name = x_axis.get('field') or category_field
+    agg_cols = [c for c in df_agg.columns if c != x_col_name]
+    if not agg_cols and x_col_name:
+        agg_cols = [c for c in df_agg.columns if c != x_col_name and c != '_id']
+    if agg_cols:
+        sort_col = agg_cols[0]
+        if sort_col in df_agg.columns:
+            df_agg = df_agg.sort(sort_col, descending=not limit_ascending)
+    df_agg = df_agg.head(effective_cat_limit)
+
+if y_limit_valid and use_series:
+    x_col = x_axis.get('field') or category_field
+    serie_cols = [c for c in df_agg.columns if c != x_col]
+    if len(serie_cols) > y_axis_limit:
+        totals = [(col, df_agg[col].sum() if df_agg[col].dtype in [pl.Int64, pl.Float64, pl.Int32, pl.Float32, pl.UInt32, pl.UInt64] else 0) for col in serie_cols]
+        totals.sort(key=lambda t: t[1], reverse=not limit_ascending)
+        keep_cols = [t[0] for t in totals[:y_axis_limit]]
+        df_agg = df_agg.select([x_col] + keep_cols)
+        series = [s for s in series if s.get('label', s.get('field')) in keep_cols]
+
 # 8. Convert aggregated result to Pandas (smaller dataset)
 df_pandas = df_agg.to_pandas()
 
@@ -886,6 +918,11 @@ try:
         plt.legend().set_visible(False)
     
     plt.tight_layout()
+
+    if y_limit_valid and graph_type and graph_type.lower() != 'pie':
+        from matplotlib.ticker import LinearLocator
+        ax = plt.gca()
+        ax.yaxis.set_major_locator(LinearLocator(numticks=y_axis_limit))
     
     # 9. Export SVG to stdout
     svg_buffer = io.StringIO()
