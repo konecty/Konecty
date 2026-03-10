@@ -36,6 +36,7 @@ if method != 'graph':
     sys.exit(1)
 
 graph_config = params.get('config', {})
+graph_lang = params.get('lang', 'pt_BR')
 
 # 2. Read NDJSON data from remaining stdin
 data = []
@@ -502,6 +503,14 @@ if y_limit_valid and use_series:
 
 # 8. Convert aggregated result to Pandas (smaller dataset)
 df_pandas = df_agg.to_pandas()
+
+# 8.5 Replace null/empty values in category column with a readable label
+empty_label = '(Vazio)' if graph_lang.startswith('pt') else '(Empty)'
+cat_col = x_axis.get('field') or category_field
+if cat_col and cat_col in df_pandas.columns:
+    df_pandas[cat_col] = df_pandas[cat_col].fillna(empty_label)
+    df_pandas[cat_col] = df_pandas[cat_col].replace('', empty_label)
+    df_pandas[cat_col] = df_pandas[cat_col].replace('null', empty_label)
 
 # 9. Generate chart with matplotlib
 plt.figure(figsize=(width / 100, height / 100), dpi=100)
