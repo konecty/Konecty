@@ -21,7 +21,7 @@ RPC_VERSION = '2.0'
 RPC_ERROR_METHOD_NOT_FOUND = -32601
 RPC_ERROR_INVALID_PARAMS = -32602
 RPC_ERROR_INTERNAL = -32603
-VALID_OPERATIONS = ('sum', 'avg', 'min', 'max')
+VALID_OPERATIONS = ('sum', 'avg', 'min', 'max', 'count_distinct')
 
 # Debug log file
 DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), 'kpi_debug.log')
@@ -91,21 +91,26 @@ def compute_aggregation(
     field: str,
 ) -> Dict[str, Any]:
     """Compute the requested aggregation on the dataframe.
-    Supports: sum, avg, min, max.
+    Supports: sum, avg, min, max, count_distinct.
     Percentage is handled client-side via two parallel calls."""
-    # Use flattened column names (dots replaced with underscores)
     col_name = field.replace('.', '_') if '.' in field else field
-
     row_count = len(df)
 
     if col_name not in df.columns:
         debug_log(f'Column {col_name} not found in dataframe. Available: {df.columns}')
         return {'result': 0, 'count': row_count, 'error': f'Field {field} not found in data'}
 
-    # Cast column to float for numeric operations, dropping nulls
+    if operation == 'count_distinct':
+        series = df[col_name].drop_nulls()
+        n_unique = series.n_unique()
+        return {
+            'result': n_unique,
+            'count': row_count,
+            'validCount': n_unique,
+        }
+
     series = df[col_name].cast(pl.Float64, strict=False).drop_nulls()
     valid_count = len(series)
-
     if valid_count == 0:
         return {'result': 0, 'count': row_count, 'validCount': 0}
 

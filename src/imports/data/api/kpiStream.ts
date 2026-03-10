@@ -17,7 +17,7 @@ import { NEWLINE_SEPARATOR } from './streamConstants';
  *   buildFindQuery → findStream (field permissions) → Python (Polars) aggregation
  *
  * For 'count': uses find() with getTotal:true, limit:1 (no Python needed).
- * For sum/avg/min/max/percentage: streams through Python kpi_aggregator.py.
+ * For sum/avg/min/max/countDistinct: streams through Python kpi_aggregator.py.
  *
  * ADR-0012: no-magic-numbers, prefer-const, functional style
  */
@@ -33,7 +33,7 @@ const PYTHON_KPI_SCRIPT_PATH_DOCKER = path.join('/app', 'scripts', 'python', 'kp
 // --- Types ---
 
 export interface KpiConfig {
-	operation: 'count' | 'sum' | 'avg' | 'min' | 'max';
+	operation: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'countDistinct';
 	field?: string; // required for all except count
 }
 
@@ -171,12 +171,13 @@ export default async function kpiStream({ kpiConfig, tracingSpan, ...findParams 
 			};
 		}
 
-		// --- SUM/AVG/MIN/MAX: findStream → Python ---
+		// --- SUM/AVG/MIN/MAX/COUNT_DISTINCT: findStream → Python ---
 
-		// Validate field is present
 		if (field == null || field.length === 0) {
 			return errorReturn(`KPI aggregation '${operation}' requires a field`);
 		}
+
+		const pythonOperation = operation === 'countDistinct' ? 'count_distinct' : operation;
 
 		// Build fields for projection: only the field we need
 		const projectionFields = [field];
@@ -229,10 +230,10 @@ export default async function kpiStream({ kpiConfig, tracingSpan, ...findParams 
 		tracingSpan?.addEvent('Creating Python KPI process');
 		pythonProcess = createKpiPythonProcess();
 
-		// Send RPC request with KPI config
+		// Send RPC request with KPI config (Python uses snake_case for count_distinct)
 		tracingSpan?.addEvent('Sending RPC request to Python');
 		await sendRPCRequest(pythonProcess, 'aggregate', {
-			config: { operation, field },
+			config: { operation: pythonOperation, field },
 		} as any);
 
 		// Send data to Python

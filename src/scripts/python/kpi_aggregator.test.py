@@ -122,6 +122,37 @@ def test_null_values():
     assert result['validCount'] == 2
 
 
+def test_count_distinct():
+    data_with_dupes = [
+        {'_id': '1', 'email': 'a@x.com'},
+        {'_id': '2', 'email': 'b@x.com'},
+        {'_id': '3', 'email': 'a@x.com'},
+        {'_id': '4', 'email': 'c@x.com'},
+    ]
+    result = run_kpi_aggregator(
+        {'method': 'aggregate', 'params': {'config': {'operation': 'count_distinct', 'field': 'email'}}},
+        data_with_dupes,
+    )
+    assert result['result'] == 3
+    assert result['count'] == 4
+    assert result['validCount'] == 3
+
+
+def test_count_distinct_with_nulls():
+    data = [
+        {'_id': '1', 'code': 'A'},
+        {'_id': '2', 'code': None},
+        {'_id': '3', 'code': 'A'},
+    ]
+    result = run_kpi_aggregator(
+        {'method': 'aggregate', 'params': {'config': {'operation': 'count_distinct', 'field': 'code'}}},
+        data,
+    )
+    assert result['result'] == 1
+    assert result['count'] == 3
+    assert result['validCount'] == 1
+
+
 if __name__ == '__main__':
     test_sum()
     test_avg()
@@ -130,4 +161,6 @@ if __name__ == '__main__':
     test_nested_fields()
     test_empty_data()
     test_null_values()
+    test_count_distinct()
+    test_count_distinct_with_nulls()
     print('All Python KPI aggregator tests passed!')
