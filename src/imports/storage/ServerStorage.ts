@@ -7,6 +7,14 @@ import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
 import { Readable } from 'stream';
 
+const decodeFilenameForBlob = (name: string): string => {
+	try {
+		return decodeURIComponent(name);
+	} catch {
+		return name;
+	}
+};
+
 export default class ServerStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
@@ -32,7 +40,8 @@ export default class ServerStorage implements FileStorage {
 
 		const file = filesToSave[0];
 		const fd = new FormData();
-		fd.append('file', new Blob([file.content]), file.name);
+		const displayName = decodeFilenameForBlob(fileData.name);
+		fd.append('file', new Blob([file.content]), displayName);
 
 		const response = await fetch(`${storageCfg.config.upload}${uploadPath}`, {
 			method: 'POST',
