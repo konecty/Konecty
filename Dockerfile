@@ -18,13 +18,8 @@ ENV PATH="/usr/local/bin:$PATH"
 
 # Note: maturin will be installed automatically by uv when building polars
 # Rust and cargo are already installed above for building polars from source on Alpine
-# Retry yarn install up to 3 times to handle transient registry 500 errors (e.g. unpipe from registry.yarnpkg.com)
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
-    for i in 1 2 3; do \
-        yarn install --production --silent --non-interactive --frozen-lockfile && break; \
-        if [ "$i" -eq 3 ]; then exit 1; fi; \
-        sleep 15; \
-    done
+
+RUN yarn install --production --silent --non-interactive --frozen-lockfile
 
 # Copy Python scripts (after copying dist and private)
 COPY ./src/scripts/python /app/scripts/python
