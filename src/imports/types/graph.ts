@@ -47,6 +47,10 @@ export interface GraphConfig {
 	colors?: string[]; // Cores customizadas
 	showLegend?: boolean; // Padrão: true
 	showGrid?: boolean; // Padrão: true
+	showDataLabels?: boolean; // Mostrar valores exatos nas barras/séries
+	includeAllPicklistOptions?: boolean; // Incluir todas as opções do picklist no eixo X mesmo com contagem zero
+	/** Enriquecido no backend quando includeAllPicklistOptions é true; enviado ao Python */
+	xAxisPicklistOptions?: string[];
 	histogram?: GraphHistogramBinsConfig; // Configuração de bins para histograma
 	xAxisLimit?: number; // Limitar quantidade de categorias no eixo X (Top N)
 	yAxisLimit?: number; // Limitar quantidade de séries/medidas no eixo Y
