@@ -13,6 +13,8 @@ Este diretório contém as decisões arquiteturais tomadas durante o desenvolvim
 - [ADR-0007: Formato Hierárquico de Saída do Pivot](./0007-formato-hierarquico-saida-pivot.md)
 - [ADR-0008: Endpoint de Gráficos com Polars e Pandas](./0008-graph-endpoint-com-polars-pandas.md)
 - [ADR-0009: Estrutura Centralizada de Mensagens de Erro no Backend](./0009-estrutura-mensagens-erro-backend.md)
+- [ADR-0010: Padrões de Código](./0010-padroes-codigo.md)
+- [ADR-0011: Evitar Tecnocentrismo na Comunicação com Usuários](./0011-evitar-tecnocentrismo-comunicacao.md)
 
 ## Formato
 

@@ -16,13 +16,14 @@ function buildStreamPipeline(
 	tracingSpan?: Span,
 ): Readable {
 	// Build pipeline step by step
-	const streamAfterPermissions = conditionsKeys.length > 0
-		? (() => {
-				tracingSpan?.addEvent('Applying field permissions transform');
-				const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
-				return mongoStream.pipe(permissionsTransform);
-			})()
-		: mongoStream;
+	const streamAfterPermissions =
+		conditionsKeys.length > 0
+			? (() => {
+					tracingSpan?.addEvent('Applying field permissions transform');
+					const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
+					return mongoStream.pipe(permissionsTransform);
+				})()
+			: mongoStream;
 
 	const streamAfterDates = transformDatesToString
 		? (() => {
@@ -48,12 +49,7 @@ export type FindStreamResult = KonectyResultSuccess<Readable> & {
 	total?: number;
 };
 
-export default async function findStream({
-	getTotal,
-	transformDatesToString = true,
-	tracingSpan,
-	...params
-}: FindStreamParams): Promise<FindStreamResult | KonectyResultError> {
+export default async function findStream({ getTotal, transformDatesToString = true, tracingSpan, ...params }: FindStreamParams): Promise<FindStreamResult | KonectyResultError> {
 	try {
 		const startTime = process.hrtime();
 
@@ -106,7 +102,7 @@ export default async function findStream({
 					maxTimeMS: STREAM_MAX_TIME_MS,
 				});
 				result.total = total;
-				logger.info(`[findStream] Total documents matching query: ${total}`);
+				logger.debug({ total }, '[findStream] Total documents matching query');
 			} catch (error) {
 				logger.error(error as Error, 'Error calculating total');
 				// Don't fail the request if total calculation fails
@@ -129,4 +125,3 @@ export default async function findStream({
 		};
 	}
 }
-

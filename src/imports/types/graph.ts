@@ -30,6 +30,8 @@ export interface GraphHistogramBinsConfig {
 	overflow?: number; // Valor máximo para agrupar valores acima
 }
 
+export type LimitOrder = 'desc' | 'asc';
+
 export interface GraphConfig {
 	type: GraphType;
 	xAxis?: GraphAxis; // Obrigatório para bar, line, scatter, timeSeries
@@ -45,7 +47,14 @@ export interface GraphConfig {
 	colors?: string[]; // Cores customizadas
 	showLegend?: boolean; // Padrão: true
 	showGrid?: boolean; // Padrão: true
+	showDataLabels?: boolean; // Mostrar valores exatos nas barras/séries
+	includeAllPicklistOptions?: boolean; // Incluir todas as opções do picklist no eixo X mesmo com contagem zero
+	/** Enriquecido no backend quando includeAllPicklistOptions é true; enviado ao Python */
+	xAxisPicklistOptions?: string[];
 	histogram?: GraphHistogramBinsConfig; // Configuração de bins para histograma
+	xAxisLimit?: number; // Limitar quantidade de categorias no eixo X (Top N)
+	yAxisLimit?: number; // Limitar quantidade de séries/medidas no eixo Y
+	limitOrder?: LimitOrder; // Ordenação para seleção do limite: 'desc' (maior) ou 'asc' (menor)
 }
 
 /**

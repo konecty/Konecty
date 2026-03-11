@@ -117,7 +117,42 @@ async function findUserByPhone(phoneNumber: string): Promise<User | null> {
 	return countryCodeMatches.find(match => match != null) ?? null;
 }
 
+/**
+ * Login options for the UI: derived from namespace otpConfig (same logic as rest/view/view.ts).
+ * Public endpoint, no auth required.
+ */
+function getLoginOptions(): { passwordEnabled: boolean; emailOtpEnabled: boolean; whatsAppOtpEnabled: boolean } {
+	const otpConfig = MetaObject.Namespace.otpConfig;
+	const emailOtpEnabled =
+		(otpConfig?.emailTemplateId != null && otpConfig.emailTemplateId !== '') || process.env.OTP_EMAIL_ENABLED === 'true';
+	const whatsAppOtpEnabled = otpConfig?.whatsapp != null || process.env.OTP_WHATSAPP_ENABLED === 'true';
+	return {
+		passwordEnabled: true,
+		emailOtpEnabled,
+		whatsAppOtpEnabled,
+	};
+}
+
 const otpApi: FastifyPluginCallback = (fastify, _, done) => {
+	/**
+	 * GET /api/auth/login-options
+	 * Returns login method flags for the current namespace (password, email OTP, WhatsApp OTP).
+	 * Used by the UI to show/hide "Entre na sua conta" and "Entrar sem senha" sections.
+	 */
+	fastify.get('/api/auth/login-options', async function (_req, reply) {
+		try {
+			const options = getLoginOptions();
+			return reply.status(StatusCodes.OK).send(options);
+		} catch (error) {
+			logger.error(error, 'Error getting login options');
+			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({
+				passwordEnabled: true,
+				emailOtpEnabled: false,
+				whatsAppOtpEnabled: false,
+			});
+		}
+	});
+
 	/**
 	 * Request OTP endpoint
 	 * POST /api/auth/request-otp
