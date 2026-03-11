@@ -62,6 +62,37 @@ function resolveFieldMeta(document: string, fieldPath: string, lang: string = 'p
 	return { label: fieldPath, type: 'text' };
 }
 
+const PICKLIST_FIELD_TYPE = 'picklist';
+
+/**
+ * Retorna os valores (keys) das opções do picklist para um campo, ou undefined se não for picklist.
+ * Suporta campo simples e aninhado (lookup).
+ */
+function getPicklistOptionValues(document: string, fieldPath: string): string[] | undefined {
+	const meta = MetaObject.Meta[document];
+	if (meta == null) return undefined;
+
+	const parts = fieldPath.split('.');
+	const fieldName = parts[0];
+	const field = meta.fields[fieldName];
+
+	if (field == null) return undefined;
+
+	if (parts.length === 1) {
+		if (field.type === PICKLIST_FIELD_TYPE && field.options && typeof field.options === 'object') {
+			return Object.keys(field.options);
+		}
+		return undefined;
+	}
+
+	if ((field.type === 'lookup' || field.type === 'inheritLookup') && field.document) {
+		const remainingPath = parts.slice(1).join('.');
+		return getPicklistOptionValues(field.document, remainingPath);
+	}
+
+	return undefined;
+}
+
 /**
  * Verifica se o label é um nome técnico de campo (não traduzido)
  * Labels técnicos: começam com _, são iguais ao field, ou são camelCase típico
@@ -147,6 +178,13 @@ export function enrichGraphConfig(document: string, graphConfig: GraphConfig, la
 			...graphConfig.xAxis,
 			label: shouldUseMetaLabel ? fieldMeta.label : graphConfig.xAxis.label,
 		};
+
+		if (graphConfig.includeAllPicklistOptions === true && fieldMeta.type === PICKLIST_FIELD_TYPE) {
+			const optionValues = getPicklistOptionValues(document, graphConfig.xAxis.field);
+			if (optionValues && optionValues.length > 0) {
+				enrichedConfig.xAxisPicklistOptions = optionValues;
+			}
+		}
 	}
 
 	// Enriquecer yAxis com label traduzido (legado — skip when series are present)

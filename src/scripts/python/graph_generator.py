@@ -18,6 +18,11 @@ matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from typing import Dict, Any, Optional
 
+# Constants for data labels (ADR-0012: no-magic-numbers)
+SHOW_DATA_LABELS_PADDING = 3
+DATA_LABEL_FONT_SIZE = 8
+ZERO_VALUE = 0
+
 # 1. Read RPC request from first line of stdin
 request_line = sys.stdin.readline()
 if not request_line:
@@ -185,6 +190,7 @@ height = graph_config.get('height', 600)
 colors = graph_config.get('colors')
 show_legend = graph_config.get('showLegend', True)
 show_grid = graph_config.get('showGrid', True)
+show_data_labels = graph_config.get('showDataLabels', False)
 
 # 7. Apply aggregations in Polars (fast)
 # Check if we're using series (new) or yAxis+aggregation (legacy)
@@ -501,6 +507,16 @@ if y_limit_valid and use_series:
         df_agg = df_agg.select([x_col] + keep_cols)
         series = [s for s in series if s.get('label', s.get('field')) in keep_cols]
 
+# 7.6 Include all picklist options (fill missing with zero)
+x_axis_picklist_options = graph_config.get('xAxisPicklistOptions')
+if x_axis_picklist_options and len(x_axis_picklist_options) > 0:
+    x_col = x_axis.get('field') or category_field
+    if x_col not in df_agg.columns and df_agg.columns:
+        x_col = df_agg.columns[0]
+    if x_col:
+        all_options_df = pl.DataFrame({x_col: x_axis_picklist_options})
+        df_agg = all_options_df.join(df_agg, on=x_col, how='left').fill_null(ZERO_VALUE)
+
 # 8. Convert aggregated result to Pandas (smaller dataset)
 df_pandas = df_agg.to_pandas()
 
@@ -563,6 +579,10 @@ try:
             plt.title(title or f'Multiple Series by {x_label}')
             if show_legend:
                 plt.legend()
+            if show_data_labels:
+                ax = plt.gca()
+                for container in ax.containers:
+                    ax.bar_label(container, fmt='%.0f', padding=SHOW_DATA_LABELS_PADDING)
         else:
             # Legacy single series
             y_field = y_axis.get('field')
@@ -590,7 +610,11 @@ try:
             plt.ylabel(y_label)
             plt.title(title or f'{y_label} by {x_label}')
             plt.xticks(rotation=45, ha='right')
-        
+            if show_data_labels:
+                ax = plt.gca()
+                for container in ax.containers:
+                    ax.bar_label(container, fmt='%.0f', padding=SHOW_DATA_LABELS_PADDING)
+
     elif graph_type and graph_type.lower() == 'line':
         x_field = x_axis.get('field')
         
@@ -721,7 +745,13 @@ try:
             labels = value_counts.index
             values = value_counts.values
         
-        plt.pie(values, labels=labels, autopct='%1.1f%%', colors=colors)
+        pie_autopct = None
+        if show_data_labels and values is not None and len(values) > 0:
+            total = float(sum(values))
+            pie_autopct = (lambda t: lambda pct: str(int(round(pct * t / 100))) if t else (lambda pct: ''))(total)
+        else:
+            pie_autopct = '%1.1f%%'
+        plt.pie(values, labels=labels, autopct=pie_autopct, colors=colors)
         category_label = category_field_label or category_field
         plt.title(title or f'Distribution by {category_label}')
         
@@ -919,7 +949,17 @@ try:
         })
         print(error_response, flush=True)
         sys.exit(1)
-    
+
+    if show_data_labels and graph_type and graph_type.lower() in ('line', 'scatter', 'timeseries'):
+        ax = plt.gca()
+        for line in ax.get_lines():
+            xdata, ydata = line.get_xdata(), line.get_ydata()
+            for x, y in zip(xdata, ydata):
+                ax.annotate(str(int(round(y))), xy=(x, y), fontsize=DATA_LABEL_FONT_SIZE, ha='center', va='bottom')
+        for col in ax.collections:
+            for xy in col.get_offsets():
+                ax.annotate(str(int(round(xy[1]))), xy=xy, fontsize=DATA_LABEL_FONT_SIZE, ha='center', va='bottom')
+
     if show_grid:
         plt.grid(True, alpha=0.3)
     
