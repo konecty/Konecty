@@ -7,9 +7,11 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { MetaObject } from '@imports/model/MetaObject';
 import crossModuleQuery from '@imports/data/api/crossModuleQuery';
+import { ExportDataResponse } from '@imports/data/export';
 import csvExport from '@imports/exports/csvExport';
 import xlsExport from '@imports/exports/xlsExport';
 import jsonExport from '@imports/exports/jsonExport';
+import { KonectyResult } from '@imports/types/result';
 import { errorReturn } from '@imports/utils/return';
 import { logger } from '@imports/utils/logger';
 
@@ -76,9 +78,10 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 			});
 
 			if (queryResult == null || !('success' in queryResult) || queryResult.success !== true) {
-				const errorMsg = queryResult != null && 'errors' in queryResult
-					? (queryResult as { errors?: Array<{ message: string }> }).errors?.[0]?.message ?? 'Query failed'
-					: 'Query execution failed';
+				const errorMsg =
+					queryResult != null && 'errors' in queryResult
+						? (queryResult as { errors?: Array<{ message: string }> }).errors?.[0]?.message ?? 'Query failed'
+						: 'Query execution failed';
 				reply.status(500).send(errorReturn(errorMsg));
 				return;
 			}
@@ -86,23 +89,39 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 			const dataStream = recordsToReadable(queryResult.records);
 			const name = `data-explorer-${document}`;
 
-			let exportStream;
+			const fieldsStr = typeof body?.fields === 'string' ? body.fields : undefined;
+			const columns = fieldsStr
+				? fieldsStr
+						.split(',')
+						.map((f: string) => f.trim())
+						.filter(Boolean)
+				: undefined;
+			const exportOptions = columns != null && columns.length > 0 ? { columns } : undefined;
+
+			let exportResultPromise: Promise<KonectyResult<ExportDataResponse>>;
 			if (format === 'csv') {
-				exportStream = csvExport(dataStream, name);
 				reply.header('Content-Type', 'text/csv; charset=utf-8');
 				reply.header('Content-Disposition', `attachment; filename="${name}.csv"`);
+				exportResultPromise = csvExport(dataStream, name, exportOptions);
 			} else if (format === 'xlsx') {
-				exportStream = xlsExport(dataStream, name);
 				reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 				reply.header('Content-Disposition', `attachment; filename="${name}.xlsx"`);
+				exportResultPromise = xlsExport(dataStream, name, exportOptions);
 			} else {
-				exportStream = jsonExport(dataStream, name);
 				reply.header('Content-Type', 'application/json; charset=utf-8');
 				reply.header('Content-Disposition', `attachment; filename="${name}.json"`);
+				exportResultPromise = jsonExport(dataStream, name);
+			}
+
+			const exportResult = await exportResultPromise;
+			if (exportResult.success !== true || exportResult.data?.content == null) {
+				const errMsg = exportResult && 'errors' in exportResult ? String((exportResult as { errors?: unknown }).errors) : 'Export failed';
+				reply.status(500).send(errorReturn(errMsg));
+				return;
 			}
 
 			const durationMs = Date.now() - startTime;
-			logger.info({ document, format, durationMs, userId: (userResult.data as any)._id }, 'Data explorer export completed');
+			logger.info({ document, format, durationMs, userId: (userResult.data as { _id?: string })._id }, 'Data explorer export completed');
 
 			try {
 				const { logExportToAccessLog } = await import('@imports/audit/accessLogExport');
@@ -120,7 +139,7 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 				// audit log failure should not break the export
 			}
 
-			return reply.send(exportStream);
+			return reply.send(exportResult.data.content);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			logger.error({ err, document, format }, 'Data explorer export failed');

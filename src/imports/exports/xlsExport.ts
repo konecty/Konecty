@@ -7,11 +7,13 @@ import { KonectyResult } from '@imports/types/result';
 import { Workbook, Worksheet } from 'excel4node';
 import { Readable } from 'stream';
 
-export default async function xlsExport(dataStream: Readable, name: string): Promise<KonectyResult<ExportDataResponse>> {
+export type XlsExportOptions = { columns?: string[] };
+
+export default async function xlsExport(dataStream: Readable, name: string, options?: XlsExportOptions): Promise<KonectyResult<ExportDataResponse>> {
 	const wb = new Workbook();
 
 	const ws = wb.addWorksheet(name);
-	const flattenData = new TransformFlattenData('dd/MM/yyyy HH:mm:ss');
+	const flattenData = new TransformFlattenData('dd/MM/yyyy HH:mm:ss', options?.columns);
 
 	const widths: Record<string, number> = {};
 
@@ -21,7 +23,7 @@ export default async function xlsExport(dataStream: Readable, name: string): Pro
 		});
 
 		await dataStream.pipe(flattenData).reduce(addToWorksheet(flattenData, widths), ws);
-		addHeaders(wb, ws, Array.from(flattenData.headers), widths);
+		addHeaders(wb, ws, flattenData.getOrderedHeaders(), widths);
 
 		resolve(
 			successReturn({
@@ -46,8 +48,9 @@ function addToWorksheet(flattenData: TransformFlattenData, widths: Record<string
 	 * @see {@link TransformFlattenData._transform} line 145
 	 */
 	return (acc: Worksheet, record: Record<string, unknown>) => {
-		if (headerNum !== flattenData.headers.size) {
-			headers = Array.from(flattenData.headers);
+		const ordered = flattenData.getOrderedHeaders();
+		if (headerNum !== ordered.length) {
+			headers = ordered;
 			headerNum = headers.length;
 		}
 

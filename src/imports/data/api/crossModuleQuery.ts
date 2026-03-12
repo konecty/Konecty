@@ -115,7 +115,15 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 		const taggedPrimary = primaryRecords.map(r => ({ ...r, [DATASET_TAG]: query.document }));
 		allDatasets.set(query.document, taggedPrimary);
 
-		const pythonConfig = await processRelationsRecursive(query.document, primaryRecords, query.relations, user, authTokenId, allDatasets, warnings, tracingSpan);
+		const hasRelations = query.relations.length > 0;
+		const hasGroupBy = query.groupBy.length > 0;
+		const hasRootAggregators = Object.keys(query.aggregators).length > 0;
+		const needsPython = hasRelations || hasGroupBy || hasRootAggregators;
+
+		let pythonConfig: RelationPythonConfig[] = [];
+		if (hasRelations) {
+			pythonConfig = await processRelationsRecursive(query.document, primaryRecords, query.relations, user, authTokenId, allDatasets, warnings, tracingSpan);
+		}
 
 		if (primaryRecords.length === 0 && allDatasets.size <= 1) {
 			return {
@@ -126,28 +134,34 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 			};
 		}
 
-		// Step 7: Spawn Python process via uv (ADR-0006) and send data
-		tracingSpan?.addEvent('Spawning Python process');
-		const scriptPath = process.env.NODE_ENV === 'production' ? PYTHON_SCRIPT_PATH_DOCKER : PYTHON_SCRIPT_PATH;
-		pythonProcess = createPythonProcess(scriptPath);
+		let mergedRecords: Record<string, unknown>[];
 
-		const config: CrossModulePythonConfig = {
-			parentDataset: query.document,
-			relations: pythonConfig,
-			...(query.groupBy.length > 0 ? { groupBy: query.groupBy } : {}),
-			...(Object.keys(query.aggregators).length > 0 ? { aggregators: query.aggregators } : {}),
-		};
+		if (needsPython) {
+			// Step 7: Spawn Python process via uv (ADR-0006) and send data
+			tracingSpan?.addEvent('Spawning Python process');
+			const scriptPath = process.env.NODE_ENV === 'production' ? PYTHON_SCRIPT_PATH_DOCKER : PYTHON_SCRIPT_PATH;
+			pythonProcess = createPythonProcess(scriptPath);
 
-		// Send RPC request
-		await sendRPC(pythonProcess, config);
+			const config: CrossModulePythonConfig = {
+				parentDataset: query.document,
+				relations: pythonConfig,
+				...(hasGroupBy ? { groupBy: query.groupBy } : {}),
+				...(hasRootAggregators ? { aggregators: query.aggregators } : {}),
+			};
 
-		// Send all datasets as tagged NDJSON
-		tracingSpan?.addEvent('Sending data to Python');
-		await sendDatasets(pythonProcess, allDatasets);
+			// Send RPC request
+			await sendRPC(pythonProcess, config);
 
-		// Step 8: Read results from Python
-		tracingSpan?.addEvent('Collecting results from Python');
-		const mergedRecords = await collectPythonResults(pythonProcess);
+			// Send all datasets as tagged NDJSON
+			tracingSpan?.addEvent('Sending data to Python');
+			await sendDatasets(pythonProcess, allDatasets);
+
+			// Step 8: Read results from Python
+			tracingSpan?.addEvent('Collecting results from Python');
+			mergedRecords = await collectPythonResults(pythonProcess);
+		} else {
+			mergedRecords = primaryRecords;
+		}
 
 		if (total != null && total > CROSS_QUERY_MAX_RECORDS) {
 			warnings.push({

@@ -11,6 +11,8 @@ export interface ExplorerFieldMeta {
 	type: string;
 	label: string;
 	options?: Record<string, string>;
+	document?: string;
+	descriptionFields?: string[];
 }
 
 export interface ExplorerReverseLookup {
@@ -54,6 +56,10 @@ export function getExplorerModules(user: User, lang: string = LANG_DEFAULT): Exp
 				const item: ExplorerFieldMeta = { name: fieldName, type: field.type ?? 'text', label };
 				if (field.type === 'picklist' && field.options != null && typeof field.options === 'object') {
 					item.options = field.options as unknown as Record<string, string>;
+				}
+				if (field.type === 'lookup' || field.type === 'inheritLookup') {
+					if (field.document != null) item.document = field.document;
+					item.descriptionFields = field.descriptionFields ?? [];
 				}
 				fields.push(item);
 			}

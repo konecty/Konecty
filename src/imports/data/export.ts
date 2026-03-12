@@ -163,20 +163,36 @@ export default async function exportData({ document, listName, type = 'csv', use
 
 export class TransformFlattenData extends Transform {
 	headers: Set<string> = new Set<string>();
+	/** Ordered list of headers: initial columns first, then any new keys from data (insertion order). */
+	orderedHeaders: string[] = [];
 	dateFormat: string;
 
-	constructor(dateFormat?: string) {
+	constructor(dateFormat?: string, initialHeaders?: string[]) {
 		super({ objectMode: true, defaultEncoding: 'utf8' });
 		this.dateFormat = dateFormat ?? MetaObject.Namespace.dateFormat ?? 'dd/MM/yyyy HH:mm:ss';
+		if (initialHeaders != null && initialHeaders.length > 0) {
+			this.orderedHeaders = [...initialHeaders];
+			initialHeaders.forEach(h => this.headers.add(h));
+		}
 	}
 
 	_transform(record: Record<string, unknown>, encoding: string, callback: internal.TransformCallback) {
 		const flatItem = flatten<object, object>(record);
 		const transformed = dateToString(flatItem, date => date.toFormat(this.dateFormat));
 
-		Object.keys(flatItem).forEach(key => this.headers.add(key));
+		for (const key of Object.keys(flatItem)) {
+			if (!this.headers.has(key)) {
+				this.headers.add(key);
+				this.orderedHeaders.push(key);
+			}
+		}
 
 		this.push(transformed);
 		callback();
+	}
+
+	/** Returns headers in stable order: initial list first, then keys as first seen in data. */
+	getOrderedHeaders(): string[] {
+		return this.orderedHeaders.length > 0 ? this.orderedHeaders : Array.from(this.headers);
 	}
 }

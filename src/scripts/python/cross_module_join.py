@@ -51,9 +51,13 @@ def send_rpc_ok() -> None:
 
 
 def extract_nested_value(record: Dict[str, Any], field_path: str) -> Any:
+    if field_path in record:
+        return record[field_path]
     parts = field_path.split('.')
     current = record
     for part in parts:
+        if isinstance(current, list):
+            current = current[0] if len(current) > 0 else None
         if isinstance(current, dict) and part in current:
             current = current[part]
         else:
@@ -227,7 +231,7 @@ if not parent_dataset:
     send_error(RPC_ERROR_INVALID_PARAMS, 'parentDataset is required')
 
 if not relations:
-    send_error(RPC_ERROR_INVALID_PARAMS, 'At least one relation is required')
+    relations = []
 
 debug_log(f'Config: parentDataset={parent_dataset}, relations={len(relations)}')
 

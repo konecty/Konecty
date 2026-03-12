@@ -273,8 +273,8 @@ export default async function find<AsStream extends boolean = false>({
 		const recordStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
-		logger.trace(log);
+		const elapsedMs = totalTime[0] * 1000 + totalTime[1] / 1000000;
+		logger.trace({ document, elapsedMs, stages: aggregateStages.length }, '[find] query built');
 
 		const result: KonectyResultSuccess<typeof recordStream> = {
 			success: true,

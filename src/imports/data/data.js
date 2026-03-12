@@ -189,8 +189,8 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 
 	const totalTime = process.hrtime(startTime);
 
-	const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
-	logger.trace(log);
+	const elapsedMs = totalTime[0] * 1000 + totalTime[1] / 1000000;
+	logger.trace({ document, elapsedMs }, '[find] query built');
 
 	if (record != null) {
 		const resultData = Object.keys(record).reduce((acc, key) => {

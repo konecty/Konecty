@@ -414,6 +414,9 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					return successReturn(value);
 				}
 
+				if (field.options == null || typeof field.options !== 'object') {
+					return successReturn(value);
+				}
 				if ([].concat(value).some(v => !Object.keys(field.options).includes(v))) {
 					return errorReturn(`Value ${value} for field ${fieldName} is invalid`);
 				}

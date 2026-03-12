@@ -87,8 +87,8 @@ export default async function findObjectStream({
 		const mongoStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / NANOSECONDS_TO_MILLISECONDS}ms => FindObjectStream ${params.document}, filter: ${JSON.stringify(query)}`;
-		logger.trace(log);
+		const elapsedMs = totalTime[0] * 1000 + totalTime[1] / NANOSECONDS_TO_MILLISECONDS;
+		logger.trace({ document: params.document, elapsedMs, stages: aggregateStages.length }, '[findObjectStream] query built');
 
 		// Create pipeline with Transform streams (stays in objectMode)
 		const stream = buildObjectStreamPipeline(mongoStream, accessConditions, conditionsKeys, transformDatesToString, tracingSpan);
