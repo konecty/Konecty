@@ -29,6 +29,8 @@ import type {
 const CROSS_QUERY_MAX_RECORDS = parseInt(process.env.CROSS_QUERY_MAX_RECORDS ?? '100000', 10);
 const RELATION_CONCURRENCY = 3;
 const DATASET_TAG = '_dataset';
+/** Threshold above which a relation dataset triggers a LARGE_DATASET warning (ADR-0012: no-magic-numbers). */
+const LARGE_DATASET_WARNING_THRESHOLD = 50_000;
 
 import path from 'node:path';
 
@@ -67,7 +69,7 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 		// Step 3: Check primary document access (Layer 2 - MUST pass)
 		const primaryAccess = getAccessFor(query.document, user);
 		if (primaryAccess === false) {
-			return errorReturn(`User lacks read access to primary document '${query.document}'`);
+			return errorReturn('dataExplorer.errors.primaryNoReadAccess');
 		}
 
 		// Step 4: Execute primary findStream (Layers 2-6)
@@ -120,10 +122,9 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 		const hasRootAggregators = Object.keys(query.aggregators).length > 0;
 		const needsPython = hasRelations || hasGroupBy || hasRootAggregators;
 
-		let pythonConfig: RelationPythonConfig[] = [];
-		if (hasRelations) {
-			pythonConfig = await processRelationsRecursive(query.document, primaryRecords, query.relations, user, authTokenId, allDatasets, warnings, tracingSpan);
-		}
+		const pythonConfig = hasRelations
+			? await processRelationsRecursive(query.document, primaryRecords, query.relations, user, authTokenId, allDatasets, warnings, tracingSpan)
+			: [];
 
 		if (primaryRecords.length === 0 && allDatasets.size <= 1) {
 			return {
@@ -166,7 +167,7 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 		if (total != null && total > CROSS_QUERY_MAX_RECORDS) {
 			warnings.push({
 				type: 'LIMIT_REACHED',
-				message: `Result limited to ${CROSS_QUERY_MAX_RECORDS} of ${total} records`,
+				message: 'dataExplorer.warnings.resultLimitReached',
 			});
 		}
 
@@ -192,7 +193,7 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 			}
 		}
 
-		return errorReturn('Oops something went wrong, please try again later... if this message persisits, please contact our support');
+		return errorReturn('dataExplorer.errors.genericTryAgain');
 	}
 }
 
@@ -207,7 +208,6 @@ async function processRelationsRecursive(
 	tracingSpan?: Span,
 ): Promise<RelationPythonConfig[]> {
 	const limit = pLimit(RELATION_CONCURRENCY);
-	const configs: RelationPythonConfig[] = [];
 
 	const tasks = relations.map(relation =>
 		limit(async () => {
@@ -217,7 +217,7 @@ async function processRelationsRecursive(
 				warnings.push({
 					type: 'RELATION_ACCESS_DENIED',
 					document: relation.document,
-					message: `User lacks read access to ${relation.document}`,
+					message: 'dataExplorer.warnings.relationNoReadAccess',
 				});
 				return null;
 			}
@@ -227,7 +227,7 @@ async function processRelationsRecursive(
 				warnings.push({
 					type: 'MISSING_INDEX',
 					document: relation.document,
-					message: `Could not resolve lookup '${relation.lookup}' in '${relation.document}' for parent '${parentDocument}'`,
+					message: 'dataExplorer.warnings.relationLookupUnresolved',
 				});
 				return null;
 			}
@@ -267,11 +267,11 @@ async function processRelationsRecursive(
 			const relationRecords = await collectStreamData(relationStreamResult.data);
 			logger.debug({ document: relation.document, count: relationRecords.length }, 'Relation collected records');
 
-			if (relationRecords.length > 50_000) {
+			if (relationRecords.length > LARGE_DATASET_WARNING_THRESHOLD) {
 				warnings.push({
 					type: 'LARGE_DATASET',
 					document: relation.document,
-					message: `${relation.document} returned ${relationRecords.length} records`,
+					message: 'dataExplorer.warnings.largeDataset',
 				});
 			}
 
@@ -307,13 +307,7 @@ async function processRelationsRecursive(
 	);
 
 	const results = await Promise.all(tasks);
-	for (const result of results) {
-		if (result != null) {
-			configs.push(result);
-		}
-	}
-
-	return configs;
+	return results.filter((r): r is RelationPythonConfig => r != null);
 }
 
 async function collectStreamData(stream: Readable): Promise<Record<string, unknown>[]> {
@@ -493,12 +487,5 @@ function buildMeta(query: CrossModuleQuery, warnings: CrossModuleWarning[], exec
 }
 
 function extractRelationDocuments(relations: CrossModuleRelation[]): string[] {
-	const docs: string[] = [];
-	for (const rel of relations) {
-		docs.push(rel.document);
-		if (rel.relations != null) {
-			docs.push(...extractRelationDocuments(rel.relations));
-		}
-	}
-	return docs;
+	return relations.flatMap(rel => [rel.document, ...(rel.relations != null ? extractRelationDocuments(rel.relations) : [])]);
 }

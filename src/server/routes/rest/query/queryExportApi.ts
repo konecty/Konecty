@@ -18,6 +18,9 @@ import { logger } from '@imports/utils/logger';
 const VALID_FORMATS = ['csv', 'xlsx', 'json'] as const;
 type ExportFormat = (typeof VALID_FORMATS)[number];
 
+/** Default limit used when logging export to access log if body.limit is missing (ADR-0012: no-magic-numbers). */
+const DEFAULT_EXPORT_LIMIT = 1000;
+
 function recordsToReadable(records: Record<string, unknown>[]): Readable {
 	let index = 0;
 	return new Readable({
@@ -39,7 +42,7 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 	}>('/rest/query/export/:format', async (req, reply) => {
 		const format = req.params.format as ExportFormat;
 		if (!VALID_FORMATS.includes(format)) {
-			reply.status(400).send(errorReturn(`Invalid format: ${format}. Must be csv, xlsx, or json.`));
+			reply.status(400).send(errorReturn('dataExplorer.export.errors.invalidFormat'));
 			return;
 		}
 
@@ -53,19 +56,19 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 		const body = req.body as Record<string, unknown>;
 		const document = typeof body?.document === 'string' ? body.document : null;
 		if (document == null) {
-			reply.status(400).send(errorReturn('Missing document in request body'));
+			reply.status(400).send(errorReturn('dataExplorer.export.errors.missingDocument'));
 			return;
 		}
 
 		const meta = MetaObject.Meta[document];
 		if (meta == null) {
-			reply.status(404).send(errorReturn(`Document ${document} not found`));
+			reply.status(404).send(errorReturn('dataExplorer.export.errors.documentNotFound'));
 			return;
 		}
 
 		const access = getAccessFor(document, userResult.data);
 		if (access === false || access.isReadable !== true) {
-			reply.status(403).send(errorReturn('No read access to this document'));
+			reply.status(403).send(errorReturn('dataExplorer.export.errors.noReadAccess'));
 			return;
 		}
 
@@ -80,8 +83,8 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 			if (queryResult == null || !('success' in queryResult) || queryResult.success !== true) {
 				const errorMsg =
 					queryResult != null && 'errors' in queryResult
-						? (queryResult as { errors?: Array<{ message: string }> }).errors?.[0]?.message ?? 'Query failed'
-						: 'Query execution failed';
+						? (queryResult as { errors?: Array<{ message: string }> }).errors?.[0]?.message ?? 'dataExplorer.export.errors.queryFailed'
+						: 'dataExplorer.export.errors.queryFailed';
 				reply.status(500).send(errorReturn(errorMsg));
 				return;
 			}
@@ -115,7 +118,7 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 
 			const exportResult = await exportResultPromise;
 			if (exportResult.success !== true || exportResult.data?.content == null) {
-				const errMsg = exportResult && 'errors' in exportResult ? String((exportResult as { errors?: unknown }).errors) : 'Export failed';
+				const errMsg = exportResult && 'errors' in exportResult ? String((exportResult as { errors?: unknown }).errors) : 'dataExplorer.export.errors.exportFailed';
 				reply.status(500).send(errorReturn(errMsg));
 				return;
 			}
@@ -130,7 +133,7 @@ export const queryExportApi: FastifyPluginCallback = (fastify, _, done) => {
 					listName: 'data-explorer',
 					type: format,
 					start: 0,
-					limit: typeof body.limit === 'number' ? body.limit : 1000,
+					limit: typeof body.limit === 'number' ? body.limit : DEFAULT_EXPORT_LIMIT,
 					threshold: 1000,
 					status: 'success',
 					durationMs,
