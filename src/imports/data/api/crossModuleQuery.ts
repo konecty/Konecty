@@ -134,6 +134,8 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 		const config: CrossModulePythonConfig = {
 			parentDataset: query.document,
 			relations: pythonConfig,
+			...(query.groupBy.length > 0 ? { groupBy: query.groupBy } : {}),
+			...(Object.keys(query.aggregators).length > 0 ? { aggregators: query.aggregators } : {}),
 		};
 
 		// Send RPC request

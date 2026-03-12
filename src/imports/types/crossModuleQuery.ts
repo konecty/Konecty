@@ -3,7 +3,7 @@ import { KonFilter } from '@imports/model/Filter';
 import type { Span } from '@opentelemetry/api';
 import type { User } from '@imports/model/User';
 
-const AGGREGATOR_NAMES = ['count', 'sum', 'avg', 'min', 'max', 'first', 'last', 'push', 'addToSet'] as const;
+const AGGREGATOR_NAMES = ['count', 'countDistinct', 'sum', 'avg', 'min', 'max', 'first', 'last', 'push', 'addToSet'] as const;
 const MAX_RELATIONS = 10;
 const MAX_NESTING_DEPTH = 2;
 const MAX_RELATION_LIMIT = 100_000;
@@ -66,7 +66,9 @@ export const CrossModuleQuerySchema = z.object({
 	sort: z.union([z.string(), z.array(SortItem)]).optional(),
 	limit: z.number().int().min(1).max(MAX_RELATION_LIMIT).default(DEFAULT_PRIMARY_LIMIT),
 	start: z.number().int().min(0).default(0),
-	relations: z.array(RelationSchema).min(1).max(MAX_RELATIONS),
+	relations: z.array(RelationSchema).max(MAX_RELATIONS).default([]),
+	groupBy: z.array(z.string()).default([]),
+	aggregators: z.record(z.string(), AggregatorSchema).default({}),
 	includeTotal: z.boolean().default(true),
 	includeMeta: z.boolean().default(false),
 });
@@ -94,6 +96,8 @@ export interface RelationPythonConfig {
 export interface CrossModulePythonConfig {
 	parentDataset: string;
 	relations: RelationPythonConfig[];
+	groupBy?: string[];
+	aggregators?: Record<string, { aggregator: string; field?: string }>;
 }
 
 export interface CrossModuleRPCRequest {

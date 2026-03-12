@@ -137,8 +137,8 @@ describe('CrossModuleQuerySchema (Zod)', () => {
 		expect(result.success).toBe(false);
 	});
 
-	it('should accept all 9 valid aggregators', () => {
-		const aggregators = ['count', 'sum', 'avg', 'min', 'max', 'first', 'last', 'push', 'addToSet'] as const;
+	it('should accept all 10 valid aggregators', () => {
+		const aggregators = ['count', 'countDistinct', 'sum', 'avg', 'min', 'max', 'first', 'last', 'push', 'addToSet'] as const;
 		for (const agg of aggregators) {
 			const result = CrossModuleQuerySchema.safeParse({
 				document: 'Contact',

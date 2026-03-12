@@ -99,6 +99,17 @@ def apply_aggregator(aggregator_name: str, field: Optional[str], records: List[D
                 values.append(v)
         return values
 
+    if aggregator_name == 'countDistinct':
+        if field is None:
+            return 0
+        seen = set()
+        for r in records:
+            v = extract_nested_value(r, field)
+            if v is not None:
+                hashable = json.dumps(v, sort_keys=True, default=str) if isinstance(v, (dict, list)) else str(v)
+                seen.add(hashable)
+        return len(seen)
+
     if aggregator_name == 'first':
         if len(records) == 0:
             return None
@@ -246,11 +257,40 @@ try:
     for relation in relations:
         process_relation(parent_records, relation, datasets)
 
-    send_rpc_ok()
+    group_by_fields = config.get('groupBy', [])
+    root_aggregators = config.get('aggregators', {})
 
-    for record in parent_records:
-        record.pop(DATASET_TAG, None)
-        print(json.dumps(record, default=str), flush=True)
+    if group_by_fields:
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for record in parent_records:
+            key_parts = []
+            for gf in group_by_fields:
+                val = extract_nested_value(record, gf)
+                key_parts.append(json.dumps(val, sort_keys=True, default=str) if isinstance(val, (dict, list)) else str(val))
+            group_key = '||'.join(key_parts)
+            if group_key not in grouped:
+                grouped[group_key] = []
+            grouped[group_key].append(record)
+
+        aggregated_records: List[Dict[str, Any]] = []
+        for records_in_group in grouped.values():
+            row: Dict[str, Any] = {}
+            for gf in group_by_fields:
+                row[gf] = extract_nested_value(records_in_group[0], gf)
+            for agg_alias, agg_config in root_aggregators.items():
+                agg_name = agg_config['aggregator']
+                agg_field = agg_config.get('field')
+                row[agg_alias] = apply_aggregator(agg_name, agg_field, records_in_group)
+            aggregated_records.append(row)
+
+        send_rpc_ok()
+        for record in aggregated_records:
+            print(json.dumps(record, default=str), flush=True)
+    else:
+        send_rpc_ok()
+        for record in parent_records:
+            record.pop(DATASET_TAG, None)
+            print(json.dumps(record, default=str), flush=True)
 
 except Exception as e:
     debug_log(f'Error during processing: {str(e)}')
