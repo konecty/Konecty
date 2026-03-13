@@ -104,6 +104,26 @@ function countTotalRelations(relations: CrossModuleRelation[]): number {
 	return count;
 }
 
+/**
+ * For isList reverse lookups (e.g., Contact.staff), finds the forward lookup field
+ * on the same document that represents the stored FK (e.g., Contact.mainContact).
+ */
+function findForwardLookupField(
+	meta: (typeof MetaObject.Meta)[string],
+	parentDocument: string,
+	reverseLookupName: string,
+): string | null {
+	const fields = meta.fields ?? {};
+	for (const [fieldName, fieldDef] of Object.entries(fields)) {
+		if (fieldName === reverseLookupName) continue;
+		if (fieldDef.type !== 'lookup' && fieldDef.type !== 'inheritLookup') continue;
+		if (fieldDef.document !== parentDocument) continue;
+		if (fieldDef.isList === true) continue;
+		return fieldName;
+	}
+	return null;
+}
+
 export function resolveRelationLookup(parentDocument: string, relation: CrossModuleRelation): LookupResolution | null {
 	if (relation.on != null) {
 		return {
@@ -138,6 +158,26 @@ export function resolveRelationLookup(parentDocument: string, relation: CrossMod
 			'Lookup field points to different document than parent',
 		);
 		return null;
+	}
+
+	if (relation.document === parentDocument && field.isList === true) {
+		const reverseField = findForwardLookupField(relationMeta, parentDocument, relation.lookup);
+		if (reverseField != null) {
+			return {
+				parentDocument,
+				childDocument: relation.document,
+				lookupField: relation.lookup,
+				parentKey: '_id',
+				childKey: `${reverseField}._id`,
+			};
+		}
+		return {
+			parentDocument,
+			childDocument: relation.document,
+			lookupField: relation.lookup,
+			parentKey: `${relation.lookup}._id`,
+			childKey: '_id',
+		};
 	}
 
 	return {

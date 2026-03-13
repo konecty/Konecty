@@ -74,11 +74,12 @@ export default async function crossModuleQuery({ authTokenId, contextUser, body,
 
 		// Step 4: Execute primary findStream (Layers 2-6)
 		tracingSpan?.addEvent('Executing primary findStream');
+		const augmentedFields = buildAugmentedFields(query);
 		const primaryStreamResult = await findStream({
 			authTokenId,
 			contextUser: user,
 			document: query.document,
-			fields: query.fields,
+			fields: augmentedFields,
 			filter: query.filter,
 			sort: query.sort,
 			limit: Math.min(query.limit, CROSS_QUERY_MAX_RECORDS),
@@ -232,8 +233,8 @@ async function processRelationsRecursive(
 				return null;
 			}
 
-			// Extract parent IDs
-			const parentIds = parentRecords.map(r => r[resolution.parentKey] as string).filter((id): id is string => id != null);
+			// Extract parent IDs (handles isList arrays like staff._id)
+			const parentIds = extractParentIds(parentRecords, resolution.parentKey);
 
 			if (parentIds.length === 0) {
 				return null;
@@ -243,13 +244,23 @@ async function processRelationsRecursive(
 			const readFilter = typeof access === 'object' && access.readFilter ? access.readFilter : undefined;
 			const mergedFilter = buildRelationFilter(parentIds, resolution, relation.filter, readFilter);
 
+			// Augment relation fields to include the childKey field (needed for Python join)
+			const childKeyTop = resolution.childKey.split('.')[0];
+			let augmentedRelFields = relation.fields;
+			if (augmentedRelFields != null && augmentedRelFields.trim() !== '') {
+				const existingRelFields = augmentedRelFields.split(',').map(f => f.trim());
+				if (!existingRelFields.includes(childKeyTop) && !existingRelFields.includes(resolution.childKey)) {
+					augmentedRelFields = [...existingRelFields, childKeyTop].join(',');
+				}
+			}
+
 			// Execute findStream for relation (Layers 2-6)
 			tracingSpan?.addEvent(`findStream for relation ${relation.document}`);
 			const relationStreamResult = await findStream({
 				authTokenId,
 				contextUser: user,
 				document: relation.document,
-				fields: relation.fields,
+				fields: augmentedRelFields,
 				filter: mergedFilter,
 				sort: relation.sort,
 				limit: relation.limit,
@@ -275,10 +286,13 @@ async function processRelationsRecursive(
 				});
 			}
 
+			// Use unique dataset name for self-referential relations to avoid collision
+			const datasetName = relation.document === parentDocument ? `${relation.document}:${relation.lookup}` : relation.document;
+
 			// Tag and store
-			const tagged = relationRecords.map(r => ({ ...r, [DATASET_TAG]: relation.document }));
-			const existing = allDatasets.get(relation.document) ?? [];
-			allDatasets.set(relation.document, [...existing, ...tagged]);
+			const tagged = relationRecords.map(r => ({ ...r, [DATASET_TAG]: datasetName }));
+			const existing = allDatasets.get(datasetName) ?? [];
+			allDatasets.set(datasetName, [...existing, ...tagged]);
 
 			// Normalize aggregator fields: child records use paths without relation prefix (e.g. email[0].address → email.address)
 			const prefix = `${relation.lookup}.`;
@@ -290,9 +304,10 @@ async function processRelationsRecursive(
 
 			// Build python config for this relation
 			const pythonRelConfig: RelationPythonConfig = {
-				dataset: relation.document,
+				dataset: datasetName,
 				parentKey: resolution.parentKey,
 				childKey: resolution.childKey,
+				prefix: relation.lookup,
 				aggregators: aggregatorsForPython,
 			};
 
@@ -496,4 +511,79 @@ function buildMeta(query: CrossModuleQuery, warnings: CrossModuleWarning[], exec
 
 function extractRelationDocuments(relations: CrossModuleRelation[]): string[] {
 	return relations.flatMap(rel => [rel.document, ...(rel.relations != null ? extractRelationDocuments(rel.relations) : [])]);
+}
+
+/**
+ * Augment the user-specified fields with extra top-level fields required by
+ * groupBy, root aggregators, and relation parentKeys (e.g. isList lookups).
+ * Always injects `_id` so the primary record can be referenced.
+ */
+export function buildAugmentedFields(query: CrossModuleQuery): string | undefined {
+	if (query.fields == null || query.fields.trim() === '') {
+		return undefined;
+	}
+
+	const relationPrefixes = new Set(query.relations.map(r => r.lookup));
+	const extraFields = new Set<string>(['_id']);
+
+	for (const field of query.groupBy) {
+		const top = field.split('.')[0];
+		if (!relationPrefixes.has(top)) {
+			extraFields.add(top);
+		}
+	}
+
+	for (const agg of Object.values(query.aggregators)) {
+		if (agg.field != null) {
+			const top = agg.field.split('.')[0];
+			if (!relationPrefixes.has(top)) {
+				extraFields.add(top);
+			}
+		}
+	}
+
+	for (const relation of query.relations) {
+		const resolution = resolveRelationLookup(query.document, relation);
+		if (resolution != null && resolution.parentKey !== '_id') {
+			extraFields.add(resolution.parentKey.split('.')[0]);
+		}
+	}
+
+	const existingFields = query.fields.split(',').map(f => f.trim());
+	const merged = [...new Set([...existingFields, ...extraFields])];
+	return merged.join(',');
+}
+
+/**
+ * Extract parent IDs from records, handling both simple `_id` keys and
+ * dot-notation keys that traverse arrays (e.g. `staff._id` where `staff`
+ * is an isList lookup array).
+ */
+export function extractParentIds(parentRecords: Record<string, unknown>[], parentKey: string): string[] {
+	if (parentKey === '_id') {
+		const ids = parentRecords.map(r => r._id as string).filter((id): id is string => id != null);
+		return [...new Set(ids)];
+	}
+
+	const dotIdx = parentKey.indexOf('.');
+	if (dotIdx === -1) {
+		const ids = parentRecords.map(r => r[parentKey] as string).filter((id): id is string => id != null);
+		return [...new Set(ids)];
+	}
+
+	const fieldName = parentKey.slice(0, dotIdx);
+	const subField = parentKey.slice(dotIdx + 1);
+
+	const ids = parentRecords.flatMap(r => {
+		const val = r[fieldName];
+		if (Array.isArray(val)) {
+			return val.map((item: unknown) => (item as Record<string, unknown>)?.[subField] as string);
+		}
+		if (val != null && typeof val === 'object') {
+			return [(val as Record<string, unknown>)[subField] as string];
+		}
+		return [];
+	});
+
+	return [...new Set(ids.filter((id): id is string => id != null))];
 }

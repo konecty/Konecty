@@ -13,6 +13,7 @@ import {
 	resolveRelationLookup,
 	buildRelationFilter,
 } from '../crossModuleQueryValidator';
+import { buildAugmentedFields, extractParentIds } from '../crossModuleQuery';
 import { MetaObject } from '@imports/model/MetaObject';
 
 jest.mock('@imports/model/MetaObject', () => ({
@@ -33,6 +34,9 @@ const CONTACT_META = {
 		_id: { type: 'text' },
 		code: { type: 'number' },
 		name: { type: 'personName' },
+		email: { type: 'email', isList: true },
+		staff: { type: 'lookup', document: 'Contact', isList: true, descriptionFields: ['code', 'name.full'] },
+		mainContact: { type: 'lookup', document: 'Contact' },
 		status: { type: 'text' },
 	},
 };
@@ -347,6 +351,166 @@ describe('Cross-Module Query Integration', () => {
 				],
 			});
 			expect(result.success).toBe(true);
+		});
+	});
+
+	describe('Self-referential isList lookup (Contact.staff)', () => {
+		it('should resolve staff lookup with reversed parentKey/childKey', () => {
+			const relation = {
+				document: 'Contact',
+				lookup: 'staff',
+				aggregators: { _count: { aggregator: 'count' as const } },
+			};
+			const resolution = resolveRelationLookup('Contact', relation);
+			expect(resolution).not.toBeNull();
+			expect(resolution?.parentKey).toBe('staff._id');
+			expect(resolution?.childKey).toBe('_id');
+		});
+
+		it('should resolve non-isList self-referential lookup with standard direction', () => {
+			const relation = {
+				document: 'Contact',
+				lookup: 'mainContact',
+				aggregators: { _count: { aggregator: 'count' as const } },
+			};
+			const resolution = resolveRelationLookup('Contact', relation);
+			expect(resolution).not.toBeNull();
+			expect(resolution?.parentKey).toBe('_id');
+			expect(resolution?.childKey).toBe('mainContact._id');
+		});
+
+		it('should validate full query with staff relation', () => {
+			const result = validateCrossModuleQuery({
+				document: 'Contact',
+				fields: 'name.full',
+				limit: 1000,
+				groupBy: ['name.full', 'staff.name.full'],
+				aggregators: {
+					first_staff_email_address: { aggregator: 'first', field: 'staff.email.address' },
+				},
+				relations: [
+					{
+						document: 'Contact',
+						lookup: 'staff',
+						fields: 'name.full,email.address',
+						limit: 1000,
+						aggregators: {
+							_count: { aggregator: 'count' },
+						},
+					},
+				],
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it('should build filter using _id for isList child lookup', () => {
+			const resolution = {
+				parentDocument: 'Contact',
+				childDocument: 'Contact',
+				lookupField: 'staff',
+				parentKey: 'staff._id',
+				childKey: '_id',
+			};
+			const parentIds = ['s1', 's2', 's3'];
+			const filter = buildRelationFilter(parentIds, resolution);
+			expect(filter.conditions).toEqual([{ term: '_id', operator: 'in', value: ['s1', 's2', 's3'] }]);
+		});
+	});
+
+	describe('buildAugmentedFields', () => {
+		it('should inject _id and groupBy/aggregator prefixes into fields', () => {
+			const query = CrossModuleQuerySchema.parse({
+				document: 'Contact',
+				fields: 'name.full',
+				groupBy: ['name.full', 'staff.name.full'],
+				aggregators: {
+					first_staff_email_address: { aggregator: 'first', field: 'staff.email.address' },
+				},
+				relations: [
+					{
+						document: 'Contact',
+						lookup: 'staff',
+						fields: 'name.full,email.address',
+						aggregators: { _count: { aggregator: 'count' } },
+					},
+				],
+			});
+			const augmented = buildAugmentedFields(query);
+			expect(augmented).toBeDefined();
+			const fields = augmented!.split(',').map(f => f.trim());
+			expect(fields).toContain('_id');
+			expect(fields).toContain('name.full');
+			expect(fields).toContain('staff');
+		});
+
+		it('should return undefined when no fields specified', () => {
+			const query = CrossModuleQuerySchema.parse({
+				document: 'Contact',
+				groupBy: ['name.full'],
+				relations: [],
+			});
+			expect(buildAugmentedFields(query)).toBeUndefined();
+		});
+
+		it('should not duplicate existing fields', () => {
+			const query = CrossModuleQuerySchema.parse({
+				document: 'Contact',
+				fields: '_id,name.full,staff',
+				groupBy: ['name.full', 'staff.name.full'],
+				relations: [],
+			});
+			const augmented = buildAugmentedFields(query);
+			const fields = augmented!.split(',').map(f => f.trim());
+			const idCount = fields.filter(f => f === '_id').length;
+			expect(idCount).toBe(1);
+		});
+	});
+
+	describe('extractParentIds', () => {
+		it('should extract simple _id values', () => {
+			const records = [{ _id: 'c1' }, { _id: 'c2' }, { _id: 'c3' }];
+			const ids = extractParentIds(records, '_id');
+			expect(ids).toEqual(['c1', 'c2', 'c3']);
+		});
+
+		it('should extract IDs from isList lookup arrays', () => {
+			const records = [
+				{ _id: 'c1', staff: [{ _id: 's1' }, { _id: 's2' }] },
+				{ _id: 'c2', staff: [{ _id: 's2' }, { _id: 's3' }] },
+				{ _id: 'c3', staff: [] },
+			];
+			const ids = extractParentIds(records, 'staff._id');
+			expect(ids).toContain('s1');
+			expect(ids).toContain('s2');
+			expect(ids).toContain('s3');
+			expect(ids).toHaveLength(3);
+		});
+
+		it('should handle single object (non-array) lookup', () => {
+			const records = [
+				{ _id: 'c1', mainContact: { _id: 'mc1' } },
+				{ _id: 'c2', mainContact: { _id: 'mc2' } },
+			];
+			const ids = extractParentIds(records, 'mainContact._id');
+			expect(ids).toEqual(['mc1', 'mc2']);
+		});
+
+		it('should deduplicate IDs', () => {
+			const records = [
+				{ _id: 'c1', staff: [{ _id: 's1' }] },
+				{ _id: 'c2', staff: [{ _id: 's1' }] },
+			];
+			const ids = extractParentIds(records, 'staff._id');
+			expect(ids).toEqual(['s1']);
+		});
+
+		it('should skip null and missing values', () => {
+			const records = [
+				{ _id: 'c1', staff: [{ _id: 's1' }, { _id: null }] },
+				{ _id: 'c2' },
+			];
+			const ids = extractParentIds(records, 'staff._id');
+			expect(ids).toEqual(['s1']);
 		});
 	});
 });

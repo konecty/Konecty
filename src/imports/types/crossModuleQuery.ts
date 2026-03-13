@@ -89,6 +89,7 @@ export interface RelationPythonConfig {
 	dataset: string;
 	parentKey: string;
 	childKey: string;
+	prefix: string;
 	aggregators: Record<string, { aggregator: string; field?: string }>;
 	relations?: RelationPythonConfig[];
 }
