@@ -340,8 +340,11 @@ if len(parent_records) == 0:
     sys.exit(0)
 
 try:
+    prefixes = []
     for relation in relations:
         process_relation(parent_records, relation, datasets)
+        if relation.get('prefix'):
+            prefixes.append(relation.get('prefix'))
 
     group_by_fields = config.get('groupBy', [])
     root_aggregators = config.get('aggregators', {})
@@ -374,11 +377,16 @@ try:
 
         send_rpc_ok()
         for record in aggregated_records:
+            record.pop(DATASET_TAG, None)
+            for prefix in prefixes:
+                record.pop(f'_rel_{prefix}_matches', None)
             print(json.dumps(record, default=str), flush=True)
     else:
         send_rpc_ok()
         for record in parent_records:
             record.pop(DATASET_TAG, None)
+            for prefix in prefixes:
+                record.pop(f'_rel_{prefix}_matches', None)
             print(json.dumps(record, default=str), flush=True)
 
 except Exception as e:
