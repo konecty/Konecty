@@ -280,12 +280,20 @@ async function processRelationsRecursive(
 			const existing = allDatasets.get(relation.document) ?? [];
 			allDatasets.set(relation.document, [...existing, ...tagged]);
 
+			// Normalize aggregator fields: child records use paths without relation prefix (e.g. email[0].address → email.address)
+			const prefix = `${relation.lookup}.`;
+			const aggregatorsForPython: RelationPythonConfig['aggregators'] = {};
+			for (const [alias, cfg] of Object.entries(relation.aggregators)) {
+				const field = cfg?.field?.startsWith(prefix) ? cfg.field.slice(prefix.length) : cfg?.field;
+				aggregatorsForPython[alias] = { ...cfg, field };
+			}
+
 			// Build python config for this relation
 			const pythonRelConfig: RelationPythonConfig = {
 				dataset: relation.document,
 				parentKey: resolution.parentKey,
 				childKey: resolution.childKey,
-				aggregators: relation.aggregators,
+				aggregators: aggregatorsForPython,
 			};
 
 			// Process sub-relations recursively
