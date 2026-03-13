@@ -9,6 +9,7 @@ import initializeInstrumentation from '@imports/telemetry';
 import { logger } from '@imports/utils/logger';
 
 import accessApi from '@server/routes/api/access';
+import adminApi from '@server/routes/api/admin';
 import dashboardsApi from './api/dashboards';
 import documentApi from './api/document';
 import formApi from './api/form';
@@ -60,6 +61,7 @@ fastify.register(cookie, {
 fastify.register(cors, getCorsConfig());
 
 fastify.register(accessApi);
+fastify.register(adminApi);
 fastify.register(dashboardsApi);
 fastify.register(metasByDocumentApi);
 fastify.register(documentApi);
