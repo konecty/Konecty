@@ -9,11 +9,11 @@
 # Protocol: Same JSON-RPC via stdin/stdout as pivot_table.py and kpi_aggregator.py.
 # ADR-0010: no-magic-numbers, functional style, structured logging.
 
-import sys
 import json
-from typing import Any, Dict, List, Optional
-from datetime import datetime
 import os
+import sys
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 RPC_VERSION = '2.0'
 RPC_ERROR_METHOD_NOT_FOUND = -32601
@@ -96,15 +96,30 @@ def group_records_by_key(records: List[Dict[str, Any]], key_path: str) -> Dict[s
     return grouped
 
 
-def apply_aggregator(aggregator_name: str, field: Optional[str], records: List[Dict[str, Any]]) -> Any:
+def _clean_record_for_aggregation(
+    record: Dict[str, Any],
+    parent_ref_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build a copy of the record without internal tags and without the parent reference key."""
+    out = {k: v for k, v in record.items() if k != DATASET_TAG}
+    if parent_ref_key and parent_ref_key in out:
+        out = {k: v for k, v in out.items() if k != parent_ref_key}
+    return out
+
+
+def apply_aggregator(
+    aggregator_name: str,
+    field: Optional[str],
+    records: List[Dict[str, Any]],
+    parent_ref_key: Optional[str] = None,
+) -> Any:
     if aggregator_name == 'count':
         return len(records)
 
     if aggregator_name == 'push':
         if field is not None:
             return [extract_nested_value(r, field) for r in records]
-        clean = [{k: v for k, v in r.items() if k != DATASET_TAG} for r in records]
-        return clean
+        return [_clean_record_for_aggregation(r, parent_ref_key) for r in records]
 
     if aggregator_name == 'addToSet':
         if field is None:
@@ -137,16 +152,14 @@ def apply_aggregator(aggregator_name: str, field: Optional[str], records: List[D
             return None
         if field is not None:
             return extract_nested_value(records[0], field)
-        r = records[0]
-        return {k: v for k, v in r.items() if k != DATASET_TAG}
+        return _clean_record_for_aggregation(records[0], parent_ref_key)
 
     if aggregator_name == 'last':
         if len(records) == 0:
             return None
         if field is not None:
             return extract_nested_value(records[-1], field)
-        r = records[-1]
-        return {k: v for k, v in r.items() if k != DATASET_TAG}
+        return _clean_record_for_aggregation(records[-1], parent_ref_key)
 
     numeric_values = _extract_numeric_values(records, field)
 
@@ -204,6 +217,8 @@ def process_relation(
         for sub_relation in sub_relations:
             process_relation(all_child_list, sub_relation, datasets)
 
+    parent_ref_key = child_key.split('.')[0] if child_key else None
+
     for parent in parent_records:
         all_ids = extract_all_ids(parent, parent_key)
         matching = [r for pid in all_ids for r in grouped.get(pid, [])]
@@ -211,7 +226,9 @@ def process_relation(
         for agg_field, agg_config in aggregators.items():
             agg_name = agg_config['aggregator']
             agg_source_field = agg_config.get('field')
-            parent[agg_field] = apply_aggregator(agg_name, agg_source_field, matching)
+            parent[agg_field] = apply_aggregator(
+                agg_name, agg_source_field, matching, parent_ref_key=parent_ref_key
+            )
 
         if prefix:
             parent[f'_rel_{prefix}_matches'] = matching
