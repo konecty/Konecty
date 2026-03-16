@@ -354,14 +354,18 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 				userMessage = 'Serviço de mensagens temporariamente indisponível. Tente novamente mais tarde.';
 			} else if (errorMessage.includes('Failed to render email template')) {
 				userMessage = 'Erro ao processar template de email. Entre em contato com o suporte.';
-			} else if (errorMessage.includes('Failed to create message')) {
+			} else if (errorMessage.includes('Failed to create message') || errorMessage.includes('Message collection not found')) {
 				userMessage = 'Erro ao criar mensagem. Tente novamente mais tarde.';
 			}
 
-			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({
+			const payload: { success: false; errors: Array<{ message: string; debug?: string }> } = {
 				success: false,
 				errors: [{ message: userMessage }],
-			});
+			};
+			if (process.env.NODE_ENV !== 'production' && deliveryResult.error) {
+				payload.errors[0].debug = deliveryResult.error;
+			}
+			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send(payload);
 		}
 
 		return reply.send({

@@ -5,7 +5,6 @@ import { logger } from '@imports/utils/logger';
 import queueManager from '@imports/queue/QueueManager';
 import { sendOtpViaWhatsApp, WhatsAppConfig } from './whatsapp';
 import { OTP_DEFAULT_EXPIRATION_MINUTES } from '../../consts';
-import { create } from '@imports/data/data';
 import { renderTemplate } from '@imports/template';
 import { randomId } from '@imports/utils/random';
 
@@ -203,7 +202,9 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 		};
 	}
 
+	const now = new Date();
 	const messageData = {
+		_id: randomId(),
 		from: emailFrom,
 		to: emailAddress,
 		subject: emailSubject,
@@ -212,25 +213,24 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 		body: emailBody,
 		discard: true,
 		_user: [{ _id: userId }],
+		_createdBy: { _id: userId },
+		_updatedBy: { _id: userId },
+		_createdAt: now,
+		_updatedAt: now,
 		data: templateData,
 	};
 
 	try {
-		// Use data.create() instead of insertOne() to trigger events
-		const result = await create({
-			document: 'Message',
-			data: messageData,
-			contextUser: user as User,
-		} as any);
-
-		if (result.success) {
-			return { success: true, method: 'email' };
+		// Insert Message directly so OTP delivery does not depend on user's create permission for Message
+		const messageCollection = MetaObject.Collections['Message'];
+		if (messageCollection == null) {
+			return {
+				success: false,
+				error: 'Message collection not found',
+			};
 		}
-
-		return {
-			success: false,
-			error: Array.isArray(result.errors) ? result.errors.join(', ') : 'Failed to create message',
-		};
+		await messageCollection.insertOne(messageData as any);
+		return { success: true, method: 'email' };
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via email');
 		return {
