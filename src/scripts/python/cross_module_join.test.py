@@ -303,3 +303,148 @@ def test_recursive_relations():
     opp_o1 = next(o for o in alice['opportunities'] if o['_id'] == 'o1')
     assert opp_o1['ppoCount'] == 2
     assert set(opp_o1['ppoStatuses']) == {'Ofertado', 'Visitado'}
+
+
+COMPANIES = [
+    {
+        '_id': 'company1',
+        'name': {'full': 'Acme Corp'},
+        'staff': [{'_id': 's1'}, {'_id': 's2'}],
+    },
+    {
+        '_id': 'company2',
+        'name': {'full': 'Beta Inc'},
+        'staff': [{'_id': 's2'}, {'_id': 's3'}],
+    },
+    {
+        '_id': 'company3',
+        'name': {'full': 'Gamma Ltd'},
+        'staff': [],
+    },
+]
+
+STAFF_CONTACTS = [
+    {'_id': 's1', 'name': {'full': 'Alice'}, 'email': [{'address': 'alice@example.com'}]},
+    {'_id': 's2', 'name': {'full': 'Bruno'}, 'email': [{'address': 'bruno@example.com'}]},
+    {'_id': 's3', 'name': {'full': 'Carlos'}, 'email': [{'address': 'carlos@example.com'}]},
+]
+
+
+def test_isList_self_referential_count():
+    """When parentKey traverses an isList array (staff._id), all matching children should be found."""
+    config = {
+        'parentDataset': 'Contact',
+        'relations': [
+            {
+                'dataset': 'StaffContact',
+                'parentKey': 'staff._id',
+                'childKey': '_id',
+                'aggregators': {
+                    'staffCount': {'aggregator': 'count'},
+                },
+            },
+        ],
+    }
+    datasets = {
+        'Contact': COMPANIES,
+        'StaffContact': STAFF_CONTACTS,
+    }
+    results = run_cross_module_join(config, datasets)
+
+    company1 = next(r for r in results if r['_id'] == 'company1')
+    company2 = next(r for r in results if r['_id'] == 'company2')
+    company3 = next(r for r in results if r['_id'] == 'company3')
+
+    assert company1['staffCount'] == 2
+    assert company2['staffCount'] == 2
+    assert company3['staffCount'] == 0
+
+
+def test_isList_self_referential_first_email():
+    """first aggregator should work with isList array parentKey."""
+    config = {
+        'parentDataset': 'Contact',
+        'relations': [
+            {
+                'dataset': 'StaffContact',
+                'parentKey': 'staff._id',
+                'childKey': '_id',
+                'aggregators': {
+                    'first_email': {'aggregator': 'first', 'field': 'email.address'},
+                    'staff_names': {'aggregator': 'push', 'field': 'name.full'},
+                },
+            },
+        ],
+    }
+    datasets = {
+        'Contact': COMPANIES,
+        'StaffContact': STAFF_CONTACTS,
+    }
+    results = run_cross_module_join(config, datasets)
+
+    company1 = next(r for r in results if r['_id'] == 'company1')
+    assert company1['first_email'] == 'alice@example.com'
+    assert set(company1['staff_names']) == {'Alice', 'Bruno'}
+
+    company3 = next(r for r in results if r['_id'] == 'company3')
+    assert company3['first_email'] is None
+
+
+def test_groupBy_with_isList_staff_field():
+    """groupBy on a relation field (staff.name.full) populated by process_relation."""
+    config = {
+        'parentDataset': 'Contact',
+        'relations': [
+            {
+                'dataset': 'StaffContact',
+                'parentKey': 'staff._id',
+                'childKey': '_id',
+                'aggregators': {
+                    'first_staff_name': {'aggregator': 'first', 'field': 'name.full'},
+                    'first_staff_email': {'aggregator': 'first', 'field': 'email.address'},
+                },
+            },
+        ],
+        'groupBy': ['name.full', 'first_staff_name'],
+        'aggregators': {
+            'first_staff_email_address': {'aggregator': 'first', 'field': 'first_staff_email'},
+        },
+    }
+    datasets = {
+        'Contact': COMPANIES,
+        'StaffContact': STAFF_CONTACTS,
+    }
+    results = run_cross_module_join(config, datasets)
+
+    acme_row = next((r for r in results if r['name.full'] == 'Acme Corp'), None)
+    assert acme_row is not None
+    assert acme_row['first_staff_name'] == 'Alice'
+    assert acme_row['first_staff_email_address'] == 'alice@example.com'
+
+
+def test_isList_deduplication():
+    """When two parents share the same child, both should get the correct count."""
+    config = {
+        'parentDataset': 'Contact',
+        'relations': [
+            {
+                'dataset': 'StaffContact',
+                'parentKey': 'staff._id',
+                'childKey': '_id',
+                'aggregators': {
+                    'names': {'aggregator': 'addToSet', 'field': 'name.full'},
+                },
+            },
+        ],
+    }
+    datasets = {
+        'Contact': COMPANIES,
+        'StaffContact': STAFF_CONTACTS,
+    }
+    results = run_cross_module_join(config, datasets)
+
+    company1 = next(r for r in results if r['_id'] == 'company1')
+    company2 = next(r for r in results if r['_id'] == 'company2')
+
+    assert set(company1['names']) == {'Alice', 'Bruno'}
+    assert set(company2['names']) == {'Bruno', 'Carlos'}

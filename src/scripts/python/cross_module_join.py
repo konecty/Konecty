@@ -9,11 +9,11 @@
 # Protocol: Same JSON-RPC via stdin/stdout as pivot_table.py and kpi_aggregator.py.
 # ADR-0010: no-magic-numbers, functional style, structured logging.
 
-import sys
 import json
-from typing import Any, Dict, List, Optional
-from datetime import datetime
 import os
+import sys
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 RPC_VERSION = '2.0'
 RPC_ERROR_METHOD_NOT_FOUND = -32601
@@ -51,14 +51,36 @@ def send_rpc_ok() -> None:
 
 
 def extract_nested_value(record: Dict[str, Any], field_path: str) -> Any:
+    if field_path in record:
+        return record[field_path]
     parts = field_path.split('.')
     current = record
     for part in parts:
+        if isinstance(current, list):
+            current = current[0] if len(current) > 0 else None
         if isinstance(current, dict) and part in current:
             current = current[part]
         else:
             return None
     return current
+
+
+def extract_all_ids(record: Dict[str, Any], key_path: str) -> List[str]:
+    """Extract all IDs from a path that may traverse arrays (isList lookups)."""
+    parts = key_path.split('.')
+    current: list = [record]
+    for part in parts:
+        next_vals: list = []
+        for item in current:
+            if not isinstance(item, dict):
+                continue
+            val = item.get(part)
+            if isinstance(val, list):
+                next_vals.extend(val)
+            elif val is not None:
+                next_vals.append(val)
+        current = next_vals
+    return [str(v) for v in current if v is not None]
 
 
 def group_records_by_key(records: List[Dict[str, Any]], key_path: str) -> Dict[str, List[Dict[str, Any]]]:
@@ -74,15 +96,30 @@ def group_records_by_key(records: List[Dict[str, Any]], key_path: str) -> Dict[s
     return grouped
 
 
-def apply_aggregator(aggregator_name: str, field: Optional[str], records: List[Dict[str, Any]]) -> Any:
+def _clean_record_for_aggregation(
+    record: Dict[str, Any],
+    parent_ref_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build a copy of the record without internal tags and without the parent reference key."""
+    out = {k: v for k, v in record.items() if k != DATASET_TAG}
+    if parent_ref_key and parent_ref_key in out:
+        out = {k: v for k, v in out.items() if k != parent_ref_key}
+    return out
+
+
+def apply_aggregator(
+    aggregator_name: str,
+    field: Optional[str],
+    records: List[Dict[str, Any]],
+    parent_ref_key: Optional[str] = None,
+) -> Any:
     if aggregator_name == 'count':
         return len(records)
 
     if aggregator_name == 'push':
         if field is not None:
             return [extract_nested_value(r, field) for r in records]
-        clean = [{k: v for k, v in r.items() if k != DATASET_TAG} for r in records]
-        return clean
+        return [_clean_record_for_aggregation(r, parent_ref_key) for r in records]
 
     if aggregator_name == 'addToSet':
         if field is None:
@@ -99,21 +136,30 @@ def apply_aggregator(aggregator_name: str, field: Optional[str], records: List[D
                 values.append(v)
         return values
 
+    if aggregator_name == 'countDistinct':
+        if field is None:
+            return 0
+        seen = set()
+        for r in records:
+            v = extract_nested_value(r, field)
+            if v is not None:
+                hashable = json.dumps(v, sort_keys=True, default=str) if isinstance(v, (dict, list)) else str(v)
+                seen.add(hashable)
+        return len(seen)
+
     if aggregator_name == 'first':
         if len(records) == 0:
             return None
         if field is not None:
             return extract_nested_value(records[0], field)
-        r = records[0]
-        return {k: v for k, v in r.items() if k != DATASET_TAG}
+        return _clean_record_for_aggregation(records[0], parent_ref_key)
 
     if aggregator_name == 'last':
         if len(records) == 0:
             return None
         if field is not None:
             return extract_nested_value(records[-1], field)
-        r = records[-1]
-        return {k: v for k, v in r.items() if k != DATASET_TAG}
+        return _clean_record_for_aggregation(records[-1], parent_ref_key)
 
     numeric_values = _extract_numeric_values(records, field)
 
@@ -157,11 +203,12 @@ def process_relation(
     dataset_name = relation_config['dataset']
     parent_key = relation_config['parentKey']
     child_key = relation_config['childKey']
+    prefix = relation_config.get('prefix', '')
     aggregators = relation_config.get('aggregators', {})
     sub_relations = relation_config.get('relations', [])
 
     child_records = datasets.get(dataset_name, [])
-    debug_log(f'Processing relation {dataset_name}: {len(child_records)} child records, parent_key={parent_key}, child_key={child_key}')
+    debug_log(f'Processing relation {dataset_name}: {len(child_records)} child records, parent_key={parent_key}, child_key={child_key}, prefix={prefix}')
 
     grouped = group_records_by_key(child_records, child_key)
 
@@ -170,19 +217,69 @@ def process_relation(
         for sub_relation in sub_relations:
             process_relation(all_child_list, sub_relation, datasets)
 
-    for parent in parent_records:
-        parent_id = extract_nested_value(parent, parent_key)
-        if parent_id is None:
-            for agg_field in aggregators:
-                parent[agg_field] = None
-            continue
+    parent_ref_key = child_key.split('.')[0] if child_key else None
 
-        matching = grouped.get(str(parent_id), [])
+    for parent in parent_records:
+        all_ids = extract_all_ids(parent, parent_key)
+        matching = [r for pid in all_ids for r in grouped.get(pid, [])]
 
         for agg_field, agg_config in aggregators.items():
             agg_name = agg_config['aggregator']
             agg_source_field = agg_config.get('field')
-            parent[agg_field] = apply_aggregator(agg_name, agg_source_field, matching)
+            parent[agg_field] = apply_aggregator(
+                agg_name, agg_source_field, matching, parent_ref_key=parent_ref_key
+            )
+
+        if prefix:
+            parent[f'_rel_{prefix}_matches'] = matching
+
+
+def expand_records_for_relations(
+    parent_records: List[Dict[str, Any]],
+    group_by_fields: List[str],
+    root_aggregators: Dict[str, Any],
+    relations: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Expand parent records for relation-prefixed groupBy fields."""
+    prefixes = {r.get('prefix', ''): r for r in relations if r.get('prefix')}
+    relation_gb_fields = [gf for gf in group_by_fields if gf.split('.')[0] in prefixes]
+    if not relation_gb_fields:
+        return parent_records
+
+    all_relation_fields = list(relation_gb_fields)
+    for agg_alias, agg_config in root_aggregators.items():
+        agg_field = agg_config.get('field')
+        if agg_field and agg_field.split('.')[0] in prefixes:
+            all_relation_fields.append(agg_field)
+
+    expanded: List[Dict[str, Any]] = []
+    for parent in parent_records:
+        prefixes_with_matches: Dict[str, List[Dict[str, Any]]] = {}
+        for pf in prefixes:
+            prefixes_with_matches[pf] = parent.get(f'_rel_{pf}_matches', [])
+
+        match_lists = list(prefixes_with_matches.items())
+        if not match_lists:
+            expanded.append(parent)
+            continue
+
+        main_prefix, main_matches = match_lists[0]
+        if not main_matches:
+            row = {**parent}
+            for rf in all_relation_fields:
+                row[rf] = None
+            expanded.append(row)
+        else:
+            for child in main_matches:
+                row = {**parent}
+                for rf in all_relation_fields:
+                    parts = rf.split('.', 1)
+                    if len(parts) == 2 and parts[0] in prefixes:
+                        row[rf] = extract_nested_value(child, parts[1])
+                expanded.append(row)
+
+    debug_log(f'Expanded {len(parent_records)} parent records to {len(expanded)} rows')
+    return expanded
 
 
 # --- Main execution ---
@@ -216,7 +313,7 @@ if not parent_dataset:
     send_error(RPC_ERROR_INVALID_PARAMS, 'parentDataset is required')
 
 if not relations:
-    send_error(RPC_ERROR_INVALID_PARAMS, 'At least one relation is required')
+    relations = []
 
 debug_log(f'Config: parentDataset={parent_dataset}, relations={len(relations)}')
 
@@ -243,14 +340,54 @@ if len(parent_records) == 0:
     sys.exit(0)
 
 try:
+    prefixes = []
     for relation in relations:
         process_relation(parent_records, relation, datasets)
+        if relation.get('prefix'):
+            prefixes.append(relation.get('prefix'))
 
-    send_rpc_ok()
+    group_by_fields = config.get('groupBy', [])
+    root_aggregators = config.get('aggregators', {})
 
-    for record in parent_records:
-        record.pop(DATASET_TAG, None)
-        print(json.dumps(record, default=str), flush=True)
+    if relations and group_by_fields:
+        parent_records = expand_records_for_relations(parent_records, group_by_fields, root_aggregators, relations)
+
+    if group_by_fields:
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for record in parent_records:
+            key_parts = []
+            for gf in group_by_fields:
+                val = extract_nested_value(record, gf)
+                key_parts.append(json.dumps(val, sort_keys=True, default=str) if isinstance(val, (dict, list)) else str(val))
+            group_key = '||'.join(key_parts)
+            if group_key not in grouped:
+                grouped[group_key] = []
+            grouped[group_key].append(record)
+
+        aggregated_records: List[Dict[str, Any]] = []
+        for records_in_group in grouped.values():
+            row: Dict[str, Any] = {}
+            for gf in group_by_fields:
+                row[gf] = extract_nested_value(records_in_group[0], gf)
+            for agg_alias, agg_config in root_aggregators.items():
+                agg_name = agg_config['aggregator']
+                agg_field = agg_config.get('field')
+                row[agg_alias] = apply_aggregator(agg_name, agg_field, records_in_group)
+            aggregated_records.append(row)
+
+        send_rpc_ok()
+        for record in aggregated_records:
+            record.pop(DATASET_TAG, None)
+            for prefix in prefixes:
+                record.pop(f'_rel_{prefix}_matches', None)
+            print(json.dumps(record, default=str), flush=True)
+    else:
+        send_rpc_ok()
+        for record in parent_records:
+            record.pop(DATASET_TAG, None)
+            for prefix in prefixes:
+                record.pop(f'_rel_{prefix}_matches', None)
+            print(json.dumps(record, default=str), flush=True)
 
 except Exception as e:
     debug_log(f'Error during processing: {str(e)}')

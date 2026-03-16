@@ -6,10 +6,12 @@ import fs from 'fs';
 import internal, { Transform } from 'node:stream';
 import { Readable } from 'stream';
 
-export default async function csvExport(dataStream: Readable, name: string): Promise<KonectyResult<ExportDataResponse>> {
+export type CsvExportOptions = { columns?: string[] };
+
+export default async function csvExport(dataStream: Readable, name: string, options?: CsvExportOptions): Promise<KonectyResult<ExportDataResponse>> {
 	const filename = `/tmp/${name}_${Date.now()}`;
 
-	const flattenData = new TransformFlattenData();
+	const flattenData = new TransformFlattenData(undefined, options?.columns);
 	const toCSV = new TransformToCSV(flattenData);
 	const addHeaders = new TransformAddHeaders(toCSV);
 	const fileWriteStream = fs.createWriteStream(filename);
@@ -52,14 +54,14 @@ class TransformToCSV extends Transform {
 	_transform(record: Record<string, unknown>, encoding: string, callback: internal.TransformCallback) {
 		const headers = this.getHeaders();
 
-		const values = Array.from(headers).map(header => (record[header] ? `"${record[header]}"` : ''));
+		const values = headers.map(header => (record[header] != null && record[header] !== '' ? `"${record[header]}"` : ''));
 		this.push(values.join(',') + '\n');
 
 		callback();
 	}
 
-	getHeaders() {
-		return this.flatDataBase.headers;
+	getHeaders(): string[] {
+		return this.flatDataBase.getOrderedHeaders();
 	}
 }
 
@@ -76,7 +78,7 @@ class TransformAddHeaders extends Transform {
 		if (this.headersAdded === false) {
 			const headers = this.toCsvBase.getHeaders();
 
-			this.push(Array.from(headers).join(',') + '\n');
+			this.push(headers.join(',') + '\n');
 			this.headersAdded = true;
 		}
 

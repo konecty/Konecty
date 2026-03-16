@@ -80,8 +80,8 @@ export default async function findStream({ getTotal, transformDatesToString = tr
 		const mongoStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / NANOSECONDS_TO_MILLISECONDS}ms => FindStream ${params.document}, filter: ${JSON.stringify(query)}`;
-		logger.trace(log);
+		const elapsedMs = totalTime[0] * 1000 + totalTime[1] / NANOSECONDS_TO_MILLISECONDS;
+		logger.trace({ document: params.document, elapsedMs, stages: aggregateStages.length }, '[findStream] query built');
 
 		// Create pipeline with Transform streams
 		const stream = buildStreamPipeline(mongoStream, accessConditions, conditionsKeys, transformDatesToString, tracingSpan);
