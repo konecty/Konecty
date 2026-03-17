@@ -9,6 +9,7 @@ import eventManager from '@imports/lib/EventManager';
 import { Document } from '@imports/model/Document';
 import { MetaObject } from '@imports/model/MetaObject';
 import queueManager from '@imports/queue/QueueManager';
+import { MetaObjectSchema } from '@imports/types/metadata';
 import { MetaObjectType } from '@imports/types/metadata';
 import { isReplicaSet } from '@imports/utils/mongo';
 import { Promise as BluebirdPromise } from 'bluebird';
@@ -72,27 +73,47 @@ const deregisterMeta = function (meta: any) {
 
 async function dbLoad() {
 	const data = await MetaObject.MetaObject.find<MetaObjectType>({}).toArray();
+	let invalidMetas = 0;
 	await BluebirdPromise.all(
 		data.map(async meta => {
-			switch (meta.type) {
-				case 'access':
-					MetaObject.Access[meta._id] = meta as unknown as MetaAccess;
-					break;
-				case 'document':
-				case 'composite':
-					return registerMeta(meta);
-				case 'pivot':
-				case 'view':
-				case 'list':
-					MetaObject.DisplayMeta[meta._id] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
-					break;
-				case 'namespace':
-					Object.assign(MetaObject.Namespace, meta);
-					await queueManager.restartResources();
-					break;
+			try {
+				const parsed = MetaObjectSchema.safeParse(meta);
+				if (!parsed.success) {
+					invalidMetas += 1;
+					logger.error(
+						`Invalid meta skipped in loadMetaObjects (${meta._id}): ${parsed.error.issues
+							.map(issue => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
+							.join(' | ')}`,
+					);
+					return;
+				}
+
+				switch (meta.type) {
+					case 'access':
+						MetaObject.Access[meta._id] = meta as unknown as MetaAccess;
+						break;
+					case 'document':
+					case 'composite':
+						return registerMeta(meta);
+					case 'pivot':
+					case 'view':
+					case 'list':
+						MetaObject.DisplayMeta[meta._id] = meta as unknown as (typeof MetaObject.DisplayMeta)[string];
+						break;
+					case 'namespace':
+						Object.assign(MetaObject.Namespace, meta);
+						await queueManager.restartResources();
+						break;
+				}
+			} catch (error) {
+				invalidMetas += 1;
+				logger.error(error, `Invalid meta skipped in loadMetaObjects (${meta?._id})`);
 			}
 		}),
 	);
+	if (invalidMetas > 0) {
+		logger.warn(`[kondata] loadMetaObjects finished with ${invalidMetas} invalid meta object(s) skipped`);
+	}
 
 	rebuildReferences();
 }

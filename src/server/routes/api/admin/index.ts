@@ -13,6 +13,8 @@ import groupBy from 'lodash/groupBy';
 import { db } from '@imports/database';
 import { ObjectId } from 'mongodb';
 
+import metaAdminApi from './meta';
+
 type AccessProfileSummary = {
 	_id: string;
 	name: string;
@@ -143,6 +145,8 @@ async function updateRoleAccess(roleId: string, access: Record<string, string | 
 }
 
 const adminApi: FastifyPluginCallback = (fastify, _, done) => {
+	fastify.register(metaAdminApi, { prefix: '/api/admin/meta' });
+
 	fastify.get('/api/admin/access-overview', async function (req, reply) {
 		const { tracer } = req.openTelemetry();
 		const tracingSpan = tracer.startSpan('GET access-overview');
