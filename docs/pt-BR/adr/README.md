@@ -15,6 +15,7 @@ Este diretório contém as decisões arquiteturais tomadas durante o desenvolvim
 - [ADR-0009: Estrutura Centralizada de Mensagens de Erro no Backend](./0009-estrutura-mensagens-erro-backend.md)
 - [ADR-0010: Padrões de Código](./0010-padroes-codigo.md)
 - [ADR-0011: Evitar Tecnocentrismo na Comunicação com Usuários](./0011-evitar-tecnocentrismo-comunicacao.md)
+- [ADR-0012: API Admin de Metadados (CRUD)](./0012-api-admin-meta-crud.md)
 
 ## Formato
 
