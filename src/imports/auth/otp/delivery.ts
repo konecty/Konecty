@@ -7,12 +7,16 @@ import { sendOtpViaWhatsApp, WhatsAppConfig } from './whatsapp';
 import { OTP_DEFAULT_EXPIRATION_MINUTES } from '../../consts';
 import { renderTemplate } from '@imports/template';
 import { randomId } from '@imports/utils/random';
+import { DataDocument } from '@imports/types/data';
 
 export interface DeliveryResult {
 	success: boolean;
 	method?: 'whatsapp' | 'rabbitmq' | 'email';
 	error?: string;
 }
+
+/** Error message when Message collection is not available (e.g. email not configured in namespace). */
+export const MESSAGE_COLLECTION_NOT_FOUND_ERROR = 'Message collection not found';
 
 /**
  * Get WhatsApp config from Namespace or environment
@@ -117,7 +121,7 @@ async function sendViaRabbitMQ(phoneNumber: string, otpCode: string, userId: str
 
 		return {
 			success: false,
-			error: typeof result?.errors?.[0] === 'string' ? result.errors[0] : (result?.errors?.[0]?.message ?? 'Failed to send message to queue'),
+			error: typeof result?.errors?.[0] === 'string' ? result.errors[0] : result?.errors?.[0]?.message ?? 'Failed to send message to queue',
 		};
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via RabbitMQ');
@@ -226,10 +230,10 @@ async function sendViaEmail(phoneNumber: string | undefined, otpCode: string, us
 		if (messageCollection == null) {
 			return {
 				success: false,
-				error: 'Message collection not found',
+				error: MESSAGE_COLLECTION_NOT_FOUND_ERROR,
 			};
 		}
-		await messageCollection.insertOne(messageData as any);
+		await messageCollection.insertOne(messageData as DataDocument);
 		return { success: true, method: 'email' };
 	} catch (error) {
 		logger.error(error, 'Error sending OTP via email');
