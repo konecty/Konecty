@@ -42,6 +42,34 @@ export const Konsistent: RunningKonsistent = {
 	removeWAL,
 };
 
+const CREATE_HISTORY_ERROR_PREFIX = 'Error creating history';
+
+function wrapHistoryError(error: unknown): Error {
+	const originalError = error as Error & {
+		type?: string;
+		code?: number;
+		codeName?: string;
+		hasErrorLabel?: (label: string) => boolean;
+	};
+	const message = `${CREATE_HISTORY_ERROR_PREFIX}: ${originalError?.message ?? 'Unknown error'}`;
+	const wrappedError = new Error(message, { cause: originalError }) as Error & {
+		type?: string;
+		code?: number;
+		codeName?: string;
+		hasErrorLabel?: (label: string) => boolean;
+	};
+
+	// Preserve Mongo metadata so retry logic can still identify transient transaction errors.
+	wrappedError.type = originalError?.type;
+	wrappedError.code = originalError?.code;
+	wrappedError.codeName = originalError?.codeName;
+	if (typeof originalError?.hasErrorLabel === 'function') {
+		wrappedError.hasErrorLabel = originalError.hasErrorLabel.bind(originalError);
+	}
+
+	return wrappedError;
+}
+
 export async function setupKonsistent() {
 	const usingExternalKonsistent = Boolean(MetaObject.Namespace.plan?.useExternalKonsistent);
 	logger.info(`Using external Konsistent? ${usingExternalKonsistent}`);
@@ -72,9 +100,10 @@ async function processChangeSync(metaName: string, operation: string, user: obje
 		? objectsDiff(data.originalRecord, omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']))
 		: omit(data.newRecord, ['_id', '_createdAt', '_createdBy', '_updatedAt', '_updatedBy']);
 
-	const historyResult = await createHistory(metaName, operation, data.newRecord._id, user, new Date(), changedProps, dbSession);
-	if (historyResult === false) {
-		throw new Error(`Error creating history`);
+	try {
+		await createHistory(metaName, operation, data.newRecord._id, user, new Date(), changedProps, dbSession);
+	} catch (error) {
+		throw wrapHistoryError(error);
 	}
 
 	if (MetaObject.Namespace.plan?.useExternalKonsistent !== true) {

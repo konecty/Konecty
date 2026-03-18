@@ -1,7 +1,18 @@
 import { ClientSession, MongoServerError } from 'mongodb';
 import { logger } from './logger';
 
-const ERROR_CODES = ['TemporarilyUnavailableException', 'WriteConflictException', 'WriteConflict'];
+const RETRYABLE_ERROR_CODES = ['TemporarilyUnavailableException', 'WriteConflictException', 'WriteConflict', 'NoSuchTransaction'];
+const RETRYABLE_ERROR_LABELS = ['TransientTransactionError', 'UnknownTransactionCommitResult'];
+const RETRY_DELAY_MS = 1000;
+
+function isRetryableTransactionError(error: unknown): boolean {
+	const mongoError = error as MongoServerError;
+
+	const hasRetryableCode = RETRYABLE_ERROR_CODES.includes(mongoError?.codeName ?? '');
+	const hasRetryableLabel = RETRYABLE_ERROR_LABELS.some(label => mongoError?.hasErrorLabel?.(label) === true);
+
+	return hasRetryableCode || hasRetryableLabel;
+}
 
 /**
  * Retries a MongoDB transaction after it encounters a write conflict error.
@@ -25,9 +36,9 @@ export async function retryMongoTransaction<T extends (isRetry: boolean) => Prom
 			if (mongoError.type === 'MongoServerError') {
 				logger.debug(`MongoServerError ${mongoError.message} - ${mongoError.codeName}`);
 			}
-			if (ERROR_CODES.includes(mongoError.codeName ?? '')) {
+			if (isRetryableTransactionError(mongoError)) {
 				logger.debug(`${mongoError.codeName}, retrying transaction ${retries}x - ${lastError.message}`);
-				await new Promise(resolve => setTimeout(resolve, 1000));
+				await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
 				continue;
 			}
 
@@ -47,7 +58,7 @@ export async function retryMongoTransaction<T extends (isRetry: boolean) => Prom
 export async function handleTransactionError(error: unknown, session?: ClientSession) {
 	await session?.abortTransaction();
 
-	if (ERROR_CODES.includes((error as MongoServerError).codeName ?? '')) {
+	if (isRetryableTransactionError(error)) {
 		logger.trace(`handleTransaction ${(error as MongoServerError).codeName}`);
 		throw error;
 	}

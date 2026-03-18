@@ -15,8 +15,9 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
 
 	const history = MetaObject.Collections[`${metaName}.History`];
 	if (!history) {
-		logger.error(`Can't get History collection from ${metaName}`);
-		return false;
+		const error = new Error(`Can't get History collection from ${metaName}`);
+		logger.error(error, `Error on create history`);
+		throw error;
 	}
 
 	const historyData = omitBy(changed, (value, key) => keysToIgnore.includes(key) || meta.fields[key]?.ignoreHistory);
@@ -40,6 +41,6 @@ export default async function createHistory(metaName, action, id, updatedBy, upd
 		return true;
 	} catch (e) {
 		logger.error(e, 'Error on create history');
-		return false;
+		throw e;
 	}
 }
