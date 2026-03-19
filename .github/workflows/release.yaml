@@ -31,6 +31,7 @@ jobs:
               with:
                   path: |
                       node_modules
+                      src/mcp/widgets/node_modules
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Install Dependencies
               run: yarn --frozen-lockfile --no-progress --non-interactive
@@ -42,6 +43,7 @@ jobs:
               with:
                   path: |
                       node_modules
+                      src/mcp/widgets/node_modules
                   key: ${{ steps.cache-restore.outputs.cache-primary-key }}
             - name: Build
               run: yarn build

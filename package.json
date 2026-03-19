@@ -8,7 +8,7 @@
 		"dev:css": "tailwindcss -i src/private/templates/login/modern-tailwind-input.css -o src/private/templates/login/modern-tailwind-output.css --watch",
 		"dev:css-once": "tailwindcss -i src/private/templates/login/modern-tailwind-input.css -o src/private/templates/login/modern-tailwind-output.css",
 		"prebuild": "rimraf dist",
-		"build:widgets": "cd src/mcp/widgets && yarn build",
+		"build:widgets": "cd src/mcp/widgets && yarn install --frozen-lockfile --no-progress --non-interactive && yarn build",
 		"build:login-css": "tailwindcss -i src/private/templates/login/modern-tailwind-input.css -o src/private/templates/login/modern-tailwind-output.css --minify",
 		"build": "yarn build:login-css && yarn build:widgets && babel src --out-dir dist --no-copy-ignored --extensions '.ts,.js' --ignore 'src/mcp/widgets/**'",
 		"lint": "eslint src/**/*.ts --fix",
