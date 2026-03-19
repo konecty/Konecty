@@ -15,6 +15,12 @@ Este diretório contém as decisões arquiteturais tomadas durante o desenvolvim
 - [ADR-0009: Estrutura Centralizada de Mensagens de Erro no Backend](./0009-estrutura-mensagens-erro-backend.md)
 - [ADR-0010: Padrões de Código](./0010-padroes-codigo.md)
 - [ADR-0011: Evitar Tecnocentrismo na Comunicação com Usuários](./0011-evitar-tecnocentrismo-comunicacao.md)
+- [ADR-0012: Servidores MCP como Plugins Fastify](./0012-servers-mcp-como-plugins-fastify.md)
+- [ADR-0013: Adapter Fastify para Transport Node do MCP](./0013-adapter-fastify-para-transport-node-mcp.md)
+- [ADR-0014: Proxy Interno MCP para Serviços Konecty](./0014-proxy-interno-mcp-para-servicos-konecty.md)
+- [ADR-0015: Rate Limiting do MCP em Memória](./0015-rate-limiting-mcp-em-memoria.md)
+- [ADR-0016: Separação entre User MCP e Admin MCP](./0016-separacao-user-admin-mcp.md)
+- [ADR-0017: Conformidade de Widgets com Diretrizes Visuais do ChatGPT](./0017-conformidade-chatgpt-para-widgets.md)
 
 ## Formato
 
