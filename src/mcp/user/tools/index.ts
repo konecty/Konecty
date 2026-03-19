@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerFilterBuilderTools } from './filterBuilder';
 import { registerFieldLookupTools } from './fieldLookup';
 import { registerFileTools } from './files';
 import { registerModuleTools } from './modules';
@@ -18,6 +19,8 @@ export function registerUserTools(server: McpServer, deps: UserToolDeps): void {
 	registerSessionTools(server, {
 		callAuthApi: deps.callAuthApi,
 	});
+
+	registerFilterBuilderTools(server);
 
 	registerModuleTools(server, {
 		authTokenId: deps.authTokenId,

@@ -4,6 +4,7 @@ import { sqlToIQR } from '@imports/data/api/sqlToRelationsParser';
 import { update } from '@imports/data/api/update';
 import { create, deleteData, findById, findByLookup } from '@imports/data/data';
 import { getExplorerModules } from '@imports/data/api/explorerModules';
+import { KonFilter } from '@imports/model/Filter';
 import { MetaObject } from '@imports/model/MetaObject';
 import { getLabel } from '@imports/meta/metaUtils';
 import { getDocument } from '@imports/document';
@@ -155,6 +156,76 @@ function buildInvalidDocumentError(document: string) {
 	};
 }
 
+const KON_FILTER_RESERVED_KEYS = new Set(['match', 'conditions', 'filters', 'textSearch']);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringifyFilterSnippet(filter: unknown): string {
+	try {
+		const text = JSON.stringify(filter);
+		return text.length > 800 ? `${text.slice(0, 800)}…` : text;
+	} catch {
+		return '[unserializable filter]';
+	}
+}
+
+function buildInvalidFilterError(filter: unknown, extra?: string) {
+	const snippet = stringifyFilterSnippet(filter);
+	const base =
+		`Invalid Konecty filter: ${snippet}. ` +
+		`Konecty requires match ("and"|"or") and structured conditions: { "match": "and", "conditions": [{ "term": "fieldName", "operator": "equals", "value": "…" }] }. ` +
+		`Do NOT use Mongo-style { "field": "value" } — it is ignored and returns unfiltered results. ` +
+		`Use the filter_build MCP tool to assemble a valid filter, or copy the shape from filter_build structuredContent.`;
+	return {
+		success: false as const,
+		errors: [{ message: extra != null && extra.length > 0 ? `${base} ${extra}` : base }],
+	};
+}
+
+/**
+ * Ensures filter is undefined, empty, or a valid KonFilter before calling find/pivot/graph.
+ * Rejects Mongo-style objects and other shapes that parseFilterObject would silently drop.
+ */
+function normalizeKonectyFilter(filter: unknown): { success: true; data: unknown } | ReturnType<typeof buildInvalidFilterError> {
+	if (filter == null) {
+		return { success: true, data: undefined };
+	}
+
+	if (!isPlainRecord(filter)) {
+		return buildInvalidFilterError(filter, 'Filter must be a JSON object.');
+	}
+
+	const keys = Object.keys(filter);
+	if (keys.length === 0) {
+		return { success: true, data: undefined };
+	}
+
+	const hasReserved = keys.some(key => KON_FILTER_RESERVED_KEYS.has(key));
+	if (!hasReserved) {
+		return buildInvalidFilterError(
+			filter,
+			'Detected a filter without match/conditions/filters/textSearch (likely Mongo-style or wrong shape).',
+		);
+	}
+
+	let toValidate: Record<string, unknown> = filter;
+	if (filter.match == null && filter.conditions == null && filter.filters == null && typeof filter.textSearch === 'string') {
+		toValidate = { match: 'and', textSearch: filter.textSearch };
+	} else if (filter.match == null && (filter.conditions != null || filter.filters != null)) {
+		toValidate = { match: 'and', ...filter };
+	}
+
+	const parsed = KonFilter.safeParse(toValidate);
+	if (!parsed.success) {
+		const zodHint = parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+		return buildInvalidFilterError(filter, `Schema validation failed: ${zodHint}`);
+	}
+
+	return { success: true, data: parsed.data };
+}
+
 function buildInvalidSortError(sort: unknown) {
 	const sortJson = (() => {
 		try {
@@ -235,10 +306,14 @@ export async function proxyRecordsFind(authTokenId: string, input: unknown) {
 	if (!normalizedSort.success) {
 		return normalizedSort;
 	}
+	const normalizedFilter = normalizeKonectyFilter(parsed.filter);
+	if (!normalizedFilter.success) {
+		return normalizedFilter;
+	}
 	return find({
 		authTokenId,
 		document: parsed.document,
-		filter: parsed.filter,
+		filter: normalizedFilter.data as never,
 		sort: normalizedSort.data,
 		fields: parsed.fields,
 		limit: parsed.limit,
@@ -329,10 +404,14 @@ export async function proxyQueryPivot(authTokenId: string, input: { document: st
 	if (!normalizedSort.success) {
 		return normalizedSort;
 	}
+	const normalizedFilter = normalizeKonectyFilter(input.filter);
+	if (!normalizedFilter.success) {
+		return normalizedFilter;
+	}
 	return pivotStream({
 		authTokenId,
 		document: input.document,
-		filter: input.filter as never,
+		filter: normalizedFilter.data as never,
 		pivotConfig: input.pivotConfig as never,
 		fields: input.fields as never,
 		sort: normalizedSort.data as never,
@@ -346,10 +425,14 @@ export async function proxyQueryGraph(authTokenId: string, input: { document: st
 	if (!normalizedSort.success) {
 		return normalizedSort;
 	}
+	const normalizedFilter = normalizeKonectyFilter(input.filter);
+	if (!normalizedFilter.success) {
+		return normalizedFilter;
+	}
 	return graphStream({
 		authTokenId,
 		document: input.document,
-		filter: input.filter as never,
+		filter: normalizedFilter.data as never,
 		graphConfig: input.graphConfig as never,
 		fields: input.fields as never,
 		sort: normalizedSort.data as never,

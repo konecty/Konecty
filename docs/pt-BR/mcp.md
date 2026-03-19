@@ -15,7 +15,7 @@ User MCP e Admin MCP são stateless. O servidor não persiste sessão de autenti
 1. Chamar `session_login_options` para verificar métodos OTP.
 2. Solicitar OTP com tool específica por canal:
    - `session_request_otp_email` para e-mail
-   - `session_request_otp_phone` para telefone/WhatsApp
+   - `session_request_otp_phone` para telefone/WhatsApp — `phoneNumber` deve estar em **E.164** (ex.: `+5511999999999`). Se o usuário informar só DDD + número (Brasil), prefixe `+55`. Use o mesmo número normalizado na solicitação e na verificação.
 3. Validar OTP com a tool correspondente ao canal:
    - `session_verify_otp_email`
    - `session_verify_otp_phone`
@@ -36,6 +36,7 @@ Tools públicas:
 - `session_request_otp_phone`
 - `session_verify_otp_email`
 - `session_verify_otp_phone`
+- `filter_build` (monta JSON de filtro Konecty validado; sem auth)
 
 Tools autenticadas:
 - `session_logout`
@@ -97,6 +98,10 @@ Objetivos do desenho:
 
 O Konecty usa formato de filtro próprio e estruturado — **não** sintaxe de query MongoDB.
 
+**Recomendado:** chamar `filter_build` com `match`, `conditions` como linhas `{ field, operator, value }` (e opcional `textSearch`). A tool devolve um filtro validado para usar em `records_find`, `query_pivot` e `query_graph`.
+
+O User MCP valida filtros antes dessas chamadas: mapas estilo Mongo no topo são **rejeitados** com erro explícito (não são mais apenas ignorados silenciosamente na camada de dados).
+
 ```json
 {
   "match": "and",
@@ -144,20 +149,21 @@ O Konecty usa formato de filtro próprio e estruturado — **não** sintaxe de q
 
 ### NUNCA use filtros estilo Mongo
 
-`{ "status": "Ativo" }` é **silenciosamente ignorado** — sem array `conditions`, `parseFilterObject` retorna `{}` (query vazia, sem filtragem).
+`{ "status": "Ativo" }` não tem `match` / `conditions` / `filters` / `textSearch`. No MCP, `records_find`, `query_pivot` e `query_graph` **rejeitam** esse formato para o agente receber erro claro em vez de resultado sem filtro.
 
 ## Referência de Entrada e Saída das Tools
 ### User MCP
 - `session_login_options`: entrada nenhuma; saída `options`, `nextSteps`, `requestOtpExamples`, `verifyOtpExamples`.
 - `session_request_otp_email`: entrada `email`; saída `otpRequest`, `channel`, `nextStep` mais bloco de imagem OTP.
-- `session_request_otp_phone`: entrada `phoneNumber`; saída `otpRequest`, `channel`, `nextStep`.
+- `session_request_otp_phone`: entrada `phoneNumber` (E.164, ex. `+5511999999999`; DDD+número BR normalizado com `+55` quando aplicável); saída `otpRequest`, `channel`, `nextStep`, `normalizedPhoneNumber` quando houver normalização.
 - `session_verify_otp_email`, `session_verify_otp_phone`: entrada identificador do canal e `otpCode`; saída `authId`, `user`, `logged`, `instructions`.
 - `session_logout`: entrada `authTokenId`; saída `logout`.
 - `modules_list`: entrada `authTokenId`; saída `modules`, `usageHint`, `queryStrategyHint`, `moduleIdentifiers`.
 - `modules_fields`: entrada `document`, `authTokenId`; saída `module` (incluindo normalização de documento quando aplicável). Campos do tipo "picklist" têm opções embutidas — use `field_picklist_options`. Campos do tipo "lookup" têm módulo relacionado — use `field_lookup_search`.
 - `field_picklist_options`: entrada `document`, `fieldName`, `authTokenId`; saída `document`, `fieldName`, `fieldLabel`, `options` (array de `{ key, sort?, pt_BR?, en? }`). Retorna as chaves válidas para picklist — use antes de filtrar.
 - `field_lookup_search`: entrada `document`, `fieldName`, `search`, opcional `limit`, `authTokenId`; saída `document`, `fieldName`, `relatedDocument`, `descriptionFields`, `records`, `total`. Busca registros relacionados para resolver _id de lookup antes de filtrar.
-- `records_find`: entrada `document`, filtros/ordenação/campos/paginação opcionais, `authTokenId`; saída `records`, `total`. Filtro usa formato estruturado Konecty: `{ "match": "and"|"or", "conditions": [{ "term": "<campo>", "operator": "<op>", "value": "<val>" }] }`. NÃO use formato Mongo `{ "campo": "valor" }`. Antes de filtrar por picklist use `field_picklist_options`; antes de filtrar por lookup use `field_lookup_search`.
+- `filter_build`: entrada `match` (`and`|`or`), `conditions` como array de `{ field, operator, value? }`, opcional `textSearch`; sem `authTokenId`. Saída `filter`, `filterJson`. Valida contra o schema de filtro Konecty; use a saída como `filter` em `records_find` / `query_pivot` / `query_graph`.
+- `records_find`: entrada `document`, filtros/ordenação/campos/paginação opcionais, `authTokenId`; saída `records`, `total`. Prefira `filter` vindo de `filter_build`. Formato Konecty: `{ "match": "and"|"or", "conditions": [{ "term", "operator", "value" }] }`. Mapas estilo Mongo no topo são rejeitados. Antes de picklist/lookup use `field_picklist_options` / `field_lookup_search`.
 - `records_find_by_id`: entrada `document`, `recordId`, opcionais `fields` e `withDetailFields`, `authTokenId`; saída `record`.
 - `records_create`: entrada `document`, `data`, `authTokenId`; saída `records`.
 - `records_update`: entrada `document`, `ids` com `_id` e `_updatedAt`, `data`, `authTokenId`; saída `records`.
@@ -165,8 +171,8 @@ O Konecty usa formato de filtro próprio e estruturado — **não** sintaxe de q
 - `records_delete`: entrada `document`, `confirm`, `ids`, `authTokenId`; saída `deleted`.
 - `query_json`: entrada `query`, opcional `includeMeta`, `authTokenId`; saída `records`, `meta`, `total`.
 - `query_sql`: entrada `sql`, opcionais `includeMeta` e `includeTotal`, `authTokenId`; saída `records`, `meta`, `total`.
-- `query_pivot`: entrada `document`, `pivotConfig`, opcionais filtro/ordenação/campos/limite, `authTokenId`; saída `pivot`.
-- `query_graph`: entrada `document`, `graphConfig`, opcionais filtro/ordenação/campos/limite, `authTokenId`; saída `graph`.
+- `query_pivot`: entrada `document`, `pivotConfig`, opcionais filtro/ordenação/campos/limite, `authTokenId`; saída `pivot`. Mesmas regras de filtro que `records_find` (use `filter_build` quando possível).
+- `query_graph`: entrada `document`, `graphConfig`, opcionais filtro/ordenação/campos/limite, `authTokenId`; saída `graph`. Mesmas regras de filtro que `records_find` (use `filter_build` quando possível).
 - `file_upload`: entrada `document`, `recordId`, `fieldName`, `file`, `authTokenId`; saída `file`.
 - `file_download`: entrada `document`, `recordId`, `fieldName`, `fileName`, `authTokenId`; saída `fileUrl`, `fileName`.
 - `file_delete`: entrada `document`, `recordId`, `fieldName`, `fileName`, `confirm`, `authTokenId`; saída `file`.
@@ -214,6 +220,7 @@ Se a flag estiver desabilitada, o endpoint retorna indisponível.
 ### Helpers de tipos de campo
 - `field_picklist_options` — retorna chaves válidas para campos picklist
 - `field_lookup_search` — busca registros relacionados para lookup e resolve _id
+- `filter_build` — monta filtro Konecty validado (sem auth)
 
 ### Registros
 - `records_find`

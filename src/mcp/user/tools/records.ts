@@ -31,21 +31,17 @@ export function registerRecordTools(server: McpServer, deps: RecordToolDeps): vo
 		{
 			description:
 				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Find records using Konecty filter format. document must be the technical module _id (modules_list.modules[].document), not label/name. ' +
-				'IMPORTANT: filter must use the Konecty structured format, NOT Mongo-style objects. ' +
-				'Format: { "match": "and"|"or", "conditions": [{ "term": "<fieldName>", "operator": "<op>", "value": "<val>" }] }. ' +
-				'Example: { "match": "and", "conditions": [{ "term": "status", "operator": "equals", "value": "Ativo" }, { "term": "code", "operator": "greater_than", "value": 100 }] }. ' +
+				'Prefer filter_build to produce a validated filter, then pass it here. ' +
+				'Filter shape: { "match": "and"|"or", "conditions": [{ "term": "<fieldName>", "operator": "<op>", "value": "<val>" }] } (optional textSearch). ' +
 				'Operators: equals, not_equals, contains, not_contains, starts_with, end_with, in, not_in, greater_than, less_than, greater_or_equals, less_or_equals, between, exists. ' +
-				'For picklist fields: use "equals" or "in" with exact option keys from field_picklist_options. ' +
-				'For lookup fields: use term "fieldName._id" with "equals" or "in" and the _id resolved by field_lookup_search. ' +
-				'For nested OR groups: use "filters" array: { "match": "and", "filters": [{ "match": "or", "conditions": [...] }] }. ' +
-				'DO NOT send { "status": "Ativo" } — this Mongo format is silently ignored. ' +
+				'Picklist: exact keys from field_picklist_options. Lookup: term "fieldName._id" with equals/in and _id from field_lookup_search. Nested OR: "filters" array. ' +
+				'Mongo-style { "status": "Ativo" } is rejected by the server with an explicit error. ' +
 				'Returns: visible record list in content.text and { success, total, records } in structuredContent.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
 				document: z.string(),
 				filter: z.unknown().optional().describe(
-					'Konecty filter object. Structure: { "match": "and"|"or", "conditions": [{ "term": "fieldName", "operator": "equals"|"in"|"contains"|..., "value": ... }], "textSearch": "optional text" }. ' +
-					'DO NOT use Mongo-style { "field": "value" }. For lookup filtering use term "field._id" with operator "equals" or "in".',
+					'Use filter_build output or { "match": "and"|"or", "conditions": [{ "term", "operator", "value" }], "textSearch"? }. Mongo-style top-level field maps are rejected.',
 				),
 				sort: z.array(SORT_ITEM_SCHEMA).optional(),
 				fields: z.string().optional(),

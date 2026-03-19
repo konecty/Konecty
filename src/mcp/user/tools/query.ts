@@ -88,11 +88,14 @@ export function registerQueryTools(server: McpServer, deps: QueryToolDeps): void
 		'query_pivot',
 		{
 			description:
-				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Builds pivot data from query result. Returns: pivot summary in content.text and { success, pivot } in structuredContent.',
+				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Builds pivot data. Use filter_build for the filter when possible; same Konecty filter rules as records_find (Mongo-style filters are rejected). Returns: pivot summary in content.text and { success, pivot } in structuredContent.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
 				document: z.string(),
-				filter: z.unknown().optional(),
+				filter: z
+					.unknown()
+					.optional()
+					.describe('Konecty filter from filter_build or { match, conditions, textSearch? }. Mongo-style object rejected.'),
 				pivotConfig: z.record(z.unknown()),
 				fields: z.string().optional(),
 				sort: z.array(SORT_ITEM_SCHEMA).optional(),
@@ -122,11 +125,14 @@ export function registerQueryTools(server: McpServer, deps: QueryToolDeps): void
 		'query_graph',
 		{
 			description:
-				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Builds graph data from query result. Returns: graph summary in content.text and { success, graph } in structuredContent.',
+				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Builds graph data. Use filter_build for the filter when possible; same Konecty filter rules as records_find (Mongo-style filters are rejected). Returns: graph summary in content.text and { success, graph } in structuredContent.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
 				document: z.string(),
-				filter: z.unknown().optional(),
+				filter: z
+					.unknown()
+					.optional()
+					.describe('Konecty filter from filter_build or { match, conditions, textSearch? }. Mongo-style object rejected.'),
 				graphConfig: z.record(z.unknown()),
 				fields: z.string().optional(),
 				sort: z.array(SORT_ITEM_SCHEMA).optional(),

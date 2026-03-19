@@ -25,6 +25,55 @@ type SessionToolDeps = {
 	callAuthApi: (path: '/api/auth/request-otp' | '/api/auth/verify-otp', payload: Record<string, unknown>) => Promise<Record<string, unknown>>;
 };
 
+/** E.164: + followed by country code and subscriber number (7–15 digits total after +). */
+const E164_REGEX = /^\+[1-9]\d{6,14}$/;
+
+const PHONE_E164_ERROR =
+	'Phone/WhatsApp OTP requires E.164 format (e.g. +5511999999999). If the user gave only DDD + local number (Brazil), prepend country code +55. Use the same normalized number in session_request_otp_phone and session_verify_otp_phone.';
+
+/**
+ * Normalizes user/agent input to E.164 for WhatsApp/phone OTP.
+ * - Already +E.164: accept after stripping non-digits after +
+ * - 10–11 digits without leading 55: assume Brazil → +55
+ * - 12–14 digits starting with 55: prepend +
+ */
+function normalizePhoneToE164(raw: string): { ok: true; e164: string } | { ok: false; message: string } {
+	const trimmed = raw.trim();
+	if (trimmed.length === 0) {
+		return { ok: false, message: PHONE_E164_ERROR };
+	}
+
+	if (trimmed.startsWith('+')) {
+		const digits = trimmed.slice(1).replace(/\D/g, '');
+		const candidate = `+${digits}`;
+		if (E164_REGEX.test(candidate)) {
+			return { ok: true, e164: candidate };
+		}
+		return { ok: false, message: `${PHONE_E164_ERROR} Received (after +): invalid length or format.` };
+	}
+
+	const digits = trimmed.replace(/\D/g, '');
+	if (digits.length === 0) {
+		return { ok: false, message: PHONE_E164_ERROR };
+	}
+
+	if (digits.length >= 10 && digits.length <= 11 && !digits.startsWith('55')) {
+		const candidate = `+55${digits}`;
+		if (E164_REGEX.test(candidate)) {
+			return { ok: true, e164: candidate };
+		}
+	}
+
+	if (digits.startsWith('55') && digits.length >= 12 && digits.length <= 14) {
+		const candidate = `+${digits}`;
+		if (E164_REGEX.test(candidate)) {
+			return { ok: true, e164: candidate };
+		}
+	}
+
+	return { ok: false, message: PHONE_E164_ERROR };
+}
+
 function parseRequiredString(value: unknown): string | null {
 	if (typeof value !== 'string') {
 		return null;
@@ -76,7 +125,7 @@ export function registerSessionTools(server: McpServer, deps: SessionToolDeps): 
 				},
 				nextSteps: [
 					'If e-mail OTP is enabled, call session_request_otp_email with a non-empty email.',
-					'If phone/WhatsApp OTP is enabled, call session_request_otp_phone with a non-empty phoneNumber.',
+					'If phone/WhatsApp OTP is enabled, call session_request_otp_phone with phoneNumber in E.164 (e.g. +5511999999999). If the user only provides DDD + number (Brazil), prepend +55.',
 					'Call session_verify_otp_email or session_verify_otp_phone matching the channel used to request OTP.',
 					'Store authId from session_verify_otp_email/session_verify_otp_phone and pass it as authTokenId in authenticated tools.',
 				],
@@ -160,18 +209,28 @@ export function registerSessionTools(server: McpServer, deps: SessionToolDeps): 
 		'session_request_otp_phone',
 		{
 			description:
-				'Requests OTP delivery using phoneNumber only. Use this tool when OTP channel is phone/WhatsApp. Returns: OTP request summary in content.text and { success, otpRequest, channel, nextStep } in structuredContent.',
+				'Requests OTP delivery using phoneNumber only (phone/WhatsApp). phoneNumber MUST be E.164 (e.g. +5511999999999). If the user gives only Brazilian DDD + number (10–11 digits), prepend +55 before calling. Use the same normalized value for session_verify_otp_phone. Returns: OTP request summary in content.text and { success, otpRequest, channel, nextStep, normalizedPhoneNumber } in structuredContent.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
-				phoneNumber: z.string(),
+				phoneNumber: z
+					.string()
+					.describe(
+						'E.164 international number, e.g. +5511999999999. For Brazil without country code (DDD + number only), the server normalizes by adding +55 when possible.',
+					),
 			},
 		},
 		async args => {
 			try {
-				const phoneNumber = parseRequiredString(args.phoneNumber);
-				if (phoneNumber == null) {
+				const rawPhone = parseRequiredString(args.phoneNumber);
+				if (rawPhone == null) {
 					return toMcpErrorResult('VALIDATION_ERROR', 'phoneNumber must be a non-empty string.');
 				}
+
+				const normalized = normalizePhoneToE164(rawPhone);
+				if (!normalized.ok) {
+					return toMcpErrorResult('VALIDATION_ERROR', normalized.message);
+				}
+				const phoneNumber = normalized.e164;
 
 				const result = (await deps.callAuthApi('/api/auth/request-otp', { phoneNumber })) as Record<string, unknown> & {
 					success?: boolean;
@@ -183,14 +242,15 @@ export function registerSessionTools(server: McpServer, deps: SessionToolDeps): 
 				}
 
 				const text = appendNextSteps(
-					`OTP request submitted for phoneNumber "${phoneNumber}".`,
-					['Check your phone/WhatsApp for the OTP code.', 'Call session_verify_otp_phone with the same phoneNumber and otpCode.'],
+					`OTP request submitted for E.164 phoneNumber "${phoneNumber}".${rawPhone !== phoneNumber ? ` (normalized from "${rawPhone}")` : ''}`,
+					['Check your phone/WhatsApp for the OTP code.', `Call session_verify_otp_phone with otpCode and phoneNumber "${phoneNumber}" (same E.164 as here).`],
 				);
 				return toMcpSuccessResult(
 					{
 						otpRequest: result,
 						channel: 'phone' as const,
-						nextStep: 'Call session_verify_otp_phone with otpCode and the same phoneNumber.',
+						normalizedPhoneNumber: phoneNumber,
+						nextStep: `Call session_verify_otp_phone with otpCode and phoneNumber "${phoneNumber}".`,
 					},
 					text,
 				);
@@ -257,19 +317,27 @@ export function registerSessionTools(server: McpServer, deps: SessionToolDeps): 
 		'session_verify_otp_phone',
 		{
 			description:
-				'Validates OTP code for phone channel. Returns authId that must be stored by the client and passed as authTokenId in authenticated tools. This MCP is stateless. Returns: auth summary in content.text and { success, authId, user, logged, instructions } in structuredContent.',
+				'Validates OTP code for phone/WhatsApp. phoneNumber MUST be the same E.164 value used in session_request_otp_phone (e.g. +5511999999999). If the user gave only DDD + number, normalize with +55 (Brazil) the same way as on request. Returns authId for authTokenId on protected tools. This MCP is stateless.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
-				phoneNumber: z.string(),
+				phoneNumber: z
+					.string()
+					.describe('E.164 phone number; must match normalized value from session_request_otp_phone (e.g. +5511999999999).'),
 				otpCode: z.string(),
 			},
 		},
 		async args => {
 			try {
-				const phoneNumber = parseRequiredString(args.phoneNumber);
-				if (phoneNumber == null) {
+				const rawPhone = parseRequiredString(args.phoneNumber);
+				if (rawPhone == null) {
 					return toMcpErrorResult('VALIDATION_ERROR', 'phoneNumber must be a non-empty string.');
 				}
+
+				const normalized = normalizePhoneToE164(rawPhone);
+				if (!normalized.ok) {
+					return toMcpErrorResult('VALIDATION_ERROR', normalized.message);
+				}
+				const phoneNumber = normalized.e164;
 
 				const otpCode = parseRequiredString(args.otpCode);
 				if (otpCode == null) {

@@ -15,7 +15,7 @@ User MCP and Admin MCP are stateless. The server does not persist an MCP convers
 1. Call `session_login_options` to inspect available OTP methods.
 2. Request OTP with channel-specific tool:
    - `session_request_otp_email` for e-mail
-   - `session_request_otp_phone` for phone/WhatsApp
+   - `session_request_otp_phone` for phone/WhatsApp — `phoneNumber` must be **E.164** (e.g. `+5511999999999`). If the user gives only Brazilian DDD + local number, prepend `+55`. Use the same normalized number for request and verify.
 3. Verify OTP with matching channel-specific tool:
    - `session_verify_otp_email`
    - `session_verify_otp_phone`
@@ -36,6 +36,7 @@ Public tools:
 - `session_request_otp_phone`
 - `session_verify_otp_email`
 - `session_verify_otp_phone`
+- `filter_build` (builds a validated Konecty filter JSON; no auth)
 
 Authenticated tools:
 - `session_logout`
@@ -97,6 +98,10 @@ Design goals:
 
 Konecty uses its own structured filter format — **not** MongoDB query syntax.
 
+**Recommended:** call `filter_build` with `match`, `conditions` as `{ field, operator, value }` rows (and optional `textSearch`). The tool returns a validated filter to pass to `records_find`, `query_pivot`, and `query_graph`.
+
+User MCP validates filters before those calls: Mongo-style top-level field maps are **rejected** with an explicit error (they are no longer silently ignored at the data layer).
+
 ```json
 {
   "match": "and",
@@ -144,20 +149,21 @@ Konecty uses its own structured filter format — **not** MongoDB query syntax.
 
 ### NEVER use Mongo-style filters
 
-`{ "status": "Ativo" }` is **silently ignored** — it has no `conditions` array so `parseFilterObject` returns `{}` (empty query, no filtering applied).
+`{ "status": "Ativo" }` has no `match` / `conditions` / `filters` / `textSearch`. In MCP, `records_find`, `query_pivot`, and `query_graph` **reject** this shape so the agent gets a clear error instead of an unfiltered result.
 
 ## Tool I/O Reference
 ### User MCP
 - `session_login_options`: input none; output `options`, `nextSteps`, `requestOtpExamples`, `verifyOtpExamples`.
 - `session_request_otp_email`: input `email`; output `otpRequest`, `channel`, `nextStep` plus OTP image content block.
-- `session_request_otp_phone`: input `phoneNumber`; output `otpRequest`, `channel`, `nextStep`.
+- `session_request_otp_phone`: input `phoneNumber` (E.164, e.g. `+5511999999999`; Brazilian DDD+number normalized with `+55` when applicable); output `otpRequest`, `channel`, `nextStep`, `normalizedPhoneNumber` when normalization occurred.
 - `session_verify_otp_email`, `session_verify_otp_phone`: input channel identifier plus `otpCode`; output `authId`, `user`, `logged`, `instructions`.
 - `session_logout`: input `authTokenId`; output `logout`.
 - `modules_list`: input `authTokenId`; output `modules`, `usageHint`, `queryStrategyHint`, `moduleIdentifiers`.
 - `modules_fields`: input `document`, `authTokenId`; output `module` (including document normalization info when applicable). Fields of type "picklist" have embedded options — use `field_picklist_options`. Fields of type "lookup" have a related module — use `field_lookup_search`.
 - `field_picklist_options`: input `document`, `fieldName`, `authTokenId`; output `document`, `fieldName`, `fieldLabel`, `options` (array of `{ key, sort?, pt_BR?, en? }`). Returns valid option keys for picklist fields — use before filtering.
 - `field_lookup_search`: input `document`, `fieldName`, `search`, optional `limit`, `authTokenId`; output `document`, `fieldName`, `relatedDocument`, `descriptionFields`, `records`, `total`. Searches related records to resolve lookup _id before filtering.
-- `records_find`: input `document`, optional filter/sort/fields/paging, `authTokenId`; output `records`, `total`. Filter uses Konecty structured format: `{ "match": "and"|"or", "conditions": [{ "term": "<field>", "operator": "<op>", "value": "<val>" }] }`. DO NOT use Mongo-style `{ "field": "value" }`. Before filtering by picklist use `field_picklist_options`; before filtering by lookup use `field_lookup_search`.
+- `filter_build`: input `match` (`and`|`or`), `conditions` as array of `{ field, operator, value? }`, optional `textSearch`; no `authTokenId`. Output `filter`, `filterJson`. Validates against Konecty filter schema; use output as `filter` on `records_find` / `query_pivot` / `query_graph`.
+- `records_find`: input `document`, optional filter/sort/fields/paging, `authTokenId`; output `records`, `total`. Prefer `filter` from `filter_build`. Konecty structured format: `{ "match": "and"|"or", "conditions": [{ "term", "operator", "value" }] }`. Mongo-style top-level maps are rejected. Before picklist/lookup filtering use `field_picklist_options` / `field_lookup_search`.
 - `records_find_by_id`: input `document`, `recordId`, optional `fields` and `withDetailFields`, `authTokenId`; output `record`.
 - `records_create`: input `document`, `data`, `authTokenId`; output `records`.
 - `records_update`: input `document`, `ids` with `_id` and `_updatedAt`, `data`, `authTokenId`; output `records`.
@@ -165,8 +171,8 @@ Konecty uses its own structured filter format — **not** MongoDB query syntax.
 - `records_delete`: input `document`, `confirm`, `ids`, `authTokenId`; output `deleted`.
 - `query_json`: input `query`, optional `includeMeta`, `authTokenId`; output `records`, `meta`, `total`.
 - `query_sql`: input `sql`, optional `includeMeta` and `includeTotal`, `authTokenId`; output `records`, `meta`, `total`.
-- `query_pivot`: input `document`, `pivotConfig`, optional filter/sort/fields/limit, `authTokenId`; output `pivot`.
-- `query_graph`: input `document`, `graphConfig`, optional filter/sort/fields/limit, `authTokenId`; output `graph`.
+- `query_pivot`: input `document`, `pivotConfig`, optional filter/sort/fields/limit, `authTokenId`; output `pivot`. Same filter rules as `records_find` (use `filter_build` when possible).
+- `query_graph`: input `document`, `graphConfig`, optional filter/sort/fields/limit, `authTokenId`; output `graph`. Same filter rules as `records_find` (use `filter_build` when possible).
 - `file_upload`: input `document`, `recordId`, `fieldName`, `file`, `authTokenId`; output `file`.
 - `file_download`: input `document`, `recordId`, `fieldName`, `fileName`, `authTokenId`; output `fileUrl`, `fileName`.
 - `file_delete`: input `document`, `recordId`, `fieldName`, `fileName`, `confirm`, `authTokenId`; output `file`.
@@ -214,6 +220,7 @@ If a flag is disabled, the endpoint returns service unavailable.
 ### Field Type Helpers
 - `field_picklist_options` — returns valid option keys for picklist fields
 - `field_lookup_search` — searches related records for lookup fields to resolve _id
+- `filter_build` — assembles a validated Konecty filter (no auth)
 
 ### Records
 - `records_find`
