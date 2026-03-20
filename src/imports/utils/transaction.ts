@@ -22,7 +22,7 @@ function isRetryableTransactionError(error: unknown): boolean {
  * @param retries - The number of retries to attempt.
  * @returns The result of the function.
  */
-export async function retryMongoTransaction<T extends (isRetry: boolean) => Promise<any>>(fn: T, retries: number = 13) {
+export async function retryMongoTransaction<TResult>(fn: (isRetry: boolean) => Promise<TResult>, retries: number = 13): Promise<TResult> {
 	let lastError: Error | undefined;
 	let isRetry = false;
 

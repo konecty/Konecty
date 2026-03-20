@@ -77,7 +77,11 @@ docs/adr/
 
 | # | Título | Status | Data | Autores |
 |---|--------|--------|------|---------|
-| Em breve | Primeiro RDA do projeto | - | - | - |
+| [0001](./0001-deprecacao-bluebird.md) | Deprecação do Bluebird | Aceito | 2026 | Equipe Backend |
+| [0002](./0002-error-handling-centralizado.md) | Error Handling Centralizado | Aceito | 2026-01 | Equipe Backend |
+| [0003](./0003-estrategia-testes-jest.md) | Estratégia de Testes com Jest | Aceito | 2026 | Equipe Backend |
+| [0004](./0004-list-calendars-schema.md) | List Calendars Schema | Aceito | 2026 | Equipe Backend |
+| [0005](./0005-error-propagation-history-transactions.md) | Error Propagation in History Transactions | Aceito | 2026-03-20 | Cloud Agent |
 
 ---
 

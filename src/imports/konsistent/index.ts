@@ -44,30 +44,38 @@ export const Konsistent: RunningKonsistent = {
 
 const CREATE_HISTORY_ERROR_PREFIX = 'Error creating history';
 
-function wrapHistoryError(error: unknown): Error {
-	const originalError = error as Error & {
-		type?: string;
-		code?: number;
-		codeName?: string;
-		hasErrorLabel?: (label: string) => boolean;
-	};
-	const message = `${CREATE_HISTORY_ERROR_PREFIX}: ${originalError?.message ?? 'Unknown error'}`;
-	const wrappedError = new Error(message, { cause: originalError }) as Error & {
-		type?: string;
-		code?: number;
-		codeName?: string;
-		hasErrorLabel?: (label: string) => boolean;
-	};
+type MongoErrorMetadata = {
+	type?: string;
+	code?: number;
+	codeName?: string;
+	hasErrorLabel?: (label: string) => boolean;
+};
 
-	// Preserve Mongo metadata so retry logic can still identify transient transaction errors.
-	wrappedError.type = originalError?.type;
-	wrappedError.code = originalError?.code;
-	wrappedError.codeName = originalError?.codeName;
-	if (typeof originalError?.hasErrorLabel === 'function') {
+type ExtendedError = Error & MongoErrorMetadata;
+
+function preserveMongoMetadata(wrappedError: ExtendedError, originalError: ExtendedError): ExtendedError {
+	if (originalError.type !== undefined) {
+		wrappedError.type = originalError.type;
+	}
+	if (originalError.code !== undefined) {
+		wrappedError.code = originalError.code;
+	}
+	if (originalError.codeName !== undefined) {
+		wrappedError.codeName = originalError.codeName;
+	}
+	if (typeof originalError.hasErrorLabel === 'function') {
 		wrappedError.hasErrorLabel = originalError.hasErrorLabel.bind(originalError);
 	}
 
 	return wrappedError;
+}
+
+function wrapHistoryError(error: unknown): Error {
+	const originalError = error as ExtendedError;
+	const message = `${CREATE_HISTORY_ERROR_PREFIX}: ${originalError?.message ?? 'Unknown error'}`;
+	const wrappedError = new Error(message, { cause: originalError }) as ExtendedError;
+
+	return preserveMongoMetadata(wrappedError, originalError);
 }
 
 export async function setupKonsistent() {

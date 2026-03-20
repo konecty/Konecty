@@ -153,7 +153,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 
 	try {
-		const transactionResult: KonectyResult<UpdateResult> = await retryMongoTransaction(() =>
+		const transactionResult: KonectyResult<UpdateResult> = await retryMongoTransaction(async () =>
 			dbSession.withTransaction(async function updateTransaction() {
 				tracingSpan?.addEvent('Processing login');
 
