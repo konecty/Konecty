@@ -4,6 +4,11 @@ Registro de alterações relevantes do projeto. Cada entrada segue o formato `YY
 
 ## Entradas
 
+- [2026-03-20 — MCP: Paginação em records_find e agregação cross-module em query_json](./2026-03-20_mcp-pagination-aggregation-prompts.md)
+- [2026-03-20 — MCP: Redesign de prompts, erros e campos de controle](./2026-03-20_mcp-prompts-error-redesign.md)
+- [2026-03-19 — Build reliability for MCP widgets in CI](./2026-03-19_esbuild-widgets-ci-resolution.md)
+- [2026-03-18 — MCP: E.164 phone OTP e validação de filtro](./2026-03-18_mcp-e164-filter-validation.md)
+- [2026-03-18 — MCP Servers (User & Admin)](./2026-03-18_mcp-servers.md)
 - [2026-03-13 — CrossModuleQuery: isList self-referential lookup fix](./2026-03-13_crossmodule-isList-fix.md)
 - [2026-03-11 — Data Explorer Backend: module metadata, saved queries CRUD, data export](./2026-03-11_data-explorer-backend.md)
 - [2026-03-11 — Docker build retry e correção de checkout no workflow develop](./2026-03-11_docker-build-retry-registry-500.md)

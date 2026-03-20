@@ -515,13 +515,6 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 		};
 	}>(
 		'/rest/data/:document/pivot',
-		{
-			// Pivot tables can take a long time to process large datasets
-			config: {
-				// 10 minutes timeout for pivot operations
-				timeout: 600000,
-			},
-		},
 		async (req, reply) => {
 			const { tracer } = req.openTelemetry();
 			const tracingSpan = tracer.startSpan('GET pivot');
