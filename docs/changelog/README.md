@@ -4,6 +4,8 @@ Registro de alterações relevantes do projeto. Cada entrada segue o formato `YY
 
 ## Entradas
 
+- [2026-03-20 — MCP: Paginação em records_find e agregação cross-module em query_json](./2026-03-20_mcp-pagination-aggregation-prompts.md)
+- [2026-03-20 — MCP: Redesign de prompts, erros e campos de controle](./2026-03-20_mcp-prompts-error-redesign.md)
 - [2026-03-19 — Build reliability for MCP widgets in CI](./2026-03-19_esbuild-widgets-ci-resolution.md)
 - [2026-03-18 — MCP: E.164 phone OTP e validação de filtro](./2026-03-18_mcp-e164-filter-validation.md)
 - [2026-03-18 — MCP Servers (User & Admin)](./2026-03-18_mcp-servers.md)

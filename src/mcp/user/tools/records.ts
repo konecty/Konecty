@@ -30,23 +30,23 @@ export function registerRecordTools(server: McpServer, deps: RecordToolDeps): vo
 		'records_find',
 		{
 			description:
-				'Requires authTokenId (from session_verify_otp_email/session_verify_otp_phone). Find records using Konecty filter format. document must be the technical module _id (modules_list.modules[].document), not label/name. ' +
-				'Prefer filter_build to produce a validated filter, then pass it here. ' +
-				'Filter shape: { "match": "and"|"or", "conditions": [{ "term": "<fieldName>", "operator": "<op>", "value": "<val>" }] } (optional textSearch). ' +
-				'Operators: equals, not_equals, contains, not_contains, starts_with, end_with, in, not_in, greater_than, less_than, greater_or_equals, less_or_equals, between, exists. ' +
-				'Picklist: exact keys from field_picklist_options. Lookup: term "fieldName._id" with equals/in and _id from field_lookup_search. Nested OR: "filters" array. ' +
-				'Mongo-style { "status": "Ativo" } is rejected by the server with an explicit error. ' +
-				'Returns: visible record list in content.text and { success, total, records } in structuredContent.',
+				'Find records in a single module with offset pagination. Requires authTokenId. ' +
+				'document: technical _id from modules_list (never label/name). ' +
+				'filter is OPTIONAL: omit it to get ALL records. When filtering, use filter_build to produce the filter — handcrafted or Mongo-style filters are rejected. ' +
+				'Pagination: default limit=50. Response includes total (full count). To paginate: next call with start=previous start+limit until start>=total. ' +
+				'System fields: _createdAt/_updatedAt (dateTime, ISO 8601), _user._id (lookup to User), _createdBy._id/_updatedBy._id (lookup to User), _id (ObjectId). ' +
+				'For aggregated data (counts, sums, averages) across modules, prefer query_json with groupBy/aggregators. ' +
+				'Returns: { success, total, records, pagination } in structuredContent.',
 			annotations: READ_ONLY_ANNOTATION,
 			inputSchema: {
-				document: z.string(),
+				document: z.string().describe('Technical module _id from modules_list.modules[].document'),
 				filter: z.unknown().optional().describe(
-					'Use filter_build output or { "match": "and"|"or", "conditions": [{ "term", "operator", "value" }], "textSearch"? }. Mongo-style top-level field maps are rejected.',
+					'OPTIONAL. Omit to retrieve all records. When filtering, MUST be output from filter_build — handcrafted or Mongo-style filters are rejected.',
 				),
 				sort: z.array(SORT_ITEM_SCHEMA).optional(),
-				fields: z.string().optional(),
-				limit: z.number().optional(),
-				start: z.number().optional(),
+				fields: z.string().optional().describe('Comma-separated field names to return. Omit to return all accessible fields.'),
+				limit: z.number().optional().describe('Page size (default 50). Use with start for pagination.'),
+				start: z.number().optional().describe('Offset for pagination (default 0). Set to previous start + limit for next page.'),
 				withDetailFields: z.boolean().optional(),
 				authTokenId: AUTH_TOKEN_SCHEMA,
 			},
@@ -59,14 +59,54 @@ export function registerRecordTools(server: McpServer, deps: RecordToolDeps): vo
 
 			const result = await proxyRecordsFind(token, args);
 			if (result.success !== true) {
-				return toMcpErrorResult('VALIDATION_ERROR', JSON.stringify(result.errors ?? []));
+				const errDetails = ('errors' in result ? result.errors : []) as Array<{ message?: string }>;
+				const detailText = errDetails.map(e => e.message ?? JSON.stringify(e)).join('; ');
+				return toMcpErrorResult('VALIDATION_ERROR', detailText, [
+					'Use filter_build to construct a validated filter before calling records_find.',
+					'Check modules_fields for field types and control fields.',
+				]);
 			}
 			const total = result.total ?? result.data?.length ?? 0;
+			const recordCount = Array.isArray(result.data) ? result.data.length : 0;
+			const currentStart = typeof args.start === 'number' ? args.start : 0;
+			const currentLimit = typeof args.limit === 'number' ? args.limit : 50;
+			const hasMore = currentStart + recordCount < total;
+			const nextStart = hasMore ? currentStart + recordCount : null;
+
+			const paginationInfo = total > recordCount
+				? `\nPagination: showing ${currentStart + 1}–${currentStart + recordCount} of ${total}. ${hasMore ? `Next page: start=${nextStart}, limit=${currentLimit}.` : 'This is the last page.'}`
+				: '';
+
+			const nextSteps = [
+				'Use records_find_by_id for full details of a specific record.',
+				'Use render_records_widget to render a table widget.',
+			];
+			if (hasMore) {
+				nextSteps.unshift(`More records available. Call records_find with start=${nextStart} and limit=${currentLimit} for the next page.`);
+			}
+			if (total > 200) {
+				nextSteps.push('For aggregated summaries (counts, sums) across large datasets, use query_json with groupBy/aggregators instead of paginating all records.');
+			}
+
 			const text = appendNextSteps(
-				`Found ${total} record(s) in "${args.document}".\n${formatRecordList(result.data)}`,
-				['Use records_find_by_id for full details of a specific record.', 'Use render_records_widget to render a table widget.'],
+				`Found ${total} record(s) in "${args.document}".${paginationInfo}\n${formatRecordList(result.data)}`,
+				nextSteps,
 			);
-			return toMcpSuccessResult({ records: result.data, total }, text);
+			return toMcpSuccessResult(
+				{
+					records: result.data,
+					total,
+					pagination: {
+						start: currentStart,
+						limit: currentLimit,
+						returned: recordCount,
+						total,
+						hasMore,
+						nextStart,
+					},
+				},
+				text,
+			);
 		},
 	);
 

@@ -43,6 +43,12 @@ export function resolveToken(argsToken: string | undefined, fallbackToken: strin
 export function authRequiredError() {
 	return toMcpErrorResult(
 		'UNAUTHORIZED',
-		'This MCP is stateless. Run session_login_options, then session_request_otp_email/session_request_otp_phone, and validate with session_verify_otp_email/session_verify_otp_phone. Store the returned authId and pass it as authTokenId on every authenticated tool call.',
+		undefined,
+		[
+			'Call session_login_options to check available auth methods.',
+			'Call session_request_otp_email or session_request_otp_phone to request an OTP code.',
+			'Call session_verify_otp_email or session_verify_otp_phone to validate the code.',
+			'Store the returned authId and pass it as authTokenId in every subsequent tool call.',
+		],
 	);
 }

@@ -158,6 +158,19 @@ function buildInvalidDocumentError(document: string) {
 
 const KON_FILTER_RESERVED_KEYS = new Set(['match', 'conditions', 'filters', 'textSearch']);
 
+const MONGO_OPERATOR_MAP: Record<string, string> = {
+	$eq: 'equals',
+	$ne: 'not_equals',
+	$gt: 'greater_than',
+	$gte: 'greater_or_equals',
+	$lt: 'less_than',
+	$lte: 'less_or_equals',
+	$in: 'in',
+	$nin: 'not_in',
+	$regex: 'contains',
+	$exists: 'exists',
+};
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -165,30 +178,68 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function stringifyFilterSnippet(filter: unknown): string {
 	try {
 		const text = JSON.stringify(filter);
-		return text.length > 800 ? `${text.slice(0, 800)}…` : text;
+		return text.length > 400 ? `${text.slice(0, 400)}…` : text;
 	} catch {
 		return '[unserializable filter]';
 	}
 }
 
-function buildInvalidFilterError(filter: unknown, extra?: string) {
+type FilterError = { success: false; errors: Array<{ message: string }> };
+
+function buildFilterBuildSuggestion(conditions: Array<{ field: string; operator: string; value?: unknown }>): string {
+	const condParts = conditions.map(c => {
+		const val = c.value !== undefined ? `, value: ${JSON.stringify(c.value)}` : '';
+		return `{ field: "${c.field}", operator: "${c.operator}"${val} }`;
+	});
+	return `filter_build({ conditions: [${condParts.join(', ')}] })`;
+}
+
+function detectMongoPatterns(filter: Record<string, unknown>): Array<{ field: string; operator: string; value?: unknown }> | null {
+	const conditions: Array<{ field: string; operator: string; value?: unknown }> = [];
+	for (const [key, val] of Object.entries(filter)) {
+		if (key.startsWith('$')) {
+			continue;
+		}
+		if (isPlainRecord(val)) {
+			const subKeys = Object.keys(val);
+			const hasMongoOp = subKeys.some(k => k.startsWith('$'));
+			if (hasMongoOp) {
+				for (const [op, opVal] of Object.entries(val)) {
+					const konOp = MONGO_OPERATOR_MAP[op];
+					if (konOp != null) {
+						conditions.push({ field: key, operator: konOp, value: opVal });
+					}
+				}
+				continue;
+			}
+		}
+		conditions.push({ field: key, operator: 'equals', value: val });
+	}
+	return conditions.length > 0 ? conditions : null;
+}
+
+function buildInvalidFilterError(filter: unknown, extra?: string): FilterError {
 	const snippet = stringifyFilterSnippet(filter);
+
+	let suggestion = '';
+	if (isPlainRecord(filter)) {
+		const detected = detectMongoPatterns(filter);
+		if (detected != null && detected.length > 0) {
+			suggestion = ` To achieve your intent, call: ${buildFilterBuildSuggestion(detected)}.`;
+		}
+	}
+
 	const base =
-		`Invalid Konecty filter: ${snippet}. ` +
-		`Konecty requires match ("and"|"or") and structured conditions: { "match": "and", "conditions": [{ "term": "fieldName", "operator": "equals", "value": "…" }] }. ` +
-		`Do NOT use Mongo-style { "field": "value" } — it is ignored and returns unfiltered results. ` +
-		`Use the filter_build MCP tool to assemble a valid filter, or copy the shape from filter_build structuredContent.`;
+		`Invalid filter received: ${snippet}.${suggestion} ` +
+		'ALWAYS use the filter_build tool to construct filters. ' +
+		'Mongo-style ({ "field": "value" } or $gte/$lte) is not accepted.';
 	return {
 		success: false as const,
 		errors: [{ message: extra != null && extra.length > 0 ? `${base} ${extra}` : base }],
 	};
 }
 
-/**
- * Ensures filter is undefined, empty, or a valid KonFilter before calling find/pivot/graph.
- * Rejects Mongo-style objects and other shapes that parseFilterObject would silently drop.
- */
-function normalizeKonectyFilter(filter: unknown): { success: true; data: unknown } | ReturnType<typeof buildInvalidFilterError> {
+function normalizeKonectyFilter(filter: unknown): { success: true; data: unknown } | FilterError {
 	if (filter == null) {
 		return { success: true, data: undefined };
 	}
@@ -204,10 +255,7 @@ function normalizeKonectyFilter(filter: unknown): { success: true; data: unknown
 
 	const hasReserved = keys.some(key => KON_FILTER_RESERVED_KEYS.has(key));
 	if (!hasReserved) {
-		return buildInvalidFilterError(
-			filter,
-			'Detected a filter without match/conditions/filters/textSearch (likely Mongo-style or wrong shape).',
-		);
+		return buildInvalidFilterError(filter);
 	}
 
 	let toValidate: Record<string, unknown> = filter;
@@ -220,7 +268,7 @@ function normalizeKonectyFilter(filter: unknown): { success: true; data: unknown
 	const parsed = KonFilter.safeParse(toValidate);
 	if (!parsed.success) {
 		const zodHint = parsed.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
-		return buildInvalidFilterError(filter, `Schema validation failed: ${zodHint}`);
+		return buildInvalidFilterError(filter, `Schema validation: ${zodHint}`);
 	}
 
 	return { success: true, data: parsed.data };

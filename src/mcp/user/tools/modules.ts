@@ -6,6 +6,7 @@ import { proxyFieldPicklistOptions, proxyModuleFields, proxyModules } from '../.
 import { AUTH_TOKEN_SCHEMA, READ_ONLY_ANNOTATION, authRequiredError, resolveToken } from './common';
 import { toMcpErrorResult, toMcpSuccessResult } from '../../shared/errors';
 import { appendNextSteps, formatKeyValues, formatModuleList } from '../../shared/textFormatters';
+import { CONTROL_FIELDS, formatControlFieldsText } from '../../shared/fieldTypeOperators';
 
 type ModuleToolDeps = {
 	authTokenId: () => string;
@@ -104,13 +105,27 @@ export function registerModuleTools(server: McpServer, deps: ModuleToolDeps): vo
 			const resolvedDocument = String(moduleData.document ?? document);
 			const normalized = resolution != null;
 			const summary = formatKeyValues(moduleData);
+			const controlFieldsText = formatControlFieldsText();
 			const text = normalized
 				? `Module fields loaded. Input "${document}" was normalized to technical document _id "${resolvedDocument}". Use "${resolvedDocument}" in subsequent tools.`
 				: 'Module fields loaded.';
-		const finalText = appendNextSteps(`${text}\n${summary}`, ['Use modules_fields output to build valid filters and payloads for records/query tools.']);
-		return toMcpSuccessResult({ module: moduleData }, finalText);
-	},
-);
+			const finalText = appendNextSteps(
+				`${text}\n${summary}\n\n${controlFieldsText}`,
+				[
+					'ALWAYS use filter_build to construct filters before calling records_find/query_pivot/query_graph.',
+					'For picklist fields, call field_picklist_options first. For lookup fields, call field_lookup_search first.',
+					'Date/dateTime values MUST be ISO 8601 (e.g. "2026-03-18T00:00:00Z"), never "2026-03-18" or "18/03/2026".',
+				],
+			);
+			return toMcpSuccessResult(
+				{
+					module: moduleData,
+					controlFields: CONTROL_FIELDS,
+				},
+				finalText,
+			);
+		},
+	);
 
 	registerMcpTool(server,
 		'field_picklist_options',
@@ -149,8 +164,8 @@ export function registerModuleTools(server: McpServer, deps: ModuleToolDeps): vo
 			const text = appendNextSteps(
 				`Picklist options for field "${fieldName}" in "${data.document}" (${data.options.length} option(s)):\n${lines.join('\n')}`,
 				[
-					`Use the key value (not the label) in Konecty filter format: { "match": "and", "conditions": [{ "term": "${fieldName}", "operator": "equals", "value": "<key>" }] }.`,
-					`For multiple values: { "term": "${fieldName}", "operator": "in", "value": ["<key1>", "<key2>"] }. DO NOT use Mongo-style { "${fieldName}": "<key>" }.`,
+					`Call filter_build with conditions: [{ field: "${fieldName}", operator: "equals", value: "<key>", fieldType: "picklist" }]. Use exact key, not label.`,
+					`For multiple values: operator "in", value: ["<key1>", "<key2>"]. Do NOT handcraft filter JSON or use Mongo-style.`,
 				],
 			);
 			return toMcpSuccessResult(data, text);

@@ -25,9 +25,10 @@ User MCP and Admin MCP are stateless. The server does not persist an MCP convers
 
 ### Query strategy for agents
 - For single-module reads and pagination, use `records_find` with `document` from `modules_list.modules[].document`.
-- For cross-module retrievals, default to `query_json`.
+- For cross-module retrievals and aggregation, default to `query_json` — it supports relations (joins), `groupBy`, and aggregators (count, sum, avg, min, max, etc.).
 - Use `query_sql` only when SQL is explicitly requested by the user.
 - Never use module label/display name as document identifier; always use technical `_id`.
+- For aggregated summaries across large datasets, prefer `query_json` with `groupBy`/`aggregators` instead of paginating through all records with `records_find`.
 
 ### User MCP tool classification
 Public tools:
@@ -94,13 +95,148 @@ Design goals:
 - Programmatic clients must receive complete and stable JSON in `structuredContent`.
 - `content.text` is concise and high-signal, not generic summaries like "Record loaded.".
 
+## Control / System Fields
+
+Every Konecty module contains system-managed control fields (prefixed with `_`). These are present in all records and can be used in filters and sorts.
+
+| Field | Type | Filter path | Valid operators | Value format |
+|-------|------|-------------|-----------------|--------------|
+| `_id` | ObjectId | `_id` | equals, not_equals, in, not_in, exists | String |
+| `_createdAt` | dateTime | `_createdAt` | equals, not_equals, greater_than, less_than, greater_or_equals, less_or_equals, between, exists | ISO 8601 (e.g. `"2026-03-18T00:00:00Z"`) |
+| `_updatedAt` | dateTime | `_updatedAt` | (same as _createdAt) | ISO 8601 |
+| `_user` | lookup (User[]) | `_user._id` | equals, not_equals, in, not_in, exists | User _id string. Also supports `current_user` operator (no value) |
+| `_createdBy` | lookup (User) | `_createdBy._id` | equals, not_equals, in, not_in, exists | User _id string |
+| `_updatedBy` | lookup (User) | `_updatedBy._id` | equals, not_equals, in, not_in, exists | User _id string |
+
+**Important**: Date/dateTime values MUST always be ISO 8601 with timezone (e.g. `"2026-01-01T00:00:00Z"`). Formats like `"2026-01-01"` or `"01/01/2026"` are not accepted.
+
+The `modules_fields` tool response includes a `controlFields` array with this metadata for programmatic use.
+
+## Pagination (records_find)
+
+`records_find` uses offset-based pagination.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `start` | number | 0 | Offset (skip N records) |
+| `limit` | number | 50 | Page size |
+| `total` | (response) | — | Full count of matching records |
+
+### Pagination strategy
+
+1. First call: `records_find` with desired `limit` (e.g. 50).
+2. Check `total` in response and `pagination.hasMore`.
+3. If `hasMore` is true, call again with `start = previous start + limit`.
+4. Repeat until `start >= total`.
+
+Example: `total=120, limit=50` → page 1: `start=0`, page 2: `start=50`, page 3: `start=100`.
+
+When `limit > 1000`, sort is forced to `{ _id: 1 }` for stable ordering.
+
+For aggregated summaries (counts, sums, averages) across large datasets, prefer `query_json` with `groupBy`/`aggregators` instead of paginating all records.
+
+## Cross-Module Query (query_json) — Aggregation
+
+`query_json` is the primary tool for cross-module retrievals and aggregation. It supports joining child modules via **relations**, grouping via **groupBy**, and aggregation functions at both root and relation level.
+
+### Query structure
+
+```json
+{
+  "document": "Contact",
+  "filter": { "match": "and", "conditions": [...] },
+  "fields": "code,name,status",
+  "sort": [{ "property": "_createdAt", "direction": "DESC" }],
+  "limit": 1000,
+  "start": 0,
+  "relations": [...],
+  "groupBy": ["status"],
+  "aggregators": { "total": { "aggregator": "count" } },
+  "includeTotal": true,
+  "includeMeta": false
+}
+```
+
+### Relations
+
+Relations join child modules to the parent. Each relation **must** have at least one aggregator.
+
+```json
+{
+  "document": "Opportunity",
+  "lookup": "contact",
+  "filter": { "match": "and", "conditions": [{ "term": "status", "operator": "in", "value": ["Nova", "Em Visitacao"] }] },
+  "fields": "code,value",
+  "aggregators": {
+    "activeCount": { "aggregator": "count" },
+    "totalValue": { "aggregator": "sum", "field": "value.value" }
+  }
+}
+```
+
+- `lookup`: field in the child module pointing to the parent.
+- Max 10 relations, max nesting depth 2.
+- `limit` per relation defaults to 1000 (max 100000).
+
+### Supported aggregators
+
+| Aggregator | `field` required? | Description |
+|------------|-------------------|-------------|
+| `count` | No | Number of records |
+| `countDistinct` | Yes | Count of distinct values |
+| `sum` | Yes | Sum of numeric values |
+| `avg` | Yes | Average |
+| `min` | Yes | Minimum |
+| `max` | Yes | Maximum |
+| `first` | Optional | First record or field value |
+| `last` | Optional | Last record or field value |
+| `push` | Optional | Array of records or field values |
+| `addToSet` | Yes | Unique values |
+
+For numeric aggregations on money fields, use the sub-path `"fieldName.value"` (e.g. `{ "aggregator": "sum", "field": "value.value" }`).
+
+### groupBy
+
+Use root-level `groupBy` with root-level `aggregators` for consolidated results:
+
+```json
+{
+  "document": "Contact",
+  "groupBy": ["status"],
+  "aggregators": { "total": { "aggregator": "count" } }
+}
+```
+
+This returns one record per unique `status` value with the count.
+
+### Example — Contacts with opportunity count and revenue
+
+```json
+{
+  "document": "Contact",
+  "fields": "code,name",
+  "relations": [
+    {
+      "document": "Opportunity",
+      "lookup": "contact",
+      "aggregators": {
+        "totalOpportunities": { "aggregator": "count" },
+        "totalRevenue": { "aggregator": "sum", "field": "value.value" }
+      }
+    }
+  ]
+}
+```
+
+Each returned Contact record will include `totalOpportunities` and `totalRevenue` from its related Opportunities.
+
 ## Konecty Filter Format
 
 Konecty uses its own structured filter format — **not** MongoDB query syntax.
 
-**Recommended:** call `filter_build` with `match`, `conditions` as `{ field, operator, value }` rows (and optional `textSearch`). The tool returns a validated filter to pass to `records_find`, `query_pivot`, and `query_graph`.
+**Mandatory:** ALWAYS call `filter_build` with `match`, `conditions` as `{ field, operator, value, fieldType? }` rows (and optional `textSearch`). The tool validates operator compatibility with field type and returns a validated filter to pass to `records_find`, `query_pivot`, and `query_graph`.
 
-User MCP validates filters before those calls: Mongo-style top-level field maps are **rejected** with an explicit error (they are no longer silently ignored at the data layer).
+User MCP validates filters before those calls: Mongo-style top-level field maps are **rejected** with an actionable error suggesting the equivalent `filter_build` call.
 
 ```json
 {
@@ -159,17 +295,17 @@ User MCP validates filters before those calls: Mongo-style top-level field maps 
 - `session_verify_otp_email`, `session_verify_otp_phone`: input channel identifier plus `otpCode`; output `authId`, `user`, `logged`, `instructions`.
 - `session_logout`: input `authTokenId`; output `logout`.
 - `modules_list`: input `authTokenId`; output `modules`, `usageHint`, `queryStrategyHint`, `moduleIdentifiers`.
-- `modules_fields`: input `document`, `authTokenId`; output `module` (including document normalization info when applicable). Fields of type "picklist" have embedded options — use `field_picklist_options`. Fields of type "lookup" have a related module — use `field_lookup_search`.
+- `modules_fields`: input `document`, `authTokenId`; output `module` (including document normalization info when applicable), `controlFields` (array of system field metadata with type, filterPath, and validOperators). Fields of type "picklist" have embedded options — use `field_picklist_options`. Fields of type "lookup" have a related module — use `field_lookup_search`.
 - `field_picklist_options`: input `document`, `fieldName`, `authTokenId`; output `document`, `fieldName`, `fieldLabel`, `options` (array of `{ key, sort?, pt_BR?, en? }`). Returns valid option keys for picklist fields — use before filtering.
 - `field_lookup_search`: input `document`, `fieldName`, `search`, optional `limit`, `authTokenId`; output `document`, `fieldName`, `relatedDocument`, `descriptionFields`, `records`, `total`. Searches related records to resolve lookup _id before filtering.
-- `filter_build`: input `match` (`and`|`or`), `conditions` as array of `{ field, operator, value? }`, optional `textSearch`; no `authTokenId`. Output `filter`, `filterJson`. Validates against Konecty filter schema; use output as `filter` on `records_find` / `query_pivot` / `query_graph`.
-- `records_find`: input `document`, optional filter/sort/fields/paging, `authTokenId`; output `records`, `total`. Prefer `filter` from `filter_build`. Konecty structured format: `{ "match": "and"|"or", "conditions": [{ "term", "operator", "value" }] }`. Mongo-style top-level maps are rejected. Before picklist/lookup filtering use `field_picklist_options` / `field_lookup_search`.
+- `filter_build`: input `match` (`and`|`or`), `conditions` as array of `{ field, operator, value?, fieldType? }`, optional `textSearch`; no `authTokenId`. When `fieldType` is provided (from `modules_fields`), validates operator compatibility. Output `filter`, `filterJson`. Use output as `filter` on `records_find` / `query_pivot` / `query_graph`.
+- `records_find`: input `document`, optional filter/sort/fields, `limit` (default 50), `start` (offset, default 0), `withDetailFields`, `authTokenId`; output `records`, `total`, `pagination` (with `start`, `limit`, `returned`, `total`, `hasMore`, `nextStart`). Offset-based pagination: iterate with `start += limit` until `hasMore` is false. Prefer `filter` from `filter_build`. Mongo-style top-level maps are rejected. For aggregated data across large datasets, prefer `query_json` with `groupBy`/`aggregators`.
 - `records_find_by_id`: input `document`, `recordId`, optional `fields` and `withDetailFields`, `authTokenId`; output `record`.
 - `records_create`: input `document`, `data`, `authTokenId`; output `records`.
 - `records_update`: input `document`, `ids` with `_id` and `_updatedAt`, `data`, `authTokenId`; output `records`.
 - `records_delete_preview`: input `document`, `recordId`, optional `fields`, `authTokenId`; output `preview`.
 - `records_delete`: input `document`, `confirm`, `ids`, `authTokenId`; output `deleted`.
-- `query_json`: input `query`, optional `includeMeta`, `authTokenId`; output `records`, `meta`, `total`.
+- `query_json`: input `query` object (`document`, optional `filter`/`fields`/`sort`/`limit`/`start`, `relations` with aggregators, `groupBy`, `aggregators`, `includeTotal`, `includeMeta`), `authTokenId`; output `records`, `meta`, `total`. Supports cross-module joins via `relations` (each with required aggregators: count, sum, avg, min, max, first, last, push, addToSet, countDistinct), `groupBy` for GROUP BY, and root-level `aggregators` for consolidated summaries.
 - `query_sql`: input `sql`, optional `includeMeta` and `includeTotal`, `authTokenId`; output `records`, `meta`, `total`.
 - `query_pivot`: input `document`, `pivotConfig`, optional filter/sort/fields/limit, `authTokenId`; output `pivot`. Same filter rules as `records_find` (use `filter_build` when possible).
 - `query_graph`: input `document`, `graphConfig`, optional filter/sort/fields/limit, `authTokenId`; output `graph`. Same filter rules as `records_find` (use `filter_build` when possible).
@@ -263,17 +399,18 @@ If a flag is disabled, the endpoint returns service unavailable.
 
 ## Prompts
 ### User prompts
-- `authenticate`
-- `find_records`
-- `filter_by_picklist`
-- `filter_by_lookup`
-- `create_record`
-- `update_record`
-- `delete_record`
-- `cross_module_query`
-- `build_pivot`
-- `build_graph`
-- `upload_file`
+- `authenticate` — OTP login flow
+- `find_records` — single-module search with pagination guidance
+- `filter_by_picklist` — picklist field filter workflow
+- `filter_by_lookup` — lookup field filter workflow
+- `build_filter` — generic filter construction
+- `create_record` — record creation
+- `update_record` — record update with optimistic locking
+- `delete_record` — safe deletion with preview
+- `cross_module_query` — cross-module retrieval with relations, groupBy, and aggregators
+- `build_pivot` — pivot table generation
+- `build_graph` — graph/chart generation
+- `upload_file` — file upload
 
 ### Admin prompts
 - `add_field_to_document`
