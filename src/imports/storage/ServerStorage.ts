@@ -31,16 +31,34 @@ export default class ServerStorage implements FileStorage {
 		const uploadPath = `/rest/file/upload/${MetaObject.Namespace.ns}/${context.accessId ?? 'konecty'}/${context.document}/${context.recordId}/${context.fieldName}`;
 
 		const file = filesToSave[0];
-		const fd = new FormData();
-		fd.append('file', new Blob([file.content]), file.name);
+		const boundary = `${Date.now()}${Math.floor(Math.random() * 1_000_000_000)
+			.toString()
+			.padStart(9, '0')}`;
+		let decodedFileName = fileData.name;
+		try {
+			decodedFileName = decodeURIComponent(fileData.name);
+		} catch {
+			decodedFileName = fileData.name;
+		}
+		const multipartBody = [
+			`--${boundary}`,
+			`Content-Disposition: form-data; name="fileName"; filename="${decodedFileName}"`,
+			`Content-Type: ${fileData.kind}`,
+			'Content-Transfer-Encoding: base64',
+			'',
+			file.content.toString('base64'),
+			`--${boundary}--`,
+			'',
+		].join('\r\n');
 
 		const response = await fetch(`${storageCfg.config.upload}${uploadPath}`, {
 			method: 'POST',
-			body: fd,
+			body: multipartBody,
 			headers: {
 				Authorization: context.authTokenId ?? '',
 				Cookie: `_authTokenId=${context.authTokenId ?? ''}`,
 				origin: context.headers.host ?? '',
+				'Content-Type': `multipart/form-data; boundary=${boundary}`,
 				...(storageCfg.config.headers ?? {}),
 			},
 		});
