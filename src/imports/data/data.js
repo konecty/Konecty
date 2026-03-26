@@ -395,6 +395,18 @@ export async function findByLookup({ authTokenId, document, field: fieldName, se
 		filter.filters.push(extraFilter);
 	}
 
+	if (isArray(field.conditionFields) && field.conditionFields.length > 0) {
+		const conditionFilter = {
+			match: 'and',
+			conditions: field.conditionFields.map(cf => ({
+				term: cf.term,
+				operator: cf.operator,
+				value: cf.valueField != null ? get(extraFilter, cf.valueField, cf.value) : cf.value,
+			})),
+		};
+		filter.filters.push(conditionFilter);
+	}
+
 	// Parse filters
 	const readFilter = parseFilterObject(filter, lookupMetaObject, { user });
 
