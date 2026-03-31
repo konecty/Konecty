@@ -517,6 +517,16 @@ if x_axis_picklist_options and len(x_axis_picklist_options) > 0:
         all_options_df = pl.DataFrame({x_col: x_axis_picklist_options})
         df_agg = all_options_df.join(df_agg, on=x_col, how='left').fill_null(ZERO_VALUE)
 
+# 7.7 Sort X-axis chronologically when xAxisSort == 'chronological'
+x_axis_sort = graph_config.get('xAxisSort')
+if x_axis_sort == 'chronological':
+    x_sort_col = x_axis.get('field') or category_field
+    if x_sort_col and x_sort_col in df_agg.columns:
+        try:
+            df_agg = df_agg.sort(x_sort_col, descending=False)
+        except Exception:
+            pass
+
 # 8. Convert aggregated result to Pandas (smaller dataset)
 df_pandas = df_agg.to_pandas()
 
