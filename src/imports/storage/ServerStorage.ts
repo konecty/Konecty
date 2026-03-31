@@ -7,6 +7,39 @@ import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
 import { Readable } from 'stream';
 
+const BOUNDARY_RANDOM_MAX = 1_000_000_000;
+const BOUNDARY_PADDING_LENGTH = 9;
+const HTTP_CLIENT_ERROR_MIN = 400;
+
+const generateMultipartBoundary = (): string => {
+	const timestamp = Date.now();
+	const randomPart = Math.floor(Math.random() * BOUNDARY_RANDOM_MAX)
+		.toString()
+		.padStart(BOUNDARY_PADDING_LENGTH, '0');
+	return `${timestamp}${randomPart}`;
+};
+
+const decodeFileNameSafely = (fileName: string): string => {
+	try {
+		return decodeURIComponent(fileName);
+	} catch (error) {
+		logger.trace({ fileName, error }, 'Failed to decode filename, using original');
+		return fileName;
+	}
+};
+
+const buildMultipartBody = (boundary: string, fileName: string, contentType: string, fileContent: Buffer): string =>
+	[
+		`--${boundary}`,
+		`Content-Disposition: form-data; name="fileName"; filename="${fileName}"`,
+		`Content-Type: ${contentType}`,
+		'Content-Transfer-Encoding: base64',
+		'',
+		fileContent.toString('base64'),
+		`--${boundary}--`,
+		'',
+	].join('\r\n');
+
 export default class ServerStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
@@ -31,28 +64,43 @@ export default class ServerStorage implements FileStorage {
 		const uploadPath = `/rest/file/upload/${MetaObject.Namespace.ns}/${context.accessId ?? 'konecty'}/${context.document}/${context.recordId}/${context.fieldName}`;
 
 		const file = filesToSave[0];
-		const fd = new FormData();
-		fd.append('file', new Blob([file.content]), file.name);
+		const boundary = generateMultipartBoundary();
+		const decodedFileName = decodeFileNameSafely(fileData.name);
+		const multipartBody = buildMultipartBody(boundary, decodedFileName, fileData.kind, file.content);
+
+		logger.trace(
+			{
+				uploadUrl: `${storageCfg.config.upload}${uploadPath}`,
+				fileName: decodedFileName,
+				fileSize: file.content.length,
+			},
+			'Uploading file to server storage',
+		);
 
 		const response = await fetch(`${storageCfg.config.upload}${uploadPath}`, {
 			method: 'POST',
-			body: fd,
+			body: multipartBody,
 			headers: {
 				Authorization: context.authTokenId ?? '',
 				Cookie: `_authTokenId=${context.authTokenId ?? ''}`,
 				origin: context.headers.host ?? '',
+				'Content-Type': `multipart/form-data; boundary=${boundary}`,
 				...(storageCfg.config.headers ?? {}),
 			},
 		});
 
 		try {
-			if (response.status > 399) {
-				return errorReturn(await response.text());
+			if (response.status >= HTTP_CLIENT_ERROR_MIN) {
+				const errorText = await response.text();
+				logger.error({ statusCode: response.status, errorText, fileName: decodedFileName, uploadPath }, 'Server storage upload failed with HTTP error');
+				return errorReturn(errorText);
 			}
 
+			logger.trace({ fileName: decodedFileName, statusCode: response.status }, 'File uploaded successfully to server storage');
 			return (await response.json()) as ReturnType<FileStorage['upload']>;
-		} catch (e) {
-			return errorReturn((e as Error).toString());
+		} catch (error) {
+			logger.error({ error, fileName: decodedFileName, uploadPath }, 'Server storage upload failed with exception');
+			return errorReturn((error as Error).toString());
 		}
 	}
 
@@ -71,11 +119,12 @@ export default class ServerStorage implements FileStorage {
 		});
 
 		try {
-			if (response.status > 399) {
-				logger.error(await response.text(), `Error deleting file ${fileName} from server`);
+			if (response.status >= HTTP_CLIENT_ERROR_MIN) {
+				const errorText = await response.text();
+				logger.error({ statusCode: response.status, errorText, fileName, directory }, 'Error deleting file from server storage');
 			}
-		} catch (e) {
-			logger.error(e, `Error deleting file ${fileName} from server`);
+		} catch (error) {
+			logger.error({ error, fileName, directory }, 'Server storage delete failed with exception');
 		}
 	}
 
