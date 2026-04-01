@@ -86,25 +86,33 @@ def apply_date_bucket(df: pl.DataFrame, field: str, bucket: str) -> tuple[pl.Dat
         return df, field
     
     bucket_col = f'{field}_bucket'
+    temp_datetime_col = f'{field}_dt'
     
     # If bucket column already exists, return it (avoid duplicate application)
     if bucket_col in df.columns:
         return df, bucket_col
     
+    field_dtype = df.schema.get(field)
+    if field_dtype is None:
+        return df, field
+
+    base_type = field_dtype.base_type() if hasattr(field_dtype, 'base_type') else field_dtype
+
     # Try to convert to datetime if not already
     try:
-        # Check if already datetime
-        if df[field].dtype == pl.Datetime:
+        if base_type == pl.Datetime:
             date_col = pl.col(field)
-        elif df[field].dtype == pl.Date:
+        elif base_type == pl.Date:
             # Convert Date to Datetime for operations
             date_col = pl.col(field).cast(pl.Datetime)
-            df = df.with_columns(date_col.alias(f'{field}_dt'))
-            date_col = pl.col(f'{field}_dt')
+            df = df.with_columns(date_col.alias(temp_datetime_col))
+            date_col = pl.col(temp_datetime_col)
+        elif base_type in (pl.Utf8, getattr(pl, 'String', pl.Utf8)):
+            parsed_datetime = pl.col(field).str.to_datetime(time_zone='UTC', strict=False)
+            df = df.with_columns(parsed_datetime.alias(temp_datetime_col))
+            date_col = pl.col(temp_datetime_col)
         else:
-            # Try to parse as datetime string
-            df = df.with_columns(pl.col(field).str.strptime(pl.Datetime, format=None, strict=False).alias(f'{field}_dt'))
-            date_col = pl.col(f'{field}_dt')
+            return df, field
     except Exception:
         # If conversion fails, return original field
         return df, field
@@ -295,7 +303,15 @@ if use_series:
     # Apply bucket to x_field if specified
     x_axis_bucket = x_axis.get('bucket')
     if x_axis_bucket and x_field in df_polars.columns:
+        original_x_field = x_field
         df_polars, x_field = apply_date_bucket(df_polars, x_field, x_axis_bucket)
+        if x_field == original_x_field:
+            error_response = json.dumps({
+                'jsonrpc': '2.0',
+                'error': {'code': -32602, 'message': f'Failed to apply date bucket {x_axis_bucket} to xAxis.field: {original_x_field}'}
+            })
+            print(error_response, flush=True)
+            sys.exit(1)
         # Atualizar x_axis['field'] para usar o campo bucketed na renderização
         x_axis['field'] = x_field
     
@@ -417,7 +433,15 @@ elif category_field and aggregation:
     # Apply bucket to x_field if specified
     x_axis_bucket = x_axis.get('bucket')
     if x_axis_bucket and x_field in df_polars.columns:
+        original_x_field = x_field
         df_polars, x_field = apply_date_bucket(df_polars, x_field, x_axis_bucket)
+        if x_field == original_x_field:
+            error_response = json.dumps({
+                'jsonrpc': '2.0',
+                'error': {'code': -32602, 'message': f'Failed to apply date bucket {x_axis_bucket} to xAxis.field: {original_x_field}'}
+            })
+            print(error_response, flush=True)
+            sys.exit(1)
         # Atualizar x_axis['field'] para usar o campo bucketed na renderização
         x_axis['field'] = x_field
     
