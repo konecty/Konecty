@@ -1,6 +1,5 @@
 import BluebirdPromise from 'bluebird';
 
-
 import { DateTime } from 'luxon';
 
 import compact from 'lodash/compact';
@@ -29,7 +28,6 @@ import { getAccessFor, getFieldConditions, getFieldPermissions, removeUnauthoriz
 import { logger } from '../utils/logger';
 import { update } from './api/update';
 
-export { update };
 import { clearProjectionPathCollision, filterConditionToFn, parseFilterObject } from './filterUtils';
 import { runNamespaceWebhook } from './namespace';
 
@@ -191,8 +189,8 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 
 	const totalTime = process.hrtime(startTime);
 
-	const log = `${totalTime[0]}s ${totalTime[1] / 1000000}ms => Find ${document}, filter: ${JSON.stringify(query)}, options: ${JSON.stringify(queryOptions)}`;
-	logger.trace(log);
+	const elapsedMs = totalTime[0] * 1000 + totalTime[1] / 1000000;
+	logger.trace({ document, elapsedMs }, '[find] query built');
 
 	if (record != null) {
 		const resultData = Object.keys(record).reduce((acc, key) => {
@@ -772,22 +770,27 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						return walResult;
 					}
 
-
 					try {
 						if (processLoginResult.data != null) {
-							await MetaObject.Collections['User'].insertOne({
-								_id: newRecord._id,
-								...processLoginResult.data,
-							}, { session: dbSession });
+							await MetaObject.Collections['User'].insertOne(
+								{
+									_id: newRecord._id,
+									...processLoginResult.data,
+								},
+								{ session: dbSession },
+							);
 
-							const loginFieldResult = await validateAndProcessValueFor({
-								meta: metaObject,
-								fieldName: get(metaObject, 'login.field', 'login'),
-								value: processLoginResult.data,
-								actionType: 'insert',
-								objectOriginalValues: data,
-								objectNewValues: cleanedData,
-							}, dbSession);
+							const loginFieldResult = await validateAndProcessValueFor(
+								{
+									meta: metaObject,
+									fieldName: get(metaObject, 'login.field', 'login'),
+									value: processLoginResult.data,
+									actionType: 'insert',
+									objectOriginalValues: data,
+									objectNewValues: cleanedData,
+								},
+								dbSession,
+							);
 
 							if (loginFieldResult.success === false) {
 								await dbSession.abortTransaction();
@@ -836,7 +839,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 
 							// If upsertedId is null, search for the affected record
 							if (upsertResult.upsertedId == null) {
-								const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: "primary" });
+								const upsertedRecord = await collection.findOne(stringToDate(upsert), { session: dbSession, readPreference: 'primary' });
 								if (upsertedRecord != null) {
 									set(insertedQuery, '_id', upsertedRecord._id);
 									tracingSpan?.addEvent('Record updated', { upsertedId: upsertedRecord._id });
@@ -870,7 +873,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 						return errorReturn(`[${document}] Error on insert, there is no affected record`);
 					}
 
-					const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: "primary" });
+					const affectedRecord = await collection.findOne(insertedQuery, { session: dbSession, readPreference: 'primary' });
 					const resultRecord = removeUnauthorizedDataForRead(access, affectedRecord, user, metaObject);
 
 					await runNamespaceWebhook({ action: 'create', ids: [insertedQuery._id], metaName: document, user });
@@ -898,7 +901,7 @@ export async function create({ authTokenId, document, data, contextUser, upsert,
 									email,
 								),
 							),
-							{ session: dbSession }
+							{ session: dbSession },
 						);
 					}
 

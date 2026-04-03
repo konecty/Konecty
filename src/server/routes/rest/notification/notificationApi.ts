@@ -162,7 +162,6 @@ const notificationApi: FastifyPluginCallback = async fastify => {
 		req.raw.on('close', () => {
 			clearInterval(heartbeatInterval);
 			notificationEmitter.off(eventKey, notificationHandler);
-			logger.debug(`SSE connection closed for user ${userId}`);
 		});
 
 		// Keep connection open

@@ -83,6 +83,44 @@ const operatoresByType = {
 	percentage: ['exists', 'equals', 'not_equals', 'less_than', 'greater_than', 'less_or_equals', 'greater_or_equals', 'between'],
 };
 
+/**
+ * Resolves a filter condition value, handling special variables and type conversions.
+ *
+ * Supported special variables:
+ * - `$user`        — Current user's _id
+ * - `$group`       — Current user's main group _id
+ * - `$groups`      — Array of current user's secondary group _ids
+ * - `$allgroups`   — Array of all user's group _ids (main + secondary)
+ * - `$user.field`  — Access to specific fields of the current user (e.g. `$user.branch._id`)
+ * - `$now`         — Current date and time
+ *
+ * Dynamic date variables (start of period — 00:00:00.000):
+ * - `$today`         — Start of current day
+ * - `$yesterday`     — Start of previous day
+ * - `$startOfWeek`   — Monday of current week
+ * - `$startOfMonth`  — First day of current month
+ * - `$startOfYear`   — January 1st of current year
+ *
+ * Dynamic date variables (end of period — 23:59:59.999):
+ * - `$endOfDay`      — End of current day
+ * - `$endOfWeek`     — Sunday of current week
+ * - `$endOfMonth`    — Last day of current month
+ * - `$endOfYear`     — December 31st of current year
+ *
+ * Parametric relative date variables:
+ * - `$hoursAgo:N`      — N hours before now
+ * - `$hoursFromNow:N`  — N hours after now
+ * - `$daysAgo:N`       — N days ago at 00:00:00.000
+ * - `$daysFromNow:N`   — N days from now at 00:00:00.000
+ * - `$monthsAgo:N`     — N months ago at 00:00:00.000
+ * - `$monthsFromNow:N` — N months from now at 00:00:00.000
+ *
+ * @param {Object} condition - The filter condition { term, operator, value }
+ * @param {Object} field - The field metadata { type, document, name, ... }
+ * @param {{ user: Object }} context - Context object with the current user
+ * @param {string} subTermPart - Sub-term path for nested/lookup fields
+ * @returns {{ success: boolean, data?: any, errors?: string[] }} Result object
+ */
 export function parseConditionValue(condition, field, { user }, subTermPart) {
 	if (field.type === 'lookup' && subTermPart !== '._id' && subTermPart.indexOf('.') !== -1) {
 		const meta = MetaObject.Meta[field.document];
@@ -122,6 +160,122 @@ export function parseConditionValue(condition, field, { user }, subTermPart) {
 
 		case '$now':
 			return successReturn(new Date());
+
+		// --- Dynamic date variables: start of period (00:00:00.000) ---
+
+		case '$today': {
+			const d = new Date();
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		case '$yesterday': {
+			const d = new Date();
+			d.setDate(d.getDate() - 1);
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		case '$startOfWeek': {
+			const d = new Date();
+			const dow = d.getDay();
+			d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1)); // Monday
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		case '$startOfMonth': {
+			const d = new Date();
+			d.setDate(1);
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		case '$startOfYear': {
+			const d = new Date();
+			d.setMonth(0, 1);
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		// --- Dynamic date variables: end of period (23:59:59.999) ---
+
+		case '$endOfDay': {
+			const d = new Date();
+			d.setHours(23, 59, 59, 999);
+			return successReturn(d);
+		}
+
+		case '$endOfWeek': {
+			const d = new Date();
+			const dow = d.getDay();
+			d.setDate(d.getDate() + (dow === 0 ? 0 : 7 - dow)); // Sunday
+			d.setHours(23, 59, 59, 999);
+			return successReturn(d);
+		}
+
+		case '$endOfMonth': {
+			const d = new Date();
+			d.setMonth(d.getMonth() + 1, 0); // last day of current month
+			d.setHours(23, 59, 59, 999);
+			return successReturn(d);
+		}
+
+		case '$endOfYear': {
+			const d = new Date();
+			d.setMonth(11, 31);
+			d.setHours(23, 59, 59, 999);
+			return successReturn(d);
+		}
+	}
+
+	// --- Dynamic date variables: parametric (relative) ---
+	if (isString(condition.value) && condition.value.startsWith('$')) {
+		const hoursAgoMatch = condition.value.match(/^\$hoursAgo:(\d+)$/);
+		if (hoursAgoMatch) {
+			const d = new Date();
+			d.setHours(d.getHours() - parseInt(hoursAgoMatch[1], 10));
+			return successReturn(d);
+		}
+
+		const hoursFwdMatch = condition.value.match(/^\$hoursFromNow:(\d+)$/);
+		if (hoursFwdMatch) {
+			const d = new Date();
+			d.setHours(d.getHours() + parseInt(hoursFwdMatch[1], 10));
+			return successReturn(d);
+		}
+
+		const daysAgoMatch = condition.value.match(/^\$daysAgo:(\d+)$/);
+		if (daysAgoMatch) {
+			const d = new Date();
+			d.setDate(d.getDate() - parseInt(daysAgoMatch[1], 10));
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		const daysFwdMatch = condition.value.match(/^\$daysFromNow:(\d+)$/);
+		if (daysFwdMatch) {
+			const d = new Date();
+			d.setDate(d.getDate() + parseInt(daysFwdMatch[1], 10));
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		const monthsAgoMatch = condition.value.match(/^\$monthsAgo:(\d+)$/);
+		if (monthsAgoMatch) {
+			const d = new Date();
+			d.setMonth(d.getMonth() - parseInt(monthsAgoMatch[1], 10));
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
+
+		const monthsFwdMatch = condition.value.match(/^\$monthsFromNow:(\d+)$/);
+		if (monthsFwdMatch) {
+			const d = new Date();
+			d.setMonth(d.getMonth() + parseInt(monthsFwdMatch[1], 10));
+			d.setHours(0, 0, 0, 0);
+			return successReturn(d);
+		}
 	}
 
 	// Check if value is a string before calling .replace()

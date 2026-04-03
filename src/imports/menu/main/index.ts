@@ -147,18 +147,21 @@ export async function mainMenu(user: User) {
 		return acc;
 	}, {});
 
-	const preferenceItems = await MetaObject.Collections['Preference']
-		.find<{
-			_id: string;
-			code: string;
-			type: string;
-			name: string;
-			document: string;
-			target: string;
-			view?: string;
-			value: string;
-		}>({ '_user._id': user._id, type: { $in: ['list', 'pivot'] }, target: 'Display' })
-		.toArray();
+	const preferenceCollection = MetaObject.Collections['Preference'];
+	const preferenceItems = preferenceCollection
+		? await preferenceCollection
+				.find<{
+					_id: string;
+					code: string;
+					type: string;
+					name: string;
+					document: string;
+					target: string;
+					view?: string;
+					value: string;
+				}>({ '_user._id': user._id, type: { $in: ['list', 'pivot'] }, target: 'Display' })
+				.toArray()
+		: [];
 
 	preferenceItems.forEach((item, index) => {
 		const document = getDocumentName({ type: item.type, name: item.name, document: item.document });
@@ -277,10 +280,7 @@ export async function menuByDocumentSorter(user: User, targetSorter: number): Pr
 		document: { $in: documentNames },
 	}).toArray();
 
-	const menuItens = sortBy(
-		[...documents, ...groups, ...listsAndPivots],
-		['menuSorter', 'name'],
-	) as MenuItemsMeta[];
+	const menuItens = sortBy([...documents, ...groups, ...listsAndPivots], ['menuSorter', 'name']) as MenuItemsMeta[];
 
 	const accessAllowed = (type: string, name: string) => {
 		if (type === 'group') return true;
@@ -295,17 +295,7 @@ export async function menuByDocumentSorter(user: User, targetSorter: number): Pr
 		return null;
 	};
 
-	const getItemPath = ({
-		type,
-		name,
-		group: itemGroup,
-		document: itemDocument,
-	}: {
-		type: string;
-		name: string;
-		group?: string;
-		document?: string;
-	}) => {
+	const getItemPath = ({ type, name, group: itemGroup, document: itemDocument }: { type: string; name: string; group?: string; document?: string }) => {
 		const document = getDocumentName({ type, name, document: itemDocument });
 		if (document == null) return null;
 		const itemPath: Array<string> = [];
