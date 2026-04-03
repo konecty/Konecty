@@ -58,6 +58,7 @@ export const UserModel = z.object({
 		})
 		.optional(),
 	namespace: z.string().optional(),
+	office: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserModel>;
