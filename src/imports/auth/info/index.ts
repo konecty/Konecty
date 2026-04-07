@@ -40,6 +40,8 @@ export async function userInfo(authTokenId?: string | null | undefined): Promise
 		addressComplementValidation: MetaObject.Namespace.addressComplementValidation,
 		addressSource: MetaObject.Namespace.addressSource,
 		enableCustomThemes: (MetaObject.Namespace as { enableCustomThemes?: boolean }).enableCustomThemes !== false,
+		customTheme: (MetaObject.Namespace as { customTheme?: { key: string; name: string; colors: { primary: string; surface: string } } }).customTheme,
+		customLogo: (MetaObject.Namespace as { customLogo?: { url: string; alt: string } }).customLogo,
 	};
 
 	try {

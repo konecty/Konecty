@@ -16,13 +16,14 @@ function buildStreamPipeline(
 	tracingSpan?: Span,
 ): Readable {
 	// Build pipeline step by step
-	const streamAfterPermissions = conditionsKeys.length > 0
-		? (() => {
-				tracingSpan?.addEvent('Applying field permissions transform');
-				const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
-				return mongoStream.pipe(permissionsTransform);
-			})()
-		: mongoStream;
+	const streamAfterPermissions =
+		conditionsKeys.length > 0
+			? (() => {
+					tracingSpan?.addEvent('Applying field permissions transform');
+					const permissionsTransform = new ApplyFieldPermissionsTransform(accessConditions);
+					return mongoStream.pipe(permissionsTransform);
+				})()
+			: mongoStream;
 
 	const streamAfterDates = transformDatesToString
 		? (() => {
@@ -48,12 +49,7 @@ export type FindStreamResult = KonectyResultSuccess<Readable> & {
 	total?: number;
 };
 
-export default async function findStream({
-	getTotal,
-	transformDatesToString = true,
-	tracingSpan,
-	...params
-}: FindStreamParams): Promise<FindStreamResult | KonectyResultError> {
+export default async function findStream({ getTotal, transformDatesToString = true, tracingSpan, ...params }: FindStreamParams): Promise<FindStreamResult | KonectyResultError> {
 	try {
 		const startTime = process.hrtime();
 
@@ -84,8 +80,8 @@ export default async function findStream({
 		const mongoStream = cursor.stream();
 
 		const totalTime = process.hrtime(startTime);
-		const log = `${totalTime[0]}s ${totalTime[1] / NANOSECONDS_TO_MILLISECONDS}ms => FindStream ${params.document}, filter: ${JSON.stringify(query)}`;
-		logger.trace(log);
+		const elapsedMs = totalTime[0] * 1000 + totalTime[1] / NANOSECONDS_TO_MILLISECONDS;
+		logger.trace({ document: params.document, elapsedMs, stages: aggregateStages.length }, '[findStream] query built');
 
 		// Create pipeline with Transform streams
 		const stream = buildStreamPipeline(mongoStream, accessConditions, conditionsKeys, transformDatesToString, tracingSpan);
@@ -106,7 +102,7 @@ export default async function findStream({
 					maxTimeMS: STREAM_MAX_TIME_MS,
 				});
 				result.total = total;
-				logger.info(`[findStream] Total documents matching query: ${total}`);
+				logger.debug({ total }, '[findStream] Total documents matching query');
 			} catch (error) {
 				logger.error(error as Error, 'Error calculating total');
 				// Don't fail the request if total calculation fails
@@ -129,4 +125,3 @@ export default async function findStream({
 		};
 	}
 }
-

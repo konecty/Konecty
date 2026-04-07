@@ -13,7 +13,7 @@ import { DataDocument } from '@imports/types/data';
 import { logger } from '@imports/utils/logger';
 import { createOtpRequest, findValidOtpRequest, incrementAttempts, removeOtpRequest, verifyOTP, hasExceededMaxAttempts, OtpRequest } from '@imports/auth/otp';
 import { randomId } from '@imports/utils/random';
-import { sendOtp } from '@imports/auth/otp/delivery';
+import { sendOtp, MESSAGE_COLLECTION_NOT_FOUND_ERROR } from '@imports/auth/otp/delivery';
 import { cleanupSessions } from '@imports/auth/login';
 import { OTP_COUNTRY_CODE_SEARCH_CONCURRENCY } from '@imports/consts';
 
@@ -117,7 +117,42 @@ async function findUserByPhone(phoneNumber: string): Promise<User | null> {
 	return countryCodeMatches.find(match => match != null) ?? null;
 }
 
+/**
+ * Login options for the UI: derived from namespace otpConfig (same logic as rest/view/view.ts).
+ * Public endpoint, no auth required.
+ */
+function getLoginOptions(): { passwordEnabled: boolean; emailOtpEnabled: boolean; whatsAppOtpEnabled: boolean } {
+	const otpConfig = MetaObject.Namespace.otpConfig;
+	const emailOtpEnabled =
+		(otpConfig?.emailTemplateId != null && otpConfig.emailTemplateId !== '') || process.env.OTP_EMAIL_ENABLED === 'true';
+	const whatsAppOtpEnabled = otpConfig?.whatsapp != null || process.env.OTP_WHATSAPP_ENABLED === 'true';
+	return {
+		passwordEnabled: true,
+		emailOtpEnabled,
+		whatsAppOtpEnabled,
+	};
+}
+
 const otpApi: FastifyPluginCallback = (fastify, _, done) => {
+	/**
+	 * GET /api/auth/login-options
+	 * Returns login method flags for the current namespace (password, email OTP, WhatsApp OTP).
+	 * Used by the UI to show/hide "Entre na sua conta" and "Entrar sem senha" sections.
+	 */
+	fastify.get('/api/auth/login-options', async function (_req, reply) {
+		try {
+			const options = getLoginOptions();
+			return reply.status(StatusCodes.OK).send(options);
+		} catch (error) {
+			logger.error(error, 'Error getting login options');
+			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({
+				passwordEnabled: true,
+				emailOtpEnabled: false,
+				whatsAppOtpEnabled: false,
+			});
+		}
+	});
+
 	/**
 	 * Request OTP endpoint
 	 * POST /api/auth/request-otp
@@ -319,14 +354,20 @@ const otpApi: FastifyPluginCallback = (fastify, _, done) => {
 				userMessage = 'Serviço de mensagens temporariamente indisponível. Tente novamente mais tarde.';
 			} else if (errorMessage.includes('Failed to render email template')) {
 				userMessage = 'Erro ao processar template de email. Entre em contato com o suporte.';
+			} else if (errorMessage === MESSAGE_COLLECTION_NOT_FOUND_ERROR) {
+				userMessage = 'Recurso de e-mail não disponível neste ambiente. Entre em contato com o administrador ou suporte.';
 			} else if (errorMessage.includes('Failed to create message')) {
 				userMessage = 'Erro ao criar mensagem. Tente novamente mais tarde.';
 			}
 
-			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send({
+			const payload: { success: false; errors: Array<{ message: string; debug?: string }> } = {
 				success: false,
 				errors: [{ message: userMessage }],
-			});
+			};
+			if (process.env.NODE_ENV !== 'production' && deliveryResult.error) {
+				payload.errors[0].debug = deliveryResult.error;
+			}
+			return reply.status(StatusCodes.INTERNAL_SERVER_ERROR).send(payload);
 		}
 
 		return reply.send({

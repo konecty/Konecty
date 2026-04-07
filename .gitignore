@@ -9,6 +9,8 @@ node_modules
 *.iws
 *.launch
 *.log
+**/__pycache__/
+*.pyc
 *.pydevproject
 *.sublime-project
 *.swp
