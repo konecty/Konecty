@@ -27,6 +27,7 @@ interface UserInfoResponse {
 			_id: string;
 			name: string;
 		};
+		office?: string;
 	} | null;
 }
 
@@ -59,6 +60,7 @@ export async function userInfo(authTokenId?: string | null | undefined): Promise
 				name: user.name,
 				namespace,
 				role: user.role,
+				office: user.office,
 			},
 		};
 
