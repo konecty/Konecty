@@ -172,4 +172,19 @@ describe('Picklist Validation', () => {
         result = await validateAndProcessValueFor({ ...defaultParams, meta, value: ['A', 'B', 'C', 'A'] });
         expect(result.success).toBe(false);
     });
+
+    it('should coerce legacy single string to array when maxSelected > 1', async () => {
+        const meta = {
+            ...baseMeta,
+            fields: {
+                pick: {
+                    ...baseMeta.fields.pick,
+                    maxSelected: 3,
+                },
+            },
+        };
+        const result = await validateAndProcessValueFor({ ...defaultParams, meta, value: 'A' });
+        expect(result.success).toBe(true);
+        expect(result.data).toEqual(['A']);
+    });
 }); 
