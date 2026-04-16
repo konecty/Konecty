@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { QueueConfigSchema } from './QueueConfig';
-import { FSStorageCfg, S3StorageCfg, ServerStorageCfg } from './Storage';
+import { FSStorageCfg, S3StorageCfg, ServerStorageCfg, SFTPStorageCfg } from './Storage';
 
 export const NamespaceSchema = z
 	.object({
@@ -18,7 +18,7 @@ export const NamespaceSchema = z
 		onCreate: z.string().or(z.array(z.string())).optional(),
 		onDelete: z.string().or(z.array(z.string())).optional(),
 
-		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg]).optional(),
+		storage: z.discriminatedUnion('type', [S3StorageCfg, FSStorageCfg, ServerStorageCfg, SFTPStorageCfg]).optional(),
 		RocketChat: z
 			.object({
 				accessToken: z.string(),

@@ -1,5 +1,6 @@
-import FileStorage, { FileContext, FileData } from './FileStorage';
+import FileStorage, { type FileContext, FileData } from './FileStorage';
 
+import type { FastifyReply } from 'fastify';
 import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
 import { logger } from '@imports/utils/logger';
@@ -11,6 +12,7 @@ import { mkdirp } from 'mkdirp';
 import path from 'path';
 
 import { FSStorageCfg } from '@imports/model/Namespace/Storage';
+import { getFileStorageDeletePathSuffixes } from '@imports/storage/fileStorageDeleteSuffixes';
 import BluebirdPromise from 'bluebird';
 import { z } from 'zod';
 
@@ -27,7 +29,7 @@ export default class FSStorage implements FileStorage {
 		this.storageCfg = Object.assign({}, CFG_DEFAULTS, storageCfg);
 	}
 
-	async sendFile(fullUrl: string, filePath: string, reply: any) {
+	async sendFile(fullUrl: string, filePath: string, reply: FastifyReply) {
 		logger.trace(`Proxying file ${filePath} from FS`);
 		const storageCfg = this.storageCfg as Required<z.infer<typeof FSStorageCfg>>;
 		const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
@@ -87,31 +89,20 @@ export default class FSStorage implements FileStorage {
 		return coreResponse;
 	}
 
-	async delete(directory: string, fileName: string) {
+	async delete(directory: string, fileName: string, context?: FileContext) {
+		void context;
 		const storageCfg = this.storageCfg as Required<z.infer<typeof FSStorageCfg>>;
-		directory = `${storageCfg.directory}/${directory}`;
+		const baseDir = path.join(storageCfg.directory, directory);
+		const decoded = decodeURIComponent(fileName);
+		const suffixes = getFileStorageDeletePathSuffixes(decoded, storageCfg?.wm != null);
 
-		const fullPath = path.join(directory, decodeURIComponent(fileName));
-		const thumbnailFullPath = path.join(directory, 'thumbnail', decodeURIComponent(fileName));
-		const watermarkFullPath = path.join(directory, 'watermark', decodeURIComponent(fileName));
-		try {
-			unlink(fullPath);
-		} catch (error) {
-			logger.error(error, `Error deleting file ${fileName} from FS`);
-		}
-
-		try {
-			unlink(thumbnailFullPath);
-		} catch (error) {
-			logger.error(error, `Error deleting thumbnail file ${fileName} from FS`);
-		}
-
-		if (storageCfg?.wm != null) {
+		await BluebirdPromise.each(suffixes, async suffix => {
+			const fullPath = path.join(baseDir, ...suffix.split('/'));
 			try {
-				unlink(watermarkFullPath);
+				await unlink(fullPath);
 			} catch (error) {
-				logger.error(error, `Error deleting watermark file ${fileName} from FS`);
+				logger.error(error, `Error deleting file ${fullPath} from FS`);
 			}
-		}
+		});
 	}
 }

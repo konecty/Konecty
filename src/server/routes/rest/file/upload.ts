@@ -19,6 +19,7 @@ import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import Bluebird from 'bluebird';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
+import { resolveUploadBaseName } from '@imports/file/resolveUploadBaseName';
 import getFileMD5 from '@imports/utils/getFileMD5';
 
 type RouteParams = {
@@ -92,7 +93,13 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			fileContent = Buffer.from(fileContent.toString('utf8'), data.encoding as BufferEncoding);
 		}
 
-		const fileName = getFileMD5(fileContent);
+		const contentHash = getFileMD5(fileContent);
+		const fileName = await resolveUploadBaseName({
+			document,
+			recordId,
+			fieldName,
+			fallback: contentHash,
+		});
 		logger.trace({ contentType, originalFileName }, `Uploading file ${originalFileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;

@@ -76,3 +76,10 @@ coverage
 dbtest
 # Docker Compose override (local development customization)
 docker-compose.override.yml
+
+# Yarn files
+yarn.lock
+
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/install-state.gz

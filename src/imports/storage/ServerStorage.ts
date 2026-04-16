@@ -1,3 +1,4 @@
+import type { FastifyReply } from 'fastify';
 import { z } from 'zod';
 import FileStorage, { FileContext, FileData } from './FileStorage';
 
@@ -47,7 +48,7 @@ export default class ServerStorage implements FileStorage {
 		this.storageCfg = storageCfg;
 	}
 
-	async sendFile(fullUrl: string, filePath: string, reply: any) {
+	async sendFile(fullUrl: string, filePath: string, reply: FastifyReply) {
 		const storageCfg = this.storageCfg as z.infer<typeof ServerStorageCfg>;
 		logger.trace(`Proxying file ${filePath} from server ${storageCfg.config.preview}`);
 
@@ -104,7 +105,11 @@ export default class ServerStorage implements FileStorage {
 		}
 	}
 
-	async delete(directory: string, fileName: string, context: FileContext) {
+	async delete(directory: string, fileName: string, context?: FileContext) {
+		if (context == null) {
+			logger.error({ directory, fileName }, 'Server storage delete skipped: missing file context');
+			return;
+		}
 		const storageCfg = this.storageCfg as z.infer<typeof ServerStorageCfg>;
 		const uploadPath = `/rest/file/delete/${MetaObject.Namespace.ns}/konecty/${directory}/${fileName}`;
 

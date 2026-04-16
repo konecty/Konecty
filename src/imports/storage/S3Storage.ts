@@ -1,10 +1,12 @@
 import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import type { FastifyReply } from 'fastify';
 import BluebirdPromise from 'bluebird';
 
 import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
 import { S3StorageCfg } from '@imports/model/Namespace/Storage';
-import FileStorage, { FileContext, FileData } from '@imports/storage/FileStorage';
+import { getFileStorageDeletePathSuffixes } from '@imports/storage/fileStorageDeleteSuffixes';
+import FileStorage, { type FileContext, FileData } from '@imports/storage/FileStorage';
 import { logger } from '@imports/utils/logger';
 
 import crypto from 'crypto';
@@ -19,7 +21,7 @@ export default class S3Storage implements FileStorage {
 		this.storageCfg = storageCfg;
 	}
 
-	async sendFile(fullUrl: string, filePath: string, reply: any) {
+	async sendFile(fullUrl: string, filePath: string, reply: FastifyReply) {
 		const storageCfg = this.storageCfg as z.infer<typeof S3StorageCfg>;
 		const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
 
@@ -150,43 +152,26 @@ export default class S3Storage implements FileStorage {
 		return coreResponse;
 	}
 
-	async delete(directory: string, fileName: string) {
+	async delete(directory: string, fileName: string, context?: FileContext) {
+		void context;
 		const storageCfg = this.storageCfg as z.infer<typeof S3StorageCfg>;
 		const s3 = new S3Client(storageCfg?.config ?? {});
+		const normalizedDir = directory.split(path.sep).join('/');
+		const decoded = decodeURIComponent(fileName);
+		const suffixes = getFileStorageDeletePathSuffixes(decoded, storageCfg?.wm != null);
 
-		try {
-			await s3.send(
-				new DeleteObjectCommand({
-					Bucket: storageCfg.bucket,
-					Key: `${directory}/${fileName}`,
-				}),
-			);
-		} catch (e) {
-			logger.error(e, `Error deleting file ${fileName} from S3`);
-		}
-
-		try {
-			await s3.send(
-				new DeleteObjectCommand({
-					Bucket: storageCfg.bucket,
-					Key: `${directory}/thumbnail/${fileName}`,
-				}),
-			);
-		} catch (e) {
-			logger.error(e, `Error deleting thumbnail file ${fileName} from S3`);
-		}
-
-		if (storageCfg?.wm != null) {
+		await BluebirdPromise.each(suffixes, async suffix => {
+			const Key = path.posix.join(normalizedDir, suffix);
 			try {
 				await s3.send(
 					new DeleteObjectCommand({
 						Bucket: storageCfg.bucket,
-						Key: `${directory}/watermark/${fileName}`,
+						Key,
 					}),
 				);
 			} catch (e) {
-				logger.error(e, `Error deleting watermark file ${fileName} from S3`);
+				logger.error(e, `Error deleting file ${Key} from S3`);
 			}
-		}
+		});
 	}
 }

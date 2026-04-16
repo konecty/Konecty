@@ -1,10 +1,11 @@
 import { FastifyPluginCallback, RouteHandler } from 'fastify';
 import fp from 'fastify-plugin';
 
-import path from 'path';
-
 import { getUserSafe } from '@imports/auth/getUser';
+import type { User } from '@imports/model/User';
+import type { KonectyResult } from '@imports/types/result';
 import { fileRemove } from '@imports/file/file';
+import { resolveStorageBasenameForDelete } from '@imports/file/resolveStorageBasenameForDelete';
 import { MetaObject } from '@imports/model/MetaObject';
 import FileStorage from '@imports/storage/FileStorage';
 import { getAccessFor } from '@imports/utils/accessUtils';
@@ -27,16 +28,24 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 
 	const authTokenId = getAuthTokenIdFromReq(req);
 
-	const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
-	if (success === false) {
-		return errorReturn(errors);
+	const authResult: KonectyResult<User> = await getUserSafe(authTokenId);
+	if (authResult.success === false) {
+		return errorReturn(authResult.errors);
 	}
+	const user = authResult.data;
 
 	const access = getAccessFor(document, user);
 
 	if (access === false || access.isReadable !== true) {
 		return errorReturn(`[${document}] You don't have permission read records`);
 	}
+
+	const { directory: storageDirectory, basename: storageBasename } = await resolveStorageBasenameForDelete({
+		document,
+		recordId,
+		fieldName,
+		fileNameParam: fileName,
+	});
 
 	const coreResponse = await fileRemove({
 		document: document,
@@ -53,9 +62,8 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 
 	const fileContext = { document, recordId, fieldName, user, fileName, accessId, authTokenId, headers: req.headers };
 
-	const directory = path.join(document, recordId, fieldName);
 	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
-	await fileStorage.delete(directory, fileName, fileContext);
+	await fileStorage.delete(storageDirectory, storageBasename, fileContext);
 
 	reply.send(coreResponse);
 };
