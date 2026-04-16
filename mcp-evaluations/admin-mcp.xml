@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>Read metadata for Contact and summarize number of fields and document label.</question>
+    <answer><!-- TODO: verify with meta_read --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Run metadata doctor and return total issue count plus first three issue messages.</question>
+    <answer><!-- TODO: verify with meta_doctor_run --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Generate metadata sync plan for two incoming objects and classify each action as create or update.</question>
+    <answer><!-- TODO: verify with meta_sync_plan --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Validate a hook script containing import statements and return validation failure reasons.</question>
+    <answer><!-- TODO: verify with meta_hook_validate --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>List all access metadata objects and return their ids and names.</question>
+    <answer><!-- TODO: verify with meta_list_upsert in dry payload and meta_read lookups --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Read namespace metadata and identify whether mcpUserEnabled and mcpAdminEnabled are configured.</question>
+    <answer><!-- TODO: verify with meta_read namespace --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Simulate update payload for view metadata and report expected validation checks before save.</question>
+    <answer><!-- TODO: verify with meta_view_upsert against validation response --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Simulate update payload for access profile metadata and report expected persistence result shape.</question>
+    <answer><!-- TODO: verify with meta_access_upsert --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Run hook upsert with script comments and return why it is rejected.</question>
+    <answer><!-- TODO: verify with meta_hook_upsert --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Provide a namespace patch preview for SMTP and webhook keys and explain required admin guard.</question>
+    <answer><!-- TODO: verify with meta_namespace_update authorization behavior --></answer>
+  </qa_pair>
+</evaluation>
