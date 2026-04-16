@@ -61,6 +61,11 @@ interface UpdateResult {
 	changed: DataDocument[];
 }
 
+interface UpdateTransactionResult extends UpdateResult {
+	updatedRecords: DataDocument[];
+	originalRecords: DataDocument[];
+}
+
 const createUpdateIdSchema = (ignoreUpdatedAt: unknown) =>
 	z.object({
 		_id: z.string(),
@@ -153,7 +158,7 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 	const dbSession = client.startSession({ defaultTransactionOptions: TRANSACTION_OPTIONS });
 
 	try {
-		const transactionResult: KonectyResult<UpdateResult> = await retryMongoTransaction(() =>
+		const transactionResult: KonectyResult<UpdateTransactionResult> = await retryMongoTransaction(() =>
 			dbSession.withTransaction(async function updateTransaction() {
 				tracingSpan?.addEvent('Processing login');
 
@@ -437,11 +442,6 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 					const updatedRecords = await collection.find(updatedQuery, { session: dbSession, readPreference: 'primary' }).toArray();
 
-					if (metaObject.scriptAfterSave != null) {
-						tracingSpan?.addEvent('Running scriptAfterSave');
-						await runScriptAfterSave({ script: metaObject.scriptAfterSave, data: updatedRecords, user, extraData: { original: existsRecords } });
-					}
-
 					// Process sync Konsistent
 					for await (const newRecord of updatedRecords) {
 						const originalRecord = originals[newRecord._id];
@@ -491,7 +491,12 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 					}
 
 					// Full is the full affected documents,    Changed are the changed props only
-					return successReturn({ full: responseData, changed: updateResults.map(r => (r as KonectyResultSuccess<DataDocument>).data) });
+					return successReturn({
+						full: responseData,
+						changed: updateResults.map(r => (r as KonectyResultSuccess<DataDocument>).data),
+						updatedRecords,
+						originalRecords: existsRecords,
+					});
 				}
 			}),
 		);
@@ -501,6 +506,18 @@ export async function update({ authTokenId, document, data, contextUser, tracing
 
 			if (transactionResult.success === false) {
 				return transactionResult;
+			}
+
+			if (metaObject.scriptAfterSave != null) {
+				tracingSpan?.addEvent('Running scriptAfterSave');
+				const existsRecords = transactionResult.data.updatedRecords.map(record => originals[record._id]);
+
+				await runScriptAfterSave({
+					script: metaObject.scriptAfterSave,
+					data: transactionResult.data.updatedRecords,
+					user,
+					extraData: { original: existsRecords },
+				});
 			}
 
 			// Process events and messages after transaction completes successfully

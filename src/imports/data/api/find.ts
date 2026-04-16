@@ -13,6 +13,7 @@ import { logger } from '@imports/utils/logger';
 import { getUserSafe } from '@imports/auth/getUser';
 import { DEFAULT_PAGE_SIZE } from '@imports/consts';
 import { dateToString } from '@imports/data/dateParser';
+import { normalizeLegacyMultiPicklistValues } from '@imports/data/normalizeLegacyMultiPicklistValues';
 import { applyIfMongoVersionGreaterThanOrEqual } from '@imports/database/versioning';
 import { KonFilter } from '@imports/model/Filter';
 import { User } from '@imports/model/User';
@@ -304,6 +305,11 @@ export default async function find<AsStream extends boolean = false>({
 		if (transformDatesToString) {
 			result.data = result.data.map((record: DataDocument) => dateToString(record), { concurrency: STREAM_CONCURRENCY });
 		}
+
+		result.data = result.data.map(
+			(record: DataDocument) => normalizeLegacyMultiPicklistValues(metaObject, record),
+			{ concurrency: STREAM_CONCURRENCY },
+		);
 
 		if (asStream) {
 			return result as FindReturnType<AsStream>;
