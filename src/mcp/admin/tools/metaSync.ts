@@ -1,10 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import pLimit from 'p-limit';
 import { registerMcpTool } from '../../shared/registerTool';
 import { MetaObject } from '@imports/model/MetaObject';
 import { z } from 'zod';
 import { toMcpErrorResult, toMcpSuccessResult } from '../../shared/errors';
 import { ADMIN_READ_ANNOTATION, ADMIN_WRITE_ANNOTATION } from './common';
 import { appendNextSteps, formatRecordList } from '../../shared/textFormatters';
+
+const META_SYNC_UPSERT_CONCURRENCY = 5;
 
 type AdminDeps = {
 	user: () => Record<string, unknown>;
@@ -68,11 +71,13 @@ export function registerMetaSyncTool(server: McpServer, deps: AdminDeps): void {
 				return toMcpErrorResult('VALIDATION_ERROR', 'autoApprove must be true to apply metadata sync.');
 			}
 
-			let upserted = 0;
-			for (const rawItem of items as MetaSyncItem[]) {
-				const result = await MetaObject.MetaObject.replaceOne({ _id: rawItem._id }, rawItem as never, { upsert: true });
-				upserted += result.upsertedCount + result.modifiedCount;
-			}
+			const limit = pLimit(META_SYNC_UPSERT_CONCURRENCY);
+			const results = await Promise.all(
+				(items as MetaSyncItem[]).map(rawItem =>
+					limit(() => MetaObject.MetaObject.replaceOne({ _id: rawItem._id }, rawItem as never, { upsert: true })),
+				),
+			);
+			const upserted = results.reduce((sum, result) => sum + result.upsertedCount + result.modifiedCount, 0);
 
 			const text = appendNextSteps(
 				`Metadata sync applied.\nApplied: ${upserted}\nTotal input items: ${items.length}`,

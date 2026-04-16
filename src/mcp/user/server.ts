@@ -6,6 +6,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { createTransportRouter } from '../shared/transport';
 import { buildSessionRouteRateLimit, buildUserRouteRateLimit, registerMcpRateLimitPlugin } from '../shared/rateLimiter';
 import { guardMcpFeatureEnabled } from '../shared/sessionGuard';
+import { getCurrentAuthTokenId, getCurrentUser, setMcpAuthContext } from '../shared/authContext';
 import { registerUserWidgetResources } from './widgets';
 import { registerUserTools } from './tools';
 import { registerUserPrompts } from './prompts';
@@ -15,18 +16,16 @@ const DEFAULT_MCP_PAYLOAD_LIMIT = 1024 * 1024;
 export const userMcpPlugin: FastifyPluginAsync = async fastify => {
 	await registerMcpRateLimitPlugin(fastify);
 
-	let currentAuthToken = '';
-	let currentUser: Record<string, unknown> = {};
-
 	const resolveCurrentAuth = async (req: Parameters<typeof getAuthTokenIdFromReq>[0]) => {
-		currentAuthToken = getAuthTokenIdFromReq(req) ?? '';
-		if (currentAuthToken.length === 0) {
-			currentUser = {};
+		const authTokenId = getAuthTokenIdFromReq(req) ?? '';
+		if (authTokenId.length === 0) {
+			setMcpAuthContext({ authTokenId: '', user: {} });
 			return;
 		}
 
-		const userResult = await getUserSafe(currentAuthToken);
-		currentUser = userResult.success === true ? (userResult.data as unknown as Record<string, unknown>) : {};
+		const userResult = await getUserSafe(authTokenId);
+		const user = userResult.success === true ? (userResult.data as unknown as Record<string, unknown>) : {};
+		setMcpAuthContext({ authTokenId, user });
 	};
 
 	const transportRouter = createTransportRouter({
@@ -40,8 +39,8 @@ export const userMcpPlugin: FastifyPluginAsync = async fastify => {
 			registerUserWidgetResources(server);
 			registerUserPrompts(server);
 			registerUserTools(server, {
-				authTokenId: () => currentAuthToken,
-				user: () => currentUser,
+				authTokenId: () => getCurrentAuthTokenId(),
+				user: () => getCurrentUser(),
 				baseUiUrl: process.env.KONECTY_UI_BASE_URL ?? 'http://localhost:3010',
 				baseApiUrl: process.env.KONECTY_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
 				callAuthApi: async (path, payload) => {

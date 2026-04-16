@@ -6,25 +6,26 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { createTransportRouter } from '../shared/transport';
 import { buildAdminRouteRateLimit, registerMcpRateLimitPlugin } from '../shared/rateLimiter';
 import { guardMcpFeatureEnabled } from '../shared/sessionGuard';
+import { getCurrentUser, setMcpAuthContext } from '../shared/authContext';
 import { registerAdminTools } from './tools';
 import { registerAdminPrompts } from './prompts';
 
 const DEFAULT_MCP_PAYLOAD_LIMIT = 1024 * 1024;
+const HTTP_FORBIDDEN = 403;
 
 export const adminMcpPlugin: FastifyPluginAsync = async fastify => {
 	await registerMcpRateLimitPlugin(fastify);
 
-	let currentUser: Record<string, unknown> = {};
-
 	const resolveCurrentUser = async (req: Parameters<typeof getAuthTokenIdFromReq>[0]) => {
 		const authTokenId = getAuthTokenIdFromReq(req) ?? '';
 		if (authTokenId.length === 0) {
-			currentUser = {};
+			setMcpAuthContext({ authTokenId: '', user: {} });
 			return;
 		}
 
 		const userResult = await getUserSafe(authTokenId);
-		currentUser = userResult.success === true ? (userResult.data as unknown as Record<string, unknown>) : {};
+		const user = userResult.success === true ? (userResult.data as unknown as Record<string, unknown>) : {};
+		setMcpAuthContext({ authTokenId, user });
 	};
 
 	const transportRouter = createTransportRouter({
@@ -36,7 +37,7 @@ export const adminMcpPlugin: FastifyPluginAsync = async fastify => {
 			});
 
 			registerAdminTools(server, {
-				user: () => currentUser,
+				user: () => getCurrentUser(),
 			});
 			registerAdminPrompts(server);
 
@@ -45,21 +46,18 @@ export const adminMcpPlugin: FastifyPluginAsync = async fastify => {
 	});
 
 	fastify.addHook('preHandler', async (req, reply) => {
-		// Always check feature flag first
 		const enabled = await guardMcpFeatureEnabled('admin', reply);
 		if (!enabled) {
 			return reply;
 		}
 
-		// The MCP initialize handshake carries no auth token by design.
-		// Only enforce admin check once the session is established (mcp-session-id present).
-		const sessionId = req.headers['mcp-session-id'];
-		const isInitialize = sessionId == null || sessionId === '';
-
 		await resolveCurrentUser(req);
 
-		if (!isInitialize && currentUser.admin !== true) {
-			reply.status(403).send({ error: 'Admin access required' });
+		// Require admin for every request, including the initialize handshake.
+		// The MCP client must send authTokenId from the start; we do not want
+		// to allow an un-authenticated init that later gets hijacked.
+		if (getCurrentUser().admin !== true) {
+			reply.status(HTTP_FORBIDDEN).send({ error: 'Admin access required' });
 			return reply;
 		}
 

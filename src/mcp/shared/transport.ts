@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import pLimit from 'p-limit';
 import { logger } from '@imports/utils/logger';
 import type { McpReply, McpRequest } from './types';
 
@@ -28,6 +29,7 @@ type TransportRouter = {
 
 const BAD_REQUEST_CODE = 400;
 const INTERNAL_ERROR_CODE = 500;
+const CLOSE_CONCURRENCY = 5;
 
 export function createTransportRouter(options: TransportRouterOptions): TransportRouter {
 	const sessions = new Map<string, ActiveSession>();
@@ -115,10 +117,16 @@ export function createTransportRouter(options: TransportRouterOptions): Transpor
 	}
 
 	async function closeAll(): Promise<void> {
-		for (const entry of sessions.values()) {
-			await entry.transport.close();
-			await entry.server.close();
-		}
+		const limit = pLimit(CLOSE_CONCURRENCY);
+		const entries = Array.from(sessions.values());
+		await Promise.all(
+			entries.map(entry =>
+				limit(async () => {
+					await entry.transport.close();
+					await entry.server.close();
+				}),
+			),
+		);
 		sessions.clear();
 	}
 
