@@ -6,6 +6,8 @@ import path from 'path';
 import sharp from 'sharp';
 
 import { getUserSafe } from '@imports/auth/getUser';
+import type { User } from '@imports/model/User';
+import type { KonectyResult } from '@imports/types/result';
 import { DEFAULT_JPEG_MAX_SIZE, DEFAULT_JPEG_QUALITY, DEFAULT_THUMBNAIL_SIZE, FILE_UPLOAD_MAX_FILE_SIZE } from '@imports/consts';
 import { MetaObject } from '@imports/model/MetaObject';
 import { StorageImageSizeCfg } from '@imports/model/Namespace/Storage';
@@ -56,10 +58,11 @@ const THUMBNAIL_CONFIG: StorageImageSizeCfg = {
 const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 	try {
 		const authTokenId = getAuthTokenIdFromReq(req);
-		const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
-		if (success === false) {
-			return errorReturn(errors);
+		const authResult: KonectyResult<User> = await getUserSafe(authTokenId);
+		if (authResult.success === false) {
+			return errorReturn(authResult.errors);
 		}
+		const user = authResult.data;
 		const { document, recordId, fieldName, accessId } = req.params;
 
 		const namespace = MetaObject.Namespace.ns;
@@ -214,16 +217,30 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
 		const coreResponse = await fileStorage.upload(fileData, filesToSave, fileContext);
 
+		if (typeof coreResponse === 'object' && coreResponse !== null && 'success' in coreResponse && (coreResponse as { success?: boolean }).success === false) {
+			const failed = coreResponse as { errors?: { message: string }[]; error?: string };
+			if (Array.isArray(failed.errors) && failed.errors.length > 0) {
+				return errorReturn(failed.errors);
+			}
+			if (typeof failed.error === 'string' && failed.error !== '') {
+				return errorReturn(failed.error);
+			}
+			return errorReturn('Upload failed');
+		}
+
+		const saved = coreResponse as { _id?: string; _updatedAt?: unknown };
+
 		reply.send({
 			success: true,
 			...fileData,
 			coreResponse,
-			_id: coreResponse._id,
-			_updatedAt: coreResponse._updatedAt,
+			_id: saved._id,
+			_updatedAt: saved._updatedAt,
 		});
 	} catch (error) {
-		logger.error(error, `Error uploading file: ${(error as Error).message}`);
-		reply.send(error);
+		const errMessage = error instanceof Error ? error.message : String(error);
+		logger.error(error, `Error uploading file: ${errMessage}`);
+		return errorReturn(errMessage);
 	}
 };
 
