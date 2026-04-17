@@ -177,7 +177,8 @@
 	"resolutions": {
 		"wrap-ansi": "7.0.0",
 		"string-width": "4.1.0",
-		"@aws-sdk/types": "3.965.0"
+		"@aws-sdk/types": "3.965.0",
+		"@aws-sdk/util-locate-window": "3.965.0"
 	},
 	"author": "Konecty",
 	"license": "AGPL-3.0-only",
