@@ -20,6 +20,7 @@
 		"npm": "please-use-yarn",
 		"yarn": ">=1.22.0"
 	},
+	"packageManager": "yarn@1.22.22",
 	"dependencies": {
 		"@autotelic/fastify-opentelemetry": "^0.18.0",
 		"@aws-sdk/client-s3": "^3.730.0",
