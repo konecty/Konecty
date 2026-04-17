@@ -3280,7 +3280,7 @@
     "@opentelemetry/resources" "0.25.0"
     lodash.merge "^4.6.2"
 
-"@opentelemetry/sdk-metrics@1.21.0":
+"@opentelemetry/sdk-metrics@1.21.0", "@opentelemetry/sdk-metrics@^1.9.1":
   version "1.21.0"
   resolved "https://registry.yarnpkg.com/@opentelemetry/sdk-metrics/-/sdk-metrics-1.21.0.tgz#40d71aaec5b696e58743889ce6d5bf2593f9a23d"
   integrity sha512-on1jTzIHc5DyWhRP+xpf+zrgrREXcHBH4EDAfaB5mIG7TWpKxNXooQ1JCylaPsswZUv4wGnVTinr4HrBdGARAQ==
@@ -3288,14 +3288,6 @@
     "@opentelemetry/core" "1.21.0"
     "@opentelemetry/resources" "1.21.0"
     lodash.merge "^4.6.2"
-
-"@opentelemetry/sdk-metrics@^1.9.1":
-  version "1.30.1"
-  resolved "https://registry.yarnpkg.com/@opentelemetry/sdk-metrics/-/sdk-metrics-1.30.1.tgz#70e2bcd275b9df6e7e925e3fe53cfe71329b5fc8"
-  integrity sha512-q9zcZ0Okl8jRgmy7eNW3Ku1XSgg3sDLa5evHZpCwjspw7E8Is4K/haRPDJrBcX3YSn/Y7gUvFnByNYEKQNbNog==
-  dependencies:
-    "@opentelemetry/core" "1.30.1"
-    "@opentelemetry/resources" "1.30.1"
 
 "@opentelemetry/sdk-node@0.48.0", "@opentelemetry/sdk-node@^0.48.0":
   version "0.48.0"
