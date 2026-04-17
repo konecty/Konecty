@@ -1,5 +1,4 @@
 import { loadMetaObjects } from '@imports/meta/loadMetaObjects';
-import { applyStorageEnvOverride } from '@imports/storage/resolveStorageConfigFromEnv';
 
 import { db } from '@imports/database';
 import startDatabaseVersioning from '@imports/database/versioning';
@@ -14,7 +13,6 @@ const app = async () => {
 		ShutdownManager.initialize();
 
 		await loadMetaObjects();
-		applyStorageEnvOverride();
 
 		if (/true|1|enabled/i.test(process.env.DISABLE_SENDMAIL ?? '') === true) {
 			logger.warn('[sendmail] Sendmail is disabled');

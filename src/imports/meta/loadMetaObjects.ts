@@ -16,7 +16,6 @@ import path from 'path';
 import { checkInitialData } from '../data/initialData';
 import { db } from '../database';
 import { MetaAccess } from '../model/MetaAccess';
-import { applyStorageEnvOverride } from '@imports/storage/resolveStorageConfigFromEnv';
 import { logger } from '../utils/logger';
 import applyIndexes from './applyIndexes';
 import buildReferences from './buildReferences';
@@ -96,7 +95,6 @@ async function dbLoad() {
 	);
 
 	rebuildReferences();
-	applyStorageEnvOverride();
 }
 
 function dbWatch() {
@@ -168,7 +166,6 @@ function dbWatch() {
 					break;
 				case 'namespace':
 					Object.assign(MetaObject.Namespace, fullDocument);
-					applyStorageEnvOverride();
 					await queueManager.restartResources();
 					break;
 			}
@@ -222,7 +219,6 @@ const fsLoad = (metadataDir: string) => {
 		if (type === 'namespace') {
 			const meta = getDocumentData(path, type);
 			Object.assign(MetaObject.Namespace, meta);
-			applyStorageEnvOverride();
 			await queueManager.restartResources();
 			return;
 		}
