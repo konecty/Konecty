@@ -125,6 +125,17 @@ export async function fileUpload({ authTokenId = null, document, fieldName, reco
 	return first(result.data);
 }
 
+/**
+ *
+ * @param {object} payload
+ * @param {string|null} [payload.authTokenId]
+ * @param {string} payload.document
+ * @param {string} payload.fieldName
+ * @param {string} payload.recordCode
+ * @param {string} payload.fileName
+ * @param {import('@imports/model/User').User|null} [payload.contextUser]
+ * @returns {Promise<Record<string, unknown>>}
+ */
 export async function fileRemove({ authTokenId = null, document, recordCode, fieldName, fileName, contextUser = null }) {
 	const { success, data: user, errors } = await getUserSafe(authTokenId, contextUser);
 

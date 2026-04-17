@@ -1,10 +1,10 @@
 import { KonectyResult } from '@imports/types/result';
 import { errorReturn, successReturn } from '@imports/utils/return';
-import { Channel, connect, Connection } from 'amqplib';
+import { Channel, ChannelModel, connect } from 'amqplib';
 import { QueueResource } from './QueueResource';
 
 export class RabbitMQResource extends QueueResource {
-	private connection: Connection | null = null;
+	private connection: ChannelModel | null = null;
 	private channel: Channel | null = null;
 	private connectionUrl: string = '';
 	private exchanges: Set<string> = new Set();

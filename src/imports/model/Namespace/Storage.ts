@@ -44,3 +44,12 @@ export const ServerStorageCfg = CommonStorageProps.extend({
 		headers: z.record(z.string()).optional(),
 	}),
 });
+
+export const SFTPStorageCfg = CommonStorageProps.extend({
+	type: z.literal('sftp'),
+	host: z.string(),
+	port: z.number().optional(),
+	username: z.string(),
+	password: z.string(),
+	remoteRoot: z.string(),
+});
