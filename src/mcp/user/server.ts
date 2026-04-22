@@ -6,7 +6,7 @@ import { getUserSafe } from '@imports/auth/getUser';
 import { createTransportRouter } from '../shared/transport';
 import { buildSessionRouteRateLimit, buildUserRouteRateLimit, registerMcpRateLimitPlugin } from '../shared/rateLimiter';
 import { guardMcpFeatureEnabled } from '../shared/sessionGuard';
-import { getCurrentAuthTokenId, getCurrentUser, setMcpAuthContext } from '../shared/authContext';
+import { attachMcpAuthToRawRequest, getCurrentAuthTokenId, getCurrentUser, setMcpAuthContext } from '../shared/authContext';
 import { registerUserWidgetResources } from './widgets';
 import { registerUserTools } from './tools';
 import { registerUserPrompts } from './prompts';
@@ -16,16 +16,21 @@ const DEFAULT_MCP_PAYLOAD_LIMIT = 1024 * 1024;
 export const userMcpPlugin: FastifyPluginAsync = async fastify => {
 	await registerMcpRateLimitPlugin(fastify);
 
-	const resolveCurrentAuth = async (req: Parameters<typeof getAuthTokenIdFromReq>[0]) => {
+	// Resolve auth context and RETURN it. The caller must invoke
+	// `setMcpAuthContext` in its own async frame so that `AsyncLocalStorage.enterWith`
+	// persists through subsequent awaits (including the MCP transport dispatch).
+	// See note below in the preHandler for why `enterWith` must not run inside this helper.
+	const resolveAuthContext = async (
+		req: Parameters<typeof getAuthTokenIdFromReq>[0],
+	): Promise<{ authTokenId: string; user: Record<string, unknown> }> => {
 		const authTokenId = getAuthTokenIdFromReq(req) ?? '';
 		if (authTokenId.length === 0) {
-			setMcpAuthContext({ authTokenId: '', user: {} });
-			return;
+			return { authTokenId: '', user: {} };
 		}
 
 		const userResult = await getUserSafe(authTokenId);
 		const user = userResult.success === true ? (userResult.data as unknown as Record<string, unknown>) : {};
-		setMcpAuthContext({ authTokenId, user });
+		return { authTokenId, user };
 	};
 
 	const transportRouter = createTransportRouter({
@@ -70,7 +75,16 @@ export const userMcpPlugin: FastifyPluginAsync = async fastify => {
 
 		// Resolve auth for all requests so tools can use it; the initialize
 		// handshake carries no token — that is intentional and allowed.
-		await resolveCurrentAuth(req);
+		// IMPORTANT: `enterWith` must run in THIS preHandler's async frame.
+		// If we awaited a helper that called `enterWith` internally (after its
+		// own `await`), the store would only be visible inside that helper and
+		// not here, because each awaited frame has its own async resource.
+		const authCtx = await resolveAuthContext(req);
+		setMcpAuthContext(authCtx);
+		// Attach auth to the raw request so the SDK can propagate it via
+		// `extra.authInfo` to tool callbacks. ALS alone does not survive
+		// fastify's preHandler/handler boundary nor the SDK's Hono dispatch.
+		attachMcpAuthToRawRequest(req.raw, authCtx);
 		return undefined;
 	});
 

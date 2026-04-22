@@ -55,10 +55,11 @@ export function createTransportRouter(options: TransportRouterOptions): Transpor
 
 	async function handlePost(req: McpRequest, reply: McpReply): Promise<void> {
 		const sessionId = req.headers['mcp-session-id'];
+		const rawReq = req.raw as McpIncomingMessage;
 
 		try {
 			if (typeof sessionId === 'string' && sessions.has(sessionId)) {
-				await sessions.get(sessionId)!.transport.handleRequest(req.raw as McpIncomingMessage, reply.raw, req.body);
+				await sessions.get(sessionId)!.transport.handleRequest(rawReq, reply.raw, req.body);
 				reply.hijack();
 				return;
 			}
@@ -76,7 +77,7 @@ export function createTransportRouter(options: TransportRouterOptions): Transpor
 			}
 
 			const created = await initializeSession(req);
-			await created.transport.handleRequest(req.raw as McpIncomingMessage, reply.raw, req.body);
+			await created.transport.handleRequest(rawReq, reply.raw, req.body);
 			reply.hijack();
 		} catch (error) {
 			logger.error(error, `[mcp:${options.name}] error handling POST request`);
