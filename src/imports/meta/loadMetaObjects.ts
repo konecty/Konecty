@@ -73,19 +73,19 @@ const deregisterMeta = function (meta: any) {
 
 async function dbLoad() {
 	const data = await MetaObject.MetaObject.find<MetaObjectType>({}).toArray();
+	let schemaWarningMetas = 0;
 	let invalidMetas = 0;
 	await BluebirdPromise.all(
 		data.map(async meta => {
 			try {
 				const parsed = MetaObjectSchema.safeParse(meta);
 				if (!parsed.success) {
-					invalidMetas += 1;
-					logger.error(
-						`Invalid meta skipped in loadMetaObjects (${meta._id}): ${parsed.error.issues
+					schemaWarningMetas += 1;
+					logger.warn(
+						`[kondata] Schema warning in loadMetaObjects (${meta._id}), meta will still load: ${parsed.error.issues
 							.map(issue => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
 							.join(' | ')}`,
 					);
-					return;
 				}
 
 				switch (meta.type) {
@@ -111,8 +111,15 @@ async function dbLoad() {
 			}
 		}),
 	);
+	if (schemaWarningMetas > 0) {
+		logger.warn(
+			`[kondata] loadMetaObjects finished with ${schemaWarningMetas} meta object(s) with schema warnings (loaded anyway)`,
+		);
+	}
 	if (invalidMetas > 0) {
-		logger.warn(`[kondata] loadMetaObjects finished with ${invalidMetas} invalid meta object(s) skipped`);
+		logger.warn(
+			`[kondata] loadMetaObjects finished with ${invalidMetas} meta object(s) skipped due to apply errors`,
+		);
 	}
 
 	rebuildReferences();
