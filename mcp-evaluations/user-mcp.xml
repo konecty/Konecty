@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>List the top 5 most recently updated records in Contact with fields _id, name.full, and _updatedAt.</question>
+    <answer><!-- TODO: verify with modules_fields + records_find --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find all opportunities created in the last 30 days grouped by status and return counts.</question>
+    <answer><!-- TODO: verify with query_json --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Show one record by id from Activity and include detail fields for lookup expansions.</question>
+    <answer><!-- TODO: verify with records_find_by_id --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Return the first 20 records from Product sorted by descending _updatedAt.</question>
+    <answer><!-- TODO: verify with records_find --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Build a cross-module SQL query that joins Contact and Opportunity and returns contact name plus opportunity status.</question>
+    <answer><!-- TODO: verify with query_sql --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Generate a pivot for Opportunity with rows=status and values=count.</question>
+    <answer><!-- TODO: verify with query_pivot --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Generate a bar chart graph for Activity grouped by type with count aggregation.</question>
+    <answer><!-- TODO: verify with query_graph --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>List accessible modules and identify which ones contain at least one lookup field.</question>
+    <answer><!-- TODO: verify with modules_list --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Build file download URL for a known file in document Contact and return final URL only.</question>
+    <answer><!-- TODO: verify with file_download --></answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Read Contact module fields and return only picklist field names.</question>
+    <answer><!-- TODO: verify with modules_fields --></answer>
+  </qa_pair>
+</evaluation>

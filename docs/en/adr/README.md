@@ -15,6 +15,14 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0009: Centralized Error Messages Structure in Backend](./0009-error-messages-structure-backend.md)
 - [ADR-0010: Code Patterns](./0010-code-patterns.md)
 - [ADR-0011: Avoid Technocentrism in User-Facing Communication](./0011-avoid-technocentrism-communication.md)
+- [ADR-0012: MCP Servers as Fastify Plugins](./0012-mcp-fastify-plugins.md)
+- [ADR-0013: Fastify to MCP Node Transport Adapter](./0013-fastify-mcp-node-transport-adapter.md)
+- [ADR-0014: MCP Internal Proxy to Konecty Services](./0014-mcp-internal-proxy-to-konecty-services.md)
+- [ADR-0015: MCP Rate Limiting In-Memory](./0015-mcp-rate-limit-in-memory.md)
+- [ADR-0016: User and Admin MCP Endpoint Separation](./0016-user-admin-mcp-separation.md)
+- [ADR-0017: ChatGPT UI Guideline Conformance for Widgets](./0017-chatgpt-ui-guideline-conformance-for-widgets.md)
+- [ADR-0018: MCP Stateless Authentication Token Contract](./0018-mcp-stateless-auth-token-contract.md)
+- [ADR-0019: MCP Tool Response Content Design](./0019-mcp-response-content-design.md)
 
 ## Format
 

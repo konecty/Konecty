@@ -1,4 +1,4 @@
-# ADR-0012: API Admin de Metadados (CRUD)
+# ADR-0020: API Admin de Metadados (CRUD)
 
 > Decisão arquitetural sobre endpoints restritos a administradores para leitura e edição de MetaObjects.
 

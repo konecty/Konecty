@@ -1450,7 +1450,7 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 ### 7. API Admin de Metadados
 
-Todos os endpoints em `/api/admin/meta/*` exigem autenticação de **administrador** (`user.admin === true`). Use o mesmo header `Authorization` com token de um usuário admin. Ver [ADR-0012](./adr/0012-api-admin-meta-crud.md) (pt-BR) e [ADR-0006](../adr/0006-meta-crud-api.md) (en).
+Todos os endpoints em `/api/admin/meta/*` exigem autenticação de **administrador** (`user.admin === true`). Use o mesmo header `Authorization` com token de um usuário admin. Ver [ADR-0020](./adr/0020-api-admin-meta-crud.md) (pt-BR) e [ADR-0006](../adr/0006-meta-crud-api.md) (en).
 
 #### Listar metas de documento/composite
 

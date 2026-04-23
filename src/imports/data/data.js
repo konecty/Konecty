@@ -34,6 +34,7 @@ import { runNamespaceWebhook } from './namespace';
 import { getUserSafe } from '@imports/auth/getUser';
 import { TRANSACTION_OPTIONS } from '@imports/consts';
 import { find } from '@imports/data/api';
+import { normalizeLegacyMultiPicklistValues } from './normalizeLegacyMultiPicklistValues';
 import { client } from '@imports/database';
 import { Konsistent } from '@imports/konsistent';
 import eventManager from '@imports/lib/EventManager';
@@ -209,14 +210,14 @@ export async function findById({ authTokenId, document, fields, dataId, withDeta
 			const populatedData = await populateDetailFields({ records: [resultData], document, contextUser: user });
 			return {
 				success: true,
-				data: populatedData,
+				data: populatedData.map(r => dateToString(normalizeLegacyMultiPicklistValues(metaObject, r))),
 				total: 1,
 			};
 		}
 
 		return {
 			success: true,
-			data: [dateToString(resultData)],
+			data: [dateToString(normalizeLegacyMultiPicklistValues(metaObject, resultData))],
 			total: 1,
 		};
 	}
@@ -395,6 +396,18 @@ export async function findByLookup({ authTokenId, document, field: fieldName, se
 		filter.filters.push(extraFilter);
 	}
 
+	if (isArray(field.conditionFields) && field.conditionFields.length > 0) {
+		const conditionFilter = {
+			match: 'and',
+			conditions: field.conditionFields.map(cf => ({
+				term: cf.term,
+				operator: cf.operator,
+				value: cf.valueField != null ? get(extraFilter, cf.valueField, cf.value) : cf.value,
+			})),
+		};
+		filter.filters.push(conditionFilter);
+	}
+
 	// Parse filters
 	const readFilter = parseFilterObject(filter, lookupMetaObject, { user });
 
@@ -437,7 +450,7 @@ export async function findByLookup({ authTokenId, document, field: fieldName, se
 
 	return {
 		success: true,
-		data: map(data, dateToString),
+		data: map(data, item => dateToString(normalizeLegacyMultiPicklistValues(lookupMetaObject, item))),
 		total,
 	};
 }

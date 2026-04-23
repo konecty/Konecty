@@ -379,6 +379,16 @@ export async function validateAndProcessValueFor({ meta, fieldName, value, actio
 					value = null;
 				}
 
+				// Multi-select picklists expect an array; accept legacy single string values (DB / clients).
+				if (
+					isString(value) &&
+					size(value) > 0 &&
+					((isNumber(field.maxSelected) && field.maxSelected > 1) ||
+						(isNumber(field.minSelected) && field.minSelected > 1))
+				) {
+					value = [value];
+				}
+
 				if (isNumber(field.maxSelected)) {
 					if (field.maxSelected > 1) {
 						const pickListResult = mustBeArray(value);

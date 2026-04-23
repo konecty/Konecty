@@ -31,6 +31,7 @@ export interface GraphHistogramBinsConfig {
 }
 
 export type LimitOrder = 'desc' | 'asc';
+export type XAxisSort = 'chronological' | 'value';
 
 export interface GraphConfig {
 	type: GraphType;
@@ -55,6 +56,7 @@ export interface GraphConfig {
 	xAxisLimit?: number; // Limitar quantidade de categorias no eixo X (Top N)
 	yAxisLimit?: number; // Limitar quantidade de séries/medidas no eixo Y
 	limitOrder?: LimitOrder; // Ordenação para seleção do limite: 'desc' (maior) ou 'asc' (menor)
+	xAxisSort?: XAxisSort; // 'chronological' = ordenar eixo X por data crescente (pós-agregação); 'value' = manter ordem por valor agregado
 }
 
 /**

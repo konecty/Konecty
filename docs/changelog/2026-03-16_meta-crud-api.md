@@ -31,7 +31,7 @@ AI agents and admin tools need programmatic access to read, create, update, and 
 - `src/imports/meta/loadMetaObjects.ts` — per-meta resilience while loading (`try/catch` + schema validation) to skip invalid metas instead of crashing the server
 - `src/server/routes/api/admin/index.ts` — registered the meta plugin
 - `docs/adr/0006-meta-crud-api.md` — ADR (EN)
-- `docs/pt-BR/adr/0012-api-admin-meta-crud.md` — ADR (PT-BR)
+- `docs/pt-BR/adr/0020-api-admin-meta-crud.md` — ADR (PT-BR)
 - `docs/en/api.md` — section 7 Admin Meta API
 - `docs/pt-BR/api.md` — section 7 API Admin de Metadados
 - `docs/postman/Konecty-API.postman_collection.json` — folder "Admin Meta API" with 9 requests
@@ -75,7 +75,7 @@ src/server/routes/api/admin/meta/index.ts (new)
 src/imports/meta/loadMetaObjects.ts (modified)
 src/server/routes/api/admin/index.ts (modified)
 docs/adr/0006-meta-crud-api.md (new)
-docs/pt-BR/adr/0012-api-admin-meta-crud.md (new)
+docs/pt-BR/adr/0020-api-admin-meta-crud.md (new)
 docs/pt-BR/adr/README.md (updated)
 docs/en/api.md (section 7)
 docs/pt-BR/api.md (section 7)
