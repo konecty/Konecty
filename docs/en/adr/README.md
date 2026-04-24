@@ -21,6 +21,8 @@ This directory contains the architectural decisions made during project developm
 - [ADR-0015: MCP Rate Limiting In-Memory](./0015-mcp-rate-limit-in-memory.md)
 - [ADR-0016: User and Admin MCP Endpoint Separation](./0016-user-admin-mcp-separation.md)
 - [ADR-0017: ChatGPT UI Guideline Conformance for Widgets](./0017-chatgpt-ui-guideline-conformance-for-widgets.md)
+- [ADR-0018: MCP Stateless Authentication Token Contract](./0018-mcp-stateless-auth-token-contract.md)
+- [ADR-0019: MCP Tool Response Content Design](./0019-mcp-response-content-design.md)
 
 ## Format
 

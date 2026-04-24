@@ -1405,6 +1405,232 @@
 			]
 		}
 		]
+	},
+	{
+		"name": "Admin Meta API",
+		"description": "Admin-only endpoints for MetaObjects CRUD. Requires user.admin === true. See docs/adr/0006-meta-crud-api.md.",
+		"item": [
+			{
+				"name": "List documents",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta"]
+					},
+					"description": "GET /api/admin/meta - List all document/composite metas"
+				},
+				"response": []
+			},
+			{
+				"name": "List metas by document",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact"]
+					},
+					"description": "GET /api/admin/meta/:document - List all metas for a document"
+				},
+				"response": []
+			},
+			{
+				"name": "Get meta",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/document",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "document"]
+					},
+					"description": "GET /api/admin/meta/:document/:type/:name - Get specific meta"
+				},
+				"response": []
+			},
+			{
+				"name": "Get hook",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/hook/scriptBeforeValidation",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "hook", "scriptBeforeValidation"]
+					},
+					"description": "GET /api/admin/meta/:document/hook/:hookName"
+				},
+				"response": []
+			},
+			{
+				"name": "Upsert meta",
+				"request": {
+					"method": "PUT",
+					"header": [{ "key": "Content-Type", "value": "application/json" }],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"_id\": \"Contact\",\n  \"type\": \"document\",\n  \"name\": \"Contact\",\n  \"label\": { \"en\": \"Contact\" }\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/document",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "document"]
+					},
+					"description": "PUT /api/admin/meta/:document/:type (document/composite) or /:document/:type/:name (named types). Payload is validated by MetaObjectSchema before write."
+				},
+				"response": []
+			},
+			{
+				"name": "Delete meta",
+				"request": {
+					"method": "DELETE",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/list/Default",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "list", "Default"]
+					},
+					"description": "DELETE /api/admin/meta/:document/:type/:name"
+				},
+				"response": []
+			},
+			{
+				"name": "Validate hook (dry-run)",
+				"request": {
+					"method": "POST",
+					"header": [{ "key": "Content-Type", "value": "application/json" }],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"hookName\": \"scriptBeforeValidation\",\n  \"document\": \"Contact\",\n  \"code\": \"return data;\"\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/hook/validate",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "hook", "validate"]
+					},
+					"description": "POST /api/admin/meta/hook/validate - Validate hook payload without persisting. If document is provided, validates merged meta contract too."
+				},
+				"response": []
+			},
+			{
+				"name": "Update hook",
+				"request": {
+					"method": "PUT",
+					"header": [{ "key": "Content-Type", "value": "application/json" }],
+					"body": {
+						"mode": "raw",
+						"raw": "return data;"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/hook/scriptBeforeValidation",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "hook", "scriptBeforeValidation"]
+					},
+					"description": "PUT /api/admin/meta/:document/hook/:hookName - Body: raw JS string or JSON object for validationData. Full meta schema is validated before persistence."
+				},
+				"response": []
+			},
+			{
+				"name": "Delete hook",
+				"request": {
+					"method": "DELETE",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/hook/scriptBeforeValidation",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "hook", "scriptBeforeValidation"]
+					},
+					"description": "DELETE /api/admin/meta/:document/hook/:hookName"
+				},
+				"response": []
+			},
+			{
+				"name": "List meta history",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/history?limit=10&offset=0",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "history"],
+						"query": [
+							{ "key": "limit", "value": "10" },
+							{ "key": "offset", "value": "0" }
+						]
+					},
+					"description": "GET /api/admin/meta/:metaId/history - List historical versions metadata (without full snapshot)."
+				},
+				"response": []
+			},
+			{
+				"name": "Get meta history version",
+				"request": {
+					"method": "GET",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/history/1",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "history", "1"]
+					},
+					"description": "GET /api/admin/meta/:metaId/history/:version - Read full historical snapshot."
+				},
+				"response": []
+			},
+			{
+				"name": "Rollback meta",
+				"request": {
+					"method": "POST",
+					"header": [{ "key": "Content-Type", "value": "application/json" }],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"version\": 1\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/Contact/rollback",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "Contact", "rollback"]
+					},
+					"description": "POST /api/admin/meta/:metaId/rollback - Restore a historical version."
+				},
+				"response": []
+			},
+			{
+				"name": "Meta doctor",
+				"request": {
+					"method": "POST",
+					"header": [{ "key": "Content-Type", "value": "application/json" }],
+					"body": {
+						"mode": "raw",
+						"raw": "{\n  \"document\": \"Contact\"\n}"
+					},
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/doctor",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "doctor"]
+					},
+					"description": "POST /api/admin/meta/doctor - Run schema and integrity checks for all metas or one document."
+				},
+				"response": []
+			},
+			{
+				"name": "Reload metadata",
+				"request": {
+					"method": "POST",
+					"header": [],
+					"url": {
+						"raw": "{{baseUrl}}/api/admin/meta/reload",
+						"host": ["{{baseUrl}}"],
+						"path": ["api", "admin", "meta", "reload"]
+					},
+					"description": "POST /api/admin/meta/reload - Reload in-memory metadata"
+				},
+				"response": []
+			}
+		]
 	}
 ],
 	"variable": [

@@ -734,6 +734,134 @@ Below is a selection of key endpoints. For each, we show the HTTP method, URL, p
 
 ---
 
+### 7. Admin Meta API
+
+All endpoints under `/api/admin/meta/*` require **admin** authentication (`user.admin === true`). Use the same `Authorization` header with a token from an admin user. See [ADR-0006](../adr/0006-meta-crud-api.md).
+
+#### List document/composite metas
+
+- **GET** `/api/admin/meta`
+- **Headers:** `Authorization: <token>` (admin user)
+- **Success Response:**
+  ```json
+  {
+    "success": true,
+    "data": [
+      { "_id": "Contact", "name": "Contact", "type": "document", "label": { "en": "Contact" } },
+      { "_id": "Namespace", "name": "Namespace", "type": "namespace", "label": {} }
+    ]
+  }
+  ```
+- **401:** Non-admin or missing/invalid token.
+
+#### List metas for a document
+
+- **GET** `/api/admin/meta/:document`
+- **Params:** `document` — document name (e.g. `Contact`, `Namespace`)
+- **Success Response:**
+  ```json
+  {
+    "success": true,
+    "data": [
+      { "_id": "Contact", "name": "Contact", "type": "document", "document": null },
+      { "_id": "Contact:list:Default", "name": "Default", "type": "list", "document": "Contact" }
+    ]
+  }
+  ```
+- **404:** Document not found.
+
+#### Get a specific meta
+
+- **GET** `/api/admin/meta/:document/:type` (canonical for `document` and `composite`)
+- **GET** `/api/admin/meta/:document/:type/:name` (canonical for named types: list | view | access | pivot | card | namespace)
+- **Params:** `document`, `type` (document | composite | list | view | access | pivot | card | namespace), `name` (required only for named types)
+- **Examples:** `GET /api/admin/meta/Contact/document`, `GET /api/admin/meta/Contact/list/Default`
+- **Compatibility:** `GET /api/admin/meta/Contact/document/Contact` is still accepted as a legacy alias.
+- **Success Response:** `{ "success": true, "data": { "_id": "...", "type": "...", ... } }`
+- **400:** Invalid type. **404:** Meta not found.
+
+#### Get hook code
+
+- **GET** `/api/admin/meta/:document/hook/:hookName`
+- **Params:** `hookName` — one of `scriptBeforeValidation`, `validationScript`, `scriptAfterSave`, `validationData`
+- **Success Response:** `{ "success": true, "data": { "hookName": "...", "value": "<code or JSON>" } }` (value is raw string for JS hooks or object for validationData)
+- **400:** Invalid hook name. **404:** Document or hook not found.
+
+#### Upsert meta
+
+- **PUT** `/api/admin/meta/:document/:type` (canonical for `document` and `composite`)
+- **PUT** `/api/admin/meta/:document/:type/:name` (canonical for named types)
+- **Headers:** `Content-Type: application/json`
+- **Body:** Full meta object (will be stored with `_id`, `type`, `name`, and `document` set as needed)
+- **Validation:** Request is validated with `MetaObjectSchema.safeParse` before write.
+- **Success Response:** `{ "success": true, "action": "created" | "updated", "_id": "..." }` (201 for created, 200 for updated)
+- **400:** Invalid type/body or schema issues (returns detailed `errors` with invalid paths).
+
+#### Delete meta
+
+- **DELETE** `/api/admin/meta/:document/:type` (canonical for `document` and `composite`)
+- **DELETE** `/api/admin/meta/:document/:type/:name` (canonical for named types)
+- **Success Response:** `{ "success": true }`
+- **404:** Meta not found.
+
+#### Update hook
+
+- **PUT** `/api/admin/meta/:document/hook/:hookName`
+- **Body:** Raw string (JS) or JSON object (for `validationData`)
+- **Validation:** JS hooks must be string; `validationData` must be object; full meta schema is validated before persisting.
+- **Hook rules (enforced in apply + doctor):**
+  - Comments are not allowed in JS hook source (`//` and `/* */`)
+  - Forbidden APIs: `require`, `import`, `process`, `global`, `globalThis`, `eval`, `Function`, and low-level modules (`fs`, `net`, `dgram`, `child_process`)
+  - Syntax must be valid JavaScript
+  - `scriptBeforeValidation` and `validationScript` must include explicit `return`
+- **Success Response:** `{ "success": true }`
+- **400:** Invalid hook name or invalid payload/schema.
+
+#### Validate hook (dry-run)
+
+- **POST** `/api/admin/meta/hook/validate`
+- **Body:** `{ "hookName": "...", "code": "return data;", "document": "Contact" }` (`document` optional)
+- **Behavior:** validates hook payload without persisting; if `document` is provided, validates the merged document/composite meta contract.
+- **Success Response:** `{ "success": true, "valid": true, "errors": [] }`
+
+#### Remove hook
+
+- **DELETE** `/api/admin/meta/:document/hook/:hookName`
+- **Success Response:** `{ "success": true }`
+
+#### Meta history
+
+- **GET** `/api/admin/meta/:metaId/history`
+- **Query:** `limit` (default `10`, max `100`), `offset` (default `0`)
+- **Success Response:** `{ "success": true, "data": [{ "version": 3, "operation": "update", "changedBy": "...", "changedAt": "..." }] }`
+
+- **GET** `/api/admin/meta/:metaId/history/:version`
+- **Success Response:** `{ "success": true, "data": { "metaId": "Contact", "version": 2, "snapshot": { ... } } }`
+
+#### Rollback meta
+
+- **POST** `/api/admin/meta/:metaId/rollback`
+- **Body:** `{ "version": 2 }` (optional; if omitted, latest history version is used)
+- **Success Response:** `{ "success": true, "action": "rolled-back", "version": 2, "data": { ...restoredMeta } }`
+- **400:** Invalid `version` or invalid historical snapshot.
+- **404:** History version not found.
+
+#### Meta doctor
+
+- **POST** `/api/admin/meta/doctor`
+- **Body:** `{ "document": "Contact" }` (optional)
+- **Checks:** schema validation, orphan metas, lookup targets, access/profile coherence, queue resource consistency with `Namespace.QueueConfig.resources`, and hook static checks (comments, forbidden APIs, syntax, required return)
+- **Success Response:** `{ "success": true, "summary": { "total": 42, "valid": 40, "warnings": 1, "errors": 1 }, "issues": [...] }`
+
+#### Reload metadata
+
+- **POST** `/api/admin/meta/reload`
+- **Body:** none
+- **Success Response:** `{ "success": true }`
+- Triggers in-memory metadata reload; call after modifying metas so the server picks up changes.
+
+---
+
 ## Error Handling
 
 All endpoints return a boolean `success`. If `success` is `false`, an `errors` array is provided with error messages.
@@ -768,6 +896,8 @@ The collection includes:
 - **Authentication**
   - Login (traditional username/password)
   - **OTP Authentication**
+- **Admin Meta API** (admin token required)
+  - List documents, list metas by document, get meta, get hook, upsert/delete meta, upsert/delete hook, history, rollback, doctor, reload
     - Request OTP - Phone (with examples for WhatsApp, Email fallback, errors)
     - Request OTP - Email
     - Verify OTP - Phone (with examples for success, invalid code, expired, max attempts)

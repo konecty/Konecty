@@ -39,7 +39,6 @@ const buildMultipartBody = (boundary: string, fileName: string, contentType: str
 		`--${boundary}--`,
 		'',
 	].join('\r\n');
-
 export default class ServerStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
@@ -65,13 +64,13 @@ export default class ServerStorage implements FileStorage {
 
 		const file = filesToSave[0];
 		const boundary = generateMultipartBoundary();
-		const decodedFileName = decodeFileNameSafely(fileData.name);
-		const multipartBody = buildMultipartBody(boundary, decodedFileName, fileData.kind, file.content);
+		const uploadFileName = decodeFileNameSafely(file.name);
+		const multipartBody = buildMultipartBody(boundary, uploadFileName, fileData.kind, file.content);
 
 		logger.trace(
 			{
 				uploadUrl: `${storageCfg.config.upload}${uploadPath}`,
-				fileName: decodedFileName,
+				fileName: uploadFileName,
 				fileSize: file.content.length,
 			},
 			'Uploading file to server storage',
@@ -92,14 +91,14 @@ export default class ServerStorage implements FileStorage {
 		try {
 			if (response.status >= HTTP_CLIENT_ERROR_MIN) {
 				const errorText = await response.text();
-				logger.error({ statusCode: response.status, errorText, fileName: decodedFileName, uploadPath }, 'Server storage upload failed with HTTP error');
+				logger.error({ statusCode: response.status, errorText, fileName: uploadFileName, uploadPath }, 'Server storage upload failed with HTTP error');
 				return errorReturn(errorText);
 			}
 
-			logger.trace({ fileName: decodedFileName, statusCode: response.status }, 'File uploaded successfully to server storage');
+			logger.trace({ fileName: uploadFileName, statusCode: response.status }, 'File uploaded successfully to server storage');
 			return (await response.json()) as ReturnType<FileStorage['upload']>;
 		} catch (error) {
-			logger.error({ error, fileName: decodedFileName, uploadPath }, 'Server storage upload failed with exception');
+			logger.error({ error, fileName: uploadFileName, uploadPath }, 'Server storage upload failed with exception');
 			return errorReturn((error as Error).toString());
 		}
 	}
