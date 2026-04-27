@@ -2,6 +2,7 @@ import type { FastifyReply } from 'fastify';
 
 import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
+import { MetaObject } from '@imports/model/MetaObject';
 import { SFTPStorageCfg } from '@imports/model/Namespace/Storage';
 import { getFileStorageDeletePathSuffixes } from '@imports/storage/fileStorageDeleteSuffixes';
 import FileStorage, { type FileContext, FileData } from '@imports/storage/FileStorage';
@@ -14,26 +15,19 @@ import path from 'path';
 import SftpClient from 'ssh2-sftp-client';
 import { z } from 'zod';
 
-/** Comprimento do MD5 em hex; basename do upload costuma ser só isso ou sufixo `-<md5>`. */
-const MD5_HEX_STEM_LENGTH = 32;
+export type SFTPResolveDeleteFromRecordParams = {
+	document: string;
+	recordId: string;
+	fieldName: string;
+	fileNameParam: string;
+};
 
-const is32CharMd5Hex = (value: string) => value.length === MD5_HEX_STEM_LENGTH && /^[a-f0-9]+$/i.test(value);
-
-const tryEtagFromUploadBasename = (filePath: string) => {
-	const ext = path.posix.extname(filePath);
-	const stem = ext ? path.posix.basename(filePath, ext) : path.posix.basename(filePath);
-	if (!stem) {
-		return null;
-	}
-	if (is32CharMd5Hex(stem)) {
-		return stem.toLowerCase();
-	}
-	/** Ex.: `logo-agencia-…-<md5>.jpg` (fallback do upload) */
-	const withLeadingDash = stem.match(/-([a-f0-9]{32})$/i);
-	if (withLeadingDash?.[1] != null && is32CharMd5Hex(withLeadingDash[1])) {
-		return withLeadingDash[1].toLowerCase();
-	}
-	return null;
+export type SFTPResolvedDeleteTarget = {
+	/** Relativo à raiz do storage (ex.: `Office/<id>/pictures`). */
+	directory: string;
+	basename: string;
+	/** `name` do anexo no Mongo, para o `fileRemove` quando o param da rota não coincide. */
+	nameForFileRemove?: string;
 };
 
 export default class SFTPStorage implements FileStorage {
@@ -41,6 +35,126 @@ export default class SFTPStorage implements FileStorage {
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
 		this.storageCfg = storageCfg;
+	}
+
+	private static toFallbackDeleteTarget(document: string, recordId: string, fieldName: string, fileNameParam: string): SFTPResolvedDeleteTarget {
+		let decoded = fileNameParam;
+		try {
+			decoded = decodeURIComponent(fileNameParam);
+		} catch {
+			decoded = fileNameParam;
+		}
+		const posixParam = fileNameParam.split(path.sep).join('/');
+		const decodedPosix = decoded.split(path.sep).join('/');
+		return {
+			directory: path.posix.join(document, recordId, fieldName),
+			basename: path.posix.basename(decodedPosix || posixParam),
+		};
+	}
+
+	/** Só usado com storage SFTP na rota REST de delete: lê a `key` do registo (code vs _id, basename = hash+ext). */
+	static async resolveDeleteTargetFromRecord(params: SFTPResolveDeleteFromRecordParams): Promise<SFTPResolvedDeleteTarget> {
+		const { document, recordId, fieldName, fileNameParam } = params;
+		try {
+			const meta = MetaObject.Meta[document];
+			if (meta == null) {
+				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
+			}
+			const field = meta.fields[fieldName];
+			if (field == null || field.type !== 'file') {
+				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
+			}
+			const collection = MetaObject.Collections[document];
+			if (collection == null) {
+				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
+			}
+
+			const record = await collection.findOne({
+				$or: [{ _id: recordId }, ...(!Number.isNaN(Number(recordId)) ? [{ code: Number(recordId) }] : [])],
+			});
+			if (record == null) {
+				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
+			}
+
+			let decoded = fileNameParam;
+			try {
+				decoded = decodeURIComponent(fileNameParam);
+			} catch {
+				decoded = fileNameParam;
+			}
+
+			const matchesEntry = (entry: { name?: string; key?: string } | null | undefined) => {
+				if (entry == null) {
+					return false;
+				}
+				const keyPosix = typeof entry.key === 'string' ? entry.key.split(path.sep).join('/') : '';
+				const keyBasename = keyPosix !== '' ? path.posix.basename(keyPosix) : '';
+				const expectedWithParam = `${document}/${recordId}/${fieldName}/${fileNameParam}`;
+				const expectedWithDecoded = `${document}/${recordId}/${fieldName}/${decoded}`;
+				return (
+					entry.name === fileNameParam ||
+					entry.name === decoded ||
+					keyPosix === expectedWithParam ||
+					keyPosix === expectedWithDecoded ||
+					keyBasename === fileNameParam ||
+					keyBasename === decoded
+				);
+			};
+
+			const fieldData = record[field.name];
+			if (field.isList === true) {
+				const list = Array.isArray(fieldData) ? fieldData : [];
+				const entry = list.find(matchesEntry);
+				if (entry?.key != null && typeof entry.key === 'string') {
+					const posixKey = entry.key.split(path.sep).join('/');
+					const nameForFileRemove = typeof entry.name === 'string' && entry.name !== '' ? entry.name : undefined;
+					return {
+						directory: path.posix.dirname(posixKey),
+						basename: path.posix.basename(posixKey),
+						...(nameForFileRemove != null ? { nameForFileRemove } : {}),
+					};
+				}
+			} else {
+				const single = fieldData as { name?: string; key?: string } | null | undefined;
+				if (matchesEntry(single) && single?.key != null && typeof single.key === 'string') {
+					const posixKey = single.key.split(path.sep).join('/');
+					const nameForFileRemove = typeof single.name === 'string' && single.name !== '' ? single.name : undefined;
+					return {
+						directory: path.posix.dirname(posixKey),
+						basename: path.posix.basename(posixKey),
+						...(nameForFileRemove != null ? { nameForFileRemove } : {}),
+					};
+				}
+			}
+		} catch (error) {
+			logger.error(error, 'SFTPStorage.resolveDeleteTargetFromRecord: failed to resolve path');
+		}
+		return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
+	}
+
+	private static readonly MD5_ETAG_HEX_LENGTH = 32;
+
+	private static is32CharMd5Hex(value: string): boolean {
+		return value.length === SFTPStorage.MD5_ETAG_HEX_LENGTH && /^[a-f0-9]+$/i.test(value);
+	}
+
+	/**
+	 * Tenta reutilizar o MD5 do nome (basename `hash` ou sufixo `-<hash>`, p.ex. ficheiros antigos) no ETag.
+	 */
+	private static tryEtagFromUploadBasename(filePath: string): string | null {
+		const ext = path.posix.extname(filePath);
+		const stem = ext ? path.posix.basename(filePath, ext) : path.posix.basename(filePath);
+		if (!stem) {
+			return null;
+		}
+		if (SFTPStorage.is32CharMd5Hex(stem)) {
+			return stem.toLowerCase();
+		}
+		const withLeadingDash = stem.match(/-([a-f0-9]{32})$/i);
+		if (withLeadingDash?.[1] != null && SFTPStorage.is32CharMd5Hex(withLeadingDash[1])) {
+			return withLeadingDash[1].toLowerCase();
+		}
+		return null;
 	}
 
 	private async withClient<T>(fn: (client: SftpClient) => Promise<T>): Promise<T> {
@@ -76,8 +190,7 @@ export default class SFTPStorage implements FileStorage {
 				return reply.status(500).send('Error retrieving file');
 			}
 			const fileContent = raw;
-			/** Nome vindo do upload: stem ou sufixo contém o mesmo MD5 do ficheiro — evita recalcular o hash em ficheiros grandes. */
-			const etagFromName = tryEtagFromUploadBasename(filePath);
+			const etagFromName = SFTPStorage.tryEtagFromUploadBasename(filePath);
 			const etag = etagFromName ?? crypto.createHash('md5').update(fileContent).digest('hex');
 			const contentType = mime.lookup(filePath) || 'application/octet-stream';
 			return reply

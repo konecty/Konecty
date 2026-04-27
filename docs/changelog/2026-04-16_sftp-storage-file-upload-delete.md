@@ -1,5 +1,7 @@
 # SFTP em storage, resolução de caminho no delete e erros estruturados no upload
 
+> **Atualização (2026-04-27):** o stem na `key` de upload passou a ser **sempre** o MD5 do conteúdo + extensão (alinhado a FS/S3); a resolução de path no delete do SFTP está em `SFTPStorage.resolveDeleteTargetFromRecord`. O histórico abaixo ainda descreve a primeira iteração (nomes `logo-agencia-…` e módulos em `src/imports/file/`), removida em [2026-04-27](./2026-04-27_refactor-sftp-file-upload-delete.md).
+
 ## Resumo
 
 Inclui armazenamento de arquivos via **SFTP** junto aos modos já existentes (configuração **somente** pelo documento **Namespace** / `storage`, como `fs` e `s3`), corrige o delete físico quando o basename em `key` difere do parâmetro `fileName` da rota REST, gera nomes previsíveis para imagens do **Office** (`logo` / `pictures`) e devolve respostas `{ success: false, errors }` coerentes nas falhas de upload (incluindo exceções no `catch`), em vez de JSON inválido ou sucesso indevido.
@@ -50,7 +52,7 @@ Inclui armazenamento de arquivos via **SFTP** junto aos modos já existentes (co
 - `src/imports/storage/SFTPStorage.ts`, `FileStorage.ts`
 - `src/imports/storage/fileStorageDeleteSuffixes.ts`
 - `src/imports/model/Namespace/Storage.ts`, `src/imports/model/Namespace/index.ts`
-- `src/imports/file/resolveUploadBaseName.ts`, `resolveStorageBasenameForDelete.ts`
+- `src/imports/file/resolveUploadBaseName` (módulo; no *refine* de 2026-04-27 o monólito passou a pasta com estratégias; ver [2026-04-27](./2026-04-27_refactor-sftp-file-upload-delete.md)), `resolveStorageBasenameForDelete.ts`
 - `src/server/routes/rest/file/upload.ts`, `delete.ts`
 - `src/imports/file/file.js`
 - `src/imports/meta/loadMetaObjects.ts`, `src/server/app.ts`

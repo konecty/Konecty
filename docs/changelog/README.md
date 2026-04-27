@@ -4,6 +4,7 @@ Registro de alterações relevantes do projeto. Cada entrada segue o formato `YY
 
 ## Entradas
 
+- [2026-04-27 — SFTP: basename `hash+ext` em qualquer storage, delete em `SFTPStorage`, fim de `resolveUploadBaseName`](./2026-04-27_refactor-sftp-file-upload-delete.md)
 - [2026-04-16 — Storage SFTP (Namespace), resolução de delete, erros de upload e nomes Office](./2026-04-16_sftp-storage-file-upload-delete.md)
 - [2026-03-26 — findByLookup: conditionFields no metadata do lookup](./2026-03-26_findbylookup-conditionfields.md)
 - [2026-03-13 — CrossModuleQuery: isList self-referential lookup fix](./2026-03-13_crossmodule-isList-fix.md)
@@ -15,6 +16,7 @@ Entries are in `docs/changelog/` as `YYYY-MM-DD_slug.md`.
 
 | Date       | Slug                        | Summary |
 |-----------|-----------------------------|--------|
+| 2026-04-27 | refactor-sftp-file-upload-delete | Basename só MD5+ext; resolução de delete em `SFTPStorage.resolveDeleteTargetFromRecord`; remoção de `resolveUploadBaseName` |
 | 2026-04-16 | sftp-storage-file-upload-delete | Storage SFTP via Namespace, delete pela `key`, basename Office, erros estruturados no upload |
 | 2026-03-26 | findbylookup-conditionfields | Apply lookup field conditionFields in findByLookup MongoDB filter |
 | 2026-03-23 | fix-server-storage-original-filename | Align backend-forwarded server storage multipart payload with UI upload format |

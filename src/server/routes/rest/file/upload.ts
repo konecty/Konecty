@@ -21,7 +21,6 @@ import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import Bluebird from 'bluebird';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
-import { resolveUploadBaseName } from '@imports/file/resolveUploadBaseName';
 import getFileMD5 from '@imports/utils/getFileMD5';
 
 type RouteParams = {
@@ -97,16 +96,8 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		}
 
 		const contentHash = getFileMD5(fileContent);
-		// Basename com regras por documento/campo só no SFTP (chave previsível no remoto). Demais storages: só hash, como antes.
-		const fileName =
-			MetaObject.Namespace.storage?.type === 'sftp'
-				? await resolveUploadBaseName({
-						document,
-						recordId,
-						fieldName,
-						fallback: contentHash,
-					})
-				: contentHash;
+		/** Basename do ficheiro na `key`: hash MD5 do conteúdo (SFTP e demais storages, mesmo padrão). */
+		const fileName = contentHash;
 		logger.trace({ contentType, originalFileName }, `Uploading file ${originalFileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;

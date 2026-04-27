@@ -6,9 +6,9 @@ import { getUserSafe } from '@imports/auth/getUser';
 import type { User } from '@imports/model/User';
 import type { KonectyResult } from '@imports/types/result';
 import { fileRemove } from '@imports/file/file';
-import { resolveStorageBasenameForDelete } from '@imports/file/resolveStorageBasenameForDelete';
 import { MetaObject } from '@imports/model/MetaObject';
 import FileStorage from '@imports/storage/FileStorage';
+import SFTPStorage from '@imports/storage/SFTPStorage';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
@@ -66,12 +66,10 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 	}
 
 	/**
-	 * SFTP: a rota de delete pode trazer o último segmento incompatível com o `name` que o
-	 * `fileRemove` (findIndex) espera, apesar de `resolveStorageBasenameForDelete` resolver o path.
-	 * Lê a entrada no Mongo e usa `nameForFileRemove` (campo `name` do anexo) em `fileRemove` sem
-	 * alterar `file.js` — a ordem fica: resolver → `fileRemove` (BD) → delete no storage.
+	 * SFTP: lê a `key` no registo (e o `name` se preciso para o `fileRemove`); resolução em
+	 * `SFTPStorage.resolveDeleteTargetFromRecord`.
 	 */
-	const storageTarget = await resolveStorageBasenameForDelete({
+	const storageTarget = await SFTPStorage.resolveDeleteTargetFromRecord({
 		document,
 		recordId,
 		fieldName,
