@@ -14,121 +14,11 @@ import path from 'path';
 import SftpClient from 'ssh2-sftp-client';
 import { z } from 'zod';
 
-export type SFTPResolveDeleteFromRecordParams = {
-	document: string;
-	recordId: string;
-	fieldName: string;
-	fileNameParam: string;
-};
-
-export type SFTPResolvedDeleteTarget = {
-	/** Relativo à raiz do storage (ex.: `Office/<id>/pictures`). */
-	directory: string;
-	basename: string;
-	/** `name` do anexo no Mongo, para o `fileRemove` quando o param da rota não coincide. */
-	nameForFileRemove?: string;
-};
-
 export default class SFTPStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
 	constructor(storageCfg: FileStorage['storageCfg']) {
 		this.storageCfg = storageCfg;
-	}
-
-	private static toFallbackDeleteTarget(document: string, recordId: string, fieldName: string, fileNameParam: string): SFTPResolvedDeleteTarget {
-		let decoded = fileNameParam;
-		try {
-			decoded = decodeURIComponent(fileNameParam);
-		} catch {
-			decoded = fileNameParam;
-		}
-		const posixParam = fileNameParam.split(path.sep).join('/');
-		const decodedPosix = decoded.split(path.sep).join('/');
-		return {
-			directory: path.posix.join(document, recordId, fieldName),
-			basename: path.posix.basename(decodedPosix || posixParam),
-		};
-	}
-
-	/** Só usado com storage SFTP na rota REST de delete: lê a `key` do registo (code vs _id, basename = hash+ext). */
-	static async resolveDeleteTargetFromRecord(params: SFTPResolveDeleteFromRecordParams): Promise<SFTPResolvedDeleteTarget> {
-		const { document, recordId, fieldName, fileNameParam } = params;
-		try {
-			const meta = MetaObject.Meta[document];
-			if (meta == null) {
-				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
-			}
-			const field = meta.fields[fieldName];
-			if (field == null || field.type !== 'file') {
-				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
-			}
-			const collection = MetaObject.Collections[document];
-			if (collection == null) {
-				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
-			}
-
-			const record = await collection.findOne({
-				$or: [{ _id: recordId }, ...(!Number.isNaN(Number(recordId)) ? [{ code: Number(recordId) }] : [])],
-			});
-			if (record == null) {
-				return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
-			}
-
-			let decoded = fileNameParam;
-			try {
-				decoded = decodeURIComponent(fileNameParam);
-			} catch {
-				decoded = fileNameParam;
-			}
-
-			const matchesEntry = (entry: { name?: string; key?: string } | null | undefined) => {
-				if (entry == null) {
-					return false;
-				}
-				const keyPosix = typeof entry.key === 'string' ? entry.key.split(path.sep).join('/') : '';
-				const keyBasename = keyPosix !== '' ? path.posix.basename(keyPosix) : '';
-				const expectedWithParam = `${document}/${recordId}/${fieldName}/${fileNameParam}`;
-				const expectedWithDecoded = `${document}/${recordId}/${fieldName}/${decoded}`;
-				return (
-					entry.name === fileNameParam ||
-					entry.name === decoded ||
-					keyPosix === expectedWithParam ||
-					keyPosix === expectedWithDecoded ||
-					keyBasename === fileNameParam ||
-					keyBasename === decoded
-				);
-			};
-
-			const fieldData = record[field.name];
-			if (field.isList === true) {
-				const list = Array.isArray(fieldData) ? fieldData : [];
-				const entry = list.find(matchesEntry);
-				if (entry?.key != null && typeof entry.key === 'string') {
-					const posixKey = entry.key.split(path.sep).join('/');
-					const nameForFileRemove = typeof entry.name === 'string' && entry.name !== '' ? entry.name : undefined;
-					return {
-						directory: path.posix.dirname(posixKey),
-						basename: path.posix.basename(posixKey),
-						...(nameForFileRemove != null ? { nameForFileRemove } : {}),
-					};
-				}
-			} else {
-				const single = fieldData as { name?: string; key?: string } | null | undefined;
-				if (matchesEntry(single) && single?.key != null && typeof single.key === 'string') {
-					const posixKey = single.key.split(path.sep).join('/');
-					const nameForFileRemove = typeof single.name === 'string' && single.name !== '' ? single.name : undefined;
-					return {
-						directory: path.posix.dirname(posixKey),
-						basename: path.posix.basename(posixKey),
-						...(nameForFileRemove != null ? { nameForFileRemove } : {}),
-					};
-				}
-			}
-		} catch (error) {
-			logger.error(error, 'SFTPStorage.resolveDeleteTargetFromRecord: failed to resolve path');
-		}
-		return SFTPStorage.toFallbackDeleteTarget(document, recordId, fieldName, fileNameParam);
 	}
 
 	private static readonly MD5_ETAG_HEX_LENGTH = 32;
@@ -172,6 +62,65 @@ export default class SFTPStorage implements FileStorage {
 		}
 
 		return [...new Set(suffixes)];
+	}
+
+	private static normalizePosix(value: string): string {
+		return value.split(path.sep).join('/');
+	}
+
+	private static async getRemainingStorageBasenames(context: FileContext): Promise<Set<string>> {
+		const result = new Set<string>();
+		const meta = MetaObject.Meta[context.document];
+		const collection = MetaObject.Collections[context.document];
+		const field = meta?.fields[context.fieldName];
+
+		if (collection == null || field == null || field.type !== 'file') {
+			return result;
+		}
+
+		const record = await collection.findOne({
+			$or: [{ code: parseInt(context.recordId) }, { _id: context.recordId }],
+		});
+		if (record == null) {
+			return result;
+		}
+
+		const addKeyBasename = (entry: { key?: string } | null | undefined) => {
+			if (entry?.key == null || typeof entry.key !== 'string') {
+				return;
+			}
+			result.add(path.posix.basename(SFTPStorage.normalizePosix(entry.key)));
+		};
+
+		if (field.isList === true) {
+			const list = Array.isArray(record[field.name]) ? (record[field.name] as Array<{ key?: string }>) : [];
+			list.forEach(addKeyBasename);
+			return result;
+		}
+
+		addKeyBasename(record[field.name] as { key?: string } | null | undefined);
+		return result;
+	}
+
+	private static async resolveDeleteBasename(client: SftpClient, baseDir: string, fileName: string, context?: FileContext): Promise<string> {
+		const decoded = decodeURIComponent(fileName);
+
+		if (await client.exists(path.posix.join(baseDir, decoded))) {
+			return decoded;
+		}
+
+		if (context == null) {
+			return decoded;
+		}
+
+		const remainingBasenames = await SFTPStorage.getRemainingStorageBasenames(context);
+		const files = await client.list(baseDir);
+		const candidates = files
+			.filter(file => file.type !== 'd')
+			.map(file => file.name)
+			.filter(name => !remainingBasenames.has(name));
+
+		return candidates.length === 1 ? candidates[0] : decoded;
 	}
 
 	private async withClient<T>(fn: (client: SftpClient) => Promise<T>): Promise<T> {
@@ -268,16 +217,16 @@ export default class SFTPStorage implements FileStorage {
 	}
 
 	async delete(directory: string, fileName: string, context?: FileContext) {
-		void context;
 		const storageCfg = this.storageCfg as z.infer<typeof SFTPStorageCfg>;
 		const remoteRoot = storageCfg.remoteRoot.replace(/\/$/, '');
 		const normalizedDir = directory.split(path.sep).join('/');
 		const baseDir = path.posix.join(remoteRoot, normalizedDir);
-		const decoded = decodeURIComponent(fileName);
-		const suffixes = SFTPStorage.getDeletePathSuffixes(decoded, storageCfg?.wm != null);
-		const pathsToDelete = suffixes.map(suffix => path.posix.join(baseDir, suffix));
 
 		await this.withClient(async client => {
+			const basename = await SFTPStorage.resolveDeleteBasename(client, baseDir, fileName, context);
+			const suffixes = SFTPStorage.getDeletePathSuffixes(basename, storageCfg?.wm != null);
+			const pathsToDelete = suffixes.map(suffix => path.posix.join(baseDir, suffix));
+
 			await BluebirdPromise.each(pathsToDelete, async remotePath => {
 				try {
 					await client.delete(remotePath);

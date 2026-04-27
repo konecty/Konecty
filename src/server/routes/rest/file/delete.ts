@@ -8,7 +8,6 @@ import type { KonectyResult } from '@imports/types/result';
 import { fileRemove } from '@imports/file/file';
 import { MetaObject } from '@imports/model/MetaObject';
 import FileStorage from '@imports/storage/FileStorage';
-import SFTPStorage from '@imports/storage/SFTPStorage';
 import { getAccessFor } from '@imports/utils/accessUtils';
 import { logger } from '@imports/utils/logger';
 import { errorReturn } from '@imports/utils/return';
@@ -41,46 +40,11 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		return errorReturn(`[${document}] You don't have permission read records`);
 	}
 
-	const isSftp = MetaObject.Namespace.storage?.type === 'sftp';
-	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
-
-	/** Padrão (não-SFTP): igual ao legado — `fileRemove` e depois delete com o `fileName` do URL. */
-	if (!isSftp) {
-		const coreResponse = await fileRemove({
-			document: document,
-			fieldName: fieldName,
-			recordCode: recordId,
-			fileName,
-			contextUser: user,
-		});
-
-		if (coreResponse.success === false) {
-			logger.trace(coreResponse.errors, 'Error deleting file');
-			return reply.send(coreResponse);
-		}
-
-		const fileContext = { document, recordId, fieldName, user, fileName, accessId, authTokenId, headers: req.headers };
-		const directory = path.join(document, recordId, fieldName);
-		await fileStorage.delete(directory, fileName, fileContext);
-		return reply.send(coreResponse);
-	}
-
-	/**
-	 * SFTP: lê a `key` no registo (e o `name` se preciso para o `fileRemove`); resolução em
-	 * `SFTPStorage.resolveDeleteTargetFromRecord`.
-	 */
-	const storageTarget = await SFTPStorage.resolveDeleteTargetFromRecord({
-		document,
-		recordId,
-		fieldName,
-		fileNameParam: fileName,
-	});
-	const fileNameForFileRemove = storageTarget.nameForFileRemove ?? fileName;
 	const coreResponse = await fileRemove({
 		document: document,
 		fieldName: fieldName,
 		recordCode: recordId,
-		fileName: fileNameForFileRemove,
+		fileName,
 		contextUser: user,
 	});
 
@@ -89,8 +53,12 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		return reply.send(coreResponse);
 	}
 
-	const fileContext = { document, recordId, fieldName, user, fileName: fileNameForFileRemove, accessId, authTokenId, headers: req.headers };
-	await fileStorage.delete(storageTarget.directory, storageTarget.basename, fileContext);
+	const fileContext = { document, recordId, fieldName, user, fileName, accessId, authTokenId, headers: req.headers };
+
+	const directory = path.join(document, recordId, fieldName);
+	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
+	await fileStorage.delete(directory, fileName, fileContext);
+
 	return reply.send(coreResponse);
 };
 

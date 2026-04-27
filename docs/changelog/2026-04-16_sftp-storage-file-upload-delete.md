@@ -1,6 +1,6 @@
 # SFTP em storage, resolução de caminho no delete e erros estruturados no upload
 
-> **Atualização (2026-04-27):** o stem na `key` de upload passou a ser **sempre** o MD5 do conteúdo + extensão (alinhado a FS/S3); a resolução de path no delete do SFTP está em `SFTPStorage.resolveDeleteTargetFromRecord`. O histórico abaixo ainda descreve a primeira iteração (nomes `logo-agencia-…` e módulos em `src/imports/file/`), removida em [2026-04-27](./2026-04-27_refactor-sftp-file-upload-delete.md).
+> **Atualização (2026-04-27):** o stem na `key` de upload passou a ser **sempre** o MD5 do conteúdo + extensão; o `delete` REST voltou ao padrão do commit `144fe0d`, e o alinhamento com o ficheiro real no SFTP (hash vs `name` de exibição) fica no `SFTPStorage.delete`. O histórico abaixo ainda descreve a primeira iteração (nomes `logo-agencia-…` e módulos em `src/imports/file/`), removida em [2026-04-27](./2026-04-27_refactor-sftp-file-upload-delete.md).
 
 ## Resumo
 
