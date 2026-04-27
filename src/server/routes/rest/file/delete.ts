@@ -1,3 +1,4 @@
+import path from 'path';
 import { FastifyPluginCallback, RouteHandler } from 'fastify';
 import fp from 'fastify-plugin';
 
@@ -40,18 +41,48 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		return errorReturn(`[${document}] You don't have permission read records`);
 	}
 
-	const { directory: storageDirectory, basename: storageBasename } = await resolveStorageBasenameForDelete({
+	const isSftp = MetaObject.Namespace.storage?.type === 'sftp';
+	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
+
+	/** Padrão (não-SFTP): igual ao legado — `fileRemove` e depois delete com o `fileName` do URL. */
+	if (!isSftp) {
+		const coreResponse = await fileRemove({
+			document: document,
+			fieldName: fieldName,
+			recordCode: recordId,
+			fileName,
+			contextUser: user,
+		});
+
+		if (coreResponse.success === false) {
+			logger.trace(coreResponse.errors, 'Error deleting file');
+			return reply.send(coreResponse);
+		}
+
+		const fileContext = { document, recordId, fieldName, user, fileName, accessId, authTokenId, headers: req.headers };
+		const directory = path.join(document, recordId, fieldName);
+		await fileStorage.delete(directory, fileName, fileContext);
+		return reply.send(coreResponse);
+	}
+
+	/**
+	 * SFTP: a rota de delete pode trazer o último segmento incompatível com o `name` que o
+	 * `fileRemove` (findIndex) espera, apesar de `resolveStorageBasenameForDelete` resolver o path.
+	 * Lê a entrada no Mongo e usa `nameForFileRemove` (campo `name` do anexo) em `fileRemove` sem
+	 * alterar `file.js` — a ordem fica: resolver → `fileRemove` (BD) → delete no storage.
+	 */
+	const storageTarget = await resolveStorageBasenameForDelete({
 		document,
 		recordId,
 		fieldName,
 		fileNameParam: fileName,
 	});
-
+	const fileNameForFileRemove = storageTarget.nameForFileRemove ?? fileName;
 	const coreResponse = await fileRemove({
 		document: document,
 		fieldName: fieldName,
 		recordCode: recordId,
-		fileName,
+		fileName: fileNameForFileRemove,
 		contextUser: user,
 	});
 
@@ -60,12 +91,9 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		return reply.send(coreResponse);
 	}
 
-	const fileContext = { document, recordId, fieldName, user, fileName, accessId, authTokenId, headers: req.headers };
-
-	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
-	await fileStorage.delete(storageDirectory, storageBasename, fileContext);
-
-	reply.send(coreResponse);
+	const fileContext = { document, recordId, fieldName, user, fileName: fileNameForFileRemove, accessId, authTokenId, headers: req.headers };
+	await fileStorage.delete(storageTarget.directory, storageTarget.basename, fileContext);
+	return reply.send(coreResponse);
 };
 
 export default fp(fileDeleteApi);

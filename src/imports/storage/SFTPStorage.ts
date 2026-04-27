@@ -14,6 +14,28 @@ import path from 'path';
 import SftpClient from 'ssh2-sftp-client';
 import { z } from 'zod';
 
+/** Comprimento do MD5 em hex; basename do upload costuma ser só isso ou sufixo `-<md5>`. */
+const MD5_HEX_STEM_LENGTH = 32;
+
+const is32CharMd5Hex = (value: string) => value.length === MD5_HEX_STEM_LENGTH && /^[a-f0-9]+$/i.test(value);
+
+const tryEtagFromUploadBasename = (filePath: string) => {
+	const ext = path.posix.extname(filePath);
+	const stem = ext ? path.posix.basename(filePath, ext) : path.posix.basename(filePath);
+	if (!stem) {
+		return null;
+	}
+	if (is32CharMd5Hex(stem)) {
+		return stem.toLowerCase();
+	}
+	/** Ex.: `logo-agencia-…-<md5>.jpg` (fallback do upload) */
+	const withLeadingDash = stem.match(/-([a-f0-9]{32})$/i);
+	if (withLeadingDash?.[1] != null && is32CharMd5Hex(withLeadingDash[1])) {
+		return withLeadingDash[1].toLowerCase();
+	}
+	return null;
+};
+
 export default class SFTPStorage implements FileStorage {
 	storageCfg: FileStorage['storageCfg'];
 
@@ -54,7 +76,9 @@ export default class SFTPStorage implements FileStorage {
 				return reply.status(500).send('Error retrieving file');
 			}
 			const fileContent = raw;
-			const etag = crypto.createHash('md5').update(fileContent).digest('hex');
+			/** Nome vindo do upload: stem ou sufixo contém o mesmo MD5 do ficheiro — evita recalcular o hash em ficheiros grandes. */
+			const etagFromName = tryEtagFromUploadBasename(filePath);
+			const etag = etagFromName ?? crypto.createHash('md5').update(fileContent).digest('hex');
 			const contentType = mime.lookup(filePath) || 'application/octet-stream';
 			return reply
 				.headers({

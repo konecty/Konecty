@@ -15,6 +15,11 @@ export type ResolvedStorageDeleteTarget = {
 	directory: string;
 	/** Stored file basename (last segment of `key`). */
 	basename: string;
+	/**
+	 * Nome exatamente como no anexo (campo `name` em Mongo). Só setado ao encontrar entrada; usar em
+	 * `fileRemove` com SFTP quando o param da rota e o `name` gravado divergirem, sem alterar `file.js`.
+	 */
+	nameForFileRemove?: string;
 };
 
 const toFallbackTarget = (document: string, recordId: string, fieldName: string, fileNameParam: string): ResolvedStorageDeleteTarget => {
@@ -95,18 +100,22 @@ export async function resolveStorageBasenameForDelete({
 			const entry = list.find(matchesEntry);
 			if (entry?.key != null && typeof entry.key === 'string') {
 				const posixKey = entry.key.split(path.sep).join('/');
+				const nameForFileRemove = typeof entry.name === 'string' && entry.name !== '' ? entry.name : undefined;
 				return {
 					directory: path.posix.dirname(posixKey),
 					basename: path.posix.basename(posixKey),
+					...(nameForFileRemove != null ? { nameForFileRemove } : {}),
 				};
 			}
 		} else {
 			const single = fieldData as { name?: string; key?: string } | null | undefined;
 			if (matchesEntry(single) && single?.key != null && typeof single.key === 'string') {
 				const posixKey = single.key.split(path.sep).join('/');
+				const nameForFileRemove = typeof single.name === 'string' && single.name !== '' ? single.name : undefined;
 				return {
 					directory: path.posix.dirname(posixKey),
 					basename: path.posix.basename(posixKey),
+					...(nameForFileRemove != null ? { nameForFileRemove } : {}),
 				};
 			}
 		}

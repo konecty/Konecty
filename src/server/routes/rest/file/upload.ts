@@ -97,12 +97,16 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 		}
 
 		const contentHash = getFileMD5(fileContent);
-		const fileName = await resolveUploadBaseName({
-			document,
-			recordId,
-			fieldName,
-			fallback: contentHash,
-		});
+		// Basename com regras por documento/campo só no SFTP (chave previsível no remoto). Demais storages: só hash, como antes.
+		const fileName =
+			MetaObject.Namespace.storage?.type === 'sftp'
+				? await resolveUploadBaseName({
+						document,
+						recordId,
+						fieldName,
+						fallback: contentHash,
+					})
+				: contentHash;
 		logger.trace({ contentType, originalFileName }, `Uploading file ${originalFileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;
