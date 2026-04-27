@@ -18,7 +18,7 @@ jobs:
             - name: Setup NodeJS
               uses: actions/setup-node@v4
               with:
-                  node-version: 18
+                  node-version: 22
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
@@ -28,6 +28,7 @@ jobs:
                   path: |
                       node_modules
                       .husky
+                      src/mcp/widgets/node_modules
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Install Dependencies
               run: yarn --frozen-lockfile --no-progress --non-interactive
@@ -40,6 +41,7 @@ jobs:
                   path: |
                       node_modules
                       .husky
+                      src/mcp/widgets/node_modules
                   key: ${{ steps.cache-restore.outputs.cache-primary-key }}
     test:
         name: Run Test
@@ -53,7 +55,7 @@ jobs:
             - name: Setup NodeJS
               uses: actions/setup-node@v4
               with:
-                  node-version: 18
+                  node-version: 22
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
@@ -63,6 +65,7 @@ jobs:
                   path: |
                       node_modules
                       .husky
+                      src/mcp/widgets/node_modules
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Install Dependencies
               run: yarn --frozen-lockfile --no-progress --non-interactive

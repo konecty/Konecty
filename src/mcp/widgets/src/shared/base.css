@@ -1,0 +1,61 @@
+:root {
+	color-scheme: light dark;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 12px;
+	color: inherit;
+	background: transparent;
+}
+
+.k-card {
+	border: 1px solid rgba(128, 128, 128, 0.3);
+	border-radius: 12px;
+	padding: 12px;
+	background: rgba(255, 255, 255, 0.02);
+}
+
+.k-title {
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.k-subtitle {
+	opacity: 0.7;
+	font-size: 12px;
+}
+
+.k-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.k-table th,
+.k-table td {
+	text-align: left;
+	padding: 8px;
+	border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+	font-size: 13px;
+}
+
+.k-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: var(--color-primary-600, #2563eb);
+	color: white;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.k-link {
+	color: var(--color-primary-600, #2563eb);
+	text-decoration: none;
+}

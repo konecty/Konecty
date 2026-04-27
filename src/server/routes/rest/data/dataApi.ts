@@ -516,11 +516,12 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 	}>(
 		'/rest/data/:document/pivot',
 		{
-			// Pivot tables can take a long time to process large datasets
+			// Pivot tables can take a long time to process large datasets.
+			// `timeout` is consumed by fastify plugins/hooks at runtime but is not
+			// part of the strict route config type in Fastify 4, so cast via unknown.
 			config: {
-				// 10 minutes timeout for pivot operations
 				timeout: 600000,
-			},
+			} as unknown as Record<string, never>,
 		},
 		async (req, reply) => {
 			const { tracer } = req.openTelemetry();
@@ -849,7 +850,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			} catch {
 				// not our JSON
 			}
-			return reply.status(500).type('application/json').send({ success: false, errors: [{ message: errMessage }] });
+			return reply
+				.status(500)
+				.type('application/json')
+				.send({ success: false, errors: [{ message: errMessage }] });
 		}
 
 		if (cacheResult.notModified) {
@@ -937,10 +941,10 @@ export const dataApi: FastifyPluginCallback = (fastify, _, done) => {
 			operation: z.enum(['count', 'sum', 'avg', 'min', 'max', 'countDistinct']),
 			field: z.string().optional(),
 		})
-		.refine(
-			data => data.operation !== 'countDistinct' || (data.field != null && data.field.length > 0),
-			{ message: 'field is required when operation is countDistinct', path: ['field'] },
-		);
+		.refine(data => data.operation !== 'countDistinct' || (data.field != null && data.field.length > 0), {
+			message: 'field is required when operation is countDistinct',
+			path: ['field'],
+		});
 	const HTTP_BAD_REQUEST = 400;
 	const HTTP_INTERNAL_ERROR = 500;
 

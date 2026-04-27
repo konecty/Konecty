@@ -41,6 +41,8 @@ import savedQueryApi from './rest/query/savedQueryApi';
 import queryExportApi from './rest/query/queryExportApi';
 import streamApi from './rest/stream/streamApi';
 import viewPaths from './rest/view/view';
+import userMcpPlugin from '../../mcp/user/server';
+import adminMcpPlugin from '../../mcp/admin/server';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -94,6 +96,8 @@ fastify.register(explorerMetaApi);
 fastify.register(savedQueryApi);
 fastify.register(queryExportApi);
 fastify.register(noAuth);
+fastify.register(userMcpPlugin, { prefix: '/mcp' });
+fastify.register(adminMcpPlugin, { prefix: '/admin-mcp' });
 if (process.env.UI_PROXY === 'true') {
 	fastify.register(proxy, {
 		upstream: process.env.UI_PROXY_URL ?? 'http://localhost:3000',

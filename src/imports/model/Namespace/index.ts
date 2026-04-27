@@ -81,6 +81,10 @@ export const NamespaceSchema = z
 				largeThreshold: z.number().int().positive().optional(),
 			})
 			.optional(),
+
+		// MCP feature flags
+		mcpUserEnabled: z.boolean().optional(),
+		mcpAdminEnabled: z.boolean().optional(),
 	})
 	.catchall(z.string());
 

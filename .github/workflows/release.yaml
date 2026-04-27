@@ -7,22 +7,17 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - name: get latest release with tag
-              id: latestrelease
+            - name: Release tag
               run: |
-                  TAG_NAME=$(curl -s https://api.github.com/repos/Konecty/Konecty/releases/latest | jq '.tag_name' | sed 's/\"//g')
-                  echo RELEASE_TAG=$TAG_NAME >> $GITHUB_OUTPUT
-            - name: confirm release tag
-              run: |
-                  echo ${{ steps.latestrelease.outputs.RELEASE_TAG }}
+                  echo "Building release tag ${{ github.ref_name }} (${{ github.ref }})"
             - name: Checkout
               uses: actions/checkout@v4
               with:
-                  ref: ${{ steps.latestrelease.outputs.RELEASE_TAG }}
+                  ref: ${{ github.ref }}
             - name: Setup NodeJS
               uses: actions/setup-node@v4
               with:
-                  node-version: 18
+                  node-version: 22
                   cache: 'yarn'
                   cache-dependency-path: yarn.lock
             - name: Restore Dependencies Cache
@@ -31,6 +26,7 @@ jobs:
               with:
                   path: |
                       node_modules
+                      src/mcp/widgets/node_modules
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
             - name: Install Dependencies
               run: yarn --frozen-lockfile --no-progress --non-interactive
@@ -42,6 +38,7 @@ jobs:
               with:
                   path: |
                       node_modules
+                      src/mcp/widgets/node_modules
                   key: ${{ steps.cache-restore.outputs.cache-primary-key }}
             - name: Build
               run: yarn build
