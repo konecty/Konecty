@@ -9,7 +9,7 @@
 
 ## Arquivos afetados (atual)
 
-- `src/imports/storage/SFTPStorage.ts` — `resolveDeleteTargetFromRecord`, `toFallbackDeleteTarget`, ETag
+- `src/imports/storage/SFTPStorage.ts` — `resolveDeleteTargetFromRecord`, `toFallbackDeleteTarget`, `getDeletePathSuffixes`, ETag
 - `src/server/routes/rest/file/upload.ts`, `delete.ts`
 
 ## Leitura relacionada

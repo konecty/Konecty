@@ -4,7 +4,6 @@ import { ALLOWED_CORS_FILE_TYPES, DEFAULT_EXPIRATION } from '@imports/consts';
 import { fileUpload } from '@imports/file/file';
 import { MetaObject } from '@imports/model/MetaObject';
 import { SFTPStorageCfg } from '@imports/model/Namespace/Storage';
-import { getFileStorageDeletePathSuffixes } from '@imports/storage/fileStorageDeleteSuffixes';
 import FileStorage, { type FileContext, FileData } from '@imports/storage/FileStorage';
 import { logger } from '@imports/utils/logger';
 
@@ -157,6 +156,24 @@ export default class SFTPStorage implements FileStorage {
 		return null;
 	}
 
+	/**
+	 * Sufixos relativos à pasta do ficheiro: principal, `thumbnail/`, e opc. `watermark/`
+	 * (basename `hash.ext` ou nomes longos; miniaturas `thumbnail/{stem}.jpeg`).
+	 */
+	private static getDeletePathSuffixes(mainBasenameDecoded: string, hasWatermark: boolean): string[] {
+		const ext = path.posix.extname(mainBasenameDecoded);
+		const stem = ext.length > 0 ? mainBasenameDecoded.slice(0, -ext.length) : mainBasenameDecoded;
+
+		const suffixes = [mainBasenameDecoded, path.posix.join('thumbnail', mainBasenameDecoded), path.posix.join('thumbnail', `${stem}.jpeg`)];
+
+		if (hasWatermark) {
+			suffixes.push(path.posix.join('watermark', mainBasenameDecoded));
+			suffixes.push(path.posix.join('watermark', `${stem}.jpeg`));
+		}
+
+		return [...new Set(suffixes)];
+	}
+
 	private async withClient<T>(fn: (client: SftpClient) => Promise<T>): Promise<T> {
 		const storageCfg = this.storageCfg as z.infer<typeof SFTPStorageCfg>;
 		const client = new SftpClient();
@@ -257,7 +274,7 @@ export default class SFTPStorage implements FileStorage {
 		const normalizedDir = directory.split(path.sep).join('/');
 		const baseDir = path.posix.join(remoteRoot, normalizedDir);
 		const decoded = decodeURIComponent(fileName);
-		const suffixes = getFileStorageDeletePathSuffixes(decoded, storageCfg?.wm != null);
+		const suffixes = SFTPStorage.getDeletePathSuffixes(decoded, storageCfg?.wm != null);
 		const pathsToDelete = suffixes.map(suffix => path.posix.join(baseDir, suffix));
 
 		await this.withClient(async client => {

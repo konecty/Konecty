@@ -18,7 +18,7 @@ Inclui armazenamento de arquivos via **SFTP** junto aos modos já existentes (co
   - Nova classe `SFTPStorage` (conexão, `put`, `get`, `delete`, rollback se a gravação no banco falhar).
   - `FileStorage.fromNamespaceStorage` passa a tratar `type: 'sftp'`.
   - Schema Zod do `Namespace` inclui `SFTPStorageCfg` na união discriminada de `storage`.
-  - `getFileStorageDeletePathSuffixes` concentra os sufixos: arquivo principal, `thumbnail/{basename}`, `thumbnail/{stem}.jpeg` e caminhos de watermark quando `wm` existe. O **SFTP** usa esse helper; **FS / S3 / Server** permanecem com o comportamento anterior (sem esse helper compartilhado nesses três).
+  - Os sufixos a apagar (principal, `thumbnail/...`, e opc. `watermark/...` com `wm`) vivem em `SFTPStorage` como método estático; **FS / S3 / Server** não reutilizam o mesmo arranjo.
 - **Upload**
   - `resolveUploadBaseName` para `Office` + campos `logo` / `pictures`: prioriza `slug`, depois `name`; inclui `code` no padrão do basename quando houver; fallback com hash do conteúdo.
   - Após `fileStorage.upload`, se `fileUpload` retornar `{ success: false }` (array `errors` ou string legada `error`), a rota responde com `errorReturn(...)` em vez de `success: true`.
@@ -50,7 +50,7 @@ Inclui armazenamento de arquivos via **SFTP** junto aos modos já existentes (co
 ## Arquivos afetados (lista não exaustiva)
 
 - `src/imports/storage/SFTPStorage.ts`, `FileStorage.ts`
-- `src/imports/storage/fileStorageDeleteSuffixes.ts`
+- (Atual) sufixos de delete em `SFTPStorage` — antes existia `fileStorageDeleteSuffixes.ts` em `src/imports/storage/`
 - `src/imports/model/Namespace/Storage.ts`, `src/imports/model/Namespace/index.ts`
 - `src/imports/file/resolveUploadBaseName` (módulo; no *refine* de 2026-04-27 o monólito passou a pasta com estratégias; ver [2026-04-27](./2026-04-27_refactor-sftp-file-upload-delete.md)), `resolveStorageBasenameForDelete.ts`
 - `src/server/routes/rest/file/upload.ts`, `delete.ts`
