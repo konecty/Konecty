@@ -2,7 +2,6 @@ import { FastifyPluginCallback, RouteHandler } from 'fastify';
 import fp from 'fastify-plugin';
 
 import Multipart from '@fastify/multipart';
-import crypto from 'crypto';
 import path from 'path';
 import sharp from 'sharp';
 
@@ -22,6 +21,7 @@ import { getAuthTokenIdFromReq } from '@imports/utils/sessionUtils';
 import Bluebird from 'bluebird';
 import { sanitizeFilename } from './sanitize';
 import { applyWatermark } from './watermark';
+import getFileMD5 from '@imports/utils/getFileMD5';
 
 type RouteParams = {
 	Params: {
@@ -88,7 +88,6 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 
 		const contentType = data.mimetype;
 		const originalFileName = encodeURIComponent(sanitizeFilename(decodeURIComponent(data.filename)));
-		const fileName = crypto.createHash('md5').update(originalFileName).digest('hex');
 
 		let fileContent = await data.toBuffer();
 
@@ -96,7 +95,8 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			fileContent = Buffer.from(fileContent.toString('utf8'), data.encoding as BufferEncoding);
 		}
 
-		logger.trace({ contentType, originalFileName }, `Uploading file ${fileName}`);
+		const fileName = getFileMD5(fileContent);
+		logger.trace({ contentType, originalFileName }, `Uploading file ${originalFileName}`);
 
 		const directory = `${document}/${recordId}/${fieldName}`;
 		const keyFileName = `${fileName}${path.extname(originalFileName) ?? ''}`;
