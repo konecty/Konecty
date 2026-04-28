@@ -126,13 +126,14 @@ export async function fileUpload({ authTokenId = null, document, fieldName, reco
 }
 
 /**
+ *
  * @param {object} payload
+ * @param {string|null} [payload.authTokenId]
  * @param {string} payload.document
- * @param {string} payload.recordCode
  * @param {string} payload.fieldName
+ * @param {string} payload.recordCode
  * @param {string} payload.fileName
- * @param {string} [payload.authTokenId]
- * @param {import('@imports/model/User').User} [payload.contextUser]
+ * @param {import('@imports/model/User').User|null} [payload.contextUser]
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function fileRemove({ authTokenId = null, document, recordCode, fieldName, fileName, contextUser = null }) {

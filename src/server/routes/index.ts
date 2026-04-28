@@ -1,6 +1,6 @@
 import type { FastifyCookieOptions } from '@fastify/cookie';
 import cookie from '@fastify/cookie';
-import Fastify from 'fastify';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 
 import cors, { FastifyCorsOptions } from '@fastify/cors';
 import proxy from '@fastify/http-proxy';
@@ -49,7 +49,7 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 const DISABLE_REQUEST_LOGGING = process.env.LOG_REQUESTS !== 'true';
 
 const fastify = Fastify({
-	logger,
+	logger: logger as unknown as FastifyBaseLogger,
 	maxParamLength: 250,
 	disableRequestLogging: DISABLE_REQUEST_LOGGING,
 	connectionTimeout: 120000, // 2 minutes

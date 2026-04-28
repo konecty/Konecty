@@ -1,9 +1,10 @@
+import path from 'path';
 import { FastifyPluginCallback, RouteHandler } from 'fastify';
 import fp from 'fastify-plugin';
 
-import path from 'path';
-
 import { getUserSafe } from '@imports/auth/getUser';
+import type { User } from '@imports/model/User';
+import type { KonectyResult } from '@imports/types/result';
 import { fileRemove } from '@imports/file/file';
 import { MetaObject } from '@imports/model/MetaObject';
 import FileStorage from '@imports/storage/FileStorage';
@@ -27,10 +28,11 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 
 	const authTokenId = getAuthTokenIdFromReq(req);
 
-	const { success, data: user, errors } = (await getUserSafe(authTokenId)) as any;
-	if (success === false) {
-		return errorReturn(errors);
+	const authResult: KonectyResult<User> = await getUserSafe(authTokenId);
+	if (authResult.success === false) {
+		return errorReturn(authResult.errors);
 	}
+	const user = authResult.data;
 
 	const access = getAccessFor(document, user);
 
@@ -57,7 +59,7 @@ const deleteRoute: RouteHandler<RouteParams> = async (req, reply) => {
 	const fileStorage = FileStorage.fromNamespaceStorage(MetaObject.Namespace.storage);
 	await fileStorage.delete(directory, fileName, fileContext);
 
-	reply.send(coreResponse);
+	return reply.send(coreResponse);
 };
 
 export default fp(fileDeleteApi);
