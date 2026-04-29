@@ -114,7 +114,13 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			content: Buffer;
 		}> = [];
 
-		if (/^image\/jpeg$/.test(contentType)) {
+		const isServerStorage = MetaObject.Namespace.storage?.type === 'server';
+
+		if (isServerStorage) {
+			// Remote blob server computes storage key from received bytes; send original only (no sharp/thumbnail/watermark/sizes).
+			filesToSave.push({ name: keyFileName, content: fileContent });
+			logger.trace({ contentType, originalFileName }, `Server storage passthrough upload ${originalFileName}`);
+		} else if (/^image\/jpeg$/.test(contentType)) {
 			logger.trace({ contentType, originalFileName }, `Resizing image ${originalFileName}`);
 			let image = sharp(fileContent);
 			const { width = 0, height = 0 } = await image.metadata();
@@ -173,7 +179,7 @@ const uploadRoute: RouteHandler<RouteParams> = async (req, reply) => {
 			}
 		}
 
-		if (/^image\//.test(contentType)) {
+		if (isServerStorage === false && /^image\//.test(contentType)) {
 			// Apply watermark to image files if needed
 			if (MetaObject.Namespace.storage?.wm != null) {
 				const watermarkImageResult = await applyWatermark(sharp(filesToSave[0].content));
