@@ -106,19 +106,15 @@ if (process.env.UI_PROXY === 'true') {
 } else {
 	fastify.register(viewPaths);
 }
-if (process.env.UI_PROXY_PATH && process.env.UI_PROXY_URL) {
+
+const uiProxyPath = process.env.UI_PROXY_PATH?.replace(/\/$/, '') ?? '';
+if (uiProxyPath !== '' && process.env.UI_PROXY_URL) {
 	fastify.register(proxy, {
 		upstream: process.env.UI_PROXY_URL,
 		httpMethods: ['GET', 'HEAD'],
-		prefix: `${process.env.UI_PROXY_PATH}:path`,
-		rewritePrefix: ':path',
+		prefix: uiProxyPath,
+		rewritePrefix: '/',
 		disableRequestLogging: true,
-		replyOptions: {
-			onResponse: (request, reply) => {
-				const proxyUrl = `${process.env.UI_PROXY_URL}${request.url?.replace('/ui', '')}`;
-				reply.from(proxyUrl);
-			},
-		},
 	});
 }
 fastify.register(healthApi);

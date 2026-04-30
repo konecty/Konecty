@@ -55,7 +55,11 @@ This will watch the Tailwind input file and regenerate CSS automatically when yo
 -   `DEFAULT_SMTP_TLS_REJECT_UNAUTHORIZED`: SMTP config `tls.rejectUnauthorized` for nodemailer, config would open a connection to TLS server with self-signed or invalid TLS certificate
 -   `DEFAULT_SMTP_AUTH_METHOD`: SMTP config `authMethod` for nodemailer, defines preferred authentication method, defaults to 'PLAIN'
 -   `DEFAULT_SMTP_DEBUG`: SMTP config `debug` for nodemailer, if set to true, then logs SMTP traffic, otherwise logs only transaction events
--   `UI_URL`: host for ui
+-   `UI_URL`: host serving the **legacy Ext UI** assets referenced by `index.hbs` / login templates (`startup.js`, resources, ...)
+-   `UI_PROXY`: (optional) `true` proxies **all** `GET` HTML traffic to `UI_PROXY_URL` and skips Konecty shell routes (`/` login pages). Prefer leaving this unset when serving legacy at `/` and the React gestor only under `UI_PROXY_PATH`.
+-   `UI_PROXY_URL`: upstream origin for the **React gestor** SPA when proxied (e.g. Cloudflare Pages host). Build that SPA with `BASE_URL=/ui/` when using `UI_PROXY_PATH=/ui`.
+-   `UI_PROXY_PATH`: mount path for the SPA proxy (e.g. `/ui`). Requires `UI_PROXY_URL`. Strip trailing slashes in env values.
+-   `UI_NEW_UI_BROWSER_PATH`: (optional) Where the browser opens the React gestor. **Relative** paths (e.g. `/ui/`) stay on the Konecty host. **Absolute** `http(s)://...` forces that URL. If unset in **`KONECTY_MODE=development`** and `UI_PROXY_URL` is `http(s)://...`, "Nova interface" opens `UI_PROXY_URL` directly (typical local Vite on `:3001`). Set `UI_NEW_UI_BROWSER_PATH=/ui/` to keep `localhost:3000/ui/` in dev. Production keeps same-origin `/ui/` when this is unset and mode is not development.
 -   `LOG_LEVEL`: [Pino log levels](https://github.com/pinojs/pino/blob/HEAD/docs/api.md#level-string)
 -   `LOG_TO_FILE`: Optional file name to write all logs. Path relative to project root
 -   `DISABLE_SENDMAIL`: (optional) `true` to disable email processing

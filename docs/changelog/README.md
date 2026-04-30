@@ -4,6 +4,7 @@ Registro de alterações relevantes do projeto. Cada entrada segue o formato `YY
 
 ## Entradas
 
+- [2026-04-30 — Alternância interface clássica / nova: preferência, query, CTA no legado, dual-shell](./2026-04-30_dual-shell-ui-proxy-legado-react.md)
 - [2026-04-27 — SFTP: hash+ext, delete na rota estilo 144fe0d, basename real e variantes no `SFTPStorage`, fim de `resolveUploadBaseName`](./2026-04-27_refactor-sftp-file-upload-delete.md)
 - [2026-04-16 — Storage SFTP (Namespace), resolução de delete, erros de upload e nomes Office](./2026-04-16_sftp-storage-file-upload-delete.md)
 - [2026-03-26 — findByLookup: conditionFields no metadata do lookup](./2026-03-26_findbylookup-conditionfields.md)
@@ -26,6 +27,7 @@ Entries are in `docs/changelog/` as `YYYY-MM-DD_slug.md`.
 
 | Date       | Slug                        | Summary |
 |-----------|-----------------------------|--------|
+| 2026-04-30 | dual-shell-ui-proxy-legado-react | Preferência new/legacy (`localStorage` + query), CTAs e bootstrap no `index.hbs`; proxy `/ui` e env dual-shell |
 | 2026-04-27 | refactor-sftp-file-upload-delete | MD5+ext no upload; delete simples na rota; SFTP apaga por basename real + variantes; fim de `resolveUploadBaseName` |
 | 2026-04-16 | sftp-storage-file-upload-delete | Storage SFTP via Namespace, delete pela `key`, basename Office, erros estruturados no upload |
 | 2026-03-26 | findbylookup-conditionfields | Apply lookup field conditionFields in findByLookup MongoDB filter |
