@@ -20,6 +20,21 @@ export class RabbitMQResource extends QueueResource {
 				this.handleConnectionError(err, () => this.connect(url));
 			});
 
+			this.channel.on('error', async err => {
+				this.logger.error(err, 'Channel error, attempting to reconnect');
+				try {
+					await this.channel?.close();
+				} catch(_) {}
+				
+				setTimeout(async() => {
+					try {
+						this.channel = await this.connection!.createChannel();
+					} catch (channelError) {
+						this.handleConnectionError(channelError as Error, () => this.connect(url));
+					}
+				}, 2000);
+			});
+
 			this.logger.info('Connected to RabbitMQ');
 		} catch (error) {
 			await this.handleError(error as Error, 'connect');
@@ -29,13 +44,14 @@ export class RabbitMQResource extends QueueResource {
 	async disconnect(): Promise<void> {
 		try {
 			await this.channel?.close();
+		} catch (error) {}
+		try {
 			await this.connection?.close();
-			this.channel = null;
-			this.connection = null;
-			this.logger.info('Disconnected from RabbitMQ');
-		} catch (error) {
-			await this.handleError(error as Error, 'disconnect');
-		}
+		} catch (error) {}
+
+		this.channel = null;
+		this.connection = null;
+		this.logger.info('Disconnected from RabbitMQ');
 	}
 
 	async createQueue(name: string, driverParams?: Record<string, any>): Promise<void> {

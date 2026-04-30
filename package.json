@@ -51,7 +51,7 @@
 		"@types/amqplib": "^0.10.6",
 		"@types/ua-parser-js": "^0.7.38",
 		"@types/uuid": "^9.0.7",
-		"amqplib": "^0.10.7",
+		"amqplib": "^1.0.3",
 		"async": "^3.2.4",
 		"bcryptjs": "^2.4.3",
 		"bluebird": "^3.7.2",
