@@ -30,6 +30,53 @@ const getEnv = () => {
 	return '';
 };
 
+function isAbsoluteHttpUrl(value: string): boolean {
+	return /^https?:\/\//i.test(value.trim());
+}
+
+function withTrailingSlash(url: string): string {
+	const t = url.trim().replace(/\/+$/, '');
+	return t === '' ? '/' : `${t}/`;
+}
+
+function defaultRelativePathFromProxy(): string {
+	const proxyPath = process.env.UI_PROXY_PATH?.trim().replace(/\/$/, '') ?? '';
+	if (proxyPath !== '') {
+		const normalized = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`;
+		return `${normalized}/`;
+	}
+	return '/ui/';
+}
+
+/**
+ * Where the browser should open the React gestor.
+ * - relativePath: same-origin path (UI_PROXY_PATH or /ui/).
+ * - absoluteBase: full origin+optional path when dev should jump straight to Vite (UI_PROXY_URL) or UI_NEW_UI_BROWSER_PATH is http(s).
+ */
+function getNewUiShellNavigation(): { absoluteBase: string; relativePath: string } {
+	const explicit = process.env.UI_NEW_UI_BROWSER_PATH?.trim();
+	const defaultRelative = defaultRelativePathFromProxy();
+
+	if (explicit && isAbsoluteHttpUrl(explicit)) {
+		return { absoluteBase: withTrailingSlash(explicit), relativePath: defaultRelative };
+	}
+
+	let relativePath = defaultRelative;
+	if (explicit && explicit.startsWith('/')) {
+		relativePath = explicit.endsWith('/') ? explicit : `${explicit}/`;
+	}
+
+	let absoluteBase = '';
+	if (!explicit && process.env.KONECTY_MODE === 'development') {
+		const proxyUrl = process.env.UI_PROXY_URL?.trim();
+		if (proxyUrl && isAbsoluteHttpUrl(proxyUrl)) {
+			absoluteBase = withTrailingSlash(proxyUrl);
+		}
+	}
+
+	return { absoluteBase, relativePath };
+}
+
 // Configuration priority: Namespace → env vars → defaults
 function getLoginPageVariant(): string {
 	const namespaceValue = MetaObject.Namespace.loginPageVariant;
@@ -298,6 +345,7 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 				return reply.redirect('/login');
 			}
 
+			const newUiNav = getNewUiShellNavigation();
 			const config = {
 				env: getEnv(),
 				host: getServer(process.env.KONECTY_HOST) || 'my.konecty.com',
@@ -306,6 +354,8 @@ export const viewPaths: FastifyPluginCallback = async fastify => {
 				btn_close: 'Fechar',
 				timeInMilis: +new Date(),
 				uiServer: getServer(process.env.UI_URL) || 'ui.konecty.com',
+				newUiAbsoluteBase: newUiNav.absoluteBase,
+				newUiBrowserPath: newUiNav.relativePath,
 				blobUrl: process.env.BLOB_URL == null ? '' : `//${getServer(process.env.BLOB_URL)}`,
 				previewUrl: process.env.PREVIEW_URL == null ? '' : `//${getServer(process.env.PREVIEW_URL)}`,
 				collectFingerprint: MetaObject.Namespace.trackUserFingerprint,

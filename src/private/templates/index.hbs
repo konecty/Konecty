@@ -84,7 +84,66 @@
 			<script src='/fp.js'></script>
 		{{/if}}
 		<script type='text/javascript'>
-			window.BLOB_URL = '{{blobUrl}}'; window.PREVIEW_URL = '{{previewUrl}}'; window.LOCALE = '{{locale}}'; window.ENV = ''; window.HOST = '{{host}}'; window.UI_URL = '{{uiServer}}';
+			window.BLOB_URL = '{{blobUrl}}';
+			window.PREVIEW_URL = '{{previewUrl}}';
+			window.LOCALE = '{{locale}}';
+			window.ENV = '';
+			window.HOST = '{{host}}';
+			window.UI_URL = '{{uiServer}}';
+			window.KONECTY_NEW_UI_ABSOLUTE = '{{newUiAbsoluteBase}}';
+			window.KONECTY_NEW_UI_PATH = '{{newUiBrowserPath}}';
+			window.konectyOpenNewUiShell = function (useReplace) {
+				try {
+					localStorage.setItem('konecty-ui-version', 'new');
+				} catch (e) {}
+				var abs = (window.KONECTY_NEW_UI_ABSOLUTE || '').trim();
+				var rel = typeof window.KONECTY_NEW_UI_PATH === 'string' ? window.KONECTY_NEW_UI_PATH : '/ui/';
+				var url;
+				if (abs) {
+					url = new URL(abs);
+				} else {
+					url = new URL(rel, window.location.origin);
+				}
+				url.search = window.location.search;
+				url.hash = window.location.hash;
+				if (abs) {
+					url.searchParams.set('konectyUiShell', 'new');
+				}
+				if (useReplace) {
+					window.location.replace(url.href);
+				} else {
+					window.location.href = url.href;
+				}
+			};
+		</script>
+		<script>
+			(function () {
+				try {
+					var params = new URLSearchParams(window.location.search);
+					var shellPref = params.get('konectyUiShell');
+					if (shellPref === 'new') {
+						localStorage.setItem('konecty-ui-version', 'new');
+					} else if (shellPref === 'legacy') {
+						localStorage.setItem('konecty-ui-version', 'legacy');
+					} else {
+						return;
+					}
+					params.delete('konectyUiShell');
+					var qs = params.toString();
+					history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+				} catch (err) {}
+			})();
+		</script>
+		<script>
+			(function () {
+				try {
+					if (localStorage.getItem('konecty-ui-version') !== 'new') return;
+					var path = window.location.pathname || '';
+					if (path !== '/' && path !== '') return;
+					if (typeof window.konectyOpenNewUiShell !== 'function') return;
+					window.konectyOpenNewUiShell(true);
+				} catch (e) {}
+			})();
 		</script>
 	</head>
 	<body>
@@ -129,5 +188,120 @@
 		></script>
 		<script src='//{{uiServer}}/resources/jquery.magnific-popup.js'></script>
 		<script type='text/javascript' src='//{{uiServer}}/startup.js?_dc={{timeInMilis}}'></script>
+		<script>
+			(function () {
+				var mounted = false;
+				var observer = null;
+
+				function disconnectObserver() {
+					if (observer) {
+						observer.disconnect();
+						observer = null;
+					}
+				}
+
+				function ensureStyle() {
+					if (document.getElementById('konecty-new-ui-shell-style')) return;
+					var style = document.createElement('style');
+					style.id = 'konecty-new-ui-shell-style';
+					style.textContent =
+						'.k-new-ui-shell-cta{margin-right:8px!important;border-radius:999px!important;border:1px solid #b7d4f6!important;background:#f4f9ff!important;box-shadow:none!important;}' +
+						'.k-new-ui-shell-cta .x-btn-inner{padding:0 9px!important;}' +
+						'.k-ui-shell-cta-content{display:inline-flex;align-items:center;height:22px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}' +
+						'.k-ui-shell-cta-label{font-size:11px;font-weight:600;color:#1f5f9f;white-space:nowrap;}';
+					document.head.appendChild(style);
+				}
+
+				function getCtaText() {
+					return '<span class="k-ui-shell-cta-content"><span class="k-ui-shell-cta-label">Experimente a nova interface</span></span>';
+				}
+
+				function openNewUi() {
+					var abs = (window.KONECTY_NEW_UI_ABSOLUTE || '').trim();
+					var rel = typeof window.KONECTY_NEW_UI_PATH === 'string' ? window.KONECTY_NEW_UI_PATH : '/ui/';
+					var previewHref = abs ? abs : new URL(rel, window.location.origin).href;
+					if (typeof window.konectyOpenNewUiShell === 'function') {
+						window.konectyOpenNewUiShell(false);
+					} else {
+						window.location.href = previewHref;
+					}
+				}
+
+				function buildButtonConfig() {
+					return {
+						xtype: 'button',
+						scale: 'small',
+						ui: 'header',
+						itemId: 'btnNewUiShell',
+						cls: 'k-new-ui-shell-cta',
+						text: getCtaText(),
+						tooltip: 'Abrir a nova interface do gestor',
+						handler: openNewUi,
+					};
+				}
+
+				function tryMountInHeader() {
+					if (mounted) {
+						return true;
+					}
+					if (!window.Ext || !Ext.ComponentQuery) {
+						return false;
+					}
+					try {
+						var users = Ext.ComponentQuery.query('viewportheader #btnUser');
+						if (!users.length) {
+							return false;
+						}
+						var userBtn = users[0];
+						var header = userBtn.up && userBtn.up('viewportheader');
+						if (!header || !header.items) {
+							return false;
+						}
+						var userIndex = header.items.indexOf(userBtn);
+						if (userIndex < 0) {
+							return false;
+						}
+						ensureStyle();
+						var existing = Ext.ComponentQuery.query('viewportheader #btnNewUiShell')[0];
+						if (existing) {
+							existing.addCls && existing.addCls('k-new-ui-shell-cta');
+							existing.setText && existing.setText(getCtaText());
+							existing.setTooltip && existing.setTooltip('Abrir a nova interface do gestor');
+							if (existing.ownerCt === header) {
+								var existingIndex = header.items.indexOf(existing);
+								if (existingIndex !== userIndex - 1) {
+									header.remove(existing, false);
+									header.insert(existingIndex < userIndex ? userIndex - 1 : userIndex, existing);
+								}
+							}
+							header.doLayout && header.doLayout();
+							mounted = true;
+							disconnectObserver();
+							return true;
+						}
+						header.insert(userIndex, buildButtonConfig());
+						header.doLayout && header.doLayout();
+						mounted = true;
+						disconnectObserver();
+						return true;
+					} catch (err) {
+						return false;
+					}
+				}
+
+				function scheduleTick() {
+					if (tryMountInHeader()) {
+						return;
+					}
+					requestAnimationFrame(tryMountInHeader);
+				}
+
+				scheduleTick();
+				try {
+					observer = new MutationObserver(scheduleTick);
+					observer.observe(document.documentElement, { childList: true, subtree: true });
+				} catch (e) {}
+			})();
+		</script>
 	</body>
 </html>
