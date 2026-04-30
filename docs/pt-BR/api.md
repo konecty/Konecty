@@ -1448,6 +1448,134 @@ Abaixo está uma seleção dos principais endpoints. Para cada um, mostramos o m
 
 ---
 
+### 7. API Admin de Metadados
+
+Todos os endpoints em `/api/admin/meta/*` exigem autenticação de **administrador** (`user.admin === true`). Use o mesmo header `Authorization` com token de um usuário admin. Ver [ADR-0020](./adr/0020-api-admin-meta-crud.md) (pt-BR) e [ADR-0006](../adr/0006-meta-crud-api.md) (en).
+
+#### Listar metas de documento/composite
+
+-   **GET** `/api/admin/meta`
+-   **Headers:** `Authorization: <token>` (usuário admin)
+-   **Resposta de sucesso:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        { "_id": "Contact", "name": "Contact", "type": "document", "label": { "en": "Contact" } },
+        { "_id": "Namespace", "name": "Namespace", "type": "namespace", "label": {} }
+      ]
+    }
+    ```
+-   **401:** Não-admin ou token ausente/inválido.
+
+#### Listar metas de um documento
+
+-   **GET** `/api/admin/meta/:document`
+-   **Parâmetros:** `document` — nome do documento (ex.: `Contact`, `Namespace`)
+-   **Resposta de sucesso:**
+    ```json
+    {
+      "success": true,
+      "data": [
+        { "_id": "Contact", "name": "Contact", "type": "document", "document": null },
+        { "_id": "Contact:list:Default", "name": "Default", "type": "list", "document": "Contact" }
+      ]
+    }
+    ```
+-   **404:** Documento não encontrado.
+
+#### Obter um meta específico
+
+-   **GET** `/api/admin/meta/:document/:type` (canônico para `document` e `composite`)
+-   **GET** `/api/admin/meta/:document/:type/:name` (canônico para tipos nomeados: list | view | access | pivot | card | namespace)
+-   **Parâmetros:** `document`, `type` (document | composite | list | view | access | pivot | card | namespace), `name` (obrigatório apenas para tipos nomeados)
+-   **Exemplos:** `GET /api/admin/meta/Contact/document`, `GET /api/admin/meta/Contact/list/Default`
+-   **Compatibilidade:** `GET /api/admin/meta/Contact/document/Contact` continua aceito como alias legado.
+-   **Resposta de sucesso:** `{ "success": true, "data": { "_id": "...", "type": "...", ... } }`
+-   **400:** Tipo inválido. **404:** Meta não encontrado.
+
+#### Obter código do hook
+
+-   **GET** `/api/admin/meta/:document/hook/:hookName`
+-   **Parâmetros:** `hookName` — um de: `scriptBeforeValidation`, `validationScript`, `scriptAfterSave`, `validationData`
+-   **Resposta de sucesso:** `{ "success": true, "data": { "hookName": "...", "value": "<código ou JSON>" } }` (value é string para hooks JS ou objeto para validationData)
+-   **400:** Nome de hook inválido. **404:** Documento ou hook não encontrado.
+
+#### Criar ou atualizar meta (upsert)
+
+-   **PUT** `/api/admin/meta/:document/:type` (canônico para `document` e `composite`)
+-   **PUT** `/api/admin/meta/:document/:type/:name` (canônico para tipos nomeados)
+-   **Headers:** `Content-Type: application/json`
+-   **Body:** Objeto completo do meta (será armazenado com `_id`, `type`, `name` e `document` definidos conforme necessário)
+-   **Validação:** A requisição é validada com `MetaObjectSchema.safeParse` antes da escrita.
+-   **Resposta de sucesso:** `{ "success": true, "action": "created" | "updated", "_id": "..." }` (201 para created, 200 para updated)
+-   **400:** Tipo/body inválido ou erro de schema (retorna `errors` com caminhos inválidos).
+
+#### Excluir meta
+
+-   **DELETE** `/api/admin/meta/:document/:type` (canônico para `document` e `composite`)
+-   **DELETE** `/api/admin/meta/:document/:type/:name` (canônico para tipos nomeados)
+-   **Resposta de sucesso:** `{ "success": true }`
+-   **404:** Meta não encontrado.
+
+#### Atualizar hook
+
+-   **PUT** `/api/admin/meta/:document/hook/:hookName`
+-   **Body:** String bruta (JS) ou objeto JSON (para `validationData`)
+-   **Validação:** Hooks JS devem ser string; `validationData` deve ser objeto; o schema completo do meta é validado antes de persistir.
+-   **Regras de hook (aplicadas no apply + doctor):**
+    - Comentários não são permitidos no código JS (`//` e `/* */`)
+    - APIs proibidas: `require`, `import`, `process`, `global`, `globalThis`, `eval`, `Function` e módulos de baixo nível (`fs`, `net`, `dgram`, `child_process`)
+    - Sintaxe JavaScript obrigatoriamente válida
+    - `scriptBeforeValidation` e `validationScript` devem conter `return` explícito
+-   **Resposta de sucesso:** `{ "success": true }`
+-   **400:** Nome de hook inválido ou payload/schema inválido.
+
+#### Validar hook (dry-run)
+
+-   **POST** `/api/admin/meta/hook/validate`
+-   **Body:** `{ "hookName": "...", "code": "return data;", "document": "Contact" }` (`document` opcional)
+-   **Comportamento:** valida o payload do hook sem persistir; se `document` for informado, valida também o contrato completo do meta mesclado.
+-   **Resposta de sucesso:** `{ "success": true, "valid": true, "errors": [] }`
+
+#### Remover hook
+
+-   **DELETE** `/api/admin/meta/:document/hook/:hookName`
+-   **Resposta de sucesso:** `{ "success": true }`
+
+#### Histórico de metas
+
+-   **GET** `/api/admin/meta/:metaId/history`
+-   **Query:** `limit` (padrão `10`, máximo `100`), `offset` (padrão `0`)
+-   **Resposta de sucesso:** `{ "success": true, "data": [{ "version": 3, "operation": "update", "changedBy": "...", "changedAt": "..." }] }`
+
+-   **GET** `/api/admin/meta/:metaId/history/:version`
+-   **Resposta de sucesso:** `{ "success": true, "data": { "metaId": "Contact", "version": 2, "snapshot": { ... } } }`
+
+#### Rollback de meta
+
+-   **POST** `/api/admin/meta/:metaId/rollback`
+-   **Body:** `{ "version": 2 }` (opcional; se omitido, usa a versão mais recente do histórico)
+-   **Resposta de sucesso:** `{ "success": true, "action": "rolled-back", "version": 2, "data": { ...metaRestaurado } }`
+-   **400:** `version` inválida ou snapshot histórico inválido.
+-   **404:** Versão do histórico não encontrada.
+
+#### Meta doctor
+
+-   **POST** `/api/admin/meta/doctor`
+-   **Body:** `{ "document": "Contact" }` (opcional)
+-   **Checks:** validação de schema, metas órfãos, targets de lookup, coerência de access/profile, consistência de recursos de fila com `Namespace.QueueConfig.resources` e checks estáticos de hook (comentários, APIs proibidas, sintaxe, retorno obrigatório)
+-   **Resposta de sucesso:** `{ "success": true, "summary": { "total": 42, "valid": 40, "warnings": 1, "errors": 1 }, "issues": [...] }`
+
+#### Recarregar metadados
+
+-   **POST** `/api/admin/meta/reload`
+-   **Body:** nenhum
+-   **Resposta de sucesso:** `{ "success": true }`
+-   Dispara o recarregamento em memória dos metadados; chame após alterar metas para o servidor aplicar as mudanças.
+
+---
+
 ## Tratamento de Erros
 
 Todos os endpoints retornam um booleano `success`. Se `success` for `false`, um array `errors` é fornecido com mensagens de erro.
@@ -1482,6 +1610,8 @@ A coleção inclui:
 - **Autenticação**
   - Login (usuário/senha tradicional)
   - **Autenticação OTP**
+- **API Admin de Metadados** (token de admin obrigatório)
+  - Listar documentos, listar metas por documento, obter meta, obter hook, upsert/excluir meta, upsert/excluir hook, histórico, rollback, doctor, reload
     - Solicitar OTP - Telefone (com exemplos para WhatsApp, fallback de Email, erros)
     - Solicitar OTP - Email
     - Verificar OTP - Telefone (com exemplos para sucesso, código inválido, expirado, tentativas máximas)
